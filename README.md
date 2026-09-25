@@ -20,7 +20,8 @@ huawei-fitwear/
 │   │   ├── src/             # Application source (app, components, hooks)
 │   │   ├── app.json         # Expo configuration
 │   │   ├── package.json     # Mobile dependencies & scripts
-│   │   └── tsconfig.json    # TypeScript configuration
+│   │   ├── tsconfig.json    # TypeScript configuration
+│   │   └── README.md        # Mobile & Expo Go guide
 │   └── watch/               # HarmonyOS NEXT ArkTS application
 │       ├── AppScope/        # Global app metadata and resources
 │       ├── entry/           # Wearable entry module (EntryAbility, pages)
