@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+oh_modules/
+
+# Expo & React Native
+.expo/
+dist/
+web-build/
+
+# DevEco Studio & HarmonyOS artifacts
+.hvigor/
+.cxx/
+local.properties
+build/
+*.hap
+*.har
+*.hsp
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDE & OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+
+# Tool harness metadata
+.pi-glla/
