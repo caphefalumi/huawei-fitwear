@@ -30,6 +30,7 @@ huawei-fitwear/
 │       ├── oh-package.json5 # HarmonyOS dependencies
 │       └── README.md        # Watch-specific guide
 ├── package.json             # Monorepo scripts
+├── AGENTS.md                # Agent guidelines & project boundaries
 └── README.md
 ```
 
