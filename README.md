@@ -1,61 +1,115 @@
-# Fitwear Monorepo
+# Fitwear
 
-Fitwear is a dual-device fitness ecosystem comprising a mobile application and a smartwatch companion application:
+Dual-device fitness ecosystem pairing a mobile client with a HarmonyOS smartwatch companion.
 
-- **`apps/mobile`**: React Native (Expo) app serving as the **Central Brain** (computation, LLM vision, cloud sync, analytics, user UI).
-- **`apps/watch`**: ArkTS (HarmonyOS NEXT) app serving as the **Sensor Agent** (real-time IMU sampling, rep detection, haptics, BLE streaming).
+---
 
-These sub-projects represent two independent ecosystems living as sibling directories. They do not share build tools or JS dependencies.
+## Architecture
 
-## Project Structure
+- **`apps/mobile`**: React Native (Expo) application handling user UI, workout tracking, computation, and history.
+- **`apps/watch`**: ArkTS (HarmonyOS NEXT) wearable application handling real-time wrist sensor sampling (IMU) and low-latency interaction.
+
+---
+
+## Repository Structure
 
 ```text
-fitwear/
+huawei-fitwear/
 ├── apps/
-│   ├── mobile/         # React Native (Expo Router) — Central Brain
-│   └── watch/          # ArkTS (HarmonyOS) — Sensor Agent (scaffold / DevEco Studio project)
-├── shared/
-│   ├── sync-schema/    # Canonical cross-device event schemas and protocol documentation
-│   └── docs/           # Cross-platform architecture and API contracts
-├── docs/               # Monorepo and milestone documentation
-├── .gitignore
-├── package.json        # Root workspace configuration (scoped to apps/mobile)
+│   ├── mobile/              # React Native / Expo application
+│   │   ├── src/             # Application source (app, components, hooks)
+│   │   ├── app.json         # Expo configuration
+│   │   ├── package.json     # Mobile dependencies & scripts
+│   │   └── tsconfig.json    # TypeScript configuration
+│   └── watch/               # HarmonyOS NEXT ArkTS application
+│       ├── AppScope/        # Global app metadata and resources
+│       ├── entry/           # Wearable entry module (EntryAbility, pages)
+│       ├── build-profile.json5 # HarmonyOS target & SDK settings
+│       ├── code-linter.json5   # ArkTS linter rules
+│       ├── hvigorfile.ts    # Hvigor build engine script
+│       ├── oh-package.json5 # HarmonyOS dependencies
+│       └── README.md        # Watch-specific guide
+├── package.json             # Monorepo scripts
 └── README.md
 ```
 
+---
+
+## Prerequisites
+
+| Tool | Purpose | Requirement |
+| :--- | :--- | :--- |
+| **Bun** | Root package manager & scripts | v1.1+ |
+| **Node.js** | Mobile runtime environment | v18+ |
+| **Huawei DevEco Studio** | Watch IDE & SDK manager | 5.0+ (API 11+ / `6.1.1(24)`) |
+
+---
+
 ## Getting Started
 
-### 1. Mobile App (`apps/mobile`)
-- **IDE**: VS Code (or Cursor)
-- **Prerequisites**: Bun (or Node.js), Expo CLI
-- **Quickstart**:
-  ```bash
-  # From monorepo root
-  bun install
-  bun start
-  ```
-  Or change directory directly:
-  ```bash
-  cd apps/mobile
-  bun start
-  ```
+### 1. Root Setup
 
-### 2. Watch App (`apps/watch`)
-- **IDE**: [Huawei DevEco Studio](https://developer.huawei.com/consumer/en/deveco-studio/) (API 11+ / HarmonyOS NEXT)
-- **Prerequisites**: HarmonyOS SDK and DevEco Studio toolchain
-- **How to Open**:
-  1. Launch DevEco Studio.
-  2. Select **Open** and point to `apps/watch`.
-  3. Let DevEco Studio resolve `oh_modules` and configure your local toolchain / signing certificates.
-  4. See [`apps/watch/README.md`](apps/watch/README.md) for details on expected pages, abilities, and modules.
+Install mobile dependencies from the monorepo root:
 
-## Cross-Device Communication Protocol
+```bash
+bun install
+```
 
-Data exchange across Bluetooth Low Energy (BLE) / Huawei Health Kit bridges follows the single source of truth defined in:
+---
 
-👉 [`shared/sync-schema/`](shared/sync-schema/)
+### 2. Mobile App (`apps/mobile`)
 
-- JSON Schema: [`shared/sync-schema/sync-schema.json`](shared/sync-schema/sync-schema.json)
-- Synchronization Guide: [`shared/sync-schema/sync-schema.md`](shared/sync-schema/sync-schema.md)
-- Mobile Interfaces: `apps/mobile/src/types/sync.ts`
-- Watch Models: `apps/watch/entry/src/main/ets/sync/SyncModels.ets`
+#### Run Development Server
+
+```bash
+# Start Metro bundler
+bun start
+
+# Or target a specific platform directly:
+bun android
+bun ios
+bun web
+```
+
+#### Verification
+
+```bash
+cd apps/mobile
+
+# Run TypeScript checks
+bunx tsc --noEmit
+```
+
+---
+
+### 3. Watch App (`apps/watch`)
+
+1. Open **Huawei DevEco Studio**.
+2. Select **Open** and choose the `apps/watch` folder.
+3. Allow DevEco Studio to resolve dependencies (`oh_modules`).
+4. **Run**:
+   - Launch a Wearable Emulator via **Tools** > **Device Manager**, or connect a physical Huawei Watch with Developer Options enabled.
+   - Click **Run** (`Shift + F10`) to build and deploy to the watch.
+
+For watch details, see [`apps/watch/README.md`](apps/watch/README.md).
+
+---
+
+## Monorepo Scripts
+
+Available from the root directory:
+
+| Command | Action |
+| :--- | :--- |
+| `bun start` | Starts the Expo dev server for `apps/mobile` |
+| `bun android` | Launches the mobile app on an Android device/emulator |
+| `bun ios` | Launches the mobile app on an iOS simulator |
+| `bun web` | Launches the mobile web app in your browser |
+| `bun lint` | Runs mobile code linter |
+
+---
+
+## Troubleshooting
+
+- **Mobile module issues**: Run `bun install` at the root. Ensure Node.js and Bun are up to date.
+- **Watch SDK error**: Verify HarmonyOS SDK `6.1.1(24)` is installed in DevEco Studio under **Tools** > **SDK Manager**.
