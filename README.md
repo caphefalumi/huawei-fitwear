@@ -32,7 +32,7 @@ fitwear/
   ```bash
   # From monorepo root
   bun install
-  bun mobile:start
+  bun start
   ```
   Or change directory directly:
   ```bash

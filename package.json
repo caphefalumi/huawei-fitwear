@@ -1,14 +1,14 @@
 {
   "name": "fitwear",
-  "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "apps/mobile"
+    "apps/*"
   ],
   "scripts": {
-    "mobile:start": "bun run start --workspace=apps/mobile",
-    "mobile:android": "bun run android --workspace=apps/mobile",
-    "mobile:ios": "bun run ios --workspace=apps/mobile",
-    "mobile:web": "bun run web --workspace=apps/mobile"
+    "start": "bun --cwd apps/mobile start",
+    "android": "bun --cwd apps/mobile android",
+    "ios": "bun --cwd apps/mobile ios",
+    "web": "bun --cwd apps/mobile web",
+    "lint": "bun --cwd apps/mobile lint"
   }
 }
