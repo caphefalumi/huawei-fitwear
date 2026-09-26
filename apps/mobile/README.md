@@ -13,7 +13,44 @@ Test and run the application on your physical device without installing Android 
    - **iOS**: Download [Expo Go on Apple App Store](https://apps.apple.com/app/expo-go/id982107779).
 
 2. **Network Requirement**:
-   - Connect your phone and development computer to the **same Wi-Fi network**.
+   - Connect your phone and development computer to the **same Wi-Fi network** (or log in to the same Expo account on CLI and mobile to sync automatically).
+
+---
+
+## Expo Account & Authentication
+
+Logging into the same Expo account on both CLI and the Expo Go app automatically syncs local development servers under **Development servers** without needing to scan QR codes.
+
+### 1. Create an Account
+
+- **Web**: Register at [expo.dev/signup](https://expo.dev/signup).
+- **CLI**:
+  ```bash
+  bunx eas-cli register
+  ```
+- **Mobile (iOS/Android)**: Open **Expo Go** and tap **Sign Up**.
+
+### 2. Log In via CLI
+
+```bash
+# Log in to your Expo account
+bunx expo login
+
+# Check logged-in user
+bunx expo whoami
+
+# Log out (if needed)
+bunx expo logout
+```
+
+### 3. Log In on Mobile App (iOS / Android)
+
+1. Open **Expo Go** on your iOS or Android device.
+2. Go to the profile/account screen:
+   - **iOS**: Tap the settings/profile icon in the top header.
+   - **Android**: Tap the profile icon or open settings.
+3. Tap **Log In** and enter your Expo credentials.
+4. Active Metro dev servers (`bun start`) will automatically show under **Projects** > **Development servers**.
 
 ---
 
@@ -43,6 +80,23 @@ bun start
 > ```bash
 > bunx expo start --tunnel
 > ```
+
+---
+
+## Native Builds (iOS & Android)
+
+Compile native binaries locally without Expo Go:
+
+```bash
+# Build & launch on iOS simulator / device (macOS & Xcode required)
+bun run build:ios
+
+# Build native iOS app with Release configuration (build-only)
+bunx expo run:ios --configuration Release --device generic --output ./build/ios
+
+# Build & launch on Android emulator / device
+bun run build:android
+```
 
 ---
 

@@ -8,6 +8,8 @@
     "start": "bun --cwd apps/mobile start",
     "android": "bun --cwd apps/mobile android",
     "ios": "bun --cwd apps/mobile ios",
+    "build:ios": "bun --cwd apps/mobile run build:ios",
+    "build:android": "bun --cwd apps/mobile run build:android",
     "web": "bun --cwd apps/mobile web",
     "lint": "bun --cwd apps/mobile lint"
   }

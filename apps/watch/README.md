@@ -6,6 +6,7 @@ ArkTS (HarmonyOS NEXT) companion application running as the **Sensor Agent** on 
 
 ```text
 apps/watch/
+├── docs/                      # ArkTS & HarmonyOS reference documentation
 ├── AppScope/
 │   ├── app.json5              # Bundle name, version, and vendor details
 │   └── resources/             # Application-level icons and strings
@@ -47,3 +48,7 @@ apps/watch/
 - **Screen Constraints**: Wearable displays are typically circular or compact square formats. Ensure interactive components utilize relative or center-aligned positioning.
 - **Power & Battery**: High-frequency IMU sampling (accelerometer/gyroscope) should only be active while a workout session is explicitly ongoing.
 - **Haptics**: Use Huawei system vibration services to provide discrete feedback when rep milestones are reached or posture warnings trigger.
+
+## Documentation
+
+See [`docs/README.md`](docs/README.md) for official ArkTS syntax, state management, and Sensor Kit guidelines.
