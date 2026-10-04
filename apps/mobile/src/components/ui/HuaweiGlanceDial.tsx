@@ -77,7 +77,6 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
   const midBeadPos = polarToCartesian(center, center, rMiddle, startAngle + 3);
   const innerBeadPos = polarToCartesian(center, center, rInner, startAngle + 3);
 
-  const stackWidth = Math.round(size * 0.36);
   const isOuterLarge = outerValue > 999;
 
   return (
@@ -183,17 +182,17 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
         style={[
           styles.numbersStack,
           {
-            left: center + 2,
-            top: center - 12,
-            width: stackWidth,
+            right: size - (center + Math.round(size * 0.08)),
+            top: center - Math.round(size * 0.05),
+            alignItems: 'flex-end',
             pointerEvents: 'none'
           }
         ]}
       >
-        <Text style={[styles.statNum, { color: colors.inner, fontSize: Math.round(size * 0.11), lineHeight: Math.round(size * 0.125) }]}>
+        <Text style={[styles.statNum, { color: colors.inner, fontSize: Math.round(size * 0.12), lineHeight: Math.round(size * 0.13) }]}>
           {innerValue}
         </Text>
-        <Text style={[styles.statNum, { color: colors.middle, fontSize: Math.round(size * 0.11), lineHeight: Math.round(size * 0.125) }]}>
+        <Text style={[styles.statNum, { color: colors.middle, fontSize: Math.round(size * 0.12), lineHeight: Math.round(size * 0.13), marginVertical: 1 }]}>
           {middleValue}
         </Text>
         <Text
@@ -201,8 +200,8 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
             styles.statNum,
             {
               color: colors.outer,
-              fontSize: isOuterLarge ? Math.round(size * 0.095) : Math.round(size * 0.11),
-              lineHeight: isOuterLarge ? Math.round(size * 0.115) : Math.round(size * 0.125)
+              fontSize: isOuterLarge ? Math.round(size * 0.10) : Math.round(size * 0.12),
+              lineHeight: isOuterLarge ? Math.round(size * 0.11) : Math.round(size * 0.13)
             }
           ]}
           numberOfLines={1}
@@ -228,13 +227,13 @@ const styles = StyleSheet.create({
   },
   numbersStack: {
     position: 'absolute',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'center'
   },
   statNum: {
     fontWeight: '900',
     fontVariant: ['tabular-nums'],
     letterSpacing: -0.5,
-    textAlign: 'center'
+    textAlign: 'right'
   }
 });

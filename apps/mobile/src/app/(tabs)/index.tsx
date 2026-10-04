@@ -19,7 +19,6 @@ import { useWorkoutStore } from '../../store/workoutStore';
 import { useDeviceStore } from '../../store/deviceStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import {
-  ProgressRing,
   SyncStatusChip,
   SkeletonBlock,
   EmptyState,
@@ -51,7 +50,6 @@ export default function HomeScreen() {
   const { data: qPlan } = usePlanQuery();
   const { data: qDevices } = useDevicesQuery();
 
-  const [dashboardDialView, setDashboardDialView] = useState<'huaweiGlance' | 'nutritionRing'>('huaweiGlance');
   const [waterMl, setWaterMl] = useState(1800);
   const [selectedMeal, setSelectedMeal] = useState<MealDoc | null>(null);
 
@@ -71,20 +69,7 @@ export default function HomeScreen() {
   const watchDevice = activeDevices.find((d) => d.type === 'watch') || activeDevices[0];
   const connectionStatus = watchDevice ? watchDevice.connectionStatus : 'connected';
 
-  const caloriesLeft = Math.max(
-    activeSummary.calorieTarget - activeSummary.caloriesConsumed,
-    0
-  );
-  const remainingPct = Math.round(
-    (caloriesLeft / Math.max(activeSummary.calorieTarget, 1)) * 100
-  );
-
   const nextDay = activePlan ? activePlan.days[activePlan.currentDayIndex] : null;
-
-  const calRatio = Math.min(activeSummary.caloriesConsumed / Math.max(activeSummary.calorieTarget, 1), 1);
-  const pRatio = Math.min(activeSummary.proteinConsumed / Math.max(activeSummary.proteinTarget, 1), 1);
-  const cRatio = Math.min(activeSummary.carbsConsumed / Math.max(activeSummary.carbsTarget, 1), 1);
-  const fRatio = Math.min(activeSummary.fatConsumed / Math.max(activeSummary.fatTarget, 1), 1);
 
   // 1. Loading State
   if (previewState === 'loading') {
@@ -202,7 +187,7 @@ export default function HomeScreen() {
           style={[
             styles.heroCard,
             {
-              backgroundColor: theme.isDark ? '#000000' : '#12332E',
+              backgroundColor: '#000000',
               borderColor: theme.border,
               borderWidth: 1,
               borderRadius: radii.xl
@@ -211,231 +196,57 @@ export default function HomeScreen() {
         >
           <View style={styles.heroHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="watch-outline" size={16} color={theme.onPrimary} />
-              <Text style={styles.heroSubHeader}>
-                {dashboardDialView === 'huaweiGlance' ? 'WATCH ACTIVITY RINGS' : 'DAILY FUELING'}
+              <Ionicons name="watch-outline" size={16} color="#FFFFFF" />
+              <Text style={[styles.heroSubHeader, { color: '#FFFFFF' }]}>
+                WATCH ACTIVITY RINGS
               </Text>
             </View>
 
-            <View style={{ flexDirection: 'row', gap: 4, backgroundColor: 'rgba(0, 0, 0, 0.35)', borderRadius: radii.full, padding: 3 }}>
-              <Pressable
-                onPress={() => setDashboardDialView('huaweiGlance')}
-                style={{
-                  paddingHorizontal: 8,
-                  paddingVertical: 3,
-                  borderRadius: radii.full,
-                  backgroundColor: dashboardDialView === 'huaweiGlance' ? '#FFFFFF' : 'transparent'
-                }}
-              >
-                <Text style={{ fontSize: 10, fontWeight: '700', color: dashboardDialView === 'huaweiGlance' ? '#000000' : '#FFFFFF' }}>
-                  Glance
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setDashboardDialView('nutritionRing')}
-                style={{
-                  paddingHorizontal: 8,
-                  paddingVertical: 3,
-                  borderRadius: radii.full,
-                  backgroundColor: dashboardDialView === 'nutritionRing' ? '#FFFFFF' : 'transparent'
-                }}
-              >
-                <Text style={{ fontSize: 10, fontWeight: '700', color: dashboardDialView === 'nutritionRing' ? '#000000' : '#FFFFFF' }}>
-                  Fueling
-                </Text>
-              </Pressable>
+            <View style={[styles.heroPill, { backgroundColor: 'rgba(255, 255, 255, 0.12)' }]}>
+              <Text style={[styles.heroPillText, { color: '#FFFFFF' }]}>Live Mirroring</Text>
             </View>
           </View>
 
-          {dashboardDialView === 'huaweiGlance' ? (
-            <View style={{ alignItems: 'center', marginVertical: 8 }}>
-              <HuaweiGlanceDial
-                size={230}
-                outerValue={activeSummary.caloriesConsumed || 106}
-                middleValue={activeSummary.workoutsCompleted || 1}
-                innerValue={9}
-              />
+          <View style={{ alignItems: 'center', marginVertical: 8 }}>
+            <HuaweiGlanceDial
+              size={240}
+              outerValue={activeSummary.caloriesConsumed || 106}
+              middleValue={activeSummary.workoutsCompleted || 1}
+              innerValue={9}
+            />
 
-              <View style={[styles.heroSplitPill, { marginTop: 12 }]}>
-                <View style={styles.splitPillItem}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#00A3FF' }} />
-                    <Text style={styles.splitPillLabel}>Stand</Text>
-                  </View>
-                  <Text style={styles.splitPillValue}>9 <Text style={styles.splitPillUnit}>hrs</Text></Text>
+            <View style={[styles.heroSplitPill, { marginTop: 14 }]}>
+              <View style={styles.splitPillItem}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#00A3FF' }} />
+                  <Text style={styles.splitPillLabel}>Stand</Text>
                 </View>
-                <View style={styles.splitPillDivider} />
-                <View style={styles.splitPillItem}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFD200' }} />
-                    <Text style={styles.splitPillLabel}>Exercise</Text>
-                  </View>
-                  <Text style={styles.splitPillValue}>
-                    {activeSummary.workoutsCompleted || 1} <Text style={styles.splitPillUnit}>session</Text>
-                  </Text>
-                </View>
-                <View style={styles.splitPillDivider} />
-                <View style={styles.splitPillItem}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF4D30' }} />
-                    <Text style={styles.splitPillLabel}>Burned</Text>
-                  </View>
-                  <Text style={styles.splitPillValue}>
-                    {activeSummary.caloriesConsumed || 106} <Text style={styles.splitPillUnit}>kcal</Text>
-                  </Text>
-                </View>
+                <Text style={styles.splitPillValue}>9 <Text style={styles.splitPillUnit}>hrs</Text></Text>
               </View>
-            </View>
-          ) : (
-            <>
-              <View style={styles.gaugeContainer}>
-                <ProgressRing
-                  size={172}
-                  strokeWidth={14}
-                  progress={calRatio}
-                  color={theme.calories}
-                  secondaryLabel={`${remainingPct}% of target`}
-                  icon={{ name: 'fire', color: theme.ringIcon.calories }}
-                  accessibilityLabel={`Calories: ${activeSummary.caloriesConsumed} of ${activeSummary.calorieTarget} kcal, ${caloriesLeft} kcal remaining`}
-                >
-                  <View style={styles.gaugeCenter}>
-                    <Text style={styles.gaugeOverline}>REMAINING</Text>
-                    <Text style={styles.gaugeMainNumber}>{caloriesLeft.toLocaleString()}</Text>
-                    <Text style={styles.gaugeUnit}>kcal left</Text>
-                  </View>
-                </ProgressRing>
-              </View>
-
-              <View style={styles.heroSplitPill}>
-                <View style={styles.splitPillItem}>
-                  <Text style={styles.splitPillLabel}>Consumed</Text>
-                  <Text style={styles.splitPillValue}>
-                    {activeSummary.caloriesConsumed} <Text style={styles.splitPillUnit}>kcal</Text>
-                  </Text>
+              <View style={styles.splitPillDivider} />
+              <View style={styles.splitPillItem}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFD200' }} />
+                  <Text style={styles.splitPillLabel}>Exercise</Text>
                 </View>
-                <View style={styles.splitPillDivider} />
-                <View style={styles.splitPillItem}>
-                  <Text style={styles.splitPillLabel}>Daily Goal</Text>
-                  <Text style={styles.splitPillValue}>
-                    {activeSummary.calorieTarget} <Text style={styles.splitPillUnit}>kcal</Text>
-                  </Text>
-                </View>
-              </View>
-            </>
-          )}
-        </View>
-
-        {/* MACRO NUTRIENTS BREAKDOWN CARD */}
-        <View
-          style={[
-            styles.card,
-            {
-              backgroundColor: theme.card,
-              borderColor: theme.border,
-              borderRadius: radii.lg,
-              ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
-            }
-          ]}
-        >
-          <View style={styles.cardHeaderRow}>
-            <View style={styles.cardHeaderTitleGroup}>
-              <Ionicons name="pie-chart" size={18} color={theme.primary} />
-              <Text style={[styles.cardTitle, { color: theme.text }]}>Macros Remaining</Text>
-            </View>
-            <Text style={[styles.cardMetaTag, { color: theme.textSecondary }]}>Auto-balanced</Text>
-          </View>
-
-          {/* Protein Bar */}
-          <View style={styles.macroRow}>
-            <View style={styles.macroHeader}>
-              <View style={styles.macroLabelGroup}>
-                <View style={[styles.macroDotBadge, { backgroundColor: theme.protein }]} />
-                <Text style={[styles.macroName, { color: theme.text }]}>Protein</Text>
-                <View style={[styles.macroStatusPill, { backgroundColor: `${theme.protein}18` }]}>
-                  <Text style={[styles.macroStatusPillText, { color: theme.protein }]}>
-                    {Math.max(0, todaySummary.proteinTarget - todaySummary.proteinConsumed)}g to goal
-                  </Text>
-                </View>
-              </View>
-              <Text style={[styles.macroValue, { color: theme.text }]}>
-                {Math.round(todaySummary.proteinConsumed)}g{' '}
-                <Text style={{ color: theme.textSecondary, fontWeight: '400' }}>
-                  / {todaySummary.proteinTarget}g
+                <Text style={styles.splitPillValue}>
+                  {activeSummary.workoutsCompleted || 1} <Text style={styles.splitPillUnit}>session</Text>
                 </Text>
-              </Text>
-            </View>
-            <View style={[styles.macroTrack, { backgroundColor: theme.surfaceElevated }]}>
-              <View
-                style={[
-                  styles.macroFill,
-                  {
-                    width: `${Math.round(pRatio * 100)}%`,
-                    backgroundColor: theme.protein,
-                    borderRadius: radii.full
-                  }
-                ]}
-              />
-            </View>
-          </View>
-
-          {/* Carbs Bar */}
-          <View style={styles.macroRow}>
-            <View style={styles.macroHeader}>
-              <View style={styles.macroLabelGroup}>
-                <View style={[styles.macroDotBadge, { backgroundColor: theme.carbs }]} />
-                <Text style={[styles.macroName, { color: theme.text }]}>Carbs</Text>
               </View>
-              <Text style={[styles.macroValue, { color: theme.text }]}>
-                {Math.round(todaySummary.carbsConsumed)}g{' '}
-                <Text style={{ color: theme.textSecondary, fontWeight: '400' }}>
-                  / {todaySummary.carbsTarget}g
+              <View style={styles.splitPillDivider} />
+              <View style={styles.splitPillItem}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF4D30' }} />
+                  <Text style={styles.splitPillLabel}>Burned</Text>
+                </View>
+                <Text style={styles.splitPillValue}>
+                  {activeSummary.caloriesConsumed || 106} <Text style={styles.splitPillUnit}>kcal</Text>
                 </Text>
-              </Text>
-            </View>
-            <View style={[styles.macroTrack, { backgroundColor: theme.surfaceElevated }]}>
-              <View
-                style={[
-                  styles.macroFill,
-                  {
-                    width: `${Math.round(cRatio * 100)}%`,
-                    backgroundColor: theme.carbs,
-                    borderRadius: radii.full
-                  }
-                ]}
-              />
-            </View>
-          </View>
-
-          {/* Fat Bar */}
-          <View style={styles.macroRow}>
-            <View style={styles.macroHeader}>
-              <View style={styles.macroLabelGroup}>
-                <View style={[styles.macroDotBadge, { backgroundColor: theme.fat }]} />
-                <Text style={[styles.macroName, { color: theme.text }]}>Fat</Text>
               </View>
-              <Text style={[styles.macroValue, { color: theme.text }]}>
-                {Math.round(todaySummary.fatConsumed)}g{' '}
-                <Text style={{ color: theme.textSecondary, fontWeight: '400' }}>
-                  / {todaySummary.fatTarget}g
-                </Text>
-              </Text>
-            </View>
-            <View style={[styles.macroTrack, { backgroundColor: theme.surfaceElevated }]}>
-              <View
-                style={[
-                  styles.macroFill,
-                  {
-                    width: `${Math.round(fRatio * 100)}%`,
-                    backgroundColor: theme.fat,
-                    borderRadius: radii.full
-                  }
-                ]}
-              />
             </View>
           </View>
         </View>
 
-        {/* TODAY'S WORKOUT FOCUS CARD */}
         <View
           style={[
             styles.card,
