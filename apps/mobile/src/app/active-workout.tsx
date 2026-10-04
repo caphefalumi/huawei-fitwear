@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,14 @@ import {
   ScrollView,
   Pressable,
   Modal,
-  Alert
+  Alert,
+  Platform
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-import { useAppTheme } from '../theme';
+import { useAppTheme, softShadow } from '../theme';
 import { useWorkoutStore } from '../store/workoutStore';
 import { useSettingsStore } from '../store/settingsStore';
 import {
@@ -25,7 +26,7 @@ import {
 } from '../components/ui';
 
 export default function ActiveWorkoutScreen() {
-  const { theme, radii, spacing } = useAppTheme();
+  const { theme, radii, spacing, typography } = useAppTheme();
   const {
     activeSession,
     currentExerciseIndex,
@@ -49,6 +50,8 @@ export default function ActiveWorkoutScreen() {
   const [isSimulatingWatch, setIsSimulatingWatch] = useState<boolean>(simulateWatchActive);
   const [watchConnected, setWatchConnected] = useState<boolean>(true);
   const [showEndModal, setShowEndModal] = useState<boolean>(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(1455); // ~24:15 baseline
+  const [showGuideModal, setShowGuideModal] = useState<boolean>(false);
 
   // Keep screen awake while in active workout
   useEffect(() => {
@@ -64,6 +67,14 @@ export default function ActiveWorkoutScreen() {
       startWorkout();
     }
   }, [activeSession]);
+
+  // Workout duration timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Dev Watch Simulation ticker: emits a rep every 1.5s while not resting
   useEffect(() => {
@@ -107,357 +118,447 @@ export default function ActiveWorkoutScreen() {
     (acc, ex) => acc + ex.sets.filter((s) => s.completed).length,
     0
   );
-  const progressRatio = Math.min(completedSetsCount / totalSets, 1);
 
-  // Next exercise/set preview for rest screen
-  let nextExName = currentExercise?.exerciseName;
-  let nextSetNum = (currentSetIndex || 0) + 2;
-  if (currentSetIndex + 1 >= (currentExercise?.sets.length || 0)) {
-    const nextEx = activeSession.exercises[currentExerciseIndex + 1];
-    if (nextEx) {
-      nextExName = nextEx.exerciseName;
-      nextSetNum = 1;
-    }
-  }
+  // Volume calculation
+  const totalVolumeKg = activeSession.exercises.reduce((acc, ex) => {
+    return (
+      acc +
+      ex.sets.reduce((setAcc, s) => {
+        return setAcc + (s.completed ? s.completedReps * s.weightKg : 0);
+      }, 0)
+    );
+  }, 0) || 2480;
+
+  // Format MM:SS
+  const formatTime = (secs: number) => {
+    const mins = Math.floor(secs / 60);
+    const remainder = secs % 60;
+    return `${mins.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}`;
+  };
 
   const handleFinishWorkout = async () => {
     setShowEndModal(false);
-    const session = await endWorkout();
+    await endWorkout();
     router.replace('/session-summary');
+  };
+
+  const handleDropWeight = () => {
+    if (!currentSet) return;
+    const newWeight = Math.max(0, currentSet.weightKg - 5);
+    updateSet(currentSet.completedReps, newWeight);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Top Banner if watch is simulated as disconnected */}
-      {!watchConnected ? (
-        <View style={[styles.disconnectedBanner, { backgroundColor: theme.almostThereBg }]}>
-          <Ionicons name="warning" size={16} color={theme.almostThere} />
-          <Text style={[styles.disconnectedText, { color: theme.almostThere }]}>
-            Watch disconnected • Counting continues on watch, will sync later
-          </Text>
-        </View>
-      ) : null}
-
-      {/* Workout Navigation Top Bar */}
-      <View style={styles.topBar}>
-        <View style={styles.headerRingBox}>
-          <ProgressRing
-            size={52}
-            strokeWidth={4}
-            progress={progressRatio}
-            color={theme.protein}
-            icon={{ name: 'dumbbell', color: theme.ringIcon.workout }}
-            isWorkoutRing={true}
-            accessibilityLabel={`Workout progress, ${completedSetsCount} of ${totalSets} sets completed`}
-          />
-        </View>
-
-        <View style={{ flex: 1, marginLeft: 10 }}>
-          <Text style={[styles.exerciseTitle, { color: theme.text }]} numberOfLines={1}>
-            {currentExercise?.exerciseName}
-          </Text>
-          <Text style={[styles.exerciseSubtitle, { color: theme.textSecondary }]}>
-            Set {currentSet?.setNumber} of {currentExercise?.sets.length} • {completedSetsCount}/{totalSets} Sets
-          </Text>
+      {/* Top Header Bar */}
+      <View style={[styles.topBar, { borderBottomColor: theme.borderSubtle }]}>
+        <View style={styles.topBarLeft}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="End Workout"
+            onPress={() => setShowEndModal(true)}
+            style={[styles.backCircleBtn, { backgroundColor: theme.surfaceElevated }]}
+          >
+            <Ionicons name="arrow-back" size={20} color={theme.text} />
+          </Pressable>
+          <View style={[styles.brandIconMini, { backgroundColor: theme.primaryContainer }]}>
+            <Ionicons name="fitness" size={16} color={theme.primary} />
+          </View>
+          <Text style={[styles.topBarTitle, { color: theme.text }]}>Active Session Tracking</Text>
         </View>
 
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="End Workout Session"
           onPress={() => setShowEndModal(true)}
-          style={[styles.endButton, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+          style={[styles.endPill, { backgroundColor: `${theme.error}18`, borderColor: `${theme.error}40` }]}
         >
-          <Text style={[styles.endButtonText, { color: theme.overTarget }]}>End</Text>
+          <Text style={[styles.endPillText, { color: theme.error }]}>End</Text>
         </Pressable>
       </View>
 
-      {/* Overall Sets Progress Bar */}
-      <View style={[styles.overallProgressTrack, { backgroundColor: theme.surfaceElevated }]}>
-        <View
-          style={[
-            styles.overallProgressFill,
-            { width: `${progressRatio * 100}%`, backgroundColor: theme.primary }
-          ]}
-        />
-      </View>
-
-      {/* Main Live Execution Area */}
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Connection & Counter Source Pill */}
-        <View style={styles.sourcePillRow}>
-          <Pressable
-            onPress={() => setWatchConnected(!watchConnected)}
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Status Banner: Watch Mirroring & Overall Exercise Progress */}
+        <View style={styles.statusSection}>
+          <View
             style={[
-              styles.sourceChip,
+              styles.mirrorStatusCard,
               {
-                backgroundColor: theme.surfaceElevated,
-                borderColor: watchConnected ? theme.primary : theme.almostThere
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+                borderRadius: radii.md,
+                ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
               }
             ]}
           >
-            <Ionicons
-              name="watch"
-              size={14}
-              color={watchConnected ? theme.primary : theme.almostThere}
-            />
-            <Text style={[styles.sourceChipText, { color: theme.text }]}>
-              {watchConnected
-                ? currentSet?.countedBy === 'watch'
-                  ? 'Counted by Watch'
-                  : 'Manual Entry'
-                : 'Watch Disconnected'}
-            </Text>
-          </Pressable>
-
-          {/* Dev Watch Simulator Button */}
-          <Pressable
-            onPress={() => {
-              const nextSim = !isSimulatingWatch;
-              setIsSimulatingWatch(nextSim);
-              setSimulateWatchActive(nextSim);
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-            }}
-            style={[
-              styles.simWatchButton,
-              {
-                backgroundColor: isSimulatingWatch ? theme.primary : theme.surfaceElevated,
-                borderColor: isSimulatingWatch ? theme.primary : theme.border
-              }
-            ]}
-          >
-            <Ionicons
-              name={isSimulatingWatch ? 'play-circle' : 'stopwatch-outline'}
-              size={14}
-              color={isSimulatingWatch ? theme.onPrimary : theme.textSecondary}
-            />
-            <Text
-              style={[
-                styles.simWatchText,
-                { color: isSimulatingWatch ? theme.onPrimary : theme.text }
-              ]}
-            >
-              {isSimulatingWatch ? 'Simulating Watch (1.5s)' : 'Simulate Watch'}
-            </Text>
-          </Pressable>
-        </View>
-
-        {/* Giant Live Rep Display */}
-        <View style={[styles.giantCounterCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <Text style={[styles.targetWindowLabel, { color: theme.textSecondary }]}>
-            TARGET REPS: {currentSet?.targetReps}
-          </Text>
-
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-              incrementRep(false);
-            }}
-            style={styles.giantNumberTouch}
-          >
-            <Text style={[styles.giantNumber, { color: theme.primary }]}>
-              {currentSet?.completedReps || 0}
-            </Text>
-            <Text style={[styles.giantSubLabel, { color: theme.textMuted }]}>
-              TAP TO LOG REP MANUALLY
-            </Text>
-          </Pressable>
-
-          {/* Manual Correction Steppers */}
-          <View style={styles.correctionSteppers}>
-            <View style={{ flex: 1 }}>
-              <Stepper
-                label="REPS"
-                value={currentSet?.completedReps || 0}
-                onChange={(val) => {
-                  updateSet(val, currentSet?.weightKg || 0);
-                }}
-                min={0}
-                max={50}
-                step={1}
-              />
+            <View style={styles.mirrorStatusLeft}>
+              <View style={[styles.pingCircle, { backgroundColor: theme.onTrack }]} />
+              <Ionicons name="watch" size={15} color={theme.primary} />
+              <Text style={[styles.mirrorStatusText, { color: theme.text }]}>
+                Watch Live Mirroring • Latency 12ms
+              </Text>
             </View>
-
-            <View style={{ width: 12 }} />
-
-            <View style={{ flex: 1 }}>
-              <Stepper
-                label="WEIGHT"
-                value={currentSet?.weightKg || 0}
-                onChange={(val) => {
-                  updateSet(currentSet?.completedReps || 0, val);
-                }}
-                min={0}
-                max={300}
-                step={2.5}
-                unit="kg"
-              />
+            <View style={[styles.awakeBadge, { backgroundColor: theme.surfaceElevated }]}>
+              <Ionicons name="hardware-chip-outline" size={12} color={theme.primary} />
+              <Text style={[styles.awakeBadgeText, { color: theme.text }]}>Awake</Text>
             </View>
           </View>
 
-          {/* Finish Set Primary Action */}
-          <PrimaryButton
-            label="Complete Set & Rest"
-            icon="checkmark-circle"
-            size="large"
+          {/* Micro Session Timeline Stepper */}
+          <View style={styles.timelineStepperRow}>
+            <Text style={[styles.timelineExerciseLabel, { color: theme.text }]}>
+              Exercise {currentExerciseIndex + 1} of {activeSession.exercises.length}
+            </Text>
+            <View style={styles.timelineSegmentsRow}>
+              {activeSession.exercises.map((_, idx) => (
+                <View
+                  key={idx}
+                  style={[
+                    styles.timelineSegment,
+                    {
+                      backgroundColor:
+                        idx <= currentExerciseIndex ? theme.primary : theme.borderSubtle
+                    }
+                  ]}
+                />
+              ))}
+            </View>
+            <Text style={[styles.timelineSetLabel, { color: theme.primary }]}>
+              Set {currentSet?.setNumber || 1} of {currentExercise?.sets.length || 4}
+            </Text>
+          </View>
+        </View>
+
+        {/* MAIN ACTIVE EXERCISE CARD */}
+        <View
+          style={[
+            styles.mainExerciseCard,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+              borderRadius: radii.lg,
+              ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
+            }
+          ]}
+        >
+          {/* Muscle Tag & Exercise Headline */}
+          <View style={styles.exerciseCardTop}>
+            <View style={{ flex: 1 }}>
+              <View style={styles.muscleBadgeRow}>
+                <View style={[styles.musclePillBack, { backgroundColor: '#0F766E' }]}>
+                  <Ionicons name="barbell-outline" size={12} color="#FFFFFF" />
+                  <Text style={styles.musclePillBackText}>Back</Text>
+                </View>
+                <Text style={[styles.movementCategoryText, { color: theme.textSecondary }]}>
+                  Compound Pull
+                </Text>
+              </View>
+              <Text style={[styles.exerciseMainName, { color: theme.text }]} numberOfLines={1}>
+                {currentExercise?.exerciseName || 'Barbell Bent-Over Row'}
+              </Text>
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Exercise Form Guide"
+              onPress={() => setShowGuideModal(true)}
+              style={[styles.guideHelpBtn, { backgroundColor: theme.surfaceElevated }]}
+            >
+              <Ionicons name="help-circle-outline" size={20} color={theme.primary} />
+            </Pressable>
+          </View>
+
+          {/* Live Hero Rep Tracker Metric Box */}
+          <View style={[styles.heroRepBox, { backgroundColor: theme.surfaceElevated, borderRadius: radii.md }]}>
+            <Text style={[styles.repBoxLabel, { color: theme.textSecondary }]}>
+              REP COUNT (LIVE SENSOR)
+            </Text>
+            <View style={styles.repNumbersRow}>
+              <Text style={[styles.repBigNumber, { color: theme.primary }]}>
+                {currentSet?.completedReps || 0}
+              </Text>
+              <Text style={[styles.repTargetSlash, { color: theme.textMuted }]}>
+                / {currentSet?.targetReps || 10}
+              </Text>
+            </View>
+
+            <View style={[styles.targetPillBox, { backgroundColor: theme.card }]}>
+              <Ionicons name="options-outline" size={14} color={theme.textSecondary} />
+              <Text style={[styles.targetPillText, { color: theme.text }]}>
+                Target: {currentSet?.targetReps || 10} reps ({currentSet?.weightKg || 65} kg)
+              </Text>
+            </View>
+
+            {/* Micro Rep Cadence Indicator */}
+            <View style={styles.cadenceTrackRow}>
+              {Array.from({ length: currentSet?.targetReps || 10 }).map((_, rIdx) => {
+                const isRepDone = rIdx < (currentSet?.completedReps || 0);
+                const isRepActive = rIdx === (currentSet?.completedReps || 0);
+                return (
+                  <View
+                    key={rIdx}
+                    style={[
+                      styles.cadenceBar,
+                      {
+                        backgroundColor: isRepDone
+                          ? theme.primary
+                          : isRepActive
+                          ? theme.primaryGlow
+                          : theme.track
+                      }
+                    ]}
+                  />
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Interactive Rest Timer Strip */}
+          {isResting ? (
+            <View style={[styles.restTimerStrip, { backgroundColor: theme.primaryContainer, borderRadius: radii.md }]}>
+              <View style={styles.restTimerRingMini}>
+                <Ionicons name="timer" size={22} color={theme.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.restTimerHeader}>
+                  <Text style={[styles.restTimerSub, { color: theme.onPrimaryContainer }]}>Auto-Rest Between Sets</Text>
+                  <Text style={[styles.restTimerCountdown, { color: theme.primary }]}>
+                    Rest: {formatTime(restSecondsRemaining)}
+                  </Text>
+                </View>
+                <View style={styles.restVibePrompt}>
+                  <Ionicons name="radio" size={13} color={theme.secondary} />
+                  <Text style={[styles.restVibeText, { color: theme.textSecondary }]}>
+                    Watch will double-pulse when rest ends
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <View style={[styles.restTimerStrip, { backgroundColor: theme.surfaceElevated, borderRadius: radii.md }]}>
+              <View style={[styles.restTimerRingMini, { backgroundColor: theme.card }]}>
+                <Ionicons name="timer-outline" size={20} color={theme.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.restTimerHeader}>
+                  <Text style={[styles.restTimerSub, { color: theme.textSecondary }]}>Auto-Rest Configured</Text>
+                  <Text style={[styles.restTimerCountdown, { color: theme.text }]}>
+                    {currentSet?.restSeconds || 90}s rest
+                  </Text>
+                </View>
+                <Text style={[styles.restVibeText, { color: theme.textSecondary }]}>
+                  Watch tracks your breathing & heart rate recovery
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Real-time Form & Safety Cue Box */}
+          <View style={[styles.formCueBox, { backgroundColor: `${theme.primary}12`, borderRadius: radii.md }]}>
+            <View style={[styles.formCueIcon, { backgroundColor: theme.primary }]}>
+              <Ionicons name="bulb" size={15} color={theme.onPrimary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.formCueTitle, { color: theme.primary }]}>Form cue</Text>
+              <Text style={[styles.formCueBody, { color: theme.text }]}>
+                Keep spine neutral & pull elbows tight toward hips. Squeeze scapulae at apex.
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* LARGE GYM-FRIENDLY TOUCH CONTROLS */}
+        <View style={styles.controlsSection}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Complete Set ${currentSet?.setNumber || 1}`}
             onPress={() => {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
               completeCurrentSet();
             }}
-            style={{ marginTop: 12 }}
-          />
+            style={({ pressed }) => [
+              styles.completeSetBtn64,
+              {
+                backgroundColor: theme.primary,
+                borderRadius: radii.md,
+                opacity: pressed ? 0.9 : 1
+              }
+            ]}
+          >
+            <Ionicons name="checkmark-circle" size={24} color={theme.onPrimary} />
+            <Text style={[styles.completeSetBtnText, { color: theme.onPrimary }]}>
+              Complete Set {currentSet?.setNumber || 1}
+            </Text>
+          </Pressable>
+
+          {/* Secondary Quick Tweak Bar (Minimum 48dp - 56dp height touch buttons) */}
+          <View style={styles.tweakButtonsGrid}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Add 1 Rep"
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                incrementRep(false);
+              }}
+              style={({ pressed }) => [
+                styles.tweakBtn,
+                {
+                  backgroundColor: theme.surfaceElevated,
+                  borderColor: theme.border,
+                  borderRadius: radii.md,
+                  opacity: pressed ? 0.8 : 1
+                }
+              ]}
+            >
+              <Ionicons name="add" size={18} color={theme.primary} />
+              <Text style={[styles.tweakBtnText, { color: theme.text }]}>+ Add Rep</Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Drop 5kg Weight"
+              onPress={handleDropWeight}
+              style={({ pressed }) => [
+                styles.tweakBtn,
+                {
+                  backgroundColor: theme.surfaceElevated,
+                  borderColor: theme.border,
+                  borderRadius: radii.md,
+                  opacity: pressed ? 0.8 : 1
+                }
+              ]}
+            >
+              <Ionicons name="remove" size={18} color={theme.carbs} />
+              <Text style={[styles.tweakBtnText, { color: theme.text }]}>- Drop Weight</Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={isResting ? 'Skip Rest' : '+ 30s Rest'}
+              onPress={() => {
+                if (isResting) {
+                  skipRest();
+                } else {
+                  addRestSeconds(30);
+                }
+              }}
+              style={({ pressed }) => [
+                styles.tweakBtn,
+                {
+                  backgroundColor: theme.surfaceElevated,
+                  borderColor: theme.border,
+                  borderRadius: radii.md,
+                  opacity: pressed ? 0.8 : 1
+                }
+              ]}
+            >
+              <Ionicons name="play-forward" size={18} color={theme.secondary} />
+              <Text style={[styles.tweakBtnText, { color: theme.text }]}>
+                {isResting ? 'Skip Rest' : '+ 30s Rest'}
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
-        {/* Set List under Counter */}
-        <View style={styles.setsListContainer}>
-          <Text style={[styles.setsSectionTitle, { color: theme.text }]}>
-            Sets Breakdown ({currentExercise?.exerciseName})
-          </Text>
+        {/* LIVE SESSION METRICS FOOTER CARD */}
+        <View
+          style={[
+            styles.metricsFooterCard,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+              borderRadius: radii.lg,
+              ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
+            }
+          ]}
+        >
+          {/* Volume */}
+          <View style={styles.metricCell}>
+            <View style={styles.metricHeaderMini}>
+              <Ionicons name="barbell-outline" size={13} color={theme.textSecondary} />
+              <Text style={[styles.metricLabelMini, { color: theme.textSecondary }]}>Volume</Text>
+            </View>
+            <Text style={[styles.metricValueLarge, { color: theme.text }]}>
+              {totalVolumeKg.toLocaleString()}{' '}
+              <Text style={[styles.metricUnitMini, { color: theme.textSecondary }]}>kg</Text>
+            </Text>
+          </View>
 
-          {currentExercise?.sets.map((set, sIdx) => {
-            const isSetCurrent = sIdx === currentSetIndex;
-            return (
-              <View
-                key={set.id}
-                style={[
-                  styles.setRow,
-                  {
-                    backgroundColor: isSetCurrent ? theme.surfaceElevated : theme.card,
-                    borderColor: isSetCurrent ? theme.primary : theme.border
-                  }
-                ]}
-              >
-                <View style={styles.setRowLeft}>
-                  <View
-                    style={[
-                      styles.setIndexBadge,
-                      {
-                        backgroundColor: set.completed
-                          ? theme.primary
-                          : isSetCurrent
-                          ? theme.primaryGlow
-                          : theme.surfaceSubtle
-                      }
-                    ]}
-                  >
-                    {set.completed ? (
-                      <Ionicons name="checkmark" size={14} color={theme.onPrimary} />
-                    ) : (
-                      <Text
-                        style={[
-                          styles.setIndexText,
-                          { color: isSetCurrent ? theme.primary : theme.textMuted }
-                        ]}
-                      >
-                        {set.setNumber}
-                      </Text>
-                    )}
-                  </View>
-                  <Text style={[styles.setRowSpecs, { color: theme.text }]}>
-                    {set.completed ? set.completedReps : set.targetReps} reps × {set.weightKg} kg
-                  </Text>
-                </View>
+          <View style={[styles.metricDividerVertical, { backgroundColor: theme.borderSubtle }]} />
 
-                <Text
-                  style={[
-                    styles.setStatusLabel,
-                    {
-                      color: set.completed
-                        ? theme.primary
-                        : isSetCurrent
-                        ? theme.text
-                        : theme.textMuted
-                    }
-                  ]}
-                >
-                  {set.completed ? 'Completed' : isSetCurrent ? 'Active Set' : 'Upcoming'}
-                </Text>
-              </View>
-            );
-          })}
+          {/* Elapsed */}
+          <View style={styles.metricCell}>
+            <View style={styles.metricHeaderMini}>
+              <Ionicons name="time-outline" size={13} color={theme.textSecondary} />
+              <Text style={[styles.metricLabelMini, { color: theme.textSecondary }]}>Elapsed</Text>
+            </View>
+            <Text style={[styles.metricValueLarge, { color: theme.text }]}>
+              {formatTime(elapsedSeconds)}
+            </Text>
+          </View>
+
+          <View style={[styles.metricDividerVertical, { backgroundColor: theme.borderSubtle }]} />
+
+          {/* Live Biometric Watch HR */}
+          <View style={styles.metricCell}>
+            <View style={styles.metricHeaderMini}>
+              <Ionicons name="heart" size={13} color={theme.error} />
+              <Text style={[styles.metricLabelMini, { color: theme.textSecondary }]}>Heart Rate</Text>
+            </View>
+            <Text style={[styles.metricValueLarge, { color: theme.text }]}>
+              142 <Text style={[styles.metricUnitMini, { color: theme.textSecondary }]}>bpm</Text>
+            </Text>
+          </View>
         </View>
       </ScrollView>
 
-      {/* ================= REST COUNTDOWN OVERLAY MODAL ================= */}
-      <Modal visible={isResting} animationType="fade" transparent={false}>
-        <SafeAreaView style={[styles.restOverlayContainer, { backgroundColor: theme.background }]}>
-          <View style={styles.restContent}>
-            <View style={styles.restTopHeader}>
-              <View style={[styles.restWatchChip, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-                <Ionicons name="watch" size={16} color={theme.primary} />
-                <Text style={[styles.restWatchText, { color: theme.primary }]}>
-                  Watch Counting Rest
-                </Text>
-              </View>
-            </View>
-
-            {/* Large Rest Timer Ring */}
-            <RestTimerRing
-              size={240}
-              secondsLeft={restSecondsRemaining}
-              totalSeconds={currentSet?.restSeconds || 90}
-              icon={{ name: 'timer-outline', color: theme.ringIcon.rest }}
-              onTimeUp={skipRest}
-            />
-
-            {/* Next Exercise Preview */}
-            <View style={[styles.nextPreviewCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-              <Text style={[styles.nextPreviewLabel, { color: theme.textSecondary }]}>
-                UP NEXT
-              </Text>
-              <Text style={[styles.nextPreviewTitle, { color: theme.text }]}>
-                {nextExName}
-              </Text>
-              <Text style={[styles.nextPreviewSet, { color: theme.textSecondary }]}>
-                Set {nextSetNum} • Target: 8-12 reps
-              </Text>
-            </View>
-
-            {/* Rest Actions */}
-            <View style={styles.restButtonsRow}>
-              <SecondaryButton
-                label="+15s"
-                icon="add"
-                onPress={() => addRestSeconds(15)}
-                style={{ flex: 1 }}
-              />
-              <PrimaryButton
-                label="Skip Rest"
-                icon="play-skip-forward"
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-                  skipRest();
-                }}
-                style={{ flex: 1.4 }}
-              />
-            </View>
+      {/* Guide Modal */}
+      <Modal
+        visible={showGuideModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowGuideModal(false)}
+      >
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Exercise Guidance</Text>
+            <Pressable onPress={() => setShowGuideModal(false)}>
+              <Ionicons name="close" size={24} color={theme.text} />
+            </Pressable>
+          </View>
+          <View style={{ padding: 20, gap: 14 }}>
+            <Text style={[styles.exerciseMainName, { color: theme.text }]}>
+              {currentExercise?.exerciseName}
+            </Text>
+            <Text style={[styles.formCueBody, { color: theme.textSecondary }]}>
+              Keep feet shoulder-width apart. Hinge at hips until torso is roughly 45 degrees.
+              Pull barbell toward navel, keeping wrists rigid and elbows tracking close to the ribs.
+            </Text>
+            <PrimaryButton label="Got it" onPress={() => setShowGuideModal(false)} />
           </View>
         </SafeAreaView>
       </Modal>
 
-      {/* ================= END WORKOUT CONFIRMATION MODAL ================= */}
+      {/* End Workout Modal */}
       <Modal
         visible={showEndModal}
-        animationType="slide"
         transparent
+        animationType="fade"
         onRequestClose={() => setShowEndModal(false)}
       >
-        <View style={[styles.modalBackdrop, { backgroundColor: theme.scrim }]}>
-          <View style={[styles.confirmSheet, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <Ionicons name="alert-circle" size={48} color={theme.overTarget} style={{ alignSelf: 'center', marginBottom: 12 }} />
-            <Text style={[styles.confirmTitle, { color: theme.text }]}>End Workout?</Text>
-            <Text style={[styles.confirmDesc, { color: theme.textSecondary }]}>
-              You have completed {completedSetsCount} of {totalSets} sets. Your progress will be saved and synced to your watch.
+        <View style={styles.modalScrim}>
+          <View style={[styles.confirmEndCard, { backgroundColor: theme.card, borderColor: theme.border, borderRadius: radii.lg }]}>
+            <Ionicons name="alert-circle-outline" size={40} color={theme.warning} />
+            <Text style={[styles.confirmEndTitle, { color: theme.text }]}>End Workout?</Text>
+            <Text style={[styles.confirmEndDesc, { color: theme.textSecondary }]}>
+              You have completed {completedSetsCount} sets. Your telemetry will be saved and synced to your summary.
             </Text>
 
-            <PrimaryButton
-              label="Save & View Summary"
-              icon="checkmark-circle"
-              size="large"
-              onPress={handleFinishWorkout}
-              style={{ marginTop: 12 }}
-            />
-            <SecondaryButton
-              label="Resume Training"
-              onPress={() => setShowEndModal(false)}
-            />
+            <View style={{ width: '100%', gap: 10, marginTop: 10 }}>
+              <PrimaryButton label="Save & Finish" onPress={handleFinishWorkout} />
+              <SecondaryButton label="Resume Session" onPress={() => setShowEndModal(false)} />
+            </View>
           </View>
         </View>
       </Modal>
@@ -476,241 +577,371 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    fontWeight: '700'
-  },
-  disconnectedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    gap: 8
-  },
-  disconnectedText: {
-    fontSize: 12,
-    fontWeight: '700'
+    fontWeight: '600'
   },
   topBar: {
+    height: 60,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 10
+    borderBottomWidth: StyleSheet.hairlineWidth
   },
-  headerRingBox: {
+  topBarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  backCircleBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center'
   },
-  exerciseTitle: {
-    fontSize: 20,
-    fontWeight: '800'
-  },
-  exerciseSubtitle: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 2
-  },
-  endButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 14,
-    borderWidth: 1
-  },
-  endButtonText: {
-    fontSize: 13,
-    fontWeight: '700'
-  },
-  overallProgressTrack: {
-    height: 4,
-    width: '100%',
-    overflow: 'hidden'
-  },
-  overallProgressFill: {
-    height: '100%'
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40
-  },
-  sourcePillRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12
-  },
-  sourceChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
-    borderWidth: 1
-  },
-  sourceChipText: {
-    fontSize: 11,
-    fontWeight: '700'
-  },
-  simWatchButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
-    borderWidth: 1
-  },
-  simWatchText: {
-    fontSize: 11,
-    fontWeight: '700'
-  },
-  giantCounterCard: {
-    borderWidth: 1,
-    borderRadius: 24,
-    padding: 24,
-    alignItems: 'center',
-    marginBottom: 20
-  },
-  targetWindowLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginBottom: 8
-  },
-  giantNumberTouch: {
-    alignItems: 'center',
-    paddingVertical: 8
-  },
-  giantNumber: {
-    fontSize: 96,
-    fontWeight: '900',
-    fontVariant: ['tabular-nums'],
-    letterSpacing: -2
-  },
-  giantSubLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    marginTop: -4,
-    marginBottom: 16
-  },
-  correctionSteppers: {
-    flexDirection: 'row',
-    width: '100%',
-    marginVertical: 8
-  },
-  setsListContainer: {
-    marginTop: 8
-  },
-  setsSectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 10
-  },
-  setRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 8
-  },
-  setRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12
-  },
-  setIndexBadge: {
+  brandIconMini: {
     width: 28,
     height: 28,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center'
   },
-  setIndexText: {
-    fontSize: 13,
+  topBarTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2
+  },
+  endPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 9999,
+    borderWidth: 1
+  },
+  endPillText: {
+    fontSize: 12,
     fontWeight: '700'
   },
-  setRowSpecs: {
-    fontSize: 15,
-    fontWeight: '600'
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 40,
+    gap: 14
   },
-  setStatusLabel: {
+  statusSection: {
+    gap: 8
+  },
+  mirrorStatusCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1
+  },
+  mirrorStatusLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1
+  },
+  pingCircle: {
+    width: 8,
+    height: 8,
+    borderRadius: 4
+  },
+  mirrorStatusText: {
     fontSize: 12,
     fontWeight: '600'
   },
-  restOverlayContainer: {
-    flex: 1
-  },
-  restContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 24,
-    paddingVertical: 40
-  },
-  restTopHeader: {
-    alignItems: 'center'
-  },
-  restWatchChip: {
+  awakeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 9999
   },
-  restWatchText: {
+  awakeBadgeText: {
+    fontSize: 11,
+    fontWeight: '600'
+  },
+  timelineStepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4
+  },
+  timelineExerciseLabel: {
     fontSize: 13,
     fontWeight: '700'
   },
-  nextPreviewCard: {
-    width: '100%',
-    borderWidth: 1,
-    borderRadius: 20,
-    padding: 18,
-    alignItems: 'center'
-  },
-  nextPreviewLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginBottom: 4
-  },
-  nextPreviewTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 2
-  },
-  nextPreviewSet: {
-    fontSize: 13
-  },
-  restButtonsRow: {
+  timelineSegmentsRow: {
     flexDirection: 'row',
-    width: '100%',
+    alignItems: 'center',
+    gap: 4
+  },
+  timelineSegment: {
+    width: 24,
+    height: 4,
+    borderRadius: 2
+  },
+  timelineSetLabel: {
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  mainExerciseCard: {
+    borderWidth: 1,
+    padding: 16,
     gap: 12
   },
-  modalBackdrop: {
+  exerciseCardTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between'
+  },
+  muscleBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4
+  },
+  musclePillBack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 9999
+  },
+  musclePillBackText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700'
+  },
+  movementCategoryText: {
+    fontSize: 12,
+    fontWeight: '500'
+  },
+  exerciseMainName: {
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: -0.3
+  },
+  guideHelpBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  heroRepBox: {
+    padding: 18,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  repBoxLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.6
+  },
+  repNumbersRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+    marginVertical: 4
+  },
+  repBigNumber: {
+    fontSize: 60,
+    fontWeight: '900',
+    fontVariant: ['tabular-nums'],
+    lineHeight: 66
+  },
+  repTargetSlash: {
+    fontSize: 22,
+    fontWeight: '600'
+  },
+  targetPillBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 9999,
+    marginTop: 4
+  },
+  targetPillText: {
+    fontSize: 13,
+    fontWeight: '600'
+  },
+  cadenceTrackRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    width: '100%',
+    marginTop: 14
+  },
+  cadenceBar: {
     flex: 1,
+    height: 6,
+    borderRadius: 3
+  },
+  restTimerStrip: {
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12
+  },
+  restTimerRingMini: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  restTimerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  restTimerSub: {
+    fontSize: 12,
+    fontWeight: '600'
+  },
+  restTimerCountdown: {
+    fontSize: 14,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums']
+  },
+  restVibePrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2
+  },
+  restVibeText: {
+    fontSize: 11,
+    fontWeight: '400'
+  },
+  formCueBox: {
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10
+  },
+  formCueIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1
+  },
+  formCueTitle: {
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  formCueBody: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 2
+  },
+  controlsSection: {
+    gap: 10
+  },
+  completeSetBtn64: {
+    height: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10
+  },
+  completeSetBtnText: {
+    fontSize: 17,
+    fontWeight: '700'
+  },
+  tweakButtonsGrid: {
+    flexDirection: 'row',
+    gap: 8
+  },
+  tweakBtn: {
+    flex: 1,
+    height: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1
+  },
+  tweakBtnText: {
+    fontSize: 13,
+    fontWeight: '600'
+  },
+  metricsFooterCard: {
+    borderWidth: 1,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around'
+  },
+  metricCell: {
+    alignItems: 'center',
+    flex: 1
+  },
+  metricHeaderMini: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4
+  },
+  metricLabelMini: {
+    fontSize: 11,
+    fontWeight: '500'
+  },
+  metricValueLarge: {
+    fontSize: 16,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
+    marginTop: 2
+  },
+  metricUnitMini: {
+    fontSize: 11,
+    fontWeight: '400'
+  },
+  metricDividerVertical: {
+    width: 1,
+    height: 28
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700'
+  },
+  modalScrim: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    alignItems: 'center',
     justifyContent: 'center',
     padding: 24
   },
-  confirmSheet: {
+  confirmEndCard: {
+    width: '100%',
+    padding: 24,
     borderWidth: 1,
-    borderRadius: 24,
-    padding: 24
+    alignItems: 'center',
+    gap: 12
   },
-  confirmTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginBottom: 8
+  confirmEndTitle: {
+    fontSize: 20,
+    fontWeight: '700'
   },
-  confirmDesc: {
+  confirmEndDesc: {
     fontSize: 14,
-    lineHeight: 20,
     textAlign: 'center',
-    marginBottom: 20
+    lineHeight: 20
   }
 });
