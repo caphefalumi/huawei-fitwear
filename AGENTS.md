@@ -45,14 +45,19 @@ bun lint                     # Lint mobile workspace
 - **Navigation hooks**: Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
 - **Theme & colors**: All colors come from `src/theme/tokens.ts` via `useAppTheme()`. No hex/rgba literals in components or screens. The watch face mock is always dark, so it reads from the `watchFace` export instead. Light theme ("Kinetic Pure Light") is cool-grey canvas, white cards lifted with `softShadow`, blue/orange/rose macros, green for on-track. Use `onColor(bg)` for glyphs on a solid fill.
 - **Tab bar**: `src/app/(tabs)/_layout.tsx` is a floating pill (in flow, side margins, `bottom inset + 24` below). Keep it detached from the screen edges.
-- **Progress rings** (`src/components/ui/ProgressRing.tsx`, `RestTimerRing.tsx`, shared `RingIcon.tsx`):
-  - Icons are MaterialCommunityIcons, one per ring type, never reused: calories `fire`, protein `arm-flex`, carbs `grain`, fat `water`, workout `dumbbell` (swaps to `check` at 100%), rest `timer-outline`. Colors come from `theme.ringIcon.*` (icon color == ring stroke color, >= 3:1 on white).
+- **Progress rings** (`src/components/ui/ProgressRing.tsx`, `RestTimerRing.tsx`, `HuaweiGlanceDial.tsx`, shared `RingIcon.tsx`):
+  - Icons are MaterialCommunityIcons or Ionicons, one per ring type, never reused: calories `fire`, protein `arm-flex`, carbs `grain`, fat `water`, workout `dumbbell` (swaps to `check` at 100%), rest `timer-outline`. Colors come from `theme.ringIcon.*` (icon color == ring stroke color, >= 3:1 on white).
   - Layout by size: large (>=160) icon above number + label; medium (100-159) icon above number, no label; small (<100) icon alone, value shown under the ring.
   - Everything in the center must fit inside the innermost stroke. Do not enlarge icons or text without re-checking this (the Home hero is the tight case). Text caps at 1.1x system font scale.
   - Concentric rings (Home hero, watch face): pass `icon` on each `RingData`; it renders as a fixed bead at the ring's 12 o'clock start. It does not follow the progress arc.
+  - **Huawei Watch Glance Dial** (`HuaweiGlanceDial.tsx`): 3-ring open activity dial (calories red, workout yellow with runner bead, active hours blue with standing bead). Sweep angle is capped at ~248° starting at 222° to guarantee that the outer red arc never overlaps or covers the bottom-right stacked metric numbers even when goals are exceeded.
   - Icons are decorative (hidden from screen readers). Each ring is one `progressbar` with a spoken `accessibilityLabel`; "over target" is appended automatically.
   - Animations use `react-native-reanimated` with `.get()`/`.set()` (React Compiler is on) and must respect `useReducedMotion()`.
   - Verify changes on `Settings > Developer > Ring gallery` (`src/app/ring-gallery.tsx`).
+- **Web & React Native Style Standards**:
+  - **Shadows**: `"shadow*"` style props (`shadowColor`, `shadowOffset`, `shadowOpacity`, `shadowRadius`) are deprecated on web. ALWAYS wrap platform shadow styles with `Platform.select({ web: { boxShadow: '...' }, default: { shadowColor: ... } })` or consume `softShadow` from `src/theme/tokens.ts`.
+  - **pointerEvents**: The `pointerEvents` JSX prop on `<View>` is deprecated. ALWAYS specify it within the style object: `style={{ pointerEvents: 'none' }}`.
+  - **Image resizeMode**: `style.resizeMode` is deprecated on `<Image>`. ALWAYS pass `resizeMode` directly as a prop: `<Image resizeMode="cover" ... />`, never inside the `style` object.
 - **Pre-commit verification**:
   ```bash
   cd apps/mobile

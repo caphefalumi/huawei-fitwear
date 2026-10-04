@@ -12,9 +12,6 @@ export interface HuaweiGlanceDialProps {
   outerTarget?: number;
   middleTarget?: number;
   innerTarget?: number;
-  outerLabel?: string;
-  middleLabel?: string;
-  innerLabel?: string;
   onPress?: () => void;
 }
 
@@ -56,8 +53,8 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
   const rMiddle = rOuter - strokeWidth - 4;
   const rInner = rMiddle - strokeWidth - 4;
 
-  const startAngle = 215;
-  const totalSweep = 295;
+  const startAngle = 222;
+  const totalSweep = 248;
   const maxEndAngle = startAngle + totalSweep;
 
   const outerRatio = Math.min(Math.max(outerValue / Math.max(outerTarget, 1), 0.04), 1);
@@ -77,8 +74,11 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
     innerTrack: '#0C223A'
   };
 
-  const midBeadPos = polarToCartesian(center, center, rMiddle, startAngle + 4);
-  const innerBeadPos = polarToCartesian(center, center, rInner, startAngle + 4);
+  const midBeadPos = polarToCartesian(center, center, rMiddle, startAngle + 3);
+  const innerBeadPos = polarToCartesian(center, center, rInner, startAngle + 3);
+
+  const stackWidth = Math.round(size * 0.36);
+  const isOuterLarge = outerValue > 999;
 
   return (
     <Pressable
@@ -141,11 +141,11 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
         />
 
         <G x={midBeadPos.x} y={midBeadPos.y}>
-          <Circle cx={0} cy={0} r={strokeWidth * 0.46} fill={colors.middle} />
+          <Circle cx={0} cy={0} r={strokeWidth * 0.48} fill={colors.middle} />
         </G>
 
         <G x={innerBeadPos.x} y={innerBeadPos.y}>
-          <Circle cx={0} cy={0} r={strokeWidth * 0.46} fill={colors.inner} />
+          <Circle cx={0} cy={0} r={strokeWidth * 0.48} fill={colors.inner} />
         </G>
       </Svg>
 
@@ -153,13 +153,13 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
         style={[
           styles.beadIconOverlay,
           {
-            top: midBeadPos.y - strokeWidth * 0.46,
-            left: midBeadPos.x - strokeWidth * 0.46,
-            width: strokeWidth * 0.92,
-            height: strokeWidth * 0.92
+            top: midBeadPos.y - strokeWidth * 0.48,
+            left: midBeadPos.x - strokeWidth * 0.48,
+            width: strokeWidth * 0.96,
+            height: strokeWidth * 0.96,
+            pointerEvents: 'none'
           }
         ]}
-        pointerEvents="none"
       >
         <Ionicons name="walk" size={Math.max(12, strokeWidth * 0.58)} color="#000000" />
       </View>
@@ -168,13 +168,13 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
         style={[
           styles.beadIconOverlay,
           {
-            top: innerBeadPos.y - strokeWidth * 0.46,
-            left: innerBeadPos.x - strokeWidth * 0.46,
-            width: strokeWidth * 0.92,
-            height: strokeWidth * 0.92
+            top: innerBeadPos.y - strokeWidth * 0.48,
+            left: innerBeadPos.x - strokeWidth * 0.48,
+            width: strokeWidth * 0.96,
+            height: strokeWidth * 0.96,
+            pointerEvents: 'none'
           }
         ]}
-        pointerEvents="none"
       >
         <Ionicons name="body" size={Math.max(11, strokeWidth * 0.54)} color="#FFFFFF" />
       </View>
@@ -183,19 +183,30 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
         style={[
           styles.numbersStack,
           {
-            bottom: Math.round(size * 0.12),
-            right: Math.round(size * 0.22)
+            left: center + 2,
+            top: center - 12,
+            width: stackWidth,
+            pointerEvents: 'none'
           }
         ]}
-        pointerEvents="none"
       >
-        <Text style={[styles.statNum, { color: colors.inner, fontSize: Math.round(size * 0.13) }]}>
+        <Text style={[styles.statNum, { color: colors.inner, fontSize: Math.round(size * 0.11), lineHeight: Math.round(size * 0.125) }]}>
           {innerValue}
         </Text>
-        <Text style={[styles.statNum, { color: colors.middle, fontSize: Math.round(size * 0.13) }]}>
+        <Text style={[styles.statNum, { color: colors.middle, fontSize: Math.round(size * 0.11), lineHeight: Math.round(size * 0.125) }]}>
           {middleValue}
         </Text>
-        <Text style={[styles.statNum, { color: colors.outer, fontSize: Math.round(size * 0.13) }]}>
+        <Text
+          style={[
+            styles.statNum,
+            {
+              color: colors.outer,
+              fontSize: isOuterLarge ? Math.round(size * 0.095) : Math.round(size * 0.11),
+              lineHeight: isOuterLarge ? Math.round(size * 0.115) : Math.round(size * 0.125)
+            }
+          ]}
+          numberOfLines={1}
+        >
           {outerValue}
         </Text>
       </View>
@@ -223,7 +234,6 @@ const styles = StyleSheet.create({
   statNum: {
     fontWeight: '900',
     fontVariant: ['tabular-nums'],
-    lineHeight: 34,
     letterSpacing: -0.5,
     textAlign: 'center'
   }

@@ -226,6 +226,7 @@ export default function ExerciseDetailScreen() {
                     uri: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80'
                   }}
                   style={styles.videoPoster}
+                  resizeMode="cover"
                 />
                 <View style={styles.videoOverlayGradient} />
 
@@ -522,8 +523,7 @@ const styles = StyleSheet.create({
   },
   videoPoster: {
     width: '100%',
-    height: '100%',
-    resizeMode: 'cover'
+    height: '100%'
   },
   videoOverlayGradient: {
     position: 'absolute',

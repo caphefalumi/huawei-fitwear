@@ -622,7 +622,7 @@ export default function HomeScreen() {
               >
                 <View style={[styles.mealPhotoBox, { backgroundColor: theme.surfaceElevated }]}>
                   {meal.imageUrl ? (
-                    <Image source={{ uri: meal.imageUrl }} style={styles.mealImage} />
+                    <Image source={{ uri: meal.imageUrl }} style={styles.mealImage} resizeMode="cover" />
                   ) : (
                     <Ionicons name="restaurant-outline" size={32} color={theme.primary} />
                   )}
@@ -1097,8 +1097,7 @@ const styles = StyleSheet.create({
   },
   mealImage: {
     width: '100%',
-    height: '100%',
-    resizeMode: 'cover'
+    height: '100%'
   },
   mealTypeTag: {
     position: 'absolute',

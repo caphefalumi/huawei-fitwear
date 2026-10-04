@@ -85,7 +85,7 @@ export const MealNutritionModal: React.FC<MealNutritionModalProps> = ({
           {/* Meal Photo Viewport */}
           {meal.imageUrl ? (
             <View style={[styles.photoViewport, { borderRadius: radii.lg, backgroundColor: theme.surfaceElevated }]}>
-              <Image source={{ uri: meal.imageUrl }} style={styles.photoImage} />
+              <Image source={{ uri: meal.imageUrl }} style={styles.photoImage} resizeMode="cover" />
               <View style={styles.photoGradientOverlay} />
               <View style={[styles.photoTimeTag, { backgroundColor: theme.primary }]}>
                 <Ionicons name="time-outline" size={12} color={theme.onPrimary} />
@@ -384,8 +384,7 @@ const styles = StyleSheet.create({
   },
   photoImage: {
     width: '100%',
-    height: '100%',
-    resizeMode: 'cover'
+    height: '100%'
   },
   photoGradientOverlay: {
     position: 'absolute',

@@ -26,8 +26,16 @@ On concentric dials, each ring’s icon sits in a **fixed bead at that ring’s 
 
 These come from **Live Execution** (set completion + haptic rest), not from the nutrition extraction list.
 
+## Huawei Watch Activity Glance Dial (`HuaweiGlanceDial`)
+
+The smartwatch preview and Home live watch toggle support the 3-ring open activity dial (`HuaweiGlanceDial.tsx`):
+- **Outer Ring (Red / `#FF4D30`)**: Energy expenditure / calories burned. Arc starts at 222° and sweeps clockwise up to 248° maximum, stopping at ~110° to leave the bottom-right quadrant completely open.
+- **Middle Ring (Yellow / `#FFD200`)**: Active exercise minutes / workout sessions. Anchored with a running figure icon bead (`🏃`) at 222°.
+- **Inner Ring (Cyan Blue / `#00A3FF`)**: Stand / active hours. Anchored with a standing figure icon bead (`🧍`) at 222°.
+- **Stacked Color Readout**: Centered cleanly within the inner radius corridor at bottom-right (`[hours (cyan), workouts (yellow), calories (coral)]`), guaranteeing that the red arc never clips or overlaps high numbers (e.g. `1537`).
+
 ## Do not confuse
 
 - Center **flame + number** on the nutrition dial = calories remaining (hero metric), not a fifth telemetry channel.
 - Macro **bars** (`MacroBar`) show the same P/C/F targets as the rings; bars are not a different data model.
-- Apple-style Activity rings (Move / Exercise / Stand) are **not** this product’s model. Ours are nutrition macros + workout/rest.
+- Apple-style Activity rings (Move / Exercise / Stand) are available via the `HuaweiGlanceDial` companion glance mode alongside our core nutrition macro + workout/rest dials.

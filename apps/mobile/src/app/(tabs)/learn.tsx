@@ -175,6 +175,7 @@ export default function LearnScreen() {
                       : 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80'
                 }}
                 style={styles.featuredVideoImage}
+                resizeMode="cover"
               />
               <View style={styles.videoGradientOverlay} />
 
@@ -486,8 +487,7 @@ const styles = StyleSheet.create({
   },
   featuredVideoImage: {
     width: '100%',
-    height: '100%',
-    resizeMode: 'cover'
+    height: '100%'
   },
   videoGradientOverlay: {
     ...StyleSheet.absoluteFill,

@@ -1054,10 +1054,17 @@ const styles = StyleSheet.create({
     right: 0,
     top: '48%',
     height: 3,
-    shadowColor: '#4FD6C4',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 8
+    ...Platform.select({
+      web: {
+        boxShadow: '0 0 10px #4FD6C4'
+      },
+      default: {
+        shadowColor: '#4FD6C4',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.9,
+        shadowRadius: 8
+      }
+    })
   },
   scanDetectBadge: {
     position: 'absolute',
