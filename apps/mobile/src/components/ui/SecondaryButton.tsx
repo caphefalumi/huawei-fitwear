@@ -34,7 +34,7 @@ export const SecondaryButton: React.FC<SecondaryButtonProps> = ({
   const { theme, radii } = useAppTheme();
 
   const isLarge = size === 'large';
-  const minHeight = isLarge ? 54 : 48;
+  const minHeight = isLarge ? 64 : 52;
 
   return (
     <Pressable
@@ -45,24 +45,24 @@ export const SecondaryButton: React.FC<SecondaryButtonProps> = ({
       style={({ pressed }) => [
         styles.button,
         {
-          backgroundColor: theme.surfaceElevated,
+          backgroundColor: disabled ? theme.neutralFill : theme.primaryContainer,
           borderColor: theme.border,
-          borderRadius: radii.full,
+          borderRadius: radii.md,
           minHeight,
-          opacity: pressed ? 0.85 : 1
+          opacity: pressed ? 0.88 : 1
         },
         style
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={theme.text} />
+        <ActivityIndicator color={theme.primary} />
       ) : (
         <>
           {icon && (
             <Ionicons
               name={icon}
               size={isLarge ? 22 : 18}
-              color={disabled ? theme.textMuted : theme.text}
+              color={disabled ? theme.textMuted : theme.primary}
               style={styles.icon}
             />
           )}
@@ -70,7 +70,7 @@ export const SecondaryButton: React.FC<SecondaryButtonProps> = ({
             style={[
               styles.text,
               {
-                color: disabled ? theme.textMuted : theme.text,
+                color: disabled ? theme.textMuted : theme.primary,
                 fontSize: isLarge ? 17 : 15
               },
               textStyle

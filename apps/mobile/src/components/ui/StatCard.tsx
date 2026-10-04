@@ -26,7 +26,7 @@ export const StatCard: React.FC<StatCardProps> = ({
         {
           backgroundColor: theme.card,
           borderColor: theme.border,
-          borderRadius: radii.xl,
+          borderRadius: radii.lg,
           padding: spacing.lg,
           ...(theme.isDark
             ? null

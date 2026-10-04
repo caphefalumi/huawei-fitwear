@@ -35,7 +35,7 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
   const { theme, radii } = useAppTheme();
 
   const isLarge = size === 'large';
-  const minHeight = isLarge ? 54 : 48;
+  const minHeight = isLarge ? 64 : 52;
 
   return (
     <Pressable
@@ -48,9 +48,9 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
         {
           backgroundColor: disabled ? theme.neutralFill : theme.primary,
           ...(Platform.OS !== 'web' ? { shadowColor: theme.shadow } : null),
-          borderRadius: radii.full,
+          borderRadius: radii.md,
           minHeight,
-          opacity: pressed ? 0.85 : 1
+          opacity: pressed ? 0.88 : 1
         },
         style
       ]}

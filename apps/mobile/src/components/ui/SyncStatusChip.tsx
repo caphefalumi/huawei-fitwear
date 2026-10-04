@@ -19,38 +19,38 @@ export const SyncStatusChip: React.FC<SyncStatusChipProps> = ({
 
   const config = {
     connected: {
-      label: 'Watch Synced',
-      color: theme.connected,
+      label: 'Watch synced just now',
+      color: theme.onTrack,
       icon: 'watch' as const,
       dot: true
     },
     syncing: {
       label: 'Syncing...',
-      color: theme.syncing,
+      color: theme.info,
       icon: 'sync' as const,
       dot: true
     },
     offline: {
-      label: pendingCount > 0 ? `Offline (${pendingCount} pending)` : 'Watch Offline',
-      color: theme.offline,
-      icon: 'cloud-offline' as const,
-      dot: false
+      label: pendingCount > 0 ? `Waiting for watch (${pendingCount})` : 'Waiting for watch',
+      color: theme.warning,
+      icon: 'time-outline' as const,
+      dot: true
     },
     not_paired: {
-      label: 'Pair Watch',
-      color: theme.textSecondary,
-      icon: 'add-circle-outline' as const,
-      dot: false
+      label: 'Watch not connected. Tap to fix',
+      color: theme.error,
+      icon: 'alert-circle-outline' as const,
+      dot: true
     },
     error: {
-      label: 'Sync Error',
+      label: 'Watch not connected. Tap to fix',
       color: theme.error,
       icon: 'alert-circle' as const,
       dot: true
     }
   }[status] || {
-    label: 'Watch Synced',
-    color: theme.connected,
+    label: 'Watch synced',
+    color: theme.onTrack,
     icon: 'watch' as const,
     dot: true
   };
