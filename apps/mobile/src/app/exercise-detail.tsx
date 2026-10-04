@@ -19,7 +19,7 @@ import { PrimaryButton, SecondaryButton } from '../components/ui';
 import { ExerciseDoc } from '../types/types';
 
 export default function ExerciseDetailScreen() {
-  const { theme, radii, spacing } = useAppTheme();
+  const { theme, radii } = useAppTheme();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { exercises, plan, updatePlan } = useWorkoutStore();
 

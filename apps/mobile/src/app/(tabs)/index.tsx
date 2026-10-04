@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,6 @@ import { useDeviceStore } from '../../store/deviceStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import {
   ProgressRing,
-  StatusBadge,
   SyncStatusChip,
   SkeletonBlock,
   EmptyState,
@@ -28,7 +27,7 @@ import {
 } from '../../components/ui';
 
 export default function HomeScreen() {
-  const { theme, radii, spacing, typography } = useAppTheme();
+  const { theme, radii } = useAppTheme();
   const { user, loadUser } = useUserStore();
   const { todaySummary, meals, loadNutrition, loading: nutritionLoading } = useNutritionStore();
   const { plan, loadPlanAndHistory } = useWorkoutStore();
@@ -433,7 +432,7 @@ export default function HomeScreen() {
         {/* TODAY'S MEALS CAROUSEL */}
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionTitleGroup}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Today's Meals</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>{"Today's Meals"}</Text>
             <View style={[styles.countBadge, { backgroundColor: theme.surfaceElevated }]}>
               <Text style={[styles.countBadgeText, { color: theme.textSecondary }]}>
                 {meals.length} logged

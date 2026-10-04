@@ -19,11 +19,11 @@ import * as Haptics from 'expo-haptics';
 import { useAppTheme, softShadow } from '../theme';
 import { useNutritionStore } from '../store/nutritionStore';
 import { exerciseService } from '../services/exerciseService';
-import { Timestamp, MealItem, MealType, ConfidenceLevel, FoodDoc } from '../types/types';
-import { PrimaryButton, SecondaryButton, Stepper, ProgressRing } from '../components/ui';
+import { Timestamp, MealItem, MealType, FoodDoc } from '../types/types';
+import { PrimaryButton, SecondaryButton, ProgressRing } from '../components/ui';
 
 export default function SnapMealScreen() {
-  const { theme, radii, spacing } = useAppTheme();
+  const { theme, radii } = useAppTheme();
   const { addMeal, todaySummary } = useNutritionStore();
 
   // Phase: 1 = Camera, 2 = Analyzing, 3 = Review, 4 = Success

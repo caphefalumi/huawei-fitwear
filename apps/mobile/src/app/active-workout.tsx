@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   ScrollView,
   Pressable,
   Modal,
-  Alert,
   Platform
 } from 'react-native';
 import { router } from 'expo-router';
@@ -19,14 +18,11 @@ import { useWorkoutStore } from '../store/workoutStore';
 import { useSettingsStore } from '../store/settingsStore';
 import {
   PrimaryButton,
-  SecondaryButton,
-  Stepper,
-  ProgressRing,
-  RestTimerRing
+  SecondaryButton
 } from '../components/ui';
 
 export default function ActiveWorkoutScreen() {
-  const { theme, radii, spacing, typography } = useAppTheme();
+  const { theme, radii } = useAppTheme();
   const {
     activeSession,
     currentExerciseIndex,

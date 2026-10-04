@@ -18,10 +18,9 @@ import { useAppTheme, softShadow } from '../../theme';
 import { useWorkoutStore } from '../../store/workoutStore';
 import { useUserStore } from '../../store/userStore';
 import { useSettingsStore } from '../../store/settingsStore';
-import { GoalType, ExerciseDoc } from '../../types/types';
+import { GoalType } from '../../types/types';
 import {
   PrimaryButton,
-  SecondaryButton,
   Chip,
   SkeletonBlock,
   EmptyState,
@@ -29,7 +28,7 @@ import {
 } from '../../components/ui';
 
 export default function TrainScreen() {
-  const { theme, radii, spacing } = useAppTheme();
+  const { theme, radii } = useAppTheme();
   const {
     plan,
     exercises,
@@ -62,8 +61,6 @@ export default function TrainScreen() {
   // Library Filters
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedMuscle, setSelectedMuscle] = useState<string>('All');
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
-  const [selectedEquipment, setSelectedEquipment] = useState<string>('All');
 
   // Filter exercises
   const filteredExercises = useMemo(() => {
@@ -76,15 +73,9 @@ export default function TrainScreen() {
       const matchesMuscle =
         selectedMuscle === 'All' || ex.muscleGroup.toLowerCase() === selectedMuscle.toLowerCase();
 
-      const matchesDifficulty =
-        selectedDifficulty === 'All' || ex.difficulty.toLowerCase() === selectedDifficulty.toLowerCase();
-
-      const matchesEquipment =
-        selectedEquipment === 'All' || ex.equipment.toLowerCase() === selectedEquipment.toLowerCase();
-
-      return matchesSearch && matchesMuscle && matchesDifficulty && matchesEquipment;
+      return matchesSearch && matchesMuscle;
     });
-  }, [exercises, searchQuery, selectedMuscle, selectedDifficulty, selectedEquipment]);
+  }, [exercises, searchQuery, selectedMuscle]);
 
   // Handle Plan Generation
   const handleRunGenerator = async () => {

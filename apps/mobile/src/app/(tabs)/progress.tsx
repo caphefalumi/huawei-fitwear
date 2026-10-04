@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -22,7 +22,6 @@ import { profileService } from '../../services/profileService';
 import { BodyMeasurementDoc, Timestamp } from '../../types/types';
 import {
   PrimaryButton,
-  SecondaryButton,
   Stepper,
   SkeletonBlock,
   EmptyState,
@@ -30,7 +29,7 @@ import {
 } from '../../components/ui';
 
 export default function ProgressScreen() {
-  const { theme, radii, spacing } = useAppTheme();
+  const { theme, radii } = useAppTheme();
   const { history } = useWorkoutStore();
   const { todaySummary } = useNutritionStore();
   const previewState = useSettingsStore((state) => state.previewState);
