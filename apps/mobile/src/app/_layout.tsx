@@ -1,18 +1,69 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import React, { useEffect } from 'react';
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { useFonts } from 'expo-font';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAppTheme } from '../theme';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
-SplashScreen.preventAutoHideAsync();
+export default function RootLayout() {
+  const { isDark } = useAppTheme();
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const [fontsLoaded, fontError] = useFonts({
+    ...Ionicons.font,
+    ...MaterialCommunityIcons.font
+  });
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="onboarding"
+          options={{ headerShown: false, presentation: 'fullScreenModal' }}
+        />
+        <Stack.Screen
+          name="snap-meal"
+          options={{ headerShown: false, presentation: 'fullScreenModal' }}
+        />
+        <Stack.Screen
+          name="active-workout"
+          options={{ headerShown: false, presentation: 'fullScreenModal' }}
+        />
+        <Stack.Screen
+          name="devices"
+          options={{ headerShown: false, presentation: 'card' }}
+        />
+        <Stack.Screen
+          name="watch-preview"
+          options={{ headerShown: false, presentation: 'modal' }}
+        />
+        <Stack.Screen
+          name="exercise-detail"
+          options={{ headerShown: false, presentation: 'modal' }}
+        />
+        <Stack.Screen
+          name="session-summary"
+          options={{ headerShown: false, presentation: 'modal' }}
+        />
+        <Stack.Screen
+          name="ring-gallery"
+          options={{ headerShown: false, presentation: 'card' }}
+        />
+      </Stack>
+    </>
   );
 }

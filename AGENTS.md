@@ -2,6 +2,8 @@
 
 This repository contains two independent sibling applications for a dual-device fitness ecosystem. They do not share JS dependencies, node_modules, or build pipelines.
 
+**Read [`docs/`](./docs/README.md) before changing product behaviour, nutrition UI, or progress rings.** Start with [`docs/rings.md`](./docs/rings.md) (what each ring measures) and [`docs/product-scope.md`](./docs/product-scope.md) (in-scope modules and stack). Full capture of the course/project Office sources: [`docs/project-a-master.md`](./docs/project-a-master.md), [`docs/tech-stack-deck.md`](./docs/tech-stack-deck.md), provenance in [`docs/sources.md`](./docs/sources.md). Visual tokens live in [`DESIGN.md`](./DESIGN.md).
+
 ---
 
 ## Architecture Boundaries
@@ -41,12 +43,23 @@ bun lint                     # Lint mobile workspace
 - **Installing packages**: ALWAYS use `npx expo install <package>` or `bunx expo install <package>` instead of direct package manager add. This resolves Expo SDK-compatible versions.
 - **Routing**: Use **Expo Router**. Route screens live in `apps/mobile/src/app/`. Do not put helper functions or shared components inside `src/app/`.
 - **Navigation hooks**: Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
+- **Theme & colors**: All colors come from `src/theme/tokens.ts` via `useAppTheme()`. No hex/rgba literals in components or screens. The watch face mock is always dark, so it reads from the `watchFace` export instead. Light theme ("Kinetic Pure Light") is cool-grey canvas, white cards lifted with `softShadow`, blue/orange/rose macros, green for on-track. Use `onColor(bg)` for glyphs on a solid fill.
+- **Tab bar**: `src/app/(tabs)/_layout.tsx` is a floating pill (in flow, side margins, `bottom inset + 24` below). Keep it detached from the screen edges.
+- **Progress rings** (`src/components/ui/ProgressRing.tsx`, `RestTimerRing.tsx`, shared `RingIcon.tsx`):
+  - Icons are MaterialCommunityIcons, one per ring type, never reused: calories `fire`, protein `arm-flex`, carbs `grain`, fat `water`, workout `dumbbell` (swaps to `check` at 100%), rest `timer-outline`. Colors come from `theme.ringIcon.*` (icon color == ring stroke color, >= 3:1 on white).
+  - Layout by size: large (>=160) icon above number + label; medium (100-159) icon above number, no label; small (<100) icon alone, value shown under the ring.
+  - Everything in the center must fit inside the innermost stroke. Do not enlarge icons or text without re-checking this (the Home hero is the tight case). Text caps at 1.1x system font scale.
+  - Concentric rings (Home hero, watch face): pass `icon` on each `RingData`; it renders as a fixed bead at the ring's 12 o'clock start. It does not follow the progress arc.
+  - Icons are decorative (hidden from screen readers). Each ring is one `progressbar` with a spoken `accessibilityLabel`; "over target" is appended automatically.
+  - Animations use `react-native-reanimated` with `.get()`/`.set()` (React Compiler is on) and must respect `useReducedMotion()`.
+  - Verify changes on `Settings > Developer > Ring gallery` (`src/app/ring-gallery.tsx`).
 - **Pre-commit verification**:
   ```bash
   cd apps/mobile
   bunx tsc --noEmit           # Typecheck
   bun run lint                # Lint
   ```
+  Lint currently reports a few errors from older code (`snap-meal.tsx`, `SkeletonBlock.tsx`, `use-color-scheme.web.ts`); don't add new ones.
 
 ### Watch Development Rules (`apps/watch`)
 
