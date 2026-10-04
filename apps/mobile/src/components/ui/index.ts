@@ -14,3 +14,4 @@ export * from './MealCard';
 export * from './RestTimerRing';
 export * from './BrandLogo';
 export * from './MealNutritionModal';
+export * from './HuaweiGlanceDial';

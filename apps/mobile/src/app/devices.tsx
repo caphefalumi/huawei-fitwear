@@ -24,7 +24,7 @@ import {
   useSyncDeviceMutation,
   usePairWatchMutation,
   useTodaySummaryQuery
-} from '../hooks/useQueries';
+} from '@/hooks/use-queries';
 
 export default function DevicesScreen() {
   const { theme } = useAppTheme();

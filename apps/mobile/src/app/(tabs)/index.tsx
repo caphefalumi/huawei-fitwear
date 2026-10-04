@@ -25,7 +25,8 @@ import {
   EmptyState,
   ErrorState,
   BrandLogo,
-  MealNutritionModal
+  MealNutritionModal,
+  HuaweiGlanceDial
 } from '../../components/ui';
 import { MealDoc, Timestamp } from '../../types/types';
 import {
@@ -34,7 +35,7 @@ import {
   useMealsByDateQuery,
   usePlanQuery,
   useDevicesQuery
-} from '../../hooks/useQueries';
+} from '@/hooks/use-queries';
 
 export default function HomeScreen() {
   const { theme, radii } = useAppTheme();
@@ -50,6 +51,7 @@ export default function HomeScreen() {
   const { data: qPlan } = usePlanQuery();
   const { data: qDevices } = useDevicesQuery();
 
+  const [dashboardDialView, setDashboardDialView] = useState<'huaweiGlance' | 'nutritionRing'>('huaweiGlance');
   const [waterMl, setWaterMl] = useState(1800);
   const [selectedMeal, setSelectedMeal] = useState<MealDoc | null>(null);
 
@@ -200,52 +202,127 @@ export default function HomeScreen() {
           style={[
             styles.heroCard,
             {
-              backgroundColor: theme.isDark ? theme.surfaceElevated : theme.primary,
+              backgroundColor: theme.isDark ? '#000000' : '#12332E',
               borderColor: theme.border,
-              borderWidth: theme.isDark ? 1 : 0,
+              borderWidth: 1,
               borderRadius: radii.xl
             }
           ]}
         >
           <View style={styles.heroHeader}>
-            <Text style={styles.heroSubHeader}>DAILY FUELING</Text>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillText}>{remainingPct}% Remaining</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="watch-outline" size={16} color={theme.onPrimary} />
+              <Text style={styles.heroSubHeader}>
+                {dashboardDialView === 'huaweiGlance' ? 'WATCH ACTIVITY RINGS' : 'DAILY FUELING'}
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 4, backgroundColor: 'rgba(0, 0, 0, 0.35)', borderRadius: radii.full, padding: 3 }}>
+              <Pressable
+                onPress={() => setDashboardDialView('huaweiGlance')}
+                style={{
+                  paddingHorizontal: 8,
+                  paddingVertical: 3,
+                  borderRadius: radii.full,
+                  backgroundColor: dashboardDialView === 'huaweiGlance' ? '#FFFFFF' : 'transparent'
+                }}
+              >
+                <Text style={{ fontSize: 10, fontWeight: '700', color: dashboardDialView === 'huaweiGlance' ? '#000000' : '#FFFFFF' }}>
+                  Glance
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setDashboardDialView('nutritionRing')}
+                style={{
+                  paddingHorizontal: 8,
+                  paddingVertical: 3,
+                  borderRadius: radii.full,
+                  backgroundColor: dashboardDialView === 'nutritionRing' ? '#FFFFFF' : 'transparent'
+                }}
+              >
+                <Text style={{ fontSize: 10, fontWeight: '700', color: dashboardDialView === 'nutritionRing' ? '#000000' : '#FFFFFF' }}>
+                  Fueling
+                </Text>
+              </Pressable>
             </View>
           </View>
 
-          <View style={styles.gaugeContainer}>
-            <ProgressRing
-              size={172}
-              strokeWidth={14}
-              progress={calRatio}
-              color={theme.calories}
-              icon={{ name: 'fire', color: theme.ringIcon.calories }}
-              accessibilityLabel={`Calories: ${activeSummary.caloriesConsumed} of ${activeSummary.calorieTarget} kcal, ${caloriesLeft} kcal remaining`}
-            >
-              <View style={styles.gaugeCenter}>
-                <Text style={styles.gaugeOverline}>REMAINING</Text>
-                <Text style={styles.gaugeMainNumber}>{caloriesLeft.toLocaleString()}</Text>
-                <Text style={styles.gaugeUnit}>kcal left</Text>
+          {dashboardDialView === 'huaweiGlance' ? (
+            <View style={{ alignItems: 'center', marginVertical: 8 }}>
+              <HuaweiGlanceDial
+                size={230}
+                outerValue={activeSummary.caloriesConsumed || 106}
+                middleValue={activeSummary.workoutsCompleted || 1}
+                innerValue={9}
+              />
+
+              <View style={[styles.heroSplitPill, { marginTop: 12 }]}>
+                <View style={styles.splitPillItem}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#00A3FF' }} />
+                    <Text style={styles.splitPillLabel}>Stand</Text>
+                  </View>
+                  <Text style={styles.splitPillValue}>9 <Text style={styles.splitPillUnit}>hrs</Text></Text>
+                </View>
+                <View style={styles.splitPillDivider} />
+                <View style={styles.splitPillItem}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFD200' }} />
+                    <Text style={styles.splitPillLabel}>Exercise</Text>
+                  </View>
+                  <Text style={styles.splitPillValue}>
+                    {activeSummary.workoutsCompleted || 1} <Text style={styles.splitPillUnit}>session</Text>
+                  </Text>
+                </View>
+                <View style={styles.splitPillDivider} />
+                <View style={styles.splitPillItem}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF4D30' }} />
+                    <Text style={styles.splitPillLabel}>Burned</Text>
+                  </View>
+                  <Text style={styles.splitPillValue}>
+                    {activeSummary.caloriesConsumed || 106} <Text style={styles.splitPillUnit}>kcal</Text>
+                  </Text>
+                </View>
               </View>
-            </ProgressRing>
-          </View>
+            </View>
+          ) : (
+            <>
+              <View style={styles.gaugeContainer}>
+                <ProgressRing
+                  size={172}
+                  strokeWidth={14}
+                  progress={calRatio}
+                  color={theme.calories}
+                  secondaryLabel={`${remainingPct}% of target`}
+                  icon={{ name: 'fire', color: theme.ringIcon.calories }}
+                  accessibilityLabel={`Calories: ${activeSummary.caloriesConsumed} of ${activeSummary.calorieTarget} kcal, ${caloriesLeft} kcal remaining`}
+                >
+                  <View style={styles.gaugeCenter}>
+                    <Text style={styles.gaugeOverline}>REMAINING</Text>
+                    <Text style={styles.gaugeMainNumber}>{caloriesLeft.toLocaleString()}</Text>
+                    <Text style={styles.gaugeUnit}>kcal left</Text>
+                  </View>
+                </ProgressRing>
+              </View>
 
-          <View style={styles.heroSplitPill}>
-            <View style={styles.splitPillItem}>
-              <Text style={styles.splitPillLabel}>Consumed</Text>
-              <Text style={styles.splitPillValue}>
-                {activeSummary.caloriesConsumed} <Text style={styles.splitPillUnit}>kcal</Text>
-              </Text>
-            </View>
-            <View style={styles.splitPillDivider} />
-            <View style={styles.splitPillItem}>
-              <Text style={styles.splitPillLabel}>Daily Goal</Text>
-              <Text style={styles.splitPillValue}>
-                {activeSummary.calorieTarget} <Text style={styles.splitPillUnit}>kcal</Text>
-              </Text>
-            </View>
-          </View>
+              <View style={styles.heroSplitPill}>
+                <View style={styles.splitPillItem}>
+                  <Text style={styles.splitPillLabel}>Consumed</Text>
+                  <Text style={styles.splitPillValue}>
+                    {activeSummary.caloriesConsumed} <Text style={styles.splitPillUnit}>kcal</Text>
+                  </Text>
+                </View>
+                <View style={styles.splitPillDivider} />
+                <View style={styles.splitPillItem}>
+                  <Text style={styles.splitPillLabel}>Daily Goal</Text>
+                  <Text style={styles.splitPillValue}>
+                    {activeSummary.calorieTarget} <Text style={styles.splitPillUnit}>kcal</Text>
+                  </Text>
+                </View>
+              </View>
+            </>
+          )}
         </View>
 
         {/* MACRO NUTRIENTS BREAKDOWN CARD */}

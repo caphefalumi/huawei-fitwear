@@ -32,7 +32,7 @@ import {
   useMealsByDateQuery,
   useTodaySummaryQuery,
   useDeleteMealMutation
-} from '../../hooks/useQueries';
+} from '@/hooks/use-queries';
 
 export default function NutritionScreen() {
   const { theme, radii } = useAppTheme();

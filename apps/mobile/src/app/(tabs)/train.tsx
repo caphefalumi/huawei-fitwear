@@ -32,7 +32,7 @@ import {
   useGeneratePlanMutation,
   useUpdatePlanMutation,
   useExercisesQuery
-} from '../../hooks/useQueries';
+} from '@/hooks/use-queries';
 
 export default function TrainScreen() {
   const { theme, radii } = useAppTheme();

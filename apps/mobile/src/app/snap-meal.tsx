@@ -21,7 +21,7 @@ import { useNutritionStore } from '../store/nutritionStore';
 import { exerciseService } from '../services/exerciseService';
 import { Timestamp, MealItem, MealType, FoodDoc } from '../types/types';
 import { PrimaryButton, SecondaryButton, ProgressRing } from '../components/ui';
-import { useAddMealMutation } from '../hooks/useQueries';
+import { useAddMealMutation } from '@/hooks/use-queries';
 
 let globalItemCounter = 1000;
 function createMealItemId(): string {

@@ -33,7 +33,7 @@ import {
   useAddMeasurementMutation,
   useWorkoutHistoryQuery,
   useTodaySummaryQuery
-} from '../../hooks/useQueries';
+} from '@/hooks/use-queries';
 
 export default function ProgressScreen() {
   const { theme, radii } = useAppTheme();

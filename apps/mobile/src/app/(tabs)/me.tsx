@@ -28,7 +28,7 @@ import {
 import {
   useUserProfileQuery,
   useUpdateProfileMutation
-} from '../../hooks/useQueries';
+} from '@/hooks/use-queries';
 
 export default function MeScreen() {
   const { theme, radii } = useAppTheme();

@@ -12,18 +12,17 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme, watchFace } from '../theme';
 import { useNutritionStore } from '../store/nutritionStore';
-import { ProgressRing, StatusBadge } from '../components/ui';
+import { ProgressRing, StatusBadge, HuaweiGlanceDial } from '../components/ui';
 
 export default function WatchPreviewScreen() {
   const { theme } = useAppTheme();
   const { todaySummary } = useNutritionStore();
 
-  const [activeWatchPage, setActiveWatchPage] = useState<1 | 2>(1);
+  const [activeWatchPage, setActiveWatchPage] = useState<1 | 2 | 3>(1);
 
   const caloriesLeft = Math.max(todaySummary.calorieTarget - todaySummary.caloriesConsumed, 0);
   const proteinLeft = Math.max(todaySummary.proteinTarget - todaySummary.proteinConsumed, 0);
 
-  // Multi-arc watch progress data
   const calRatio = Math.min(todaySummary.caloriesConsumed / todaySummary.calorieTarget, 1);
   const pRatio = Math.min(todaySummary.proteinConsumed / todaySummary.proteinTarget, 1);
   const cRatio = Math.min(todaySummary.carbsConsumed / todaySummary.carbsTarget, 1);
@@ -38,7 +37,6 @@ export default function WatchPreviewScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Top Header */}
       <View style={styles.header}>
         <Pressable
           onPress={() => router.back()}
@@ -55,17 +53,33 @@ export default function WatchPreviewScreen() {
           Exact 466 × 466 AMOLED Glance Reference (HarmonyOS NEXT API 11+)
         </Text>
 
-        {/* Circular Hardware Frame */}
         <View style={styles.hardwareBezel}>
           <View style={styles.watchScreen}>
             {activeWatchPage === 1 ? (
-              /* ================= PAGE 1: NUTRITION DIAL ================= */
+              <View style={styles.watchPage}>
+                <Text style={styles.watchTime}>10:42</Text>
+
+                <View style={styles.ringCenter}>
+                  <HuaweiGlanceDial
+                    size={230}
+                    outerValue={todaySummary.caloriesConsumed || 106}
+                    middleValue={todaySummary.workoutsCompleted || 1}
+                    innerValue={9}
+                  />
+                </View>
+
+                <View style={styles.watchStatusRow}>
+                  <StatusBadge status={todaySummary.status} size="small" />
+                  <Text style={styles.watchProteinChip}>{Math.round(proteinLeft)}g P left</Text>
+                </View>
+              </View>
+            ) : activeWatchPage === 2 ? (
               <View style={styles.watchPage}>
                 <Text style={styles.watchTime}>10:42</Text>
 
                 <View style={styles.ringCenter}>
                   <ProgressRing
-                    size={240}
+                    size={230}
                     rings={watchRings}
                     primaryValue={caloriesLeft}
                     primaryLabel="KCAL LEFT"
@@ -82,7 +96,6 @@ export default function WatchPreviewScreen() {
                 </View>
               </View>
             ) : (
-              /* ================= PAGE 2: ACTIVE WORKOUT GLANCE ================= */
               <View style={styles.watchPage}>
                 <View style={styles.workoutTopRow}>
                   <Ionicons name="barbell" size={14} color={watchFace.workout} />
@@ -113,7 +126,6 @@ export default function WatchPreviewScreen() {
           </View>
         </View>
 
-        {/* Page Switcher */}
         <View style={[styles.pageToggle, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
           <Pressable
             onPress={() => setActiveWatchPage(1)}
@@ -128,7 +140,7 @@ export default function WatchPreviewScreen() {
                 { color: activeWatchPage === 1 ? theme.onPrimary : theme.textSecondary }
               ]}
             >
-              Page 1: Nutrition Dial
+              1: Activity Glance
             </Text>
           </Pressable>
 
@@ -145,12 +157,28 @@ export default function WatchPreviewScreen() {
                 { color: activeWatchPage === 2 ? theme.onPrimary : theme.textSecondary }
               ]}
             >
-              Page 2: Workout Glance
+              2: Nutrition Dial
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => setActiveWatchPage(3)}
+            style={[
+              styles.toggleBtn,
+              { backgroundColor: activeWatchPage === 3 ? theme.primary : 'transparent' }
+            ]}
+          >
+            <Text
+              style={[
+                styles.toggleText,
+                { color: activeWatchPage === 3 ? theme.onPrimary : theme.textSecondary }
+              ]}
+            >
+              3: Workout
             </Text>
           </Pressable>
         </View>
 
-        {/* Architecture Spec Info */}
         <View style={[styles.infoCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
           <Text style={[styles.infoTitle, { color: theme.text }]}>HarmonyOS Architecture</Text>
           <Text style={[styles.infoText, { color: theme.textSecondary }]}>
