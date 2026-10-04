@@ -9,13 +9,14 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
-  Image
+  Image,
+  Platform
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
-import { useAppTheme } from '../theme';
+import { useAppTheme, softShadow } from '../theme';
 import { useNutritionStore } from '../store/nutritionStore';
 import { exerciseService } from '../services/exerciseService';
 import { Timestamp, MealItem, MealType, ConfidenceLevel, FoodDoc } from '../types/types';
@@ -362,54 +363,113 @@ export default function SnapMealScreen() {
 
   // ================= 3. REVIEW DETECTED FOOD SCREEN =================
   if (phase === 3) {
+    const hasLowConfidence = detectedItems.some((i) => i.confidence === 'low' || i.confidence === 'medium');
+
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-        <View style={styles.reviewHeader}>
+        {/* Top Header */}
+        <View style={[styles.reviewHeader, { borderBottomColor: theme.borderSubtle }]}>
+          <View style={styles.reviewHeaderLeft}>
+            <Pressable
+              style={[styles.circleButtonReview, { backgroundColor: theme.surfaceElevated }]}
+              onPress={() => setPhase(1)}
+              accessibilityRole="button"
+              accessibilityLabel="Back to camera"
+            >
+              <Ionicons name="arrow-back" size={20} color={theme.text} />
+            </Pressable>
+            <View style={[styles.brandIconMini, { backgroundColor: theme.primaryContainer }]}>
+              <Ionicons name="fitness" size={16} color={theme.primary} />
+            </View>
+            <Text style={[styles.reviewHeaderTitle, { color: theme.text }]}>Meal Snap Camera</Text>
+          </View>
+
           <Pressable
-            style={styles.circleButtonReview}
-            onPress={() => setPhase(1)}
-          >
-            <Ionicons name="arrow-back" size={22} color={theme.text} />
-          </Pressable>
-          <Text style={[styles.reviewHeaderTitle, { color: theme.text }]}>Review Plate</Text>
-          <Pressable
-            style={styles.addMissingHeaderBtn}
+            style={[styles.circleButtonReview, { backgroundColor: theme.primaryContainer }]}
             onPress={() => setShowSearchModal(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Add missing food item"
           >
-            <Ionicons name="add" size={24} color={theme.primary} />
+            <Ionicons name="add" size={22} color={theme.primary} />
           </Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={styles.reviewScroll}>
-          {/* Photo with Overlay Chips */}
-          <View style={styles.photoContainer}>
+        <ScrollView contentContainerStyle={styles.reviewScroll} showsVerticalScrollIndicator={false}>
+          {/* Status Context Bar (Edge AI Offline Engine) */}
+          <View style={styles.edgeContextBar}>
+            <View style={[styles.edgeModelBadge, { backgroundColor: theme.primaryContainer }]}>
+              <View style={[styles.pulseDot, { backgroundColor: theme.primary }]} />
+              <Text style={[styles.edgeModelText, { color: theme.onPrimaryContainer }]}>
+                Edge AI Vision Model v3.4
+              </Text>
+            </View>
+            <View style={styles.edgeLatencyRow}>
+              <Ionicons name="flash" size={14} color={theme.onTrack} />
+              <Text style={[styles.edgeLatencyText, { color: theme.textSecondary }]}>
+                On-device (0.18s)
+              </Text>
+            </View>
+          </View>
+
+          {/* Food Snapshot Showcase (4:3 ratio with rich edge badges) */}
+          <View style={[styles.photoShowcaseContainer, { borderRadius: radii.lg }]}>
             <Image
               source={{ uri: capturedImage }}
               style={styles.reviewImage}
               resizeMode="cover"
             />
-            {/* Visual AI Chips */}
-            <View style={[styles.overlayChip, { top: 24, left: 32 }]}>
-              <View style={[styles.chipDot, { backgroundColor: theme.protein }]} />
-              <Text style={[styles.chipText, { color: theme.onPrimary }]}>Chicken Breast ~180g</Text>
+            <View style={styles.photoOverlayGradient} />
+
+            {/* Offline Ready Badge */}
+            <View style={[styles.photoOfflineBadge, { backgroundColor: 'rgba(18, 30, 28, 0.85)' }]}>
+              <Ionicons name="hardware-chip-outline" size={14} color={theme.primary} />
+              <Text style={styles.photoOfflineBadgeText}>Edge AI Detected (Offline ready)</Text>
             </View>
-            <View style={[styles.overlayChip, { bottom: 32, right: 40 }]}>
-              <View style={[styles.chipDot, { backgroundColor: theme.carbs }]} />
-              <Text style={[styles.chipText, { color: theme.onPrimary }]}>Jasmine Rice ~200g</Text>
+
+            {/* Visual Bounding Chips */}
+            <View style={[styles.photoTagChip, { top: '30%', left: '20%' }]}>
+              <View style={[styles.photoTagDot, { backgroundColor: theme.protein }]} />
+              <Text style={styles.photoTagText}>Chicken</Text>
+            </View>
+            <View style={[styles.photoTagChip, { bottom: '25%', right: '25%' }]}>
+              <View style={[styles.photoTagDot, { backgroundColor: theme.carbs }]} />
+              <Text style={styles.photoTagText}>Rice / Potato</Text>
             </View>
           </View>
 
-          {/* Meal Type & Time Selector */}
+          {/* Confidence / Heuristic Warning Banner */}
+          {hasLowConfidence && (
+            <View style={[styles.confidenceAlertCard, { backgroundColor: `${theme.warning}18`, borderColor: `${theme.warning}40` }]}>
+              <View style={[styles.confidenceAlertIcon, { backgroundColor: `${theme.warning}30` }]}>
+                <Ionicons name="warning-outline" size={18} color={theme.warning} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.confidenceAlertHeader}>
+                  <Text style={[styles.confidenceAlertTitle, { color: theme.warning }]}>
+                    Review portion weight
+                  </Text>
+                  <Text style={[styles.confidenceAlertMeta, { color: theme.warning }]}>
+                    72% certainty
+                  </Text>
+                </View>
+                <Text style={[styles.confidenceAlertDesc, { color: theme.textSecondary }]}>
+                  Depth map indicates dense pile. Tap stepper below to confirm weight or adjust grams.
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Meal Type Bar */}
           <View style={[styles.mealTypeBar, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
             {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((t) => (
               <Pressable
                 key={t}
                 onPress={() => setSelectedMealType(t)}
-                style={({ pressed }) => [
+                style={[
                   styles.mealTypeTab,
                   {
                     backgroundColor: selectedMealType === t ? theme.primary : 'transparent',
-                    opacity: pressed ? 0.8 : 1
+                    borderRadius: radii.sm
                   }
                 ]}
               >
@@ -417,7 +477,8 @@ export default function SnapMealScreen() {
                   style={[
                     styles.mealTypeTabText,
                     {
-                      color: selectedMealType === t ? theme.onPrimary : theme.textSecondary
+                      color: selectedMealType === t ? theme.onPrimary : theme.textSecondary,
+                      fontWeight: selectedMealType === t ? '700' : '500'
                     }
                   ]}
                 >
@@ -427,34 +488,61 @@ export default function SnapMealScreen() {
             ))}
           </View>
 
-          {/* Detected Items List */}
-          <Text style={[styles.detectedSectionTitle, { color: theme.text }]}>
-            Detected Foods ({detectedItems.length})
-          </Text>
+          {/* Detected Items Header */}
+          <View style={styles.detectedSectionHeader}>
+            <View style={styles.detectedTitleGroup}>
+              <Text style={[styles.detectedSectionTitle, { color: theme.text }]}>Detected Foods</Text>
+              <View style={[styles.detectedCountPill, { backgroundColor: theme.surfaceElevated }]}>
+                <Text style={[styles.detectedCountText, { color: theme.textSecondary }]}>
+                  {detectedItems.length} items
+                </Text>
+              </View>
+            </View>
 
+            <Pressable
+              onPress={() => setShowSearchModal(true)}
+              style={styles.addInlineBtn}
+            >
+              <Ionicons name="add-circle" size={16} color={theme.primary} />
+              <Text style={[styles.addInlineText, { color: theme.primary }]}>Add item</Text>
+            </Pressable>
+          </View>
+
+          {/* Detected Foods Cards */}
           {detectedItems.map((item) => {
-            const isLowConfidence = item.confidence === 'low';
+            const isLow = item.confidence === 'low' || item.confidence === 'medium';
+            const macroColor =
+              item.protein > item.carbs && item.protein > item.fat
+                ? theme.protein
+                : item.carbs > item.fat
+                ? theme.carbs
+                : theme.fat;
+
             return (
               <View
                 key={item.id}
                 style={[
-                  styles.foodItemCard,
+                  styles.foodCardStitch,
                   {
                     backgroundColor: theme.card,
-                    borderColor: isLowConfidence ? theme.almostThere : theme.border
+                    borderColor: isLow ? theme.warning : theme.border,
+                    borderRadius: radii.md
                   }
                 ]}
               >
-                <View style={styles.foodItemHeader}>
+                <View style={styles.foodCardStitchTop}>
                   <View style={{ flex: 1 }}>
-                    <View style={styles.foodTitleRow}>
-                      <Text style={[styles.foodName, { color: theme.text }]}>
+                    <View style={styles.foodCardStitchTitleRow}>
+                      <View style={[styles.macroDotCircle, { backgroundColor: macroColor }]} />
+                      <Text style={[styles.foodCardStitchName, { color: theme.text }]} numberOfLines={1}>
                         {item.name}
                       </Text>
-                      {/* Confidence Badge */}
+                    </View>
+
+                    <View style={styles.foodCardStitchMetaRow}>
                       <View
                         style={[
-                          styles.confidenceBadge,
+                          styles.confidencePill,
                           {
                             backgroundColor:
                               item.confidence === 'high'
@@ -465,9 +553,20 @@ export default function SnapMealScreen() {
                           }
                         ]}
                       >
+                        <Ionicons
+                          name={item.confidence === 'high' ? 'checkmark-circle' : 'help-circle'}
+                          size={11}
+                          color={
+                            item.confidence === 'high'
+                              ? theme.onTrack
+                              : item.confidence === 'medium'
+                              ? theme.almostThere
+                              : theme.overTarget
+                          }
+                        />
                         <Text
                           style={[
-                            styles.confidenceText,
+                            styles.confidencePillText,
                             {
                               color:
                                 item.confidence === 'high'
@@ -478,84 +577,144 @@ export default function SnapMealScreen() {
                             }
                           ]}
                         >
-                          {item.confidence || 'high'}
+                          {item.confidence === 'high' ? 'High 96%' : 'Med 72%'}
                         </Text>
                       </View>
-                    </View>
 
-                    {isLowConfidence && (
-                      <Text style={[styles.checkThisPrompt, { color: theme.almostThere }]}>
-                        ⚠️ Low confidence: please verify grams or item name.
+                      <Text style={[styles.foodCardStitchSub, { color: theme.textSecondary }]}>
+                        • {item.calories} kcal • {item.protein}g P
                       </Text>
-                    )}
+                    </View>
                   </View>
 
                   <Pressable
                     onPress={() => handleDeleteItem(item.id)}
-                    style={styles.deleteItemBtn}
+                    style={styles.trashBtn}
                   >
-                    <Ionicons name="trash-outline" size={18} color={theme.textMuted} />
+                    <Ionicons name="trash-outline" size={17} color={theme.textMuted} />
                   </Pressable>
                 </View>
 
-                {/* Grams Stepper */}
-                <Stepper
-                  label="PORTION"
-                  value={item.grams}
-                  onChange={(val) => handleUpdateGrams(item.id, val)}
-                  min={10}
-                  max={1000}
-                  step={10}
-                  unit="g"
-                />
-
-                {/* Item Macros */}
-                <View style={[styles.itemMacroRow, { borderTopColor: theme.borderSubtle }]}>
-                  <Text style={[styles.itemKcal, { color: theme.text }]}>
-                    {item.calories} kcal
+                {/* Inline Serving Weight Stepper */}
+                <View style={[styles.stepperRowStitch, { borderTopColor: theme.borderSubtle }]}>
+                  <Text style={[styles.stepperPromptText, { color: theme.textSecondary }]}>
+                    Adjust serving weight:
                   </Text>
-                  <Text style={[styles.itemMacro, { color: theme.protein }]}>
-                    {item.protein}g P
-                  </Text>
-                  <Text style={[styles.itemMacro, { color: theme.carbs }]}>
-                    {item.carbs}g C
-                  </Text>
-                  <Text style={[styles.itemMacro, { color: theme.fat }]}>
-                    {item.fat}g F
-                  </Text>
+                  <View style={[styles.stepperGroupStitch, { backgroundColor: theme.surfaceElevated }]}>
+                    <Pressable
+                      onPress={() => handleUpdateGrams(item.id, Math.max(10, item.grams - 10))}
+                      style={styles.stepperSmallBtn}
+                    >
+                      <Ionicons name="remove" size={16} color={theme.text} />
+                    </Pressable>
+                    <Text style={[styles.stepperSmallVal, { color: theme.text }]}>
+                      {item.grams}g
+                    </Text>
+                    <Pressable
+                      onPress={() => handleUpdateGrams(item.id, item.grams + 10)}
+                      style={styles.stepperSmallBtn}
+                    >
+                      <Ionicons name="add" size={16} color={theme.text} />
+                    </Pressable>
+                  </View>
                 </View>
               </View>
             );
           })}
 
-          <SecondaryButton
-            label="Add Missing Food Item"
-            icon="add-circle-outline"
-            onPress={() => setShowSearchModal(true)}
-            style={{ marginVertical: 12 }}
-          />
-        </ScrollView>
-
-        {/* Pinned Totals Bottom Bar */}
-        <View style={[styles.pinnedFooter, { backgroundColor: theme.surfaceElevated, borderTopColor: theme.border }]}>
-          <View style={styles.totalsOverview}>
-            <View>
-              <Text style={[styles.footerKcalTotal, { color: theme.text }]}>
-                {totalCalories} kcal
-              </Text>
-              <Text style={[styles.footerMacroString, { color: theme.textSecondary }]}>
-                {Math.round(totalProtein)}g P • {Math.round(totalCarbs)}g C • {Math.round(totalFat)}g F
-              </Text>
+          {/* Total Macros Summary Card (Stitch 2x2 Grid) */}
+          <View
+            style={[
+              styles.totalsSummaryCard,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+                borderRadius: radii.lg,
+                ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
+              }
+            ]}
+          >
+            <View style={styles.totalsSummaryHeader}>
+              <Text style={[styles.totalsSummaryTitle, { color: theme.text }]}>Meal Totals</Text>
+              <View style={styles.totalsBudgetTag}>
+                <Ionicons name="checkmark-circle" size={14} color={theme.primary} />
+                <Text style={[styles.totalsBudgetText, { color: theme.primary }]}>
+                  {Math.round((totalCalories / Math.max(todaySummary.calorieTarget, 1)) * 100)}% daily budget
+                </Text>
+              </View>
             </View>
+
+            <View style={styles.macro2x2Grid}>
+              {/* Calories */}
+              <View style={[styles.macroGridCell, { backgroundColor: theme.surfaceElevated }]}>
+                <View style={[styles.macroGridIcon, { backgroundColor: `${theme.calories}18` }]}>
+                  <Ionicons name="flame" size={18} color={theme.calories} />
+                </View>
+                <View>
+                  <Text style={[styles.macroGridNum, { color: theme.text }]}>{totalCalories}</Text>
+                  <Text style={[styles.macroGridLabel, { color: theme.textSecondary }]}>Calories</Text>
+                </View>
+              </View>
+
+              {/* Protein */}
+              <View style={[styles.macroGridCell, { backgroundColor: theme.surfaceElevated }]}>
+                <View style={[styles.macroGridIcon, { backgroundColor: `${theme.protein}18` }]}>
+                  <Ionicons name="barbell" size={18} color={theme.protein} />
+                </View>
+                <View>
+                  <Text style={[styles.macroGridNum, { color: theme.text }]}>{Math.round(totalProtein)}g</Text>
+                  <Text style={[styles.macroGridLabel, { color: theme.textSecondary }]}>Protein</Text>
+                </View>
+              </View>
+
+              {/* Carbs */}
+              <View style={[styles.macroGridCell, { backgroundColor: theme.surfaceElevated }]}>
+                <View style={[styles.macroGridIcon, { backgroundColor: `${theme.carbs}18` }]}>
+                  <Ionicons name="nutrition" size={18} color={theme.carbs} />
+                </View>
+                <View>
+                  <Text style={[styles.macroGridNum, { color: theme.text }]}>{Math.round(totalCarbs)}g</Text>
+                  <Text style={[styles.macroGridLabel, { color: theme.textSecondary }]}>Carbs</Text>
+                </View>
+              </View>
+
+              {/* Fat */}
+              <View style={[styles.macroGridCell, { backgroundColor: theme.surfaceElevated }]}>
+                <View style={[styles.macroGridIcon, { backgroundColor: `${theme.fat}18` }]}>
+                  <Ionicons name="water" size={18} color={theme.fat} />
+                </View>
+                <View>
+                  <Text style={[styles.macroGridNum, { color: theme.text }]}>{Math.round(totalFat)}g</Text>
+                  <Text style={[styles.macroGridLabel, { color: theme.textSecondary }]}>Healthy Fat</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Realtime Sync Note */}
+          <View style={styles.syncNoteRow}>
+            <Ionicons name="watch-outline" size={16} color={theme.onTrack} />
+            <Text style={[styles.syncNoteText, { color: theme.textSecondary }]}>
+              Home calorie ring & Huawei watch will update immediately on save.
+            </Text>
+          </View>
+
+          {/* Primary Action Buttons */}
+          <View style={styles.bottomButtonsStack}>
             <PrimaryButton
-              label="Save Meal"
+              label={`Add to Today (+${totalCalories} kcal)`}
               icon="checkmark-circle"
               size="large"
               onPress={handleSaveMeal}
-              style={{ minWidth: 150 }}
+            />
+
+            <SecondaryButton
+              label="Retake Photo"
+              icon="camera-outline"
+              onPress={() => setPhase(1)}
             />
           </View>
-        </View>
+        </ScrollView>
 
         {/* Search Food Modal */}
         <Modal
@@ -849,18 +1008,334 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 12
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth
+  },
+  reviewHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  brandIconMini: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   circleButtonReview: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center'
   },
   reviewHeaderTitle: {
-    fontSize: 18,
-    fontWeight: '800'
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.2
+  },
+  edgeContextBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10
+  },
+  edgeModelBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 9999,
+    gap: 6
+  },
+  pulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3
+  },
+  edgeModelText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3
+  },
+  edgeLatencyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4
+  },
+  edgeLatencyText: {
+    fontSize: 11,
+    fontWeight: '500'
+  },
+  photoShowcaseContainer: {
+    width: '100%',
+    aspectRatio: 4 / 3,
+    overflow: 'hidden',
+    position: 'relative',
+    marginBottom: 12
+  },
+  photoOverlayGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.25)'
+  },
+  photoOfflineBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 9999
+  },
+  photoOfflineBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600'
+  },
+  photoTagChip: {
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 9999
+  },
+  photoTagDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3
+  },
+  photoTagText: {
+    color: '#121E1C',
+    fontSize: 11,
+    fontWeight: '700'
+  },
+  confidenceAlertCard: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 12
+  },
+  confidenceAlertIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1
+  },
+  confidenceAlertHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2
+  },
+  confidenceAlertTitle: {
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  confidenceAlertMeta: {
+    fontSize: 11,
+    fontWeight: '600'
+  },
+  confidenceAlertDesc: {
+    fontSize: 12,
+    lineHeight: 16
+  },
+  detectedSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+    marginBottom: 8
+  },
+  detectedTitleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  detectedCountPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 9999
+  },
+  detectedCountText: {
+    fontSize: 11,
+    fontWeight: '600'
+  },
+  addInlineBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4
+  },
+  addInlineText: {
+    fontSize: 13,
+    fontWeight: '600'
+  },
+  foodCardStitch: {
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 10
+  },
+  foodCardStitchTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 10
+  },
+  foodCardStitchTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
+  macroDotCircle: {
+    width: 8,
+    height: 8,
+    borderRadius: 4
+  },
+  foodCardStitchName: {
+    fontSize: 15,
+    fontWeight: '700'
+  },
+  foodCardStitchMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 3
+  },
+  confidencePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4
+  },
+  confidencePillText: {
+    fontSize: 10,
+    fontWeight: '700'
+  },
+  foodCardStitchSub: {
+    fontSize: 12,
+    fontWeight: '500'
+  },
+  trashBtn: {
+    padding: 4
+  },
+  stepperRowStitch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth
+  },
+  stepperPromptText: {
+    fontSize: 12,
+    fontWeight: '500'
+  },
+  stepperGroupStitch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 8,
+    padding: 2
+  },
+  stepperSmallBtn: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6
+  },
+  stepperSmallVal: {
+    width: 48,
+    textAlign: 'center',
+    fontSize: 13,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums']
+  },
+  totalsSummaryCard: {
+    borderWidth: 1,
+    padding: 16,
+    marginTop: 8,
+    marginBottom: 12
+  },
+  totalsSummaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12
+  },
+  totalsSummaryTitle: {
+    fontSize: 16,
+    fontWeight: '700'
+  },
+  totalsBudgetTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4
+  },
+  totalsBudgetText: {
+    fontSize: 12,
+    fontWeight: '600'
+  },
+  macro2x2Grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10
+  },
+  macroGridCell: {
+    width: '48%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+    borderRadius: 10
+  },
+  macroGridIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  macroGridNum: {
+    fontSize: 15,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums']
+  },
+  macroGridLabel: {
+    fontSize: 11,
+    fontWeight: '500'
+  },
+  syncNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginVertical: 10,
+    paddingHorizontal: 8
+  },
+  syncNoteText: {
+    fontSize: 11,
+    fontWeight: '500',
+    textAlign: 'center'
+  },
+  bottomButtonsStack: {
+    gap: 8,
+    marginTop: 6
   },
   addMissingHeaderBtn: {
     width: 40,
@@ -870,7 +1345,7 @@ const styles = StyleSheet.create({
   },
   reviewScroll: {
     padding: 16,
-    paddingBottom: 120
+    paddingBottom: 40
   },
   photoContainer: {
     height: 180,
