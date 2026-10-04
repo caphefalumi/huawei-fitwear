@@ -25,7 +25,8 @@ import {
   Stepper,
   SkeletonBlock,
   EmptyState,
-  ErrorState
+  ErrorState,
+  BrandLogo
 } from '../../components/ui';
 
 export default function ProgressScreen() {
@@ -114,9 +115,7 @@ export default function ProgressScreen() {
       {/* Top Header Bar */}
       <View style={[styles.topBar, { borderBottomColor: theme.borderSubtle }]}>
         <View style={styles.topBarBrand}>
-          <View style={[styles.brandLogoCircle, { backgroundColor: theme.primaryContainer }]}>
-            <Ionicons name="fitness" size={20} color={theme.primary} />
-          </View>
+          <BrandLogo size={32} />
           <View>
             <Text style={[styles.brandTitle, { color: theme.primary }]}>AI FitWear</Text>
             <View style={styles.watchSyncMiniRow}>

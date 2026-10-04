@@ -12,3 +12,4 @@ export * from './ErrorState';
 export * from './SyncStatusChip';
 export * from './MealCard';
 export * from './RestTimerRing';
+export * from './BrandLogo';

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
-import { View, Platform } from 'react-native';
+import { Tabs, router } from 'expo-router';
+import { View, Pressable, Platform, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../theme';
@@ -16,14 +16,14 @@ export default function TabsLayout() {
           headerShown: false,
           tabBarStyle: {
             position: 'absolute',
-            bottom: Math.max(bottom, 8) + 8,
-            left: 18,
-            right: 18,
+            bottom: Math.max(bottom, 6) + 4,
+            left: 16,
+            right: 16,
             height: 60,
             borderRadius: radii.full,
             borderWidth: 1,
             borderColor: theme.border,
-            backgroundColor: theme.isDark ? '#161618F0' : '#FFFFFFF2',
+            backgroundColor: theme.isDark ? '#161C1BF0' : '#FFFFFFF2',
             paddingBottom: 6,
             paddingTop: 6,
             paddingHorizontal: 8,
@@ -31,7 +31,7 @@ export default function TabsLayout() {
               web: {
                 boxShadow: theme.isDark
                   ? '0 12px 32px rgba(0, 0, 0, 0.65)'
-                  : '0 12px 32px rgba(15, 23, 42, 0.12)'
+                  : '0 8px 24px rgba(0, 94, 83, 0.10)'
               },
               default: {
                 shadowColor: theme.shadow,
@@ -46,60 +46,125 @@ export default function TabsLayout() {
             paddingVertical: 2
           },
           tabBarActiveTintColor: theme.primary,
-          tabBarInactiveTintColor: theme.textMuted,
+          tabBarInactiveTintColor: theme.textSecondary,
           tabBarLabelStyle: {
-            fontSize: 10,
-            fontWeight: '600',
-            letterSpacing: 0.3
+            fontSize: 11,
+            fontWeight: '600'
           }
         }}
       >
+        {/* 1. Home Dashboard */}
         <Tabs.Screen
           name="index"
           options={{
-            title: 'Today',
+            title: 'Home',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? 'sparkles' : 'sparkles-outline'} size={21} color={color} />
+              <Ionicons name={focused ? 'flame' : 'flame-outline'} size={22} color={color} />
             )
           }}
         />
-        <Tabs.Screen
-          name="nutrition"
-          options={{
-            title: 'Nutrition',
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? 'restaurant' : 'restaurant-outline'} size={21} color={color} />
-            )
-          }}
-        />
+
+        {/* 2. Workout Plan */}
         <Tabs.Screen
           name="train"
           options={{
-            title: 'Train',
+            title: 'Plan',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? 'barbell' : 'barbell-outline'} size={21} color={color} />
+              <Ionicons name={focused ? 'barbell' : 'barbell-outline'} size={22} color={color} />
             )
           }}
         />
+
+        {/* 3. Center Camera Action Button */}
+        <Tabs.Screen
+          name="camera"
+          options={{
+            title: '',
+            tabBarButton: () => (
+              <View style={styles.centerButtonWrapper}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Meal Snap Camera"
+                  onPress={() => router.push('/snap-meal')}
+                  style={({ pressed }) => [
+                    styles.centerCircleBtn,
+                    {
+                      backgroundColor: theme.primary,
+                      transform: [{ scale: pressed ? 0.94 : 1 }],
+                      ...Platform.select({
+                        web: {
+                          boxShadow: '0 4px 16px rgba(0, 94, 83, 0.35)'
+                        },
+                        default: {
+                          shadowColor: theme.primary,
+                          shadowOffset: { width: 0, height: 4 },
+                          shadowOpacity: 0.35,
+                          shadowRadius: 10,
+                          elevation: 6
+                        }
+                      })
+                    }
+                  ]}
+                >
+                  <Ionicons name="camera" size={26} color={theme.onPrimary} />
+                </Pressable>
+              </View>
+            )
+          }}
+        />
+
+        {/* 4. Action Guidance Library (Learn) */}
+        <Tabs.Screen
+          name="learn"
+          options={{
+            title: 'Learn',
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons name={focused ? 'book' : 'book-outline'} size={21} color={color} />
+            )
+          }}
+        />
+
+        {/* 5. Progress & Analytics */}
         <Tabs.Screen
           name="progress"
           options={{
             title: 'Progress',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? 'trending-up' : 'trending-up-outline'} size={21} color={color} />
+              <Ionicons name={focused ? 'bar-chart' : 'bar-chart-outline'} size={21} color={color} />
             )
+          }}
+        />
+
+        {/* Hidden from tab bar */}
+        <Tabs.Screen
+          name="nutrition"
+          options={{
+            href: null
           }}
         />
         <Tabs.Screen
           name="me"
           options={{
-            title: 'Me',
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? 'person' : 'person-outline'} size={21} color={color} />
-            )
+            href: null
           }}
         />
       </Tabs>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  centerButtonWrapper: {
+    top: -16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 60
+  },
+  centerCircleBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center'
+  }
+});
