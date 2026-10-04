@@ -1,10 +1,8 @@
 {
   "name": "fitwear",
   "private": true,
-  "workspaces": [
-    "apps/*"
-  ],
   "scripts": {
+    "postinstall": "bun install --cwd apps/mobile",
     "start": "bun --cwd apps/mobile start",
     "android": "bun --cwd apps/mobile android",
     "ios": "bun --cwd apps/mobile ios",
