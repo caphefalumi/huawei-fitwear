@@ -22,7 +22,6 @@ import { GoalType, ExerciseDoc } from '../../types/types';
 import {
   PrimaryButton,
   SecondaryButton,
-  ProgressRing,
   Chip,
   SkeletonBlock,
   EmptyState,
@@ -30,7 +29,7 @@ import {
 } from '../../components/ui';
 
 export default function TrainScreen() {
-  const { theme, radii } = useAppTheme();
+  const { theme, radii, spacing } = useAppTheme();
   const {
     plan,
     exercises,
@@ -53,18 +52,18 @@ export default function TrainScreen() {
 
   // Plan Generator Modal
   const [showGeneratorModal, setShowGeneratorModal] = useState<boolean>(false);
-  const [generatorGoal, setGeneratorGoal] = useState<GoalType>(user.goal || 'build_muscle');
+  const [generatorGoal, setGeneratorGoal] = useState<GoalType>(user?.goal || 'build_muscle');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+
+  // Watch sync state
+  const [watchSynced, setWatchSynced] = useState<boolean>(false);
+  const [syncingWatch, setSyncingWatch] = useState<boolean>(false);
 
   // Library Filters
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedMuscle, setSelectedMuscle] = useState<string>('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
   const [selectedEquipment, setSelectedEquipment] = useState<string>('All');
-
-  // Swap exercise modal
-  const [swappingDayIndex, setSwappingDayIndex] = useState<number | null>(null);
-  const [swappingExerciseIndex, setSwappingExerciseIndex] = useState<number | null>(null);
 
   // Filter exercises
   const filteredExercises = useMemo(() => {
@@ -116,49 +115,16 @@ export default function TrainScreen() {
     router.push('/active-workout');
   };
 
-  // Remove exercise from plan day
-  const handleRemoveExercise = (dayIdx: number, exIdx: number) => {
-    if (!plan) return;
-
-    Alert.alert('Remove Exercise', 'Remove this movement from your routine?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () => {
-          const updatedDays = [...plan.days];
-          updatedDays[dayIdx].exercises.splice(exIdx, 1);
-          updatePlan({ days: updatedDays });
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-        }
-      }
-    ]);
-  };
-
-  // Swap exercise action
-  const handleSelectSwapExercise = (chosenEx: ExerciseDoc) => {
-    if (swappingDayIndex === null || swappingExerciseIndex === null || !plan) return;
-
-    const updatedDays = [...plan.days];
-    const targetDay = updatedDays[swappingDayIndex];
-
-    if (swappingExerciseIndex >= targetDay.exercises.length) {
-      targetDay.exercises.push({
-        id: `pe_${targetDay.exercises.length}_${chosenEx.id}`,
-        exerciseId: chosenEx.id,
-        sets: 3,
-        repRange: { min: 8, max: 12 },
-        restSeconds: 90,
-        targetWeightKg: 40
-      });
-    } else {
-      targetDay.exercises[swappingExerciseIndex].exerciseId = chosenEx.id;
-    }
-
-    updatePlan({ days: updatedDays });
-    setSwappingDayIndex(null);
-    setSwappingExerciseIndex(null);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  // Sync to watch action
+  const handleSyncToWatch = () => {
+    setSyncingWatch(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    setTimeout(() => {
+      setSyncingWatch(false);
+      setWatchSynced(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      Alert.alert('Watch Synced', 'Today\'s workout split and exercises have been sent to your Huawei Watch GT 4.');
+    }, 1000);
   };
 
   // 1. Loading State
@@ -201,11 +167,34 @@ export default function TrainScreen() {
   }
 
   const muscleFilters = ['All', 'chest', 'back', 'legs', 'shoulders', 'arms', 'core'];
-  const difficultyFilters = ['All', 'beginner', 'intermediate', 'advanced'];
-  const equipmentFilters = ['All', 'barbell', 'dumbbell', 'machine', 'cable', 'bodyweight'];
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Top Header Bar */}
+      <View style={[styles.topBar, { borderBottomColor: theme.borderSubtle }]}>
+        <View style={styles.topBarBrand}>
+          <View style={[styles.brandLogoCircle, { backgroundColor: theme.primaryContainer }]}>
+            <Ionicons name="fitness" size={20} color={theme.primary} />
+          </View>
+          <View>
+            <Text style={[styles.brandTitle, { color: theme.primary }]}>AI FitWear</Text>
+            <View style={styles.watchSyncMiniRow}>
+              <View style={[styles.syncDot, { backgroundColor: theme.onTrack }]} />
+              <Text style={[styles.syncMiniText, { color: theme.textSecondary }]}>Watch synced • 2m ago</Text>
+            </View>
+          </View>
+        </View>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open Profile & Settings"
+          onPress={() => router.push('/(tabs)/me')}
+          style={[styles.profileAvatar, { backgroundColor: theme.primaryContainer, borderColor: theme.border }]}
+        >
+          <Ionicons name="person" size={18} color={theme.primary} />
+        </Pressable>
+      </View>
+
       {/* Segmented Switcher Header */}
       <View style={styles.header}>
         <View style={[styles.segmentedTrack, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, borderRadius: radii.full }]}>
@@ -214,18 +203,17 @@ export default function TrainScreen() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
               setActiveSegment('plan');
             }}
-            style={({ pressed }) => [
+            style={[
               styles.segmentTab,
               {
                 backgroundColor: activeSegment === 'plan' ? theme.primary : 'transparent',
-                borderRadius: radii.full,
-                opacity: pressed ? 0.85 : 1
+                borderRadius: radii.full
               }
             ]}
           >
             <Ionicons
               name="calendar"
-              size={16}
+              size={15}
               color={activeSegment === 'plan' ? theme.onPrimary : theme.textSecondary}
               style={{ marginRight: 6 }}
             />
@@ -244,18 +232,17 @@ export default function TrainScreen() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
               setActiveSegment('library');
             }}
-            style={({ pressed }) => [
+            style={[
               styles.segmentTab,
               {
                 backgroundColor: activeSegment === 'library' ? theme.primary : 'transparent',
-                borderRadius: radii.full,
-                opacity: pressed ? 0.85 : 1
+                borderRadius: radii.full
               }
             ]}
           >
             <Ionicons
               name="book"
-              size={16}
+              size={15}
               color={activeSegment === 'library' ? theme.onPrimary : theme.textSecondary}
               style={{ marginRight: 6 }}
             />
@@ -273,380 +260,432 @@ export default function TrainScreen() {
 
       {/* ================= 1. PLAN SEGMENT ================= */}
       {activeSegment === 'plan' ? (
-        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 104 }]} showsVerticalScrollIndicator={false}>
-          {plan ? (
-            <>
-              {/* Cycle & Next Day Status Card */}
-              <View
-                style={[
-                  styles.cycleCard,
-                  {
-                    backgroundColor: theme.card,
-                    borderColor: theme.border,
-                    borderRadius: radii.xl,
-                    ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
-                  }
-                ]}
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 110 }]} showsVerticalScrollIndicator={false}>
+          {/* Plan Title & Cycle Info */}
+          <View style={styles.planHeaderSection}>
+            <View style={styles.cycleBadgeRow}>
+              <View style={[styles.activeCycleBadge, { backgroundColor: theme.primaryContainer }]}>
+                <View style={[styles.cyclePulseDot, { backgroundColor: theme.primary }]} />
+                <Text style={[styles.activeCycleText, { color: theme.onPrimaryContainer }]}>
+                  Active Cycle
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setShowGeneratorModal(true)}
+                style={[styles.calendarIconBtn, { backgroundColor: theme.surfaceElevated }]}
               >
-                <View style={styles.cycleTopRow}>
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.cycleTitleRow}>
-                      <Text style={[styles.cycleTitle, { color: theme.text }]}>
-                        Cycle {plan.currentCycle}
+                <Ionicons name="calendar-outline" size={18} color={theme.textSecondary} />
+              </Pressable>
+            </View>
+
+            <Text style={[styles.mainPlanHeadline, { color: theme.text }]}>Training Plan</Text>
+            <Text style={[styles.mainPlanSubtext, { color: theme.textSecondary }]}>
+              Cycle {plan?.currentCycle || 1}: Beginner Foundation (Week 2 of 4)
+            </Text>
+          </View>
+
+          {/* Daily Baselines Card (Stitch design) */}
+          <View style={[styles.baselinesCard, { backgroundColor: theme.surfaceElevated, borderRadius: radii.md }]}>
+            <View style={styles.baselinesLeft}>
+              <View style={[styles.baselinesIconBox, { backgroundColor: theme.card }]}>
+                <Ionicons name="analytics" size={18} color={theme.primary} />
+              </View>
+              <View style={{ minWidth: 0 }}>
+                <Text style={[styles.baselinesLabel, { color: theme.textSecondary }]}>DAILY BASELINES</Text>
+                <Text style={[styles.baselinesNumbers, { color: theme.text }]} numberOfLines={1}>
+                  BMR {user?.bmr || 1680} • TDEE {user?.tdee || 2350} kcal
+                </Text>
+              </View>
+            </View>
+
+            <View style={[styles.goalPillBadge, { backgroundColor: theme.card }]}>
+              <Text style={[styles.goalPillText, { color: theme.primary }]}>
+                {user?.goal === 'build_muscle' ? 'Lean Muscle Gain' : 'Fat Loss & Core'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Weekly Schedule Header */}
+          <View style={styles.scheduleHeaderRow}>
+            <View>
+              <Text style={[styles.scheduleTitle, { color: theme.text }]}>Weekly Schedule</Text>
+              <Text style={[styles.scheduleSub, { color: theme.textSecondary }]}>
+                Tap to inspect or reschedule day
+              </Text>
+            </View>
+
+            <Pressable
+              onPress={() => setShowGeneratorModal(true)}
+              style={styles.autoFillBtn}
+            >
+              <Text style={[styles.autoFillText, { color: theme.primary }]}>Auto-Fill</Text>
+              <Ionicons name="sparkles" size={14} color={theme.primary} />
+            </Pressable>
+          </View>
+
+          {/* 6-Day Schedule List (Stitch style) */}
+          <View style={styles.scheduleList}>
+            {plan?.days.map((day, dIdx) => {
+              const isToday = dIdx === plan.currentDayIndex;
+              const isCompleted = dIdx < plan.currentDayIndex;
+              const isExpanded = expandedDayIndex === dIdx;
+
+              // Derive muscle tag colors
+              const primaryMuscle = day.muscleGroup.toLowerCase();
+              const muscleColor =
+                primaryMuscle.includes('chest')
+                  ? '#C2410C'
+                  : primaryMuscle.includes('back')
+                  ? '#0F766E'
+                  : primaryMuscle.includes('leg')
+                  ? '#4338CA'
+                  : primaryMuscle.includes('shoulder')
+                  ? '#B45309'
+                  : '#BE185D';
+
+              return (
+                <Pressable
+                  key={day.id}
+                  onPress={() => setExpandedDayIndex(isExpanded ? null : dIdx)}
+                  style={[
+                    styles.scheduleDayCard,
+                    {
+                      backgroundColor: theme.card,
+                      borderColor: isToday ? theme.primary : theme.border,
+                      borderLeftWidth: isToday ? 4 : 1,
+                      borderRadius: radii.md,
+                      ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
+                    }
+                  ]}
+                >
+                  <View style={styles.scheduleDayContent}>
+                    {/* Day Date Block */}
+                    <View
+                      style={[
+                        styles.dayNumberBlock,
+                        {
+                          backgroundColor: isToday ? theme.primary : theme.surfaceElevated
+                        }
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.dayNameText,
+                          { color: isToday ? theme.onPrimary : theme.textSecondary }
+                        ]}
+                      >
+                        DAY
                       </Text>
-                      <View style={[styles.syncPill, { backgroundColor: theme.surfaceElevated, borderRadius: radii.full }]}>
-                        <Ionicons name="watch" size={13} color={theme.primary} />
-                        <Text style={[styles.syncPillText, { color: theme.primary }]}>Watch Synced</Text>
+                      <Text
+                        style={[
+                          styles.dayNumVal,
+                          { color: isToday ? theme.onPrimary : theme.text }
+                        ]}
+                      >
+                        {day.dayNumber}
+                      </Text>
+                    </View>
+
+                    {/* Day Info */}
+                    <View style={styles.dayInfoCol}>
+                      <View style={styles.dayTitleRow}>
+                        <Text style={[styles.dayCardTitle, { color: theme.text }]} numberOfLines={1}>
+                          {day.title}
+                        </Text>
+                        {isToday ? (
+                          <View style={[styles.todayTag, { backgroundColor: theme.primaryContainer }]}>
+                            <Text style={[styles.todayTagText, { color: theme.primary }]}>Today</Text>
+                          </View>
+                        ) : isCompleted ? (
+                          <Text style={[styles.completedText, { color: theme.onTrack }]}>Completed</Text>
+                        ) : null}
+                      </View>
+
+                      {/* Muscle chips */}
+                      <View style={styles.muscleChipsRow}>
+                        <View style={[styles.muscleMicroPill, { backgroundColor: muscleColor }]}>
+                          <View style={styles.whiteMicroDot} />
+                          <Text style={styles.muscleMicroPillText}>{day.muscleGroup}</Text>
+                        </View>
+                        <Text style={[styles.dayDurationMeta, { color: theme.textSecondary }]}>
+                          {day.estimatedDurationMin}m • {day.exercises.length} moves
+                        </Text>
                       </View>
                     </View>
-                    <Text style={[styles.nextDayLabel, { color: theme.textSecondary }]}>
-                      Next: Day {plan.days[plan.currentDayIndex]?.dayNumber} •{' '}
-                      {plan.days[plan.currentDayIndex]?.muscleGroup}
+
+                    {/* Right Action */}
+                    {isToday ? (
+                      <Pressable
+                        onPress={() => handleLaunchWorkout()}
+                        style={[styles.startPillBtn, { backgroundColor: theme.primary }]}
+                      >
+                        <Ionicons name="play" size={13} color={theme.onPrimary} />
+                        <Text style={[styles.startPillText, { color: theme.onPrimary }]}>Start</Text>
+                      </Pressable>
+                    ) : isCompleted ? (
+                      <View style={[styles.checkCircleBox, { backgroundColor: theme.primaryContainer }]}>
+                        <Ionicons name="checkmark-circle" size={18} color={theme.primary} />
+                      </View>
+                    ) : (
+                      <Ionicons
+                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                        size={18}
+                        color={theme.textMuted}
+                      />
+                    )}
+                  </View>
+
+                  {/* Expanded Movement List */}
+                  {isExpanded && (
+                    <View style={[styles.expandedExercisesBox, { borderTopColor: theme.borderSubtle }]}>
+                      {day.exercises.map((pe, idx) => (
+                        <View key={pe.id} style={styles.expandedExerciseRow}>
+                          <Text style={[styles.exerciseIndexNum, { color: theme.textSecondary }]}>
+                            {idx + 1}.
+                          </Text>
+                          <Text style={[styles.expandedExerciseName, { color: theme.text }]} numberOfLines={1}>
+                            {pe.exerciseId.replace('ex_', '').replace(/_/g, ' ')}
+                          </Text>
+                          <Text style={[styles.expandedExerciseSets, { color: theme.textSecondary }]}>
+                            {pe.sets} × {pe.repRange.min}-{pe.repRange.max}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* TARGET MUSCLE FOCUS GRID (Stitch 6 Groups) */}
+          <View style={styles.muscleFocusSection}>
+            <View style={styles.muscleFocusHeader}>
+              <View>
+                <Text style={[styles.muscleFocusTitle, { color: theme.text }]}>Target Muscle Focus</Text>
+                <Text style={[styles.muscleFocusSub, { color: theme.textSecondary }]}>
+                  Emphasis based on weekly volume
+                </Text>
+              </View>
+              <Text style={[styles.muscleFocusCount, { color: theme.primary }]}>6 Groups</Text>
+            </View>
+
+            <View style={styles.muscleGrid3x2}>
+              {[
+                { name: 'Chest', load: 'Heavy', color: '#C2410C' },
+                { name: 'Back', load: 'Heavy', color: '#0F766E' },
+                { name: 'Shoulders', load: 'Mod', color: '#B45309' },
+                { name: 'Legs', load: 'Heavy', color: '#4338CA' },
+                { name: 'Arms', load: 'Mod', color: '#BE185D' },
+                { name: 'Abs', load: 'Core', color: '#4D7C0F' }
+              ].map((m) => (
+                <Pressable
+                  key={m.name}
+                  onPress={() => {
+                    setSelectedMuscle(m.name);
+                    setActiveSegment('library');
+                  }}
+                  style={[styles.muscleCardItem, { backgroundColor: theme.card, borderColor: theme.border }]}
+                >
+                  <View style={[styles.muscleCardDot, { backgroundColor: m.color }]} />
+                  <View style={{ minWidth: 0 }}>
+                    <Text style={[styles.muscleCardName, { color: theme.text }]} numberOfLines={1}>
+                      {m.name}
+                    </Text>
+                    <Text style={[styles.muscleCardLoad, { color: theme.textSecondary }]}>
+                      {m.load}
                     </Text>
                   </View>
+                </Pressable>
+              ))}
+            </View>
+          </View>
 
-                  <View style={styles.cycleRingBox}>
-                    <ProgressRing
-                      size={74}
-                      strokeWidth={6}
-                      progress={(plan.currentDayIndex + 1) / Math.max(plan.days.length, 1)}
-                      color={theme.protein}
-                      primaryValue={`${plan.currentDayIndex + 1}/${plan.days.length}`}
-                      primaryLabel="Day"
-                      icon={{ name: 'dumbbell', color: theme.ringIcon.workout }}
-                      isWorkoutRing={true}
-                      accessibilityLabel={`Cycle progress: Day ${plan.currentDayIndex + 1} of ${plan.days.length}`}
-                    />
-                  </View>
+          {/* SYNC SCHEDULE TO WATCH CARD (Stitch GT 4 Section) */}
+          <View
+            style={[
+              styles.watchCardContainer,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+                borderRadius: radii.lg,
+                ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
+              }
+            ]}
+          >
+            <View style={styles.watchCardTopRow}>
+              <View style={styles.watchIconAndTitle}>
+                <View style={[styles.watchIconSquare, { backgroundColor: theme.primaryContainer }]}>
+                  <Ionicons name="watch-outline" size={24} color={theme.primary} />
                 </View>
-
-                {/* Banner explanation */}
-                <View style={[styles.ruleBanner, { backgroundColor: theme.surfaceElevated, borderRadius: radii.md }]}>
-                  <Ionicons name="information-circle" size={18} color={theme.primary} style={{ marginRight: 8 }} />
-                  <Text style={[styles.ruleBannerText, { color: theme.textSecondary }]}>
-                    Automated progressive overload. Edit sets, reps, or swap movements anytime.
+                <View>
+                  <Text style={[styles.watchCardHeadline, { color: theme.text }]}>Sync Schedule to Watch</Text>
+                  <Text style={[styles.watchCardSub, { color: theme.textSecondary }]}>
+                    Huawei Watch GT 4 • Connected
                   </Text>
                 </View>
+              </View>
+              <View style={[styles.connectedLiveDot, { backgroundColor: theme.onTrack }]} />
+            </View>
 
-                {/* Start Workout Primary CTA */}
-                <PrimaryButton
-                  label={`Start Day ${plan.days[plan.currentDayIndex]?.dayNumber}: ${plan.days[plan.currentDayIndex]?.muscleGroup}`}
-                  icon="play"
-                  size="large"
-                  onPress={() => setShowCycleModal(true)}
-                  style={{ marginTop: 8 }}
+            <View style={[styles.alarmPromptBox, { backgroundColor: theme.surfaceElevated }]}>
+              <Ionicons name="alarm-outline" size={18} color={theme.primary} style={{ marginTop: 1 }} />
+              <Text style={[styles.alarmPromptText, { color: theme.textSecondary }]}>
+                HarmonyOS watch will buzz and prompt your session at{' '}
+                <Text style={{ color: theme.text, fontWeight: '700' }}>5:30 PM</Text>.
+              </Text>
+            </View>
+
+            <PrimaryButton
+              label={syncingWatch ? 'Syncing Routine...' : watchSynced ? 'Synced to HarmonyOS Watch' : 'Send to Watch'}
+              icon="sync-outline"
+              loading={syncingWatch}
+              onPress={handleSyncToWatch}
+            />
+          </View>
+
+          {/* CYCLE OPTIONS */}
+          <View style={styles.cycleOptionsSection}>
+            <Text style={[styles.cycleOptionsTitle, { color: theme.text }]}>Cycle Options</Text>
+
+            <View
+              style={[
+                styles.cycleProgressCard,
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.border,
+                  borderRadius: radii.md
+                }
+              ]}
+            >
+              <View style={styles.cycleProgressTop}>
+                <View style={styles.cycleProgressIconRow}>
+                  <Ionicons name="refresh-circle" size={20} color={theme.primary} />
+                  <Text style={[styles.cycleProgressLabel, { color: theme.text }]}>
+                    Continue Current Cycle
+                  </Text>
+                </View>
+                <Text style={[styles.cycleProgressPct, { color: theme.primary }]}>45% Complete</Text>
+              </View>
+
+              <View style={[styles.cycleTrack, { backgroundColor: theme.surfaceElevated }]}>
+                <View
+                  style={[
+                    styles.cycleTrackFill,
+                    { width: '45%', backgroundColor: theme.primary, borderRadius: radii.full }
+                  ]}
                 />
               </View>
 
-              {/* 6 Day Cards */}
-              <View style={styles.daysListHeader}>
-                <Text style={[styles.sectionHeading, { color: theme.text }]}>6-Day Routine</Text>
-                <Pressable onPress={() => setShowGeneratorModal(true)}>
-                  <Text style={[styles.regenerateText, { color: theme.primary }]}>Re-generate</Text>
-                </Pressable>
+              <View style={styles.cycleProgressBottom}>
+                <Text style={[styles.cycleBottomSub, { color: theme.textSecondary }]}>
+                  Week 2 of 4 • 8 sessions left
+                </Text>
+                <Text style={[styles.cycleOnTrackText, { color: theme.primary }]}>On Track</Text>
               </View>
+            </View>
 
-              {plan.days.map((day, dIdx) => {
-                const isCurrent = dIdx === plan.currentDayIndex;
-                const isExpanded = expandedDayIndex === dIdx;
-
-                return (
-                  <View
-                    key={day.id}
-                    style={[
-                      styles.dayCard,
-                      {
-                        backgroundColor: theme.card,
-                        borderColor: isCurrent ? theme.primary : theme.border,
-                        borderRadius: radii.lg,
-                        ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
-                      }
-                    ]}
-                  >
-                    <Pressable
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                        setExpandedDayIndex(isExpanded ? null : dIdx);
-                      }}
-                      style={styles.dayCardHeader}
-                    >
-                      <View style={styles.dayTitleGroup}>
-                        <View
-                          style={[
-                            styles.dayNumberBadge,
-                            {
-                              backgroundColor: isCurrent ? theme.primary : theme.surfaceElevated,
-                              borderRadius: radii.md
-                            }
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.dayNumberText,
-                              { color: isCurrent ? theme.onPrimary : theme.text }
-                            ]}
-                          >
-                            D{day.dayNumber}
-                          </Text>
-                        </View>
-                        <View>
-                          <Text style={[styles.dayMuscle, { color: theme.text }]}>
-                            {day.muscleGroup}
-                          </Text>
-                          <Text style={[styles.dayMeta, { color: theme.textSecondary }]}>
-                            {day.estimatedDurationMin} min • {day.exercises.length} Movements
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.dayActionGroup}>
-                        {isCurrent ? (
-                          <View style={[styles.todayBadge, { backgroundColor: theme.primaryGlow, borderRadius: radii.full }]}>
-                            <Text style={[styles.todayBadgeText, { color: theme.primary }]}>Today</Text>
-                          </View>
-                        ) : null}
-                        <Ionicons
-                          name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                          size={20}
-                          color={theme.textSecondary}
-                        />
-                      </View>
-                    </Pressable>
-
-                    {/* Expanded Day Details */}
-                    {isExpanded ? (
-                      <View style={[styles.dayExpandedContent, { borderTopColor: theme.borderSubtle }]}>
-                        {day.exercises.map((pe, eIdx) => {
-                          const doc = exercises.find((e) => e.id === pe.exerciseId);
-                          return (
-                            <View key={pe.id} style={styles.planExerciseRow}>
-                              <View style={{ flex: 1 }}>
-                                <Text style={[styles.planExName, { color: theme.text }]}>
-                                  {doc?.name || pe.exerciseId}
-                                </Text>
-                                <Text style={[styles.planExSpecs, { color: theme.textSecondary }]}>
-                                  {pe.sets} sets × {pe.repRange.min}-{pe.repRange.max} reps • {pe.restSeconds}s rest • {pe.targetWeightKg}kg
-                                </Text>
-                              </View>
-
-                              <View style={styles.planExActions}>
-                                <Pressable
-                                  onPress={() => {
-                                    setSwappingDayIndex(dIdx);
-                                    setSwappingExerciseIndex(eIdx);
-                                  }}
-                                  style={[styles.smallActionBtn, { backgroundColor: theme.surfaceElevated, borderRadius: radii.md }]}
-                                >
-                                  <Ionicons name="swap-horizontal" size={16} color={theme.primary} />
-                                </Pressable>
-                                <Pressable
-                                  onPress={() => handleRemoveExercise(dIdx, eIdx)}
-                                  style={[styles.smallActionBtn, { backgroundColor: theme.surfaceElevated, borderRadius: radii.md }]}
-                                >
-                                  <Ionicons name="trash-outline" size={16} color={theme.overTarget} />
-                                </Pressable>
-                              </View>
-                            </View>
-                          );
-                        })}
-
-                        <SecondaryButton
-                          label="Add Movement"
-                          icon="add"
-                          onPress={() => {
-                            setSwappingDayIndex(dIdx);
-                            setSwappingExerciseIndex(day.exercises.length);
-                          }}
-                          style={{ marginTop: 8 }}
-                        />
-                      </View>
-                    ) : null}
-                  </View>
-                );
-              })}
-            </>
-          ) : (
-            <EmptyState
-              icon="barbell-outline"
-              title="No Plan Configured"
-              description="Generate your 6-day beginner foundation split."
-              actionLabel="Generate Plan"
-              onAction={() => setShowGeneratorModal(true)}
-            />
-          )}
+            <Pressable
+              onPress={() => setShowGeneratorModal(true)}
+              style={[
+                styles.generateSplitRow,
+                {
+                  backgroundColor: theme.surfaceElevated,
+                  borderColor: theme.border,
+                  borderRadius: radii.md
+                }
+              ]}
+            >
+              <View style={styles.generateSplitLeft}>
+                <View style={[styles.generateSplitIcon, { backgroundColor: theme.card }]}>
+                  <Ionicons name="sparkles" size={18} color={theme.primary} />
+                </View>
+                <View>
+                  <Text style={[styles.generateSplitTitle, { color: theme.text }]}>
+                    Generate New AI Split
+                  </Text>
+                  <Text style={[styles.generateSplitSub, { color: theme.textSecondary }]}>
+                    Tap to re-calibrate goals & equipment
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+            </Pressable>
+          </View>
         </ScrollView>
       ) : (
-        /* ================= 2. EXERCISE LIBRARY SEGMENT ================= */
-        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 104 }]} showsVerticalScrollIndicator={false}>
-          {/* Search Box */}
-          <View style={[styles.searchBox, { backgroundColor: theme.card, borderColor: theme.border, borderRadius: radii.lg }]}>
+        /* ================= 2. LIBRARY SEGMENT ================= */
+        <View style={styles.libraryContainer}>
+          {/* Search bar */}
+          <View style={[styles.searchBox, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
             <Ionicons name="search" size={18} color={theme.textSecondary} style={{ marginRight: 8 }} />
             <TextInput
+              style={[styles.searchInput, { color: theme.text }]}
+              placeholder="Search exercise movements..."
+              placeholderTextColor={theme.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Search 50+ movements..."
-              placeholderTextColor={theme.textMuted}
-              style={[styles.searchInput, { color: theme.text }]}
             />
-            {searchQuery.length > 0 ? (
+            {searchQuery.length > 0 && (
               <Pressable onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
+                <Ionicons name="close-circle" size={18} color={theme.textMuted} />
               </Pressable>
-            ) : null}
+            )}
           </View>
 
-          {/* Muscle Category Chips */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipRow}>
+          {/* Muscle Chips Filter */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
             {muscleFilters.map((m) => (
               <Chip
                 key={m}
-                label={m.toUpperCase()}
+                label={m.charAt(0).toUpperCase() + m.slice(1)}
                 selected={selectedMuscle.toLowerCase() === m.toLowerCase()}
                 onPress={() => setSelectedMuscle(m)}
               />
             ))}
           </ScrollView>
 
-          {/* Difficulty Chips */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipRow}>
-            {difficultyFilters.map((d) => (
-              <Chip
-                key={d}
-                label={d.toUpperCase()}
-                selected={selectedDifficulty.toLowerCase() === d.toLowerCase()}
-                onPress={() => setSelectedDifficulty(d)}
-              />
+          {/* Exercise List */}
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
+            {filteredExercises.map((ex) => (
+              <Pressable
+                key={ex.id}
+                onPress={() => router.push(`/exercise-detail?id=${ex.id}`)}
+                style={[
+                  styles.libraryExerciseCard,
+                  {
+                    backgroundColor: theme.card,
+                    borderColor: theme.border,
+                    borderRadius: radii.md
+                  }
+                ]}
+              >
+                <View style={styles.libraryCardBody}>
+                  <Text style={[styles.libraryCardName, { color: theme.text }]}>{ex.name}</Text>
+                  <Text style={[styles.libraryCardDesc, { color: theme.textSecondary }]} numberOfLines={2}>
+                    {ex.description}
+                  </Text>
+                  <View style={styles.libraryMetaRow}>
+                    <View style={[styles.libraryBadge, { backgroundColor: theme.surfaceElevated }]}>
+                      <Text style={[styles.libraryBadgeText, { color: theme.primary }]}>
+                        {ex.muscleGroup}
+                      </Text>
+                    </View>
+                    <View style={[styles.libraryBadge, { backgroundColor: theme.surfaceElevated }]}>
+                      <Text style={[styles.libraryBadgeText, { color: theme.textSecondary }]}>
+                        {ex.equipment}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+              </Pressable>
             ))}
           </ScrollView>
-
-          {/* Equipment Chips */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipRow}>
-            {equipmentFilters.map((eq) => (
-              <Chip
-                key={eq}
-                label={eq.toUpperCase()}
-                selected={selectedEquipment.toLowerCase() === eq.toLowerCase()}
-                onPress={() => setSelectedEquipment(eq)}
-              />
-            ))}
-          </ScrollView>
-
-          {/* Exercise Items List */}
-          <View style={styles.libCountRow}>
-            <Text style={[styles.libCountText, { color: theme.textSecondary }]}>
-              {filteredExercises.length} Movements Found
-            </Text>
-          </View>
-
-          {filteredExercises.map((ex) => (
-            <Pressable
-              key={ex.id}
-              onPress={() => router.push(`/exercise-detail?id=${ex.id}`)}
-              style={({ pressed }) => [
-                styles.libCard,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.border,
-                  borderRadius: radii.lg,
-                  opacity: pressed ? 0.8 : 1,
-                  ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
-                }
-              ]}
-            >
-              <View style={[styles.libIconBox, { backgroundColor: theme.surfaceElevated, borderRadius: radii.md }]}>
-                <Ionicons name="barbell" size={20} color={theme.primary} />
-              </View>
-
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.libExName, { color: theme.text }]}>{ex.name}</Text>
-                <Text style={[styles.libExMeta, { color: theme.textSecondary }]}>
-                  {ex.muscleGroup.toUpperCase()} • {ex.equipment.toUpperCase()} • {ex.difficulty.toUpperCase()}
-                </Text>
-              </View>
-
-              <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-            </Pressable>
-          ))}
-        </ScrollView>
+        </View>
       )}
 
-      {/* ================= CYCLE CONTROL BOTTOM SHEET MODAL ================= */}
-      <Modal
-        visible={showCycleModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowCycleModal(false)}
-      >
-        <View style={[styles.modalBackdrop, { backgroundColor: theme.scrim }]}>
-          <View style={[styles.bottomSheet, { backgroundColor: theme.card, borderColor: theme.border, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl }]}>
-            <View style={[styles.sheetHandle, { backgroundColor: theme.border }]} />
-            <Text style={[styles.sheetTitle, { color: theme.text }]}>Cycle Progression Controls</Text>
-            <Text style={[styles.sheetDesc, { color: theme.textSecondary }]}>
-              Current cycle: Cycle {plan?.currentCycle || 1} • Next: Day {plan?.days[plan?.currentDayIndex || 0]?.dayNumber}
-            </Text>
-
-            {/* Option A: Continue Old Cycle */}
-            <Pressable
-              onPress={() => setCycleChoice('continue')}
-              style={[
-                styles.choiceCard,
-                {
-                  backgroundColor: cycleChoice === 'continue' ? theme.surfaceElevated : theme.surfaceSubtle,
-                  borderColor: cycleChoice === 'continue' ? theme.primary : theme.border,
-                  borderRadius: radii.lg
-                }
-              ]}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.choiceTitle, { color: theme.text }]}>Continue Current Cycle</Text>
-                <Text style={[styles.choiceSub, { color: theme.textSecondary }]}>
-                  Resume at Day {plan?.days[plan?.currentDayIndex || 0]?.dayNumber} ({plan?.days[plan?.currentDayIndex || 0]?.muscleGroup})
-                </Text>
-              </View>
-              {cycleChoice === 'continue' ? (
-                <Ionicons name="checkmark-circle" size={22} color={theme.primary} />
-              ) : null}
-            </Pressable>
-
-            {/* Option B: Start New Cycle */}
-            <Pressable
-              onPress={() => setCycleChoice('new')}
-              style={[
-                styles.choiceCard,
-                {
-                  backgroundColor: cycleChoice === 'new' ? theme.surfaceElevated : theme.surfaceSubtle,
-                  borderColor: cycleChoice === 'new' ? theme.primary : theme.border,
-                  borderRadius: radii.lg
-                }
-              ]}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.choiceTitle, { color: theme.text }]}>Start New Cycle (Cycle {(plan?.currentCycle || 1) + 1})</Text>
-                <Text style={[styles.choiceSub, { color: theme.textSecondary }]}>
-                  Restart from Day 1 and increment cycle counter
-                </Text>
-              </View>
-              {cycleChoice === 'new' ? (
-                <Ionicons name="checkmark-circle" size={22} color={theme.primary} />
-              ) : null}
-            </Pressable>
-
-            <PrimaryButton
-              label="Launch Workout"
-              icon="flash"
-              size="large"
-              onPress={handleLaunchWorkout}
-              style={{ marginTop: 16 }}
-            />
-            <SecondaryButton
-              label="Cancel"
-              onPress={() => setShowCycleModal(false)}
-            />
-          </View>
-        </View>
-      </Modal>
-
-      {/* ================= PLAN GENERATOR MODAL ================= */}
+      {/* Plan Generator Modal */}
       <Modal
         visible={showGeneratorModal}
         animationType="slide"
@@ -655,114 +694,50 @@ export default function TrainScreen() {
       >
         <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>AI Routine Generator</Text>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Generate AI Split</Text>
             <Pressable onPress={() => setShowGeneratorModal(false)}>
               <Ionicons name="close" size={24} color={theme.text} />
             </Pressable>
           </View>
 
-          <ScrollView contentContainerStyle={{ padding: 20 }}>
-            <Text style={[styles.generatorIntro, { color: theme.textSecondary }]}>
-              Generates a calibrated 6-day split based on your profile telemetry:
-            </Text>
-
-            <View style={[styles.profilePrefillCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, borderRadius: radii.lg }]}>
-              <Text style={[styles.prefillItem, { color: theme.text }]}>Height: {user.heightCm} cm</Text>
-              <Text style={[styles.prefillItem, { color: theme.text }]}>Weight: {user.weightKg} kg</Text>
-              <Text style={[styles.prefillItem, { color: theme.text }]}>Activity: {user.activityLevel?.toUpperCase() || 'MODERATE'}</Text>
-            </View>
-
-            <Text style={[styles.selectGoalHeader, { color: theme.text }]}>Select Primary Objective:</Text>
-
-            <View style={styles.goalChoiceList}>
-              {[
-                { key: 'build_muscle' as GoalType, label: 'Hypertrophy & Muscle Growth', icon: 'barbell' },
-                { key: 'lose_fat' as GoalType, label: 'Caloric Deficit & Conditioning', icon: 'flame' },
-                { key: 'maintain' as GoalType, label: 'Strength & Biomarker Maintenance', icon: 'shield-checkmark' }
-              ].map((g) => {
-                const isSelected = generatorGoal === g.key;
-                return (
-                  <Pressable
-                    key={g.key}
-                    onPress={() => setGeneratorGoal(g.key)}
-                    style={[
-                      styles.goalChoiceCard,
-                      {
-                        backgroundColor: isSelected ? theme.surfaceElevated : theme.card,
-                        borderColor: isSelected ? theme.primary : theme.border,
-                        borderRadius: radii.lg
-                      }
-                    ]}
-                  >
-                    <Ionicons
-                      name={g.icon as any}
-                      size={20}
-                      color={isSelected ? theme.primary : theme.textSecondary}
-                      style={{ marginRight: 12 }}
-                    />
-                    <Text style={[styles.goalChoiceText, { color: isSelected ? theme.primary : theme.text }]}>
-                      {g.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+          <View style={{ padding: 20, gap: 16 }}>
+            <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>SELECT PRIMARY GOAL</Text>
+            {(['build_muscle', 'lose_fat', 'maintain'] as GoalType[]).map((g) => (
+              <Pressable
+                key={g}
+                onPress={() => setGeneratorGoal(g)}
+                style={[
+                  styles.goalOptionRow,
+                  {
+                    backgroundColor: generatorGoal === g ? theme.primaryContainer : theme.surfaceElevated,
+                    borderColor: generatorGoal === g ? theme.primary : theme.border,
+                    borderRadius: radii.md
+                  }
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.goalOptionText,
+                    {
+                      color: generatorGoal === g ? theme.primary : theme.text,
+                      fontWeight: generatorGoal === g ? '700' : '500'
+                    }
+                  ]}
+                >
+                  {g === 'build_muscle' ? 'Build Muscle (Hypertrophy)' : g === 'lose_fat' ? 'Fat Loss & Conditioning' : 'Maintain & Mobility'}
+                </Text>
+                {generatorGoal === g && <Ionicons name="checkmark-circle" size={20} color={theme.primary} />}
+              </Pressable>
+            ))}
 
             <PrimaryButton
               label={isGenerating ? 'Synthesizing Movements...' : 'Generate 6-Day Split'}
               icon="sparkles"
-              size="large"
+              loading={isGenerating}
               onPress={handleRunGenerator}
-              disabled={isGenerating}
-              style={{ marginTop: 24 }}
+              style={{ marginTop: 20 }}
             />
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
-
-      {/* ================= SWAP EXERCISE MODAL ================= */}
-      <Modal
-        visible={swappingDayIndex !== null}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => {
-          setSwappingDayIndex(null);
-          setSwappingExerciseIndex(null);
-        }}
-      >
-        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>Swap Movement</Text>
-            <Pressable
-              onPress={() => {
-                setSwappingDayIndex(null);
-                setSwappingExerciseIndex(null);
-              }}
-            >
-              <Ionicons name="close" size={24} color={theme.text} />
-            </Pressable>
           </View>
-
-          <ScrollView contentContainerStyle={{ padding: 16 }}>
-            {exercises.map((ex) => (
-              <Pressable
-                key={ex.id}
-                onPress={() => handleSelectSwapExercise(ex)}
-                style={[styles.libCard, { backgroundColor: theme.card, borderColor: theme.border, borderRadius: radii.lg }]}
-              >
-                <View style={[styles.libIconBox, { backgroundColor: theme.surfaceElevated, borderRadius: radii.md }]}>
-                  <Ionicons name="barbell" size={20} color={theme.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.libExName, { color: theme.text }]}>{ex.name}</Text>
-                  <Text style={[styles.libExMeta, { color: theme.textSecondary }]}>
-                    {ex.muscleGroup.toUpperCase()} • {ex.equipment.toUpperCase()}
-                  </Text>
-                </View>
-                <Ionicons name="add-circle" size={22} color={theme.primary} />
-              </Pressable>
-            ))}
-          </ScrollView>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -773,263 +748,541 @@ const styles = StyleSheet.create({
   container: {
     flex: 1
   },
+  topBar: {
+    height: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth
+  },
+  topBarBrand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10
+  },
+  brandLogoCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  brandTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.3
+  },
+  watchSyncMiniRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 1
+  },
+  syncDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3
+  },
+  syncMiniText: {
+    fontSize: 11,
+    fontWeight: '500'
+  },
+  profileAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1
+  },
   header: {
     paddingHorizontal: 16,
     paddingVertical: 10
   },
   segmentedTrack: {
     flexDirection: 'row',
-    padding: 4,
-    borderWidth: 1
+    borderWidth: 1,
+    padding: 3
   },
   segmentTab: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10
+    paddingVertical: 8
   },
   segmentTabText: {
     fontSize: 13,
-    fontWeight: '700'
+    fontWeight: '600'
   },
   content: {
-    padding: 16
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    gap: 16
   },
-  cycleCard: {
-    borderWidth: 1,
-    padding: 18,
-    marginBottom: 16
+  planHeaderSection: {
+    gap: 4
   },
-  cycleTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12
-  },
-  cycleTitleRow: {
+  cycleBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 2
+    justifyContent: 'space-between'
   },
-  cycleRingBox: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 12
-  },
-  cycleTitle: {
-    fontSize: 22,
-    fontWeight: '800'
-  },
-  nextDayLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 2
-  },
-  syncPill: {
+  activeCycleBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     paddingHorizontal: 10,
-    paddingVertical: 4
+    paddingVertical: 3,
+    borderRadius: 9999
   },
-  syncPillText: {
+  cyclePulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3
+  },
+  activeCycleText: {
     fontSize: 11,
     fontWeight: '700'
   },
-  ruleBanner: {
+  calendarIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  mainPlanHeadline: {
+    fontSize: 26,
+    fontWeight: '700',
+    letterSpacing: -0.4,
+    marginTop: 2
+  },
+  mainPlanSubtext: {
+    fontSize: 14,
+    fontWeight: '500'
+  },
+  baselinesCard: {
+    padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    marginBottom: 12
+    justifyContent: 'space-between'
   },
-  ruleBannerText: {
-    fontSize: 12,
-    lineHeight: 16,
+  baselinesLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     flex: 1
   },
-  daysListHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  baselinesIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 12,
-    marginHorizontal: 4
+    justifyContent: 'center'
   },
-  sectionHeading: {
+  baselinesLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5
+  },
+  baselinesNumbers: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 1
+  },
+  goalPillBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 9999
+  },
+  goalPillText: {
+    fontSize: 11,
+    fontWeight: '700'
+  },
+  scheduleHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4
+  },
+  scheduleTitle: {
     fontSize: 18,
-    fontWeight: '800'
+    fontWeight: '700',
+    letterSpacing: -0.2
   },
-  regenerateText: {
+  scheduleSub: {
+    fontSize: 12,
+    fontWeight: '400',
+    marginTop: 1
+  },
+  autoFillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4
+  },
+  autoFillText: {
     fontSize: 13,
     fontWeight: '700'
   },
-  dayCard: {
+  scheduleList: {
+    gap: 10
+  },
+  scheduleDayCard: {
     borderWidth: 1,
-    marginBottom: 12,
+    padding: 12,
     overflow: 'hidden'
   },
-  dayCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16
-  },
-  dayTitleGroup: {
+  scheduleDayContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12
   },
-  dayNumberBadge: {
-    width: 36,
-    height: 36,
+  dayNumberBlock: {
+    width: 44,
+    height: 48,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center'
   },
-  dayNumberText: {
-    fontSize: 13,
-    fontWeight: '800'
-  },
-  dayMuscle: {
-    fontSize: 16,
+  dayNameText: {
+    fontSize: 10,
     fontWeight: '700'
   },
-  dayMeta: {
-    fontSize: 12,
-    marginTop: 2
+  dayNumVal: {
+    fontSize: 16,
+    fontWeight: '800'
   },
-  dayActionGroup: {
+  dayInfoCol: {
+    flex: 1,
+    minWidth: 0
+  },
+  dayTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap'
+  },
+  dayCardTitle: {
+    fontSize: 15,
+    fontWeight: '700'
+  },
+  todayTag: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4
+  },
+  todayTagText: {
+    fontSize: 10,
+    fontWeight: '700'
+  },
+  completedText: {
+    fontSize: 11,
+    fontWeight: '700'
+  },
+  muscleChipsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4
+  },
+  muscleMicroPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 9999
+  },
+  whiteMicroDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#FFFFFF'
+  },
+  muscleMicroPillText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700'
+  },
+  dayDurationMeta: {
+    fontSize: 12
+  },
+  startPillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 9999
+  },
+  startPillText: {
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  checkCircleBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  expandedExercisesBox: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: 6
+  },
+  expandedExerciseRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8
   },
-  todayBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3
+  exerciseIndexNum: {
+    fontSize: 12,
+    fontWeight: '600',
+    width: 18
   },
-  todayBadgeText: {
-    fontSize: 11,
-    fontWeight: '800'
+  expandedExerciseName: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600'
   },
-  dayExpandedContent: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    padding: 16,
-    paddingTop: 12
+  expandedExerciseSets: {
+    fontSize: 12,
+    fontWeight: '500'
   },
-  planExerciseRow: {
+  muscleFocusSection: {
+    marginTop: 8,
+    gap: 8
+  },
+  muscleFocusHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(128, 128, 128, 0.15)'
+    justifyContent: 'space-between'
   },
-  planExName: {
-    fontSize: 14,
-    fontWeight: '700',
-    textTransform: 'capitalize'
+  muscleFocusTitle: {
+    fontSize: 17,
+    fontWeight: '700'
   },
-  planExSpecs: {
+  muscleFocusSub: {
+    fontSize: 12
+  },
+  muscleFocusCount: {
     fontSize: 12,
-    marginTop: 2
+    fontWeight: '700'
   },
-  planExActions: {
+  muscleGrid3x2: {
     flexDirection: 'row',
-    gap: 8,
-    marginLeft: 12
+    flexWrap: 'wrap',
+    gap: 8
   },
-  smallActionBtn: {
-    width: 32,
-    height: 32,
+  muscleCardItem: {
+    width: '31%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1
+  },
+  muscleCardDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5
+  },
+  muscleCardName: {
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  muscleCardLoad: {
+    fontSize: 10,
+    fontWeight: '500'
+  },
+  watchCardContainer: {
+    borderWidth: 1,
+    padding: 16,
+    marginTop: 6,
+    gap: 12
+  },
+  watchCardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  watchIconAndTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10
+  },
+  watchIconSquare: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center'
+  },
+  watchCardHeadline: {
+    fontSize: 16,
+    fontWeight: '700'
+  },
+  watchCardSub: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 1
+  },
+  connectedLiveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4
+  },
+  alarmPromptBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    padding: 10,
+    borderRadius: 10
+  },
+  alarmPromptText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 16
+  },
+  cycleOptionsSection: {
+    marginTop: 6,
+    gap: 10
+  },
+  cycleOptionsTitle: {
+    fontSize: 17,
+    fontWeight: '700'
+  },
+  cycleProgressCard: {
+    borderWidth: 1,
+    padding: 14,
+    gap: 8
+  },
+  cycleProgressTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  cycleProgressIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
+  cycleProgressLabel: {
+    fontSize: 14,
+    fontWeight: '700'
+  },
+  cycleProgressPct: {
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  cycleTrack: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden'
+  },
+  cycleTrackFill: {
+    height: '100%'
+  },
+  cycleProgressBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  cycleBottomSub: {
+    fontSize: 11
+  },
+  cycleOnTrackText: {
+    fontSize: 11,
+    fontWeight: '700'
+  },
+  generateSplitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderWidth: 1
+  },
+  generateSplitLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10
+  },
+  generateSplitIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  generateSplitTitle: {
+    fontSize: 14,
+    fontWeight: '700'
+  },
+  generateSplitSub: {
+    fontSize: 12,
+    marginTop: 1
+  },
+  libraryContainer: {
+    flex: 1
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
+    marginHorizontal: 16,
+    marginTop: 8,
     paddingHorizontal: 12,
-    height: 48,
-    marginBottom: 12
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
-    height: '100%'
+    fontSize: 14
   },
-  filterChipRow: {
-    gap: 8,
-    marginBottom: 10
+  filterScroll: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8
   },
-  libCountRow: {
-    marginVertical: 10,
-    marginHorizontal: 4
-  },
-  libCountText: {
-    fontSize: 12,
-    fontWeight: '600'
-  },
-  libCard: {
+  libraryExerciseCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1,
     padding: 14,
-    marginBottom: 10,
-    gap: 12
+    marginBottom: 8
   },
-  libIconBox: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  libExName: {
-    fontSize: 15,
-    fontWeight: '700'
-  },
-  libExMeta: {
-    fontSize: 12,
-    marginTop: 2
-  },
-  modalBackdrop: {
+  libraryCardBody: {
     flex: 1,
-    justifyContent: 'flex-end'
+    marginRight: 10
   },
-  bottomSheet: {
-    borderTopWidth: 1,
-    padding: 20,
-    paddingBottom: 36
-  },
-  sheetHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16
-  },
-  sheetTitle: {
-    fontSize: 20,
-    fontWeight: '800'
-  },
-  sheetDesc: {
-    fontSize: 13,
-    marginTop: 4,
-    marginBottom: 16
-  },
-  choiceCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    padding: 16,
-    marginBottom: 10
-  },
-  choiceTitle: {
+  libraryCardName: {
     fontSize: 15,
-    fontWeight: '700'
+    fontWeight: '700',
+    marginBottom: 2
   },
-  choiceSub: {
+  libraryCardDesc: {
     fontSize: 12,
-    marginTop: 2
+    lineHeight: 16,
+    marginBottom: 6
+  },
+  libraryMetaRow: {
+    flexDirection: 'row',
+    gap: 6
+  },
+  libraryBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6
+  },
+  libraryBadgeText: {
+    fontSize: 11,
+    fontWeight: '600'
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1040,38 +1293,21 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '800'
+    fontWeight: '700'
   },
-  generatorIntro: {
-    fontSize: 14,
-    marginBottom: 12
-  },
-  profilePrefillCard: {
-    borderWidth: 1,
-    padding: 14,
-    marginBottom: 20,
-    gap: 4
-  },
-  prefillItem: {
-    fontSize: 13,
-    fontWeight: '600'
-  },
-  selectGoalHeader: {
-    fontSize: 16,
+  modalLabel: {
+    fontSize: 11,
     fontWeight: '700',
-    marginBottom: 12
+    letterSpacing: 0.5
   },
-  goalChoiceList: {
-    gap: 10
-  },
-  goalChoiceCard: {
+  goalOptionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
-    padding: 16
+    justifyContent: 'space-between',
+    padding: 16,
+    borderWidth: 1
   },
-  goalChoiceText: {
-    fontSize: 14,
-    fontWeight: '700'
+  goalOptionText: {
+    fontSize: 15
   }
 });
