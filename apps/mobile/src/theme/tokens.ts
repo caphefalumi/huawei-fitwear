@@ -1,6 +1,7 @@
 /**
- * AI FitWear - Kinetic Dual-Engine Theme Tokens
- * Fully specified for Kinetic Obsidian (Dark / AMOLED) and Kinetic Pure Light (Light / Porcelain)
+ * AI FitWear - Stitch AI FitWear Design System Tokens
+ * Dual-engine theme tokens: Kinetic Obsidian (Dark) and Kinetic Pure Light (Light)
+ * Center seed: #00796B / #005E53 with Be Vietnam Pro + Inter typography
  */
 
 import { Platform } from 'react-native';
@@ -20,7 +21,11 @@ export interface ThemeColors {
   textMuted: string;
   primary: string;
   primaryGlow: string;
+  primaryContainer: string;
   onPrimary: string;
+  onPrimaryContainer: string;
+  secondary: string;
+  secondaryContainer: string;
   // Functional Macro Telemetry
   protein: string;
   carbs: string;
@@ -53,116 +58,128 @@ export interface ThemeColors {
   syncing: string;
   offline: string;
   error: string;
+  info: string;
+  warning: string;
 }
 
 export const kineticObsidian: ThemeColors = {
   name: 'Kinetic Obsidian',
   isDark: true,
-  background: '#000000',
-  surface: '#121214',
-  card: '#161618',
-  surfaceElevated: '#1C1C1F',
-  surfaceSubtle: '#111113',
-  border: '#242428',
-  borderSubtle: '#1C1C20',
+  background: '#0E1312',
+  surface: '#161C1B',
+  card: '#161C1B',
+  surfaceElevated: '#1F2625',
+  surfaceSubtle: '#121E1C',
+  border: '#2B3433',
+  borderSubtle: '#1F2625',
   text: '#FFFFFF',
-  textSecondary: '#8E8E93',
+  textSecondary: '#A1A1AA',
   textMuted: '#636366',
-  primary: '#22C55E', // Apple Fitness Green
-  primaryGlow: 'rgba(34, 197, 94, 0.25)',
-  onPrimary: '#000000',
-  protein: '#0EA5E9', // Electric Cyan
-  carbs: '#F59E0B', // Amber Gold
-  fat: '#EF4444', // Coral Red
-  calories: '#22C55E',
-  onTrack: '#22C55E',
-  onTrackBg: 'rgba(34, 197, 94, 0.15)',
-  almostThere: '#F59E0B',
-  almostThereBg: 'rgba(245, 158, 11, 0.15)',
-  overTarget: '#EF4444',
-  overTargetBg: 'rgba(239, 68, 68, 0.15)',
-  track: '#1C1C1F',
+  primary: '#4FD6C4', // Stitch Mint Teal
+  primaryGlow: 'rgba(79, 214, 196, 0.25)',
+  primaryContainer: '#12332E',
+  onPrimary: '#00201B',
+  onPrimaryContainer: '#BFF3EB',
+  secondary: '#2D4FCF',
+  secondaryContainer: '#4B69EA',
+  protein: '#8CA2FF', // Macro Protein Dark
+  carbs: '#F2B84B', // Macro Carbs Dark
+  fat: '#D58AF0', // Macro Fat Dark
+  calories: '#FF8A5B', // Macro Kcal Dark
+  onTrack: '#6FD38A',
+  onTrackBg: 'rgba(111, 211, 138, 0.18)',
+  almostThere: '#F2B84B',
+  almostThereBg: 'rgba(242, 184, 75, 0.18)',
+  overTarget: '#F2B84B', // Supportive warning tone per Stitch guidelines
+  overTargetBg: 'rgba(242, 184, 75, 0.18)',
+  track: '#1F2625',
   neutralFill: '#242428',
   onStatus: '#FFFFFF',
   shadow: '#000000',
   scrim: 'rgba(0, 0, 0, 0.75)',
   ringIcon: {
-    calories: '#22C55E',
-    protein: '#0EA5E9',
-    carbs: '#F59E0B',
-    fat: '#EF4444',
-    workout: '#0EA5E9',
-    rest: '#22C55E'
+    calories: '#FF8A5B',
+    protein: '#8CA2FF',
+    carbs: '#F2B84B',
+    fat: '#D58AF0',
+    workout: '#4FD6C4',
+    rest: '#6CC1F5'
   },
-  connected: '#22C55E',
-  syncing: '#0EA5E9',
+  connected: '#6FD38A',
+  syncing: '#6CC1F5',
   offline: '#8E8E93',
-  error: '#EF4444'
+  error: '#FF8A80',
+  info: '#6CC1F5',
+  warning: '#F2B84B'
 };
 
-// Kinetic Pure Light: cool porcelain canvas, white cards lifted by soft shadows,
-// blue / orange / rose macro colors and green for "on track".
+// Kinetic Pure Light: Stitch AI FitWear light mode porcelain with teal-green seed
 export const kineticPureLight: ThemeColors = {
   name: 'Kinetic Pure Light',
   isDark: false,
-  background: '#F4F6FA',
-  surface: '#FFFFFF',
+  background: '#EFFCF9',
+  surface: '#EFFCF9',
   card: '#FFFFFF',
-  surfaceElevated: '#EEF2F8',
-  surfaceSubtle: '#F8FAFC',
-  border: '#E6EBF2',
-  borderSubtle: '#DDE3EC',
-  text: '#0F172A',
-  textSecondary: '#475569', // 7.6:1 on white
-  textMuted: '#64748B', // 4.8:1 on white
-  primary: '#0369A1', // 5.9:1 with white text
-  primaryGlow: 'rgba(3, 105, 161, 0.2)',
+  surfaceElevated: '#E4F1EE',
+  surfaceSubtle: '#EAF6F3',
+  border: '#DDE4E4',
+  borderSubtle: '#BDC9C5',
+  text: '#121E1C',
+  textSecondary: '#3E4946',
+  textMuted: '#6E7A76',
+  primary: '#005E53', // Stitch Deep Teal
+  primaryGlow: 'rgba(0, 94, 83, 0.2)',
+  primaryContainer: '#DDF3EF',
   onPrimary: '#FFFFFF',
-  protein: '#0284C7',
-  carbs: '#D97706',
-  fat: '#E11D48',
-  calories: '#059669',
-  onTrack: '#047857',
+  onPrimaryContainer: '#00302A',
+  secondary: '#2D4FCF',
+  secondaryContainer: '#4B69EA',
+  protein: '#3B5BDB', // Stitch Macro Protein
+  carbs: '#A8730A', // Stitch Macro Carbs
+  fat: '#9C36B5', // Stitch Macro Fat
+  calories: '#D9480F', // Stitch Macro Kcal
+  onTrack: '#2E7D32',
   onTrackBg: '#D1FAE5',
-  almostThere: '#B45309',
+  almostThere: '#9A5B00',
   almostThereBg: '#FEF3C7',
-  overTarget: '#BE123C',
-  overTargetBg: '#FFE4E6',
+  overTarget: '#9A5B00', // Non-punitive warning
+  overTargetBg: '#FEF3C7',
   track: '#E8EDF4',
   neutralFill: '#DDE3EC',
   onStatus: '#FFFFFF',
-  shadow: '#0F172A',
-  scrim: 'rgba(15, 23, 42, 0.5)',
-  // Icon color == its ring stroke color; every one is >= 3:1 on white
+  shadow: '#121E1C',
+  scrim: 'rgba(18, 30, 28, 0.5)',
   ringIcon: {
-    calories: '#059669', // 3.8:1
-    protein: '#0284C7', // 4.1:1
-    carbs: '#D97706', // 3.2:1
-    fat: '#E11D48', // 4.7:1
-    workout: '#0284C7',
-    rest: '#0369A1' // 5.9:1
+    calories: '#D9480F',
+    protein: '#3B5BDB',
+    carbs: '#A8730A',
+    fat: '#9C36B5',
+    workout: '#005E53',
+    rest: '#0B6FA8'
   },
-  connected: '#047857',
-  syncing: '#0284C7',
-  offline: '#64748B',
-  error: '#BE123C'
+  connected: '#2E7D32',
+  syncing: '#0B6FA8',
+  offline: '#6E7A76',
+  error: '#B3261E',
+  info: '#0B6FA8',
+  warning: '#9A5B00'
 };
 
 /** Soft card lift for the light theme (dark relies on borders). Pair with `shadowColor: theme.shadow`. */
 export const softShadow = Platform.select({
   web: {
-    boxShadow: '0 6px 16px -4px rgba(15, 23, 42, 0.07)'
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
   },
   default: {
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.07,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 2
   }
 }) as any;
+
 /**
  * The watch face mock is always dark (AMOLED), whatever the app theme is.
- * Ring icon tints keep >= 3:1 against #000000 (all are > 9:1).
  */
 export const watchFace = {
   bezel: '#18181B',
@@ -171,18 +188,18 @@ export const watchFace = {
   chip: '#1C1C1E',
   text: '#FFFFFF',
   textSecondary: '#A1A1AA',
-  calories: '#34D399',
-  protein: '#38BDF8',
-  carbs: '#FBBF24',
-  fat: '#FB7185',
-  workout: '#34D399',
-  rest: '#38BDF8',
+  calories: '#FF8A5B',
+  protein: '#8CA2FF',
+  carbs: '#F2B84B',
+  fat: '#D58AF0',
+  workout: '#4FD6C4',
+  rest: '#6CC1F5',
   ringIcon: {
     calories: '#FFFFFF',
     workout: '#FFFFFF',
-    protein: '#7DD3FC',
-    carbs: '#FCD34D',
-    fat: '#FDA4AF'
+    protein: '#8CA2FF',
+    carbs: '#F2B84B',
+    fat: '#D58AF0'
   }
 } as const;
 
@@ -193,50 +210,57 @@ export function onColor(bg: string): string {
     return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
   };
   const lum = 0.2126 * lin(0) + 0.7152 * lin(1) + 0.0722 * lin(2);
-  return lum > 0.18 ? '#000000' : '#FFFFFF'; // crossover where black/white contrast is equal
+  return lum > 0.18 ? '#000000' : '#FFFFFF';
 }
+
 export const spacing = {
   xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
-  touchTarget: 44
-} as const;
-
-export const radii = {
   sm: 8,
   md: 12,
   lg: 16,
   xl: 24,
+  xxl: 32,
+  xxxl: 48,
+  touchTarget: 48
+} as const;
+
+export const radii = {
+  sm: 8,
+  md: 14,
+  lg: 20,
+  xl: 28,
   full: 9999
 } as const;
 
 export const typography = {
   displayLarge: {
-    fontSize: 40,
+    fontSize: 44,
     fontWeight: '700' as const,
-    letterSpacing: -1
+    lineHeight: 48,
+    letterSpacing: -0.8
   },
   displayMedium: {
     fontSize: 32,
     fontWeight: '700' as const,
-    letterSpacing: -0.8
+    lineHeight: 38,
+    letterSpacing: -0.6
   },
   headlineLarge: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700' as const,
-    letterSpacing: -0.5
+    lineHeight: 36,
+    letterSpacing: -0.3
   },
   headlineMedium: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '600' as const,
-    letterSpacing: -0.3
+    lineHeight: 30,
+    letterSpacing: -0.1
   },
   headlineSmall: {
     fontSize: 18,
-    fontWeight: '600' as const
+    fontWeight: '600' as const,
+    lineHeight: 26
   },
   bodyLarge: {
     fontSize: 16,
@@ -251,12 +275,20 @@ export const typography = {
   labelLarge: {
     fontSize: 14,
     fontWeight: '600' as const,
-    letterSpacing: 0.2
+    lineHeight: 18,
+    letterSpacing: 0.1
   },
   labelSmall: {
     fontSize: 12,
     fontWeight: '600' as const,
-    letterSpacing: 0.4
+    lineHeight: 16,
+    letterSpacing: 0.2
+  },
+  caption: {
+    fontSize: 12,
+    fontWeight: '500' as const,
+    lineHeight: 16,
+    letterSpacing: 0.2
   },
   micro: {
     fontSize: 10,
