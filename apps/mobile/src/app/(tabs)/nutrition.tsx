@@ -16,7 +16,7 @@ import * as Haptics from 'expo-haptics';
 import { useAppTheme, softShadow } from '../../theme';
 import { useNutritionStore } from '../../store/nutritionStore';
 import { useSettingsStore } from '../../store/settingsStore';
-import { Timestamp, MealType } from '../../types/types';
+import { Timestamp, MealType, MealDoc } from '../../types/types';
 import {
   MealCard,
   PrimaryButton,
@@ -25,7 +25,8 @@ import {
   StatusBadge,
   SkeletonBlock,
   EmptyState,
-  ErrorState
+  ErrorState,
+  MealNutritionModal
 } from '../../components/ui';
 
 export default function NutritionScreen() {
@@ -43,6 +44,7 @@ export default function NutritionScreen() {
 
   // Hydration state (local telemetry tracking)
   const [waterMl, setWaterMl] = useState<number>(2000);
+  const [selectedMeal, setSelectedMeal] = useState<MealDoc | null>(null);
   const waterTargetMl = 3000;
 
   // Past 7 days for the horizontal date strip
@@ -425,6 +427,7 @@ export default function NutritionScreen() {
                     <MealCard
                       key={meal.id}
                       meal={meal}
+                      onPress={() => setSelectedMeal(meal)}
                       onDelete={() => handleDelete(meal.id, meal.type)}
                     />
                   ))}
@@ -449,6 +452,14 @@ export default function NutritionScreen() {
           />
         </View>
       </ScrollView>
+
+      {/* Detailed Nutrition Facts Modal for Stored Meals */}
+      <MealNutritionModal
+        meal={selectedMeal}
+        visible={selectedMeal !== null}
+        onClose={() => setSelectedMeal(null)}
+        onDelete={deleteMeal}
+      />
     </SafeAreaView>
   );
 }

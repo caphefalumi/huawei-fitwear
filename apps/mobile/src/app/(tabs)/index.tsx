@@ -24,17 +24,20 @@ import {
   SkeletonBlock,
   EmptyState,
   ErrorState,
-  BrandLogo
+  BrandLogo,
+  MealNutritionModal
 } from '../../components/ui';
+import { MealDoc } from '../../types/types';
 
 export default function HomeScreen() {
   const { theme, radii } = useAppTheme();
   const { user, loadUser } = useUserStore();
-  const { todaySummary, meals, loadNutrition, loading: nutritionLoading } = useNutritionStore();
+  const { todaySummary, meals, loadNutrition, deleteMeal, loading: nutritionLoading } = useNutritionStore();
   const { plan, loadPlanAndHistory } = useWorkoutStore();
   const { devices, loadDevices } = useDeviceStore();
   const previewState = useSettingsStore((state) => state.previewState);
   const [waterMl, setWaterMl] = useState(1800);
+  const [selectedMeal, setSelectedMeal] = useState<MealDoc | null>(null);
 
   useEffect(() => {
     loadUser();
@@ -471,7 +474,7 @@ export default function HomeScreen() {
             meals.map((meal) => (
               <Pressable
                 key={meal.id}
-                onPress={() => router.push('/snap-meal')}
+                onPress={() => setSelectedMeal(meal)}
                 style={[
                   styles.mealCardItem,
                   {
@@ -560,6 +563,14 @@ export default function HomeScreen() {
           </Pressable>
         </View>
       </ScrollView>
+
+      {/* Detailed Nutrition Facts Modal for Stored Meals */}
+      <MealNutritionModal
+        meal={selectedMeal}
+        visible={selectedMeal !== null}
+        onClose={() => setSelectedMeal(null)}
+        onDelete={deleteMeal}
+      />
     </SafeAreaView>
   );
 }
