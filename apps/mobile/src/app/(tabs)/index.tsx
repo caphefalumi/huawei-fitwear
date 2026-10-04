@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,8 @@ import {
   ScrollView,
   Pressable,
   RefreshControl,
-  Platform
+  Platform,
+  Image
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,8 +21,6 @@ import { useSettingsStore } from '../../store/settingsStore';
 import {
   ProgressRing,
   StatusBadge,
-  PrimaryButton,
-  SecondaryButton,
   SyncStatusChip,
   SkeletonBlock,
   EmptyState,
@@ -29,12 +28,13 @@ import {
 } from '../../components/ui';
 
 export default function HomeScreen() {
-  const { theme, radii } = useAppTheme();
-  const { loadUser } = useUserStore();
+  const { theme, radii, spacing, typography } = useAppTheme();
+  const { user, loadUser } = useUserStore();
   const { todaySummary, meals, loadNutrition, loading: nutritionLoading } = useNutritionStore();
   const { plan, loadPlanAndHistory } = useWorkoutStore();
   const { devices, loadDevices } = useDeviceStore();
   const previewState = useSettingsStore((state) => state.previewState);
+  const [waterMl, setWaterMl] = useState(1800);
 
   useEffect(() => {
     loadUser();
@@ -51,17 +51,11 @@ export default function HomeScreen() {
     todaySummary.calorieTarget - todaySummary.caloriesConsumed,
     0
   );
+  const remainingPct = Math.round(
+    (caloriesLeft / Math.max(todaySummary.calorieTarget, 1)) * 100
+  );
 
   const nextDay = plan ? plan.days[plan.currentDayIndex] : null;
-
-  // Formatted date
-  const todayFormatted = useMemo(() => {
-    return new Date().toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'short',
-      day: 'numeric'
-    }).toUpperCase();
-  }, []);
 
   // Multi-arc progress data matching the Huawei watch dial
   const calRatio = Math.min(todaySummary.caloriesConsumed / Math.max(todaySummary.calorieTarget, 1), 1);
@@ -69,14 +63,7 @@ export default function HomeScreen() {
   const cRatio = Math.min(todaySummary.carbsConsumed / Math.max(todaySummary.carbsTarget, 1), 1);
   const fRatio = Math.min(todaySummary.fatConsumed / Math.max(todaySummary.fatTarget, 1), 1);
 
-  const ringsData = useMemo(() => [
-    { value: calRatio, color: theme.calories, radius: 64, strokeWidth: 8 },
-    { value: pRatio, color: theme.protein, radius: 53, strokeWidth: 4.5 },
-    { value: cRatio, color: theme.carbs, radius: 44, strokeWidth: 4.5 },
-    { value: fRatio, color: theme.fat, radius: 36, strokeWidth: 4.5 }
-  ], [calRatio, pRatio, cRatio, fRatio, theme]);
-
-  // 1. Loading State (Dev Preview)
+  // 1. Loading State
   if (previewState === 'loading') {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -85,8 +72,8 @@ export default function HomeScreen() {
           <SkeletonBlock height={32} width={180} style={{ marginBottom: 20 }} />
           <SkeletonBlock height={240} borderRadius={radii.xl} style={{ marginBottom: 16 }} />
           <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
-            <SkeletonBlock height={48} borderRadius={radii.full} style={{ flex: 1.2 }} />
-            <SkeletonBlock height={48} borderRadius={radii.full} style={{ flex: 1 }} />
+            <SkeletonBlock height={48} borderRadius={radii.md} style={{ flex: 1 }} />
+            <SkeletonBlock height={48} borderRadius={radii.md} style={{ flex: 1 }} />
           </View>
           <SkeletonBlock height={180} borderRadius={radii.lg} style={{ marginBottom: 20 }} />
           <SkeletonBlock height={140} borderRadius={radii.lg} />
@@ -95,7 +82,7 @@ export default function HomeScreen() {
     );
   }
 
-  // 2. Error State (Dev Preview)
+  // 2. Error State
   if (previewState === 'error') {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -110,7 +97,7 @@ export default function HomeScreen() {
     );
   }
 
-  // 3. Empty State (Dev Preview)
+  // 3. Empty State
   if (previewState === 'empty') {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -127,18 +114,33 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Offline banner if in offline preview mode */}
-      {previewState === 'offline' ? (
-        <View style={[styles.offlineBanner, { backgroundColor: theme.surfaceElevated }]}>
-          <Ionicons name="cloud-offline" size={16} color={theme.textSecondary} />
-          <Text style={[styles.offlineText, { color: theme.textSecondary }]}>
-            Offline Mode — Changes will queue and sync when reconnected
-          </Text>
+      {/* Top Header Bar */}
+      <View style={[styles.topBar, { borderBottomColor: theme.borderSubtle }]}>
+        <View style={styles.topBarBrand}>
+          <View style={[styles.brandLogoCircle, { backgroundColor: theme.primaryContainer }]}>
+            <Ionicons name="fitness" size={20} color={theme.primary} />
+          </View>
+          <View>
+            <Text style={[styles.brandTitle, { color: theme.primary }]}>AI FitWear</Text>
+            <View style={styles.watchSyncMiniRow}>
+              <View style={[styles.syncDot, { backgroundColor: theme.onTrack }]} />
+              <Text style={[styles.syncMiniText, { color: theme.textSecondary }]}>Watch synced • 2m ago</Text>
+            </View>
+          </View>
         </View>
-      ) : null}
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open Profile & Settings"
+          onPress={() => router.push('/(tabs)/me')}
+          style={[styles.profileAvatar, { backgroundColor: theme.primaryContainer, borderColor: theme.border }]}
+        >
+          <Ionicons name="person" size={18} color={theme.primary} />
+        </Pressable>
+      </View>
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: 104 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: 110 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -152,368 +154,412 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Header Section: Editorial Date & Greeting */}
-        <View style={styles.headerRow}>
-          <View style={styles.userInfoCol}>
-            <View style={styles.dateBadgeRow}>
-              <Ionicons name="flash-outline" size={12} color={theme.primary} />
-              <Text style={[styles.dateSubtext, { color: theme.textSecondary }]}>
-                {todayFormatted}
+        {/* Top Greeting & Target Summary */}
+        <View style={styles.greetingSection}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.greetingHeadline, { color: theme.text }]}>
+              Good morning, {user?.fullName || 'Alex'} 👋
+            </Text>
+            <View style={styles.targetSubRow}>
+              <Text style={[styles.targetHighlight, { color: theme.primary }]}>
+                Target: {todaySummary.calorieTarget.toLocaleString()} kcal
+              </Text>
+              <View style={[styles.subDot, { backgroundColor: theme.border }]} />
+              <Text style={[styles.subMeta, { color: theme.textSecondary }]}>
+                {nextDay ? nextDay.title : 'Pull day'}
               </Text>
             </View>
-            <Text style={[styles.headline, { color: theme.text }]}>
-              Today
-            </Text>
           </View>
+
           <SyncStatusChip
             status={previewState === 'offline' ? 'offline' : connectionStatus}
             onPress={() => router.push('/devices')}
           />
         </View>
 
-        {/* HERO CARD: Kinetic Telemetry Activity Overview */}
+        {/* HERO CALORIE RING CARD */}
         <View
           style={[
             styles.heroCard,
             {
-              backgroundColor: theme.card,
-              borderColor: theme.border,
-              borderRadius: radii.xl,
-              ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
+              backgroundColor: theme.isDark ? '#12332E' : '#00796B',
+              borderRadius: radii.xl
             }
           ]}
         >
-          <View style={styles.heroLayout}>
-            {/* Multi-Ring Activity Dial */}
-            <View style={styles.ringColumn}>
-              <ProgressRing
-                size={144}
-                rings={ringsData}
-                strokeWidth={8}
-                icon={{ name: 'fire', color: theme.ringIcon.calories }}
-                badge={todaySummary.status === 'OVER_TARGET' ? 'warning' : undefined}
-                accessibilityLabel={`Calories: ${todaySummary.caloriesConsumed} of ${todaySummary.calorieTarget} kcal, ${caloriesLeft} kcal remaining`}
-              />
-            </View>
-
-            {/* Glanceable Numbers */}
-            <View style={styles.metricsColumn}>
-              <View style={styles.primaryMetricBlock}>
-                <Text style={[styles.metricKcalBig, { color: theme.text }]}>
-                  {caloriesLeft.toLocaleString()}
-                </Text>
-                <Text style={[styles.metricKcalUnit, { color: theme.textSecondary }]}>
-                  KCAL REMAINING
-                </Text>
-              </View>
-
-              <View style={styles.metricSubRow}>
-                <View>
-                  <Text style={[styles.metricSmallNum, { color: theme.text }]}>
-                    {todaySummary.caloriesConsumed}
-                  </Text>
-                  <Text style={[styles.metricSmallLabel, { color: theme.textMuted }]}>
-                    INTAKE
-                  </Text>
-                </View>
-
-                <View style={[styles.metricDivider, { backgroundColor: theme.border }]} />
-
-                <View>
-                  <Text style={[styles.metricSmallNum, { color: theme.text }]}>
-                    {todaySummary.calorieTarget}
-                  </Text>
-                  <Text style={[styles.metricSmallLabel, { color: theme.textMuted }]}>
-                    GOAL
-                  </Text>
-                </View>
-              </View>
-
-              <View style={{ marginTop: 6, alignSelf: 'flex-start' }}>
-                <StatusBadge status={todaySummary.status} size="small" />
-              </View>
+          <View style={styles.heroHeader}>
+            <Text style={styles.heroSubHeader}>DAILY FUELING</Text>
+            <View style={styles.heroPill}>
+              <Text style={styles.heroPillText}>{remainingPct}% Remaining</Text>
             </View>
           </View>
 
-          {/* 3 Macro Dial Cards */}
-          <View style={[styles.macroPillsRow, { borderTopColor: theme.borderSubtle }]}>
-            {/* Protein */}
-            <View style={[styles.macroPillCard, { backgroundColor: theme.surfaceElevated, borderRadius: radii.md }]}>
-              <View style={styles.macroPillHeader}>
-                <View style={[styles.macroDot, { backgroundColor: theme.protein }]} />
-                <Text style={[styles.macroPillTitle, { color: theme.textSecondary }]}>PROTEIN</Text>
+          {/* Radial Calorie Gauge */}
+          <View style={styles.gaugeContainer}>
+            <ProgressRing
+              size={172}
+              strokeWidth={14}
+              progress={calRatio}
+              color="#FF8A5B"
+              icon={{ name: 'fire', color: '#FF8A5B' }}
+              accessibilityLabel={`Calories: ${todaySummary.caloriesConsumed} of ${todaySummary.calorieTarget} kcal, ${caloriesLeft} kcal remaining`}
+            >
+              <View style={styles.gaugeCenter}>
+                <Text style={styles.gaugeOverline}>REMAINING</Text>
+                <Text style={styles.gaugeMainNumber}>{caloriesLeft.toLocaleString()}</Text>
+                <Text style={styles.gaugeUnit}>kcal left</Text>
               </View>
-              <Text style={[styles.macroPillValue, { color: theme.text }]}>
-                {Math.round(todaySummary.proteinConsumed)}
-                <Text style={[styles.macroPillTarget, { color: theme.textMuted }]}>/{todaySummary.proteinTarget}g</Text>
+            </ProgressRing>
+          </View>
+
+          {/* Hero Sub-Stats Split Pill */}
+          <View style={styles.heroSplitPill}>
+            <View style={styles.splitPillItem}>
+              <Text style={styles.splitPillLabel}>Consumed</Text>
+              <Text style={styles.splitPillValue}>
+                {todaySummary.caloriesConsumed} <Text style={styles.splitPillUnit}>kcal</Text>
               </Text>
-              <View style={[styles.macroMiniTrack, { backgroundColor: theme.track }]}>
-                <View
-                  style={[
-                    styles.macroMiniFill,
-                    {
-                      width: `${Math.round(pRatio * 100)}%`,
-                      backgroundColor: theme.protein,
-                      borderRadius: radii.full
-                    }
-                  ]}
-                />
-              </View>
             </View>
-
-            {/* Carbs */}
-            <View style={[styles.macroPillCard, { backgroundColor: theme.surfaceElevated, borderRadius: radii.md }]}>
-              <View style={styles.macroPillHeader}>
-                <View style={[styles.macroDot, { backgroundColor: theme.carbs }]} />
-                <Text style={[styles.macroPillTitle, { color: theme.textSecondary }]}>CARBS</Text>
-              </View>
-              <Text style={[styles.macroPillValue, { color: theme.text }]}>
-                {Math.round(todaySummary.carbsConsumed)}
-                <Text style={[styles.macroPillTarget, { color: theme.textMuted }]}>/{todaySummary.carbsTarget}g</Text>
+            <View style={styles.splitPillDivider} />
+            <View style={styles.splitPillItem}>
+              <Text style={styles.splitPillLabel}>Daily Goal</Text>
+              <Text style={styles.splitPillValue}>
+                {todaySummary.calorieTarget} <Text style={styles.splitPillUnit}>kcal</Text>
               </Text>
-              <View style={[styles.macroMiniTrack, { backgroundColor: theme.track }]}>
-                <View
-                  style={[
-                    styles.macroMiniFill,
-                    {
-                      width: `${Math.round(cRatio * 100)}%`,
-                      backgroundColor: theme.carbs,
-                      borderRadius: radii.full
-                    }
-                  ]}
-                />
-              </View>
-            </View>
-
-            {/* Fat */}
-            <View style={[styles.macroPillCard, { backgroundColor: theme.surfaceElevated, borderRadius: radii.md }]}>
-              <View style={styles.macroPillHeader}>
-                <View style={[styles.macroDot, { backgroundColor: theme.fat }]} />
-                <Text style={[styles.macroPillTitle, { color: theme.textSecondary }]}>FAT</Text>
-              </View>
-              <Text style={[styles.macroPillValue, { color: theme.text }]}>
-                {Math.round(todaySummary.fatConsumed)}
-                <Text style={[styles.macroPillTarget, { color: theme.textMuted }]}>/{todaySummary.fatTarget}g</Text>
-              </Text>
-              <View style={[styles.macroMiniTrack, { backgroundColor: theme.track }]}>
-                <View
-                  style={[
-                    styles.macroMiniFill,
-                    {
-                      width: `${Math.round(fRatio * 100)}%`,
-                      backgroundColor: theme.fat,
-                      borderRadius: radii.full
-                    }
-                  ]}
-                />
-              </View>
             </View>
           </View>
         </View>
 
-        {/* ACTIVITY VITALS GLANCE ROW */}
-        <View style={styles.vitalsRow}>
-          <View style={[styles.vitalCard, { backgroundColor: theme.card, borderColor: theme.border, borderRadius: radii.lg }]}>
-            <View style={styles.vitalHeader}>
-              <Ionicons name="footsteps" size={14} color={theme.primary} />
-              <Text style={[styles.vitalLabel, { color: theme.textSecondary }]}>STEPS</Text>
-            </View>
-            <Text style={[styles.vitalValue, { color: theme.text }]}>8,420</Text>
-            <Text style={[styles.vitalTarget, { color: theme.textMuted }]}>Goal: 10,000</Text>
-          </View>
-
-          <View style={[styles.vitalCard, { backgroundColor: theme.card, borderColor: theme.border, borderRadius: radii.lg }]}>
-            <View style={styles.vitalHeader}>
-              <Ionicons name="flame" size={14} color={theme.calories} />
-              <Text style={[styles.vitalLabel, { color: theme.textSecondary }]}>ACTIVE</Text>
-            </View>
-            <Text style={[styles.vitalValue, { color: theme.text }]}>540</Text>
-            <Text style={[styles.vitalTarget, { color: theme.textMuted }]}>kcal burn</Text>
-          </View>
-
-          <View style={[styles.vitalCard, { backgroundColor: theme.card, borderColor: theme.border, borderRadius: radii.lg }]}>
-            <View style={styles.vitalHeader}>
-              <Ionicons name="heart" size={14} color={theme.fat} />
-              <Text style={[styles.vitalLabel, { color: theme.textSecondary }]}>HEART</Text>
-            </View>
-            <Text style={[styles.vitalValue, { color: theme.text }]}>71</Text>
-            <Text style={[styles.vitalTarget, { color: theme.textMuted }]}>bpm rest</Text>
-          </View>
-        </View>
-
-        {/* QUICK ACTIONS */}
-        <View style={styles.actionRow}>
-          <PrimaryButton
-            label="Snap Meal"
-            icon="camera"
-            size="large"
-            onPress={() => router.push('/snap-meal')}
-            style={styles.snapButton}
-          />
-          <SecondaryButton
-            label="Start Workout"
-            icon="barbell"
-            size="large"
-            onPress={() => router.push('/active-workout')}
-            style={styles.workoutButton}
-          />
-        </View>
-
-        {/* SECTION: TODAY'S WORKOUT */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
-            {"TODAY'S WORKOUT"}
-          </Text>
-          <Pressable onPress={() => router.push('/(tabs)/train')}>
-            <Text style={[styles.sectionLinkText, { color: theme.primary }]}>Plan Details</Text>
-          </Pressable>
-        </View>
-
-        {nextDay ? (
-          <View
-            style={[
-              styles.workoutHeroCard,
-              {
-                backgroundColor: theme.card,
-                borderColor: theme.border,
-                borderRadius: radii.xl,
-                ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
-              }
-            ]}
-          >
-            <View style={styles.workoutCardTop}>
-              <View style={{ flex: 1 }}>
-                <View style={styles.workoutTagRow}>
-                  <View style={[styles.workoutBadge, { backgroundColor: theme.onTrackBg }]}>
-                    <Text style={[styles.workoutDayTag, { color: theme.primary }]}>
-                      DAY {nextDay.dayNumber}
-                    </Text>
-                  </View>
-                  <Text style={[styles.workoutMeta, { color: theme.textSecondary }]}>
-                    {nextDay.estimatedDurationMin} min • {nextDay.exercises.length} exercises
-                  </Text>
-                </View>
-                <Text style={[styles.workoutMainTitle, { color: theme.text }]} numberOfLines={1}>
-                  {nextDay.title}
-                </Text>
-              </View>
-
-              <View style={styles.workoutProgressCircle}>
-                <ProgressRing
-                  size={52}
-                  strokeWidth={4.5}
-                  progress={0}
-                  color={theme.primary}
-                  icon={{ name: 'dumbbell', color: theme.ringIcon.workout }}
-                  accessibilityLabel="Today's workout progress: 0%"
-                />
-              </View>
-            </View>
-
-            {/* Exercise preview checklist */}
-            <View style={[styles.exerciseList, { borderTopColor: theme.borderSubtle }]}>
-              {nextDay.exercises.slice(0, 3).map((pe) => (
-                <View key={pe.id} style={styles.exercisePreviewRow}>
-                  <View style={[styles.exerciseBullet, { backgroundColor: theme.primary }]} />
-                  <Text style={[styles.exerciseName, { color: theme.text }]} numberOfLines={1}>
-                    {pe.exerciseId.replace('ex_', '').replace(/_/g, ' ')}
-                  </Text>
-                  <Text style={[styles.exerciseSetsText, { color: theme.textSecondary }]}>
-                    {pe.sets} × {pe.repRange.min}-{pe.repRange.max} reps
-                  </Text>
-                </View>
-              ))}
-            </View>
-
-            <PrimaryButton
-              label="Begin Workout"
-              icon="play"
-              onPress={() => router.push('/active-workout')}
-              style={{ marginTop: 14 }}
-            />
-          </View>
-        ) : (
-          <View style={[styles.emptyWorkoutCard, { backgroundColor: theme.card, borderColor: theme.border, borderRadius: radii.xl }]}>
-            <EmptyState
-              icon="barbell-outline"
-              title="No Active Routine"
-              description="Generate your personalized split based on your profile."
-              actionLabel="Build Routine"
-              onAction={() => router.push('/(tabs)/train')}
-            />
-          </View>
-        )}
-
-        {/* SECTION: TODAY'S LOGGED MEALS */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
-            {"TODAY'S FUEL"}
-          </Text>
-          <Pressable onPress={() => router.push('/(tabs)/nutrition')}>
-            <Text style={[styles.sectionLinkText, { color: theme.primary }]}>See All</Text>
-          </Pressable>
-        </View>
-
+        {/* MACRO NUTRIENTS BREAKDOWN CARD */}
         <View
           style={[
-            styles.mealsListCard,
+            styles.card,
             {
               backgroundColor: theme.card,
               borderColor: theme.border,
-              borderRadius: radii.xl,
+              borderRadius: radii.lg,
               ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
             }
           ]}
         >
-          {meals.length === 0 ? (
-            <Text style={[styles.noMealsText, { color: theme.textSecondary }]}>
-              No meals logged today. Photograph your plate to auto-calculate nutrition.
-            </Text>
-          ) : (
-            meals.slice(0, 3).map((meal, index) => (
-              <View
-                key={meal.id}
-                style={[
-                  styles.mealRowItem,
-                  index > 0 ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.borderSubtle } : null
-                ]}
-              >
-                <View style={[styles.mealIconBox, { backgroundColor: theme.surfaceElevated, borderRadius: radii.md }]}>
-                  <Ionicons
-                    name={
-                      meal.type === 'breakfast'
-                        ? 'sunny'
-                        : meal.type === 'lunch'
-                        ? 'restaurant'
-                        : meal.type === 'dinner'
-                        ? 'moon'
-                        : 'cafe'
-                    }
-                    size={16}
-                    color={theme.primary}
-                  />
-                </View>
+          <View style={styles.cardHeaderRow}>
+            <View style={styles.cardHeaderTitleGroup}>
+              <Ionicons name="pie-chart" size={18} color={theme.primary} />
+              <Text style={[styles.cardTitle, { color: theme.text }]}>Macros Remaining</Text>
+            </View>
+            <Text style={[styles.cardMetaTag, { color: theme.textSecondary }]}>Auto-balanced</Text>
+          </View>
 
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.mealItemType, { color: theme.text }]}>
-                    {meal.type.charAt(0).toUpperCase() + meal.type.slice(1)} • {meal.time}
-                  </Text>
-                  <Text style={[styles.mealSummaryNames, { color: theme.textSecondary }]} numberOfLines={1}>
-                    {meal.items.map((i) => i.name).join(', ')}
-                  </Text>
-                </View>
-
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={[styles.mealKcalTotal, { color: theme.text }]}>
-                    {meal.totalCalories} kcal
-                  </Text>
-                  <Text style={[styles.mealProteinGram, { color: theme.protein }]}>
-                    {Math.round(meal.totalProtein)}g P
+          {/* Protein Bar */}
+          <View style={styles.macroRow}>
+            <View style={styles.macroHeader}>
+              <View style={styles.macroLabelGroup}>
+                <View style={[styles.macroDotBadge, { backgroundColor: theme.protein }]} />
+                <Text style={[styles.macroName, { color: theme.text }]}>Protein</Text>
+                <View style={[styles.macroStatusPill, { backgroundColor: `${theme.protein}18` }]}>
+                  <Text style={[styles.macroStatusPillText, { color: theme.protein }]}>
+                    {Math.max(0, todaySummary.proteinTarget - todaySummary.proteinConsumed)}g to goal
                   </Text>
                 </View>
               </View>
+              <Text style={[styles.macroValue, { color: theme.text }]}>
+                {Math.round(todaySummary.proteinConsumed)}g{' '}
+                <Text style={{ color: theme.textSecondary, fontWeight: '400' }}>
+                  / {todaySummary.proteinTarget}g
+                </Text>
+              </Text>
+            </View>
+            <View style={[styles.macroTrack, { backgroundColor: theme.surfaceElevated }]}>
+              <View
+                style={[
+                  styles.macroFill,
+                  {
+                    width: `${Math.round(pRatio * 100)}%`,
+                    backgroundColor: theme.protein,
+                    borderRadius: radii.full
+                  }
+                ]}
+              />
+            </View>
+          </View>
+
+          {/* Carbs Bar */}
+          <View style={styles.macroRow}>
+            <View style={styles.macroHeader}>
+              <View style={styles.macroLabelGroup}>
+                <View style={[styles.macroDotBadge, { backgroundColor: theme.carbs }]} />
+                <Text style={[styles.macroName, { color: theme.text }]}>Carbs</Text>
+              </View>
+              <Text style={[styles.macroValue, { color: theme.text }]}>
+                {Math.round(todaySummary.carbsConsumed)}g{' '}
+                <Text style={{ color: theme.textSecondary, fontWeight: '400' }}>
+                  / {todaySummary.carbsTarget}g
+                </Text>
+              </Text>
+            </View>
+            <View style={[styles.macroTrack, { backgroundColor: theme.surfaceElevated }]}>
+              <View
+                style={[
+                  styles.macroFill,
+                  {
+                    width: `${Math.round(cRatio * 100)}%`,
+                    backgroundColor: theme.carbs,
+                    borderRadius: radii.full
+                  }
+                ]}
+              />
+            </View>
+          </View>
+
+          {/* Fat Bar */}
+          <View style={styles.macroRow}>
+            <View style={styles.macroHeader}>
+              <View style={styles.macroLabelGroup}>
+                <View style={[styles.macroDotBadge, { backgroundColor: theme.fat }]} />
+                <Text style={[styles.macroName, { color: theme.text }]}>Fat</Text>
+              </View>
+              <Text style={[styles.macroValue, { color: theme.text }]}>
+                {Math.round(todaySummary.fatConsumed)}g{' '}
+                <Text style={{ color: theme.textSecondary, fontWeight: '400' }}>
+                  / {todaySummary.fatTarget}g
+                </Text>
+              </Text>
+            </View>
+            <View style={[styles.macroTrack, { backgroundColor: theme.surfaceElevated }]}>
+              <View
+                style={[
+                  styles.macroFill,
+                  {
+                    width: `${Math.round(fRatio * 100)}%`,
+                    backgroundColor: theme.fat,
+                    borderRadius: radii.full
+                  }
+                ]}
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* TODAY'S WORKOUT FOCUS CARD */}
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+              borderRadius: radii.lg,
+              ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
+            }
+          ]}
+        >
+          <View style={styles.workoutTopRow}>
+            <View style={{ flex: 1 }}>
+              <View style={styles.workoutBadgeRow}>
+                <View style={[styles.musclePill, { backgroundColor: `${theme.primary}18` }]}>
+                  <Text style={[styles.musclePillText, { color: theme.primary }]}>
+                    BACK & BICEPS
+                  </Text>
+                </View>
+                <Text style={[styles.scheduledText, { color: theme.textSecondary }]}>
+                  Scheduled for 17:30
+                </Text>
+              </View>
+
+              <Text style={[styles.workoutTitle, { color: theme.text }]} numberOfLines={1}>
+                {nextDay ? nextDay.title : 'Pull Hypertrophy Routine'}
+              </Text>
+
+              <View style={styles.workoutMetaRow}>
+                <View style={styles.metaItem}>
+                  <Ionicons name="barbell-outline" size={15} color={theme.textSecondary} />
+                  <Text style={[styles.metaText, { color: theme.textSecondary }]}>
+                    {nextDay ? nextDay.exercises.length : 4} exercises
+                  </Text>
+                </View>
+                <Text style={{ color: theme.borderSubtle }}>•</Text>
+                <View style={styles.metaItem}>
+                  <Ionicons name="time-outline" size={15} color={theme.textSecondary} />
+                  <Text style={[styles.metaText, { color: theme.textSecondary }]}>
+                    {nextDay ? nextDay.estimatedDurationMin : 45} mins
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={[styles.workoutCircleIcon, { backgroundColor: theme.primaryContainer }]}>
+              <Ionicons name="repeat" size={22} color={theme.primary} />
+            </View>
+          </View>
+
+          {/* Action Controls: Dual Phone + Watch */}
+          <View style={styles.workoutActionsGrid}>
+            <Pressable
+              onPress={() => router.push('/active-workout')}
+              style={({ pressed }) => [
+                styles.actionBtn,
+                {
+                  backgroundColor: theme.primary,
+                  borderRadius: radii.md,
+                  opacity: pressed ? 0.88 : 1
+                }
+              ]}
+            >
+              <Ionicons name="watch-outline" size={18} color={theme.onPrimary} />
+              <Text style={[styles.actionBtnText, { color: theme.onPrimary }]}>
+                Start on Watch
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.push('/active-workout')}
+              style={({ pressed }) => [
+                styles.actionBtn,
+                {
+                  backgroundColor: theme.surfaceElevated,
+                  borderColor: theme.border,
+                  borderRadius: radii.md,
+                  opacity: pressed ? 0.88 : 1
+                }
+              ]}
+            >
+              <Ionicons name="phone-portrait-outline" size={18} color={theme.text} />
+              <Text style={[styles.actionBtnText, { color: theme.text }]}>
+                Start on Phone
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* TODAY'S MEALS CAROUSEL */}
+        <View style={styles.sectionHeaderRow}>
+          <View style={styles.sectionTitleGroup}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Today's Meals</Text>
+            <View style={[styles.countBadge, { backgroundColor: theme.surfaceElevated }]}>
+              <Text style={[styles.countBadgeText, { color: theme.textSecondary }]}>
+                {meals.length} logged
+              </Text>
+            </View>
+          </View>
+
+          <Pressable
+            onPress={() => router.push('/snap-meal')}
+            style={styles.addMealLink}
+          >
+            <Ionicons name="add-circle" size={18} color={theme.primary} />
+            <Text style={[styles.addMealLinkText, { color: theme.primary }]}>Log meal</Text>
+          </Pressable>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.mealCarouselContainer}
+        >
+          {meals.length === 0 ? (
+            <Pressable
+              onPress={() => router.push('/snap-meal')}
+              style={[
+                styles.emptyMealCard,
+                { backgroundColor: theme.card, borderColor: theme.border, borderRadius: radii.lg }
+              ]}
+            >
+              <Ionicons name="camera-outline" size={28} color={theme.primary} />
+              <Text style={[styles.emptyMealTitle, { color: theme.text }]}>Snap your first meal</Text>
+              <Text style={[styles.emptyMealSub, { color: theme.textSecondary }]}>
+                Tap to auto-calculate nutrition
+              </Text>
+            </Pressable>
+          ) : (
+            meals.map((meal) => (
+              <Pressable
+                key={meal.id}
+                onPress={() => router.push('/snap-meal')}
+                style={[
+                  styles.mealCardItem,
+                  {
+                    backgroundColor: theme.card,
+                    borderColor: theme.border,
+                    borderRadius: radii.lg,
+                    ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
+                  }
+                ]}
+              >
+                <View style={[styles.mealPhotoBox, { backgroundColor: theme.surfaceElevated }]}>
+                  {meal.imageUrl ? (
+                    <Image source={{ uri: meal.imageUrl }} style={styles.mealImage} />
+                  ) : (
+                    <Ionicons name="restaurant-outline" size={32} color={theme.primary} />
+                  )}
+                  <View style={[styles.mealTypeTag, { backgroundColor: `${theme.card}EE` }]}>
+                    <Text style={[styles.mealTypeTagText, { color: theme.text }]}>
+                      {meal.type.toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={[styles.mealTimeTag, { backgroundColor: theme.primary }]}>
+                    <Text style={[styles.mealTimeTagText, { color: theme.onPrimary }]}>
+                      {meal.time}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.mealCardBody}>
+                  <Text style={[styles.mealCardName, { color: theme.text }]} numberOfLines={1}>
+                    {meal.items[0]?.name || 'Logged Meal'}
+                  </Text>
+                  <Text style={[styles.mealCardMacros, { color: theme.textSecondary }]}>
+                    {meal.totalCalories} kcal •{' '}
+                    <Text style={{ color: theme.protein, fontWeight: '700' }}>
+                      {meal.totalProtein}g Protein
+                    </Text>
+                  </Text>
+                </View>
+              </Pressable>
             ))
           )}
+        </ScrollView>
+
+        {/* QUICK HEALTH COACH TIP / HYDRATION */}
+        <View
+          style={[
+            styles.hydrationCard,
+            {
+              backgroundColor: theme.surfaceElevated,
+              borderColor: theme.border,
+              borderRadius: radii.lg
+            }
+          ]}
+        >
+          <View style={[styles.hydrationIconCircle, { backgroundColor: `${theme.primary}18` }]}>
+            <Ionicons name="water" size={22} color={theme.primary} />
+          </View>
+
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <View style={styles.hydrationHeaderRow}>
+              <Text style={[styles.hydrationTitle, { color: theme.text }]}>Hydration Tracker</Text>
+              <Text style={[styles.hydrationTargetText, { color: theme.primary }]}>
+                {(waterMl / 1000).toFixed(1)} / 2.5 L
+              </Text>
+            </View>
+            <Text style={[styles.hydrationTip, { color: theme.textSecondary }]} numberOfLines={1}>
+              Drink 1 glass before your Pull workout to sustain muscle pump.
+            </Text>
+          </View>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Add 250ml water"
+            onPress={() => setWaterMl((prev) => Math.min(prev + 250, 4000))}
+            style={({ pressed }) => [
+              styles.addWaterBtn,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+                opacity: pressed ? 0.75 : 1
+              }
+            ]}
+          >
+            <Ionicons name="add" size={18} color={theme.primary} />
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -524,311 +570,466 @@ const styles = StyleSheet.create({
   container: {
     flex: 1
   },
-  content: {
-    padding: 16
-  },
-  offlineBanner: {
+  topBar: {
+    height: 60,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 16
-  },
-  offlineText: {
-    fontSize: 12,
-    fontWeight: '600'
-  },
-  headerRow: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginBottom: 16
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth
   },
-  userInfoCol: {
-    flex: 1
-  },
-  dateBadgeRow: {
+  topBarBrand: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginBottom: 4
+    gap: 10
   },
-  dateSubtext: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8
-  },
-  headline: {
-    fontSize: 32,
-    fontWeight: '800',
-    letterSpacing: -0.8
-  },
-  heroCard: {
-    borderWidth: 1,
-    padding: 18,
-    marginBottom: 16
-  },
-  heroLayout: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between'
-  },
-  ringColumn: {
+  brandLogoCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center'
   },
-  metricsColumn: {
-    flex: 1,
-    marginLeft: 18,
-    justifyContent: 'center'
-  },
-  primaryMetricBlock: {
-    marginBottom: 8
-  },
-  metricKcalBig: {
-    fontSize: 34,
-    fontWeight: '900',
-    letterSpacing: -1,
-    fontVariant: ['tabular-nums']
-  },
-  metricKcalUnit: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    marginTop: 2
-  },
-  metricSubRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    marginBottom: 6
-  },
-  metricSmallNum: {
-    fontSize: 15,
-    fontWeight: '800',
-    fontVariant: ['tabular-nums']
-  },
-  metricSmallLabel: {
-    fontSize: 9,
+  brandTitle: {
+    fontSize: 17,
     fontWeight: '700',
-    letterSpacing: 0.5,
-    marginTop: 1
+    letterSpacing: -0.3
   },
-  metricDivider: {
-    width: 1,
-    height: 18
-  },
-  macroPillsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    marginTop: 16,
-    paddingTop: 14
-  },
-  macroPillCard: {
-    flex: 1,
-    padding: 10
-  },
-  macroPillHeader: {
+  watchSyncMiniRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    marginBottom: 4
+    marginTop: 1
   },
-  macroDot: {
+  syncDot: {
     width: 6,
     height: 6,
     borderRadius: 3
   },
-  macroPillTitle: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.5
-  },
-  macroPillValue: {
-    fontSize: 14,
-    fontWeight: '800',
-    fontVariant: ['tabular-nums']
-  },
-  macroPillTarget: {
-    fontSize: 10,
+  syncMiniText: {
+    fontSize: 11,
     fontWeight: '500'
   },
-  macroMiniTrack: {
-    height: 3,
-    borderRadius: 2,
-    marginTop: 6,
-    overflow: 'hidden'
+  profileAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1
   },
-  macroMiniFill: {
-    height: '100%'
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    gap: 16
   },
-  vitalsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 16
-  },
-  vitalCard: {
-    flex: 1,
-    borderWidth: 1,
-    padding: 12
-  },
-  vitalHeader: {
+  greetingSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginBottom: 6
-  },
-  vitalLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.6
-  },
-  vitalValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    fontVariant: ['tabular-nums']
-  },
-  vitalTarget: {
-    fontSize: 10,
-    fontWeight: '500',
-    marginTop: 2
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20
-  },
-  snapButton: {
-    flex: 1.2
-  },
-  workoutButton: {
-    flex: 1
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    marginLeft: 4,
-    marginRight: 4
+    gap: 12
   },
-  sectionTitle: {
-    fontSize: 11,
-    fontWeight: '800',
+  greetingHeadline: {
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: -0.4
+  },
+  targetSubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 3
+  },
+  targetHighlight: {
+    fontSize: 13,
+    fontWeight: '600'
+  },
+  subDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2
+  },
+  subMeta: {
+    fontSize: 13,
+    fontWeight: '400'
+  },
+  heroCard: {
+    padding: 20,
+    alignItems: 'center'
+  },
+  heroHeader: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4
+  },
+  heroSubHeader: {
+    color: '#DDF3EF',
+    fontSize: 12,
+    fontWeight: '700',
     letterSpacing: 0.8
   },
-  sectionLinkText: {
-    fontSize: 12,
-    fontWeight: '700'
+  heroPill: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 9999
   },
-  workoutHeroCard: {
+  heroPillText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600'
+  },
+  gaugeContainer: {
+    marginVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  gaugeCenter: {
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  gaugeOverline: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    marginBottom: 2
+  },
+  gaugeMainNumber: {
+    color: '#FFFFFF',
+    fontSize: 34,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    fontVariant: ['tabular-nums']
+  },
+  gaugeUnit: {
+    color: '#DDF3EF',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 1
+  },
+  heroSplitPill: {
+    width: '100%',
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0, 0, 0, 0.18)',
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginTop: 6
+  },
+  splitPillItem: {
+    flex: 1,
+    alignItems: 'center'
+  },
+  splitPillDivider: {
+    width: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)'
+  },
+  splitPillLabel: {
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontSize: 11,
+    fontWeight: '500'
+  },
+  splitPillValue: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+    marginTop: 2
+  },
+  splitPillUnit: {
+    fontSize: 11,
+    fontWeight: '400',
+    color: 'rgba(255, 255, 255, 0.8)'
+  },
+  card: {
     borderWidth: 1,
-    padding: 18,
-    marginBottom: 20
+    padding: 16
   },
-  emptyWorkoutCard: {
-    borderWidth: 1,
-    padding: 20,
-    marginBottom: 20
-  },
-  workoutCardTop: {
+  cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 14
   },
-  workoutTagRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4
-  },
-  workoutBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6
-  },
-  workoutDayTag: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5
-  },
-  workoutMeta: {
-    fontSize: 11,
-    fontWeight: '600'
-  },
-  workoutMainTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: -0.3
-  },
-  workoutProgressCircle: {
-    marginLeft: 12
-  },
-  exerciseList: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 12,
-    gap: 8
-  },
-  exercisePreviewRow: {
+  cardHeaderTitleGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8
   },
-  exerciseBullet: {
-    width: 4,
-    height: 4,
-    borderRadius: 2
+  cardTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.2
   },
-  exerciseName: {
-    fontSize: 13,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-    flex: 1
-  },
-  exerciseSetsText: {
+  cardMetaTag: {
     fontSize: 12,
     fontWeight: '500'
   },
-  mealsListCard: {
-    borderWidth: 1,
-    overflow: 'hidden',
-    paddingHorizontal: 16
+  macroRow: {
+    marginBottom: 12
   },
-  noMealsText: {
-    fontSize: 13,
-    paddingVertical: 20,
-    textAlign: 'center'
-  },
-  mealRowItem: {
+  macroHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    justifyContent: 'space-between',
+    marginBottom: 6
+  },
+  macroLabelGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
+  macroDotBadge: {
+    width: 8,
+    height: 8,
+    borderRadius: 4
+  },
+  macroName: {
+    fontSize: 14,
+    fontWeight: '600'
+  },
+  macroStatusPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4
+  },
+  macroStatusPillText: {
+    fontSize: 11,
+    fontWeight: '700'
+  },
+  macroValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums']
+  },
+  macroTrack: {
+    height: 8,
+    borderRadius: 9999,
+    overflow: 'hidden'
+  },
+  macroFill: {
+    height: '100%'
+  },
+  workoutTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
     gap: 12
   },
-  mealIconBox: {
-    width: 36,
-    height: 36,
+  workoutBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6
+  },
+  musclePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 9999
+  },
+  musclePillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.6
+  },
+  scheduledText: {
+    fontSize: 12,
+    fontWeight: '500'
+  },
+  workoutTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+    marginBottom: 6
+  },
+  workoutMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4
+  },
+  metaText: {
+    fontSize: 13,
+    fontWeight: '500'
+  },
+  workoutCircleIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center'
   },
-  mealItemType: {
-    fontSize: 14,
-    fontWeight: '700'
+  workoutActionsGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14
   },
-  mealSummaryNames: {
+  actionBtn: {
+    flex: 1,
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: StyleSheet.hairlineWidth
+  },
+  actionBtnText: {
+    fontSize: 14,
+    fontWeight: '600'
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4
+  },
+  sectionTitleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.3
+  },
+  countBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 9999
+  },
+  countBadgeText: {
+    fontSize: 12,
+    fontWeight: '600'
+  },
+  addMealLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4
+  },
+  addMealLinkText: {
+    fontSize: 14,
+    fontWeight: '600'
+  },
+  mealCarouselContainer: {
+    gap: 12,
+    paddingRight: 16
+  },
+  emptyMealCard: {
+    width: 240,
+    padding: 24,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderStyle: 'dashed'
+  },
+  emptyMealTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginTop: 8
+  },
+  emptyMealSub: {
     fontSize: 12,
     marginTop: 2
   },
-  mealKcalTotal: {
-    fontSize: 14,
-    fontWeight: '800',
-    fontVariant: ['tabular-nums']
+  mealCardItem: {
+    width: 240,
+    borderWidth: 1,
+    overflow: 'hidden'
   },
-  mealProteinGram: {
+  mealPhotoBox: {
+    width: '100%',
+    height: 130,
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  mealImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover'
+  },
+  mealTypeTag: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 9999
+  },
+  mealTypeTagText: {
+    fontSize: 11,
+    fontWeight: '700'
+  },
+  mealTimeTag: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 9999
+  },
+  mealTimeTagText: {
     fontSize: 11,
     fontWeight: '600'
+  },
+  mealCardBody: {
+    padding: 12
+  },
+  mealCardName: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2
+  },
+  mealCardMacros: {
+    fontSize: 12,
+    fontWeight: '500'
+  },
+  hydrationCard: {
+    borderWidth: 1,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12
+  },
+  hydrationIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  hydrationHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2
+  },
+  hydrationTitle: {
+    fontSize: 14,
+    fontWeight: '600'
+  },
+  hydrationTargetText: {
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  hydrationTip: {
+    fontSize: 12,
+    fontWeight: '400'
+  },
+  addWaterBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1
   }
 });
