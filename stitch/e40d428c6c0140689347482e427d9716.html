@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@500;600;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "macro-protein-dark": "#8CA2FF", "on-background": "#121e1c", "muscle-abs": "#4D7C0F", "on-primary": "#ffffff", "muscle-arms": "#BE185D", "error-container": "#ffdad6", "macro-carbs": "#A8730A", "on-surface-variant": "#3e4946", "error": "#B3261E", "hero-bg-light": "#00796B", "on-secondary-container": "#fffbff", "secondary-fixed": "#dde1ff", "on-surface": "#121e1c", "inverse-primary": "#7ad7c6", "tertiary-fixed-dim": "#ffb59e", "surface-container-low": "#eaf6f3", "on-secondary-fixed": "#001355", "primary-container": "#DDF3EF", "outline": "#6e7a76", "success-dark": "#6FD38A", "tertiary-container": "#c33b00", "on-primary-fixed-variant": "#005047", "secondary-fixed-dim": "#b8c3ff", "on-error": "#ffffff", "secondary": "#2d4fcf", "primary-fixed": "#97f3e2", "surface": "#effcf9", "surface-container-lowest": "#ffffff", "macro-protein": "#3B5BDB", "on-primary-container": "#00302A", "muscle-chest": "#C2410C", "inverse-surface": "#273331", "macro-kcal-dark": "#FF8A5B", "surface-dim": "#d0ddda", "info-dark": "#6CC1F5", "surface-container-highest": "#d8e5e2", "on-tertiary-fixed": "#390b00", "macro-kcal": "#D9480F", "primary-container-dark": "#12332E", "macro-carbs-dark": "#F2B84B", "macro-fat": "#9C36B5", "surface-tint": "#006b5e", "on-secondary": "#ffffff", "tertiary-fixed": "#ffdbd0", "on-primary-container-dark": "#BFF3EB", "muscle-legs": "#4338CA", "success": "#2E7D32", "on-primary-fixed": "#00201b", "primary-dark": "#4FD6C4", "warning-dark": "#F2B84B", "on-tertiary-container": "#ffe8e2", "on-tertiary": "#ffffff", "on-primary-dark": "#00201B", "outline-variant": "#bdc9c5", "warning": "#9A5B00", "tertiary": "#992c00", "secondary-container": "#4b69ea", "muscle-shoulders": "#B45309", "primary-fixed-dim": "#7ad7c6", "hero-bg-dark": "#12332E", "on-error-container": "#93000a", "macro-fat-dark": "#D58AF0", "primary": "#005e53", "surface-container": "#e4f1ee", "info": "#0B6FA8", "surface-container-high": "#deebe8", "on-tertiary-fixed-variant": "#842500", "surface-bright": "#effcf9", "on-secondary-fixed-variant": "#0736ba", "error-dark": "#FF8A80", "inverse-on-surface": "#e7f3f1", "surface-variant": "#d8e5e2", "muscle-back": "#0F766E", "background": "#effcf9" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "space-xl": "1.5rem", "gutter-tablet": "1rem", "space-sm": "0.5rem", "margin-tablet": "1.25rem", "space-md": "0.75rem", "margin": "1rem", "space-xs": "0.25rem", "space-lg": "1rem", "gutter": "0.75rem" }, fontFamily: { "body-lg": ["Inter"], "body-md": ["Inter"], "headline-sm": ["Be Vietnam Pro"], "headline-md": ["Be Vietnam Pro"], "display": ["Inter"], "headline-lg": ["Be Vietnam Pro"], "label-md": ["Inter"], "caption": ["Inter"], "display-mobile": ["Inter"] }, fontSize: { "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }], "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }], "headline-sm": ["18px", { lineHeight: "26px", fontWeight: "600" }], "headline-md": ["22px", { lineHeight: "30px", letterSpacing: "-0.005em", fontWeight: "600" }], "display": ["56px", { lineHeight: "60px", letterSpacing: "-0.02em", fontWeight: "700" }], "headline-lg": ["28px", { lineHeight: "36px", letterSpacing: "-0.01em", fontWeight: "700" }], "label-md": ["14px", { lineHeight: "18px", letterSpacing: "0.01em", fontWeight: "600" }], "caption": ["12px", { lineHeight: "16px", letterSpacing: "0.02em", fontWeight: "500" }], "display-mobile": ["44px", { lineHeight: "48px", letterSpacing: "-0.02em", fontWeight: "700" }] } } } }</script><style>@layer base{html,body{width:100%;margin:0;padding:0;min-height:100%;background-color:#effcf9;}body{overscroll-behavior-y:none;-webkit-tap-highlight-color:transparent;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-on-surface antialiased flex flex-col min-h-full"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 px-margin flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm min-w-0 flex-1"><img alt="AI FitWear Brand Logo" class="h-8 w-auto object-contain flex-shrink-0" src="https://lh3.googleusercontent.com/aida/AEtjO1VMeFtFV3n34gVYKzjZBZq6HYw2IdzZzWC1r4teNubeV9n_JyAqqnwj-jb3a0PH3wXJdFB3Ntbi8eGrhr32973vjimx1JrADpmwVVBsHSnB_54nmoNKXF0bnHaGNBt15FqqqTNia1e8ayQnkjNoL-_EXNacwwNIVSuXlDAMtKaOR5gMGY7aBog-_PrvDClGgjXVlvcLynv4w2ERxI3a_SG3A7MB9W9Qy5jcVdv4L-63zV34QktufV4V-4ZX"/><div class="flex flex-col min-w-0"><div class="flex items-center gap-space-xs"><span class="font-headline-sm text-headline-sm text-primary tracking-tight truncate">AI FitWear</span></div><div class="flex items-center gap-1.5 mt-0.5 bg-surface-container-lowest/90 px-2 py-0.5 rounded-full w-fit shadow-[0_1px_4px_rgba(0,0,0,0.03)]"><span class="w-2 h-2 rounded-full bg-success flex-shrink-0 animate-pulse"></span><span class="font-caption text-caption text-on-surface-variant truncate">Watch synced • 2m ago</span></div></div></div><div class="flex items-center gap-space-sm flex-shrink-0"><div class="hidden"><span class="font-headline-sm text-headline-sm">Workout Plan</span></div><button class="w-11 h-11 rounded-full flex items-center justify-center p-0.5 hover:opacity-90 active:scale-95 transition-transform" type="button"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBtRO-QqCA4d-KBQYFpdsI3IQ_Xvfv3fDvyN56WZKOjj2eGK666OoXC2WBdn5j3uP4CjCOXQcZAwA8oOCzp3OaCq09qHBvL-KJizIfzoRGZ1SIbPtfqrttv9Ho0C-eXzun68PKLADEED3D3GoDZw2h4dnyEF_HENXthptKqoNL753ZvbJuq0lj6AxO8PzlC7QXO-iJphTGe_4w_KLlV-GiZU44FDpGdLbRDEXu5B0wZ7-V7io-pd0GsGQ"/></button></div></div></header><main class="flex-1 flex flex-col relative w-full pt-16 pb-24 bg-surface min-h-screen"><div class="flex flex-col w-full pb-8">
+<div class="px-margin pt-space-md flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary-container text-on-primary-container">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+<span class="font-caption text-caption font-semibold">Active Cycle</span>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px]">calendar_month</span>
+</button>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Training Plan</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Cycle 1: Beginner Foundation (Week 2 of 4)</p>
+</div>
+<div class="px-margin mt-space-md">
+<div class="p-space-md rounded-xl bg-surface-container flex items-center justify-between gap-space-sm shadow-sm">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-9 h-9 rounded-lg bg-surface-container-lowest flex items-center justify-center text-primary flex-shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-[20px]">insights</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-caption text-caption text-on-surface-variant uppercase tracking-wider font-semibold">Daily Baselines</span>
+<span class="font-label-md text-label-md text-on-surface truncate">BMR 1,680 • TDEE 2,350 kcal</span>
+</div>
+</div>
+<div class="flex-shrink-0 px-2.5 py-1 rounded-full bg-surface-container-lowest text-primary font-caption text-caption font-semibold shadow-sm">
+        Lean Muscle Gain
+      </div>
+</div>
+</div>
+<div class="px-margin mt-space-lg flex items-center justify-between">
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Weekly Schedule</h2>
+<p class="font-caption text-caption text-on-surface-variant">Tap to inspect or reschedule day</p>
+</div>
+<button class="flex items-center gap-1 text-primary font-caption text-caption font-semibold hover:opacity-85 transition-opacity" type="button">
+<span>Auto-Fill</span>
+<span class="material-symbols-outlined text-[16px]">magic_button</span>
+</button>
+</div>
+<div class="px-margin mt-space-sm flex flex-col gap-space-sm" id="weekScheduleList">
+<div class="p-space-md rounded-xl bg-surface-container-lowest flex items-center justify-between shadow-sm transition-all hover:shadow-md">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="flex flex-col items-center justify-center w-10 h-11 rounded-lg bg-surface-container text-on-surface flex-shrink-0">
+<span class="font-caption text-caption font-bold text-on-surface-variant">MON</span>
+<span class="font-headline-sm text-headline-sm leading-none font-bold text-on-surface">14</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-space-xs flex-wrap">
+<span class="font-label-md text-label-md text-on-surface font-semibold truncate">Chest &amp; Triceps</span>
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
+<span class="font-caption text-caption text-success font-semibold">Completed</span>
+</div>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-white font-caption text-caption font-medium bg-muscle-chest">
+<span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+              Chest
+            </span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-white font-caption text-caption font-medium bg-muscle-arms">
+<span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+              Arms
+            </span>
+</div>
+</div>
+</div>
+<div class="w-8 h-8 rounded-full bg-primary-container text-primary flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</div>
+<div class="p-space-md rounded-xl bg-surface-container-lowest flex items-center justify-between shadow-md relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary"></div>
+<div class="flex items-center gap-space-md min-w-0 pl-1">
+<div class="flex flex-col items-center justify-center w-10 h-11 rounded-lg bg-primary text-on-primary flex-shrink-0 shadow-sm">
+<span class="font-caption text-caption font-bold text-on-primary/80">TUE</span>
+<span class="font-headline-sm text-headline-sm leading-none font-bold text-on-primary">15</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-space-xs">
+<span class="font-label-md text-label-md text-on-surface font-bold truncate">Back &amp; Biceps</span>
+<span class="px-2 py-0.5 rounded-full bg-primary-container text-on-primary-container font-caption text-caption font-bold">Today</span>
+</div>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-white font-caption text-caption font-medium bg-muscle-back">
+<span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+              Back
+            </span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-white font-caption text-caption font-medium bg-muscle-arms">
+<span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+              Arms
+            </span>
+</div>
+</div>
+</div>
+<button class="px-3.5 py-1.5 rounded-full bg-primary text-on-primary font-caption text-caption font-semibold shadow-sm active:scale-95 transition-transform flex items-center gap-1 flex-shrink-0" type="button">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+<span>Start</span>
+</button>
+</div>
+<div class="p-space-md rounded-xl bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="flex flex-col items-center justify-center w-10 h-11 rounded-lg bg-surface-container text-on-surface flex-shrink-0">
+<span class="font-caption text-caption font-medium text-on-surface-variant">WED</span>
+<span class="font-headline-sm text-headline-sm leading-none font-semibold text-on-surface">16</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-medium truncate">Rest &amp; Mobility</span>
+<span class="font-caption text-caption text-on-surface-variant">15 min gentle hip &amp; shoulder openers</span>
+</div>
+</div>
+<span class="px-3 py-1 rounded-full bg-surface-container text-on-surface-variant font-caption text-caption font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">bedtime</span>
+<span>Rest</span>
+</span>
+</div>
+<div class="p-space-md rounded-xl bg-surface-container-lowest flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="flex flex-col items-center justify-center w-10 h-11 rounded-lg bg-surface-container text-on-surface flex-shrink-0">
+<span class="font-caption text-caption font-medium text-on-surface-variant">THU</span>
+<span class="font-headline-sm text-headline-sm leading-none font-semibold text-on-surface">17</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-space-xs">
+<span class="font-label-md text-label-md text-on-surface font-semibold truncate">Legs &amp; Core</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-primary font-caption text-caption font-bold">Suggested</span>
+</div>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-white font-caption text-caption font-medium bg-muscle-legs">
+<span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+              Legs
+            </span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-white font-caption text-caption font-medium bg-muscle-abs">
+<span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+              Abs
+            </span>
+</div>
+</div>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors flex-shrink-0" type="button">
+<span class="material-symbols-outlined text-[18px]">more_horiz</span>
+</button>
+</div>
+<div class="p-space-md rounded-xl bg-surface-container-lowest flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="flex flex-col items-center justify-center w-10 h-11 rounded-lg bg-surface-container text-on-surface flex-shrink-0">
+<span class="font-caption text-caption font-medium text-on-surface-variant">FRI</span>
+<span class="font-headline-sm text-headline-sm leading-none font-semibold text-on-surface">18</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-space-xs">
+<span class="font-label-md text-label-md text-on-surface font-semibold truncate">Shoulders &amp; Arms</span>
+<span class="font-caption text-caption text-on-surface-variant">Scheduled</span>
+</div>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-white font-caption text-caption font-medium bg-muscle-shoulders">
+<span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+              Shoulders
+            </span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-white font-caption text-caption font-medium bg-muscle-arms">
+<span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+              Arms
+            </span>
+</div>
+</div>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors flex-shrink-0" type="button">
+<span class="material-symbols-outlined text-[18px]">more_horiz</span>
+</button>
+</div>
+<div class="p-space-md rounded-xl bg-surface-container-lowest flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="flex flex-col items-center justify-center w-10 h-11 rounded-lg bg-surface-container text-on-surface flex-shrink-0">
+<span class="font-caption text-caption font-medium text-on-surface-variant">SAT</span>
+<span class="font-headline-sm text-headline-sm leading-none font-semibold text-on-surface">19</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-space-xs">
+<span class="font-label-md text-label-md text-on-surface font-semibold truncate">Lower Body &amp; Core</span>
+<span class="font-caption text-caption text-on-surface-variant">Scheduled</span>
+</div>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-white font-caption text-caption font-medium bg-muscle-legs">
+<span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+              Legs
+            </span>
+</div>
+</div>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors flex-shrink-0" type="button">
+<span class="material-symbols-outlined text-[18px]">more_horiz</span>
+</button>
+</div>
+<div class="p-space-md rounded-xl bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="flex flex-col items-center justify-center w-10 h-11 rounded-lg bg-surface-container text-on-surface flex-shrink-0">
+<span class="font-caption text-caption font-medium text-on-surface-variant">SUN</span>
+<span class="font-headline-sm text-headline-sm leading-none font-semibold text-on-surface">20</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-medium truncate">Active Recovery</span>
+<span class="font-caption text-caption text-on-surface-variant">Outdoor walk &amp; deep breathwork</span>
+</div>
+</div>
+<span class="px-3 py-1 rounded-full bg-surface-container text-on-surface-variant font-caption text-caption font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">spa</span>
+<span>Recovery</span>
+</span>
+</div>
+</div>
+<div class="px-margin mt-space-xl flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Target Muscle Focus</h2>
+<p class="font-caption text-caption text-on-surface-variant">Drag or tap chips to adjust training emphasis</p>
+</div>
+<span class="font-caption text-caption text-primary font-semibold">6 Groups</span>
+</div>
+<div class="grid grid-cols-3 gap-2 mt-1" id="muscleChipsGrid">
+<button class="muscle-chip p-2.5 rounded-xl bg-surface-container-lowest shadow-sm flex items-center gap-2 hover:bg-surface-container transition-all active:scale-95 text-left" data-muscle="Chest" type="button">
+<span class="w-3.5 h-3.5 rounded-full bg-muscle-chest flex-shrink-0"></span>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-semibold truncate leading-tight">Chest</span>
+<span class="font-caption text-caption text-on-surface-variant">Heavy</span>
+</div>
+</button>
+<button class="muscle-chip p-2.5 rounded-xl bg-surface-container-lowest shadow-sm flex items-center gap-2 hover:bg-surface-container transition-all active:scale-95 text-left" data-muscle="Back" type="button">
+<span class="w-3.5 h-3.5 rounded-full bg-muscle-back flex-shrink-0"></span>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-semibold truncate leading-tight">Back</span>
+<span class="font-caption text-caption text-on-surface-variant">Heavy</span>
+</div>
+</button>
+<button class="muscle-chip p-2.5 rounded-xl bg-surface-container-lowest shadow-sm flex items-center gap-2 hover:bg-surface-container transition-all active:scale-95 text-left" data-muscle="Shoulders" type="button">
+<span class="w-3.5 h-3.5 rounded-full bg-muscle-shoulders flex-shrink-0"></span>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-semibold truncate leading-tight">Shoulders</span>
+<span class="font-caption text-caption text-on-surface-variant">Mod</span>
+</div>
+</button>
+<button class="muscle-chip p-2.5 rounded-xl bg-surface-container-lowest shadow-sm flex items-center gap-2 hover:bg-surface-container transition-all active:scale-95 text-left" data-muscle="Legs" type="button">
+<span class="w-3.5 h-3.5 rounded-full bg-muscle-legs flex-shrink-0"></span>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-semibold truncate leading-tight">Legs</span>
+<span class="font-caption text-caption text-on-surface-variant">Heavy</span>
+</div>
+</button>
+<button class="muscle-chip p-2.5 rounded-xl bg-surface-container-lowest shadow-sm flex items-center gap-2 hover:bg-surface-container transition-all active:scale-95 text-left" data-muscle="Arms" type="button">
+<span class="w-3.5 h-3.5 rounded-full bg-muscle-arms flex-shrink-0"></span>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-semibold truncate leading-tight">Arms</span>
+<span class="font-caption text-caption text-on-surface-variant">Mod</span>
+</div>
+</button>
+<button class="muscle-chip p-2.5 rounded-xl bg-surface-container-lowest shadow-sm flex items-center gap-2 hover:bg-surface-container transition-all active:scale-95 text-left" data-muscle="Abs" type="button">
+<span class="w-3.5 h-3.5 rounded-full bg-muscle-abs flex-shrink-0"></span>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-semibold truncate leading-tight">Abs</span>
+<span class="font-caption text-caption text-on-surface-variant">Core</span>
+</div>
+</button>
+</div>
+</div>
+<div class="px-margin mt-space-xl">
+<div class="p-space-lg rounded-2xl bg-surface-container-lowest shadow-md flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-xl bg-primary-container text-on-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[24px]">watch</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface leading-tight">Sync Schedule to Watch</h3>
+<p class="font-caption text-caption text-on-surface-variant">Huawei Watch GT 4 • Connected</p>
+</div>
+</div>
+<span class="w-2.5 h-2.5 rounded-full bg-success"></span>
+</div>
+<div class="p-3 rounded-xl bg-surface-container flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[18px] text-primary flex-shrink-0 mt-0.5">alarm</span>
+<p class="font-caption text-caption text-on-surface-variant">HarmonyOS watch will buzz and prompt your session at <strong class="text-on-surface font-semibold">5:30 PM</strong>.</p>
+</div>
+<button class="w-full h-[52px] rounded-xl bg-primary text-on-primary font-label-md text-label-md flex items-center justify-center gap-2 shadow-md active:scale-98 transition-all hover:bg-primary/95" id="syncWatchBtn" type="button">
+<span class="material-symbols-outlined text-[20px]" id="syncWatchIcon">sync</span>
+<span id="syncWatchText">Send to Watch</span>
+</button>
+</div>
+</div>
+<div class="px-margin mt-space-xl flex flex-col gap-space-sm">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Cycle Options</h2>
+<div class="flex flex-col gap-space-sm">
+<div class="p-space-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[22px] text-primary">restart_alt</span>
+<span class="font-label-md text-label-md font-bold text-on-surface">Continue Current Cycle</span>
+</div>
+<span class="font-caption text-caption font-bold text-primary">45% Complete</span>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden">
+<div class="h-full rounded-full bg-primary" style="width: 45%;"></div>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-caption text-caption">
+<span>Week 2 of 4 • 8 sessions left</span>
+<span class="text-primary font-semibold">On Track</span>
+</div>
+</div>
+<div class="p-space-lg rounded-xl bg-surface-container flex items-center justify-between hover:bg-surface-container-high transition-colors active:scale-98 cursor-pointer" role="button" tabindex="0">
+<div class="flex items-center gap-space-md">
+<div class="w-10 h-10 rounded-xl bg-surface-container-lowest flex items-center justify-center text-primary shadow-sm">
+<span class="material-symbols-outlined text-[22px]">auto_awesome</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md font-bold text-on-surface">Generate New AI Split</span>
+<span class="font-caption text-caption text-on-surface-variant">Tap to re-calibrate goals &amp; equipment</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+<script>
+  (function() {
+    const syncBtn = document.getElementById('syncWatchBtn');
+    const syncIcon = document.getElementById('syncWatchIcon');
+    const syncText = document.getElementById('syncWatchText');
+
+    if (syncBtn && syncIcon && syncText) {
+      syncBtn.addEventListener('click', function() {
+        syncIcon.classList.add('animate-spin');
+        syncText.textContent = 'Syncing Routine...';
+        syncBtn.setAttribute('disabled', 'true');
+        syncBtn.classList.add('opacity-80');
+
+        setTimeout(() => {
+          syncIcon.classList.remove('animate-spin');
+          syncIcon.textContent = 'check';
+          syncText.textContent = 'Synced to HarmonyOS Watch';
+          syncBtn.classList.remove('bg-primary');
+          syncBtn.classList.add('bg-success');
+
+          setTimeout(() => {
+            syncIcon.textContent = 'sync';
+            syncText.textContent = 'Send to Watch';
+            syncBtn.removeAttribute('disabled');
+            syncBtn.classList.remove('opacity-80', 'bg-success');
+            syncBtn.classList.add('bg-primary');
+          }, 2400);
+        }, 1100);
+      });
+    }
+
+    const muscleChips = document.querySelectorAll('.muscle-chip');
+    muscleChips.forEach(chip => {
+      chip.addEventListener('click', function() {
+        this.classList.toggle('bg-primary-container');
+        this.classList.toggle('text-on-primary-container');
+      });
+    });
+  })();
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/90 backdrop-blur-xl shadow-[0_-2px_12px_rgba(0,0,0,0.05)]" data-active-classes="text-primary font-semibold"><div class="relative flex items-center justify-around h-16 px-space-xs"><a class="flex flex-col items-center justify-center min-w-[56px] h-12 text-on-surface-variant transition-colors hover:text-primary" data-path="home-dashboard" href="#"><span class="material-symbols-outlined text-[24px]">local_fire_department</span><span class="font-caption text-caption mt-0.5">Home</span></a><a aria-current="page" class="flex flex-col items-center justify-center min-w-[56px] h-12 transition-colors text-primary font-semibold" data-path="workout-plan" href="#"><span class="material-symbols-outlined text-[24px]">fitness_center</span><span class="font-caption text-caption mt-0.5">Plan</span></a><div class="relative flex items-center justify-center w-14 h-14 -mt-6"><a class="w-14 h-14 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-[0_4px_16px_rgba(0,94,83,0.35)] active:scale-95 transition-all hover:bg-primary/95" data-path="meal-snap-camera" href="#"><span class="material-symbols-outlined text-[28px]">photo_camera</span></a></div><a class="flex flex-col items-center justify-center min-w-[56px] h-12 text-on-surface-variant transition-colors hover:text-primary" data-path="knowledge-hub" href="#"><span class="material-symbols-outlined text-[24px]">menu_book</span><span class="font-caption text-caption mt-0.5">Learn</span></a><a class="flex flex-col items-center justify-center min-w-[56px] h-12 text-on-surface-variant transition-colors hover:text-primary" data-path="analytics-progress" href="#"><span class="material-symbols-outlined text-[24px]">bar_chart</span><span class="font-caption text-caption mt-0.5">Progress</span></a></div></nav></body></html>
