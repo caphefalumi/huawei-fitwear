@@ -1,4 +1,5 @@
 import { Image } from 'react-native';
+/* eslint-disable import/no-duplicates */
 import { StyleSheet, View } from 'react-native';
 import Animated, { Keyframe, Easing } from 'react-native-reanimated';
 

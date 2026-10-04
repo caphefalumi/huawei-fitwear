@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -21,10 +21,18 @@ import { useNutritionStore } from '../store/nutritionStore';
 import { exerciseService } from '../services/exerciseService';
 import { Timestamp, MealItem, MealType, FoodDoc } from '../types/types';
 import { PrimaryButton, SecondaryButton, ProgressRing } from '../components/ui';
+import { useAddMealMutation } from '../hooks/useQueries';
+
+let globalItemCounter = 1000;
+function createMealItemId(): string {
+  globalItemCounter += 1;
+  return `item_${globalItemCounter}`;
+}
 
 export default function SnapMealScreen() {
   const { theme, radii } = useAppTheme();
   const { addMeal, todaySummary } = useNutritionStore();
+  const addMealMutation = useAddMealMutation();
 
   // Phase: 1 = Camera, 2 = Analyzing, 3 = Review, 4 = Success
   const [phase, setPhase] = useState<1 | 2 | 3 | 4>(1);
@@ -156,22 +164,40 @@ export default function SnapMealScreen() {
     );
   };
 
+  const handleScaleAllItems = (factor: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setDetectedItems((prev) =>
+      prev.map((item) => {
+        const newGrams = Math.max(10, Math.round(item.grams * factor));
+        const ratio = newGrams / (item.grams || 1);
+        return {
+          ...item,
+          grams: newGrams,
+          calories: Math.round(item.calories * ratio),
+          protein: Number((item.protein * ratio).toFixed(1)),
+          carbs: Number((item.carbs * ratio).toFixed(1)),
+          fat: Number((item.fat * ratio).toFixed(1))
+        };
+      })
+    );
+  };
+
   const handleDeleteItem = (id: string) => {
     setDetectedItems((prev) => prev.filter((item) => item.id !== id));
   };
 
-  // Search Food Modal
-  useEffect(() => {
-    if (searchQuery.trim().length > 0) {
-      exerciseService.searchFoods(searchQuery).then(setSearchResults);
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim().length > 0) {
+      exerciseService.searchFoods(query).then(setSearchResults);
     } else {
       setSearchResults([]);
     }
-  }, [searchQuery]);
+  };
 
   const handleAddFoodItem = (food: FoodDoc) => {
     const newItem: MealItem = {
-      id: `item_${Date.now()}`,
+      id: createMealItemId(),
       name: food.name,
       grams: food.servingGrams,
       calories: food.calories,
@@ -192,7 +218,7 @@ export default function SnapMealScreen() {
   const totalFat = detectedItems.reduce((acc, curr) => acc + curr.fat, 0);
 
   const handleSaveMeal = async () => {
-    await addMeal({
+    const mealPayload = {
       userId: 'user_default',
       type: selectedMealType,
       time: Timestamp.formatTime(),
@@ -203,7 +229,12 @@ export default function SnapMealScreen() {
       totalProtein,
       totalCarbs,
       totalFat
-    });
+    };
+    try {
+      await addMealMutation.mutateAsync(mealPayload);
+    } catch {
+    }
+    await addMeal(mealPayload);
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     setPhase(4);
@@ -294,23 +325,34 @@ export default function SnapMealScreen() {
     );
   }
 
-  // ================= 2. ON-DEVICE ANALYSIS VIEW =================
   if (phase === 2) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.analysisCenter}>
-          <View style={[styles.analysisIconBox, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-            <ActivityIndicator size="large" color={theme.primary} />
+          <View style={[styles.scanViewport, { borderColor: theme.border, borderRadius: radii.xl }]}>
+            <Image source={{ uri: capturedImage }} style={styles.scanImage} resizeMode="cover" />
+            <View style={styles.scanOverlay} />
+            <View style={[styles.scanLaser, { backgroundColor: theme.primary }]} />
+
+            <View style={[styles.scanDetectBadge, { top: 24, left: 24, borderColor: theme.protein }]}>
+              <View style={[styles.photoTagDot, { backgroundColor: theme.protein }]} />
+              <Text style={styles.scanDetectText}>Chicken Breast • 96%</Text>
+            </View>
+
+            <View style={[styles.scanDetectBadge, { bottom: 32, right: 24, borderColor: theme.carbs }]}>
+              <View style={[styles.photoTagDot, { backgroundColor: theme.carbs }]} />
+              <Text style={styles.scanDetectText}>Jasmine Rice • 92%</Text>
+            </View>
           </View>
 
-          <Text style={[styles.analysisHeading, { color: theme.text }]}>
-            Analyzing Plate
-          </Text>
+          <View style={styles.analysisHeaderBlock}>
+            <ActivityIndicator size="small" color={theme.primary} />
+            <Text style={[styles.analysisHeading, { color: theme.text }]}>Analyzing Plate</Text>
+          </View>
           <Text style={[styles.analysisSubtext, { color: theme.textSecondary }]}>
             Running fully on-device • Works without internet
           </Text>
 
-          {/* Step Sequence */}
           <View style={styles.stepSequenceBox}>
             {analysisSteps.map((stepItem, idx) => {
               const isPast = idx < analysisStep;
@@ -486,6 +528,26 @@ export default function SnapMealScreen() {
                 </Text>
               </Pressable>
             ))}
+          </View>
+
+          <View style={[styles.scaleMultiplierRow, { backgroundColor: theme.surfaceElevated, borderRadius: radii.md }]}>
+            <Text style={[styles.scalePromptText, { color: theme.textSecondary }]}>Quick Scale Portion:</Text>
+            <View style={styles.scaleButtonsGroup}>
+              {[
+                { label: '0.5×', val: 0.5 },
+                { label: '1.0×', val: 1.0 },
+                { label: '1.5×', val: 1.5 },
+                { label: '2.0×', val: 2.0 }
+              ].map((scale) => (
+                <Pressable
+                  key={scale.label}
+                  onPress={() => handleScaleAllItems(scale.val)}
+                  style={[styles.scaleBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+                >
+                  <Text style={[styles.scaleBtnText, { color: theme.primary }]}>{scale.label}</Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
 
           {/* Detected Items Header */}
@@ -738,7 +800,7 @@ export default function SnapMealScreen() {
                 placeholder="Search chicken, rice, pho, oats..."
                 placeholderTextColor={theme.textMuted}
                 value={searchQuery}
-                onChangeText={setSearchQuery}
+                onChangeText={handleSearchChange}
                 autoFocus
               />
             </View>
@@ -964,7 +1026,85 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 32
+    padding: 24
+  },
+  scanViewport: {
+    width: '100%',
+    height: 220,
+    borderWidth: 2,
+    overflow: 'hidden',
+    position: 'relative',
+    marginBottom: 20
+  },
+  scanImage: {
+    width: '100%',
+    height: '100%'
+  },
+  scanOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 32, 27, 0.35)'
+  },
+  scanLaser: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '48%',
+    height: 3,
+    shadowColor: '#4FD6C4',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 8
+  },
+  scanDetectBadge: {
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    backgroundColor: 'rgba(18, 30, 28, 0.85)'
+  },
+  scanDetectText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700'
+  },
+  analysisHeaderBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4
+  },
+  scaleMultiplierRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 10,
+    marginBottom: 12
+  },
+  scalePromptText: {
+    fontSize: 12,
+    fontWeight: '600'
+  },
+  scaleButtonsGroup: {
+    flexDirection: 'row',
+    gap: 6
+  },
+  scaleBtn: {
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1
+  },
+  scaleBtnText: {
+    fontSize: 11,
+    fontWeight: '800'
   },
   analysisIconBox: {
     width: 84,

@@ -27,7 +27,14 @@ import {
   BrandLogo,
   MealNutritionModal
 } from '../../components/ui';
-import { MealDoc } from '../../types/types';
+import { MealDoc, Timestamp } from '../../types/types';
+import {
+  useUserProfileQuery,
+  useTodaySummaryQuery,
+  useMealsByDateQuery,
+  usePlanQuery,
+  useDevicesQuery
+} from '../../hooks/useQueries';
 
 export default function HomeScreen() {
   const { theme, radii } = useAppTheme();
@@ -36,6 +43,13 @@ export default function HomeScreen() {
   const { plan, loadPlanAndHistory } = useWorkoutStore();
   const { devices, loadDevices } = useDeviceStore();
   const previewState = useSettingsStore((state) => state.previewState);
+
+  const { data: userProfile } = useUserProfileQuery();
+  const { data: qSummary, isLoading: summaryLoading } = useTodaySummaryQuery();
+  const { data: qMeals, refetch: refetchMeals } = useMealsByDateQuery(Timestamp.toDateString());
+  const { data: qPlan } = usePlanQuery();
+  const { data: qDevices } = useDevicesQuery();
+
   const [waterMl, setWaterMl] = useState(1800);
   const [selectedMeal, setSelectedMeal] = useState<MealDoc | null>(null);
 
@@ -46,25 +60,29 @@ export default function HomeScreen() {
     loadDevices();
   }, [loadUser, loadNutrition, loadPlanAndHistory, loadDevices]);
 
-  const watchDevice = devices.find((d) => d.type === 'watch') || devices[0];
+  const activeUser = userProfile || user;
+  const activeSummary = qSummary || todaySummary;
+  const activeMeals = qMeals || meals;
+  const activePlan = qPlan !== undefined ? qPlan : plan;
+  const activeDevices = qDevices || devices;
+
+  const watchDevice = activeDevices.find((d) => d.type === 'watch') || activeDevices[0];
   const connectionStatus = watchDevice ? watchDevice.connectionStatus : 'connected';
 
-  // Derived metrics
   const caloriesLeft = Math.max(
-    todaySummary.calorieTarget - todaySummary.caloriesConsumed,
+    activeSummary.calorieTarget - activeSummary.caloriesConsumed,
     0
   );
   const remainingPct = Math.round(
-    (caloriesLeft / Math.max(todaySummary.calorieTarget, 1)) * 100
+    (caloriesLeft / Math.max(activeSummary.calorieTarget, 1)) * 100
   );
 
-  const nextDay = plan ? plan.days[plan.currentDayIndex] : null;
+  const nextDay = activePlan ? activePlan.days[activePlan.currentDayIndex] : null;
 
-  // Multi-arc progress data matching the Huawei watch dial
-  const calRatio = Math.min(todaySummary.caloriesConsumed / Math.max(todaySummary.calorieTarget, 1), 1);
-  const pRatio = Math.min(todaySummary.proteinConsumed / Math.max(todaySummary.proteinTarget, 1), 1);
-  const cRatio = Math.min(todaySummary.carbsConsumed / Math.max(todaySummary.carbsTarget, 1), 1);
-  const fRatio = Math.min(todaySummary.fatConsumed / Math.max(todaySummary.fatTarget, 1), 1);
+  const calRatio = Math.min(activeSummary.caloriesConsumed / Math.max(activeSummary.calorieTarget, 1), 1);
+  const pRatio = Math.min(activeSummary.proteinConsumed / Math.max(activeSummary.proteinTarget, 1), 1);
+  const cRatio = Math.min(activeSummary.carbsConsumed / Math.max(activeSummary.carbsTarget, 1), 1);
+  const fRatio = Math.min(activeSummary.fatConsumed / Math.max(activeSummary.fatTarget, 1), 1);
 
   // 1. Loading State
   if (previewState === 'loading') {
@@ -145,8 +163,9 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={nutritionLoading}
+            refreshing={nutritionLoading || summaryLoading}
             onRefresh={() => {
+              refetchMeals();
               loadNutrition();
               loadPlanAndHistory();
               loadDevices();
@@ -155,15 +174,14 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Top Greeting & Target Summary */}
         <View style={styles.greetingSection}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.greetingHeadline, { color: theme.text }]}>
-              Good morning, {user?.fullName || 'Alex'} 👋
+              Good morning, {activeUser?.fullName || 'Alex'} 👋
             </Text>
             <View style={styles.targetSubRow}>
-              <Text style={[styles.targetHighlight, { color: theme.primary }]}>
-                Target: {todaySummary.calorieTarget.toLocaleString()} kcal
+              <Text style={[styles.targetHighlight, { color: theme.secondary }]}>
+                Target: {activeSummary.calorieTarget.toLocaleString()} kcal
               </Text>
               <View style={[styles.subDot, { backgroundColor: theme.border }]} />
               <Text style={[styles.subMeta, { color: theme.textSecondary }]}>
@@ -178,12 +196,13 @@ export default function HomeScreen() {
           />
         </View>
 
-        {/* HERO CALORIE RING CARD */}
         <View
           style={[
             styles.heroCard,
             {
-              backgroundColor: theme.isDark ? '#12332E' : '#00796B',
+              backgroundColor: theme.isDark ? theme.surfaceElevated : theme.primary,
+              borderColor: theme.border,
+              borderWidth: theme.isDark ? 1 : 0,
               borderRadius: radii.xl
             }
           ]}
@@ -195,15 +214,14 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Radial Calorie Gauge */}
           <View style={styles.gaugeContainer}>
             <ProgressRing
               size={172}
               strokeWidth={14}
               progress={calRatio}
-              color="#FF8A5B"
-              icon={{ name: 'fire', color: '#FF8A5B' }}
-              accessibilityLabel={`Calories: ${todaySummary.caloriesConsumed} of ${todaySummary.calorieTarget} kcal, ${caloriesLeft} kcal remaining`}
+              color={theme.calories}
+              icon={{ name: 'fire', color: theme.ringIcon.calories }}
+              accessibilityLabel={`Calories: ${activeSummary.caloriesConsumed} of ${activeSummary.calorieTarget} kcal, ${caloriesLeft} kcal remaining`}
             >
               <View style={styles.gaugeCenter}>
                 <Text style={styles.gaugeOverline}>REMAINING</Text>
@@ -213,19 +231,18 @@ export default function HomeScreen() {
             </ProgressRing>
           </View>
 
-          {/* Hero Sub-Stats Split Pill */}
           <View style={styles.heroSplitPill}>
             <View style={styles.splitPillItem}>
               <Text style={styles.splitPillLabel}>Consumed</Text>
               <Text style={styles.splitPillValue}>
-                {todaySummary.caloriesConsumed} <Text style={styles.splitPillUnit}>kcal</Text>
+                {activeSummary.caloriesConsumed} <Text style={styles.splitPillUnit}>kcal</Text>
               </Text>
             </View>
             <View style={styles.splitPillDivider} />
             <View style={styles.splitPillItem}>
               <Text style={styles.splitPillLabel}>Daily Goal</Text>
               <Text style={styles.splitPillValue}>
-                {todaySummary.calorieTarget} <Text style={styles.splitPillUnit}>kcal</Text>
+                {activeSummary.calorieTarget} <Text style={styles.splitPillUnit}>kcal</Text>
               </Text>
             </View>
           </View>
@@ -431,13 +448,54 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        <Pressable
+          onPress={() => router.push('/(tabs)/learn')}
+          style={[
+            styles.card,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+              borderRadius: radii.lg,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: 14,
+              ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
+            }
+          ]}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+            <View
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: radii.md,
+                backgroundColor: `${theme.primary}18`,
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Ionicons name="film" size={20} color={theme.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: theme.text }}>
+                Action Guidance Hub
+              </Text>
+              <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 2 }}>
+                Video form cues & wrist loop animations
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+        </Pressable>
+
         {/* TODAY'S MEALS CAROUSEL */}
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionTitleGroup}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>{"Today's Meals"}</Text>
             <View style={[styles.countBadge, { backgroundColor: theme.surfaceElevated }]}>
               <Text style={[styles.countBadgeText, { color: theme.textSecondary }]}>
-                {meals.length} logged
+                {activeMeals.length} logged
               </Text>
             </View>
           </View>
@@ -446,8 +504,8 @@ export default function HomeScreen() {
             onPress={() => router.push('/snap-meal')}
             style={styles.addMealLink}
           >
-            <Ionicons name="add-circle" size={18} color={theme.primary} />
-            <Text style={[styles.addMealLinkText, { color: theme.primary }]}>Log meal</Text>
+            <Ionicons name="add-circle" size={18} color={theme.secondary} />
+            <Text style={[styles.addMealLinkText, { color: theme.secondary }]}>Log meal</Text>
           </Pressable>
         </View>
 
@@ -456,7 +514,7 @@ export default function HomeScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.mealCarouselContainer}
         >
-          {meals.length === 0 ? (
+          {activeMeals.length === 0 ? (
             <Pressable
               onPress={() => router.push('/snap-meal')}
               style={[
@@ -464,14 +522,14 @@ export default function HomeScreen() {
                 { backgroundColor: theme.card, borderColor: theme.border, borderRadius: radii.lg }
               ]}
             >
-              <Ionicons name="camera-outline" size={28} color={theme.primary} />
+              <Ionicons name="camera-outline" size={28} color={theme.secondary} />
               <Text style={[styles.emptyMealTitle, { color: theme.text }]}>Snap your first meal</Text>
               <Text style={[styles.emptyMealSub, { color: theme.textSecondary }]}>
                 Tap to auto-calculate nutrition
               </Text>
             </Pressable>
           ) : (
-            meals.map((meal) => (
+            activeMeals.map((meal) => (
               <Pressable
                 key={meal.id}
                 onPress={() => setSelectedMeal(meal)}

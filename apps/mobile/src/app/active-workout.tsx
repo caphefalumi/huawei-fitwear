@@ -18,7 +18,8 @@ import { useWorkoutStore } from '../store/workoutStore';
 import { useSettingsStore } from '../store/settingsStore';
 import {
   PrimaryButton,
-  SecondaryButton
+  SecondaryButton,
+  RestTimerRing
 } from '../components/ui';
 
 export default function ActiveWorkoutScreen() {
@@ -36,18 +37,20 @@ export default function ActiveWorkoutScreen() {
     skipRest,
     addRestSeconds,
     tickRest,
-    endWorkout
+    endWorkout,
+    exercises,
+    addSetToCurrentExercise,
+    swapCurrentExercise
   } = useWorkoutStore();
 
   const simulateWatchActive = useSettingsStore((state) => state.simulateWatchActive);
-  const setSimulateWatchActive = useSettingsStore((state) => state.setSimulateWatchActive);
 
-  // Local simulated ticker
   const [isSimulatingWatch, setIsSimulatingWatch] = useState<boolean>(simulateWatchActive);
-  const [watchConnected, setWatchConnected] = useState<boolean>(true);
+  const [watchConnected] = useState<boolean>(true);
   const [showEndModal, setShowEndModal] = useState<boolean>(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState<number>(1455); // ~24:15 baseline
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(1455);
   const [showGuideModal, setShowGuideModal] = useState<boolean>(false);
+  const [showSwapModal, setShowSwapModal] = useState<boolean>(false);
 
   // Keep screen awake while in active workout
   useEffect(() => {
@@ -62,7 +65,7 @@ export default function ActiveWorkoutScreen() {
     if (!activeSession) {
       startWorkout();
     }
-  }, [activeSession]);
+  }, [activeSession, startWorkout]);
 
   // Workout duration timer
   useEffect(() => {
@@ -82,7 +85,7 @@ export default function ActiveWorkoutScreen() {
     }, 1500);
 
     return () => clearInterval(interval);
-  }, [isSimulatingWatch, isResting, activeSession, watchConnected]);
+  }, [isSimulatingWatch, isResting, activeSession, watchConnected, incrementRep]);
 
   // Rest countdown timer ticker (ticks every 1s while resting)
   useEffect(() => {
@@ -93,7 +96,7 @@ export default function ActiveWorkoutScreen() {
     }, 1000);
 
     return () => clearInterval(restInterval);
-  }, [isResting]);
+  }, [isResting, tickRest]);
 
   if (!activeSession) {
     return (
@@ -138,9 +141,15 @@ export default function ActiveWorkoutScreen() {
     router.replace('/session-summary');
   };
 
+  const handleAddWeight = () => {
+    if (!currentSet) return;
+    updateSet(currentSet.completedReps, currentSet.weightKg + 2.5);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  };
+
   const handleDropWeight = () => {
     if (!currentSet) return;
-    const newWeight = Math.max(0, currentSet.weightKg - 5);
+    const newWeight = Math.max(0, currentSet.weightKg - 2.5);
     updateSet(currentSet.completedReps, newWeight);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   };
@@ -195,10 +204,30 @@ export default function ActiveWorkoutScreen() {
                 Watch Live Mirroring • Latency 12ms
               </Text>
             </View>
-            <View style={[styles.awakeBadge, { backgroundColor: theme.surfaceElevated }]}>
-              <Ionicons name="hardware-chip-outline" size={12} color={theme.primary} />
-              <Text style={[styles.awakeBadgeText, { color: theme.text }]}>Awake</Text>
-            </View>
+            <Pressable
+              onPress={() => {
+                setIsSimulatingWatch((prev) => !prev);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              }}
+              style={[
+                styles.awakeBadge,
+                { backgroundColor: isSimulatingWatch ? theme.primaryContainer : theme.surfaceElevated }
+              ]}
+            >
+              <Ionicons
+                name="hardware-chip-outline"
+                size={12}
+                color={isSimulatingWatch ? theme.primary : theme.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.awakeBadgeText,
+                  { color: isSimulatingWatch ? theme.primary : theme.textSecondary }
+                ]}
+              >
+                {isSimulatingWatch ? 'Auto Reps' : 'Manual'}
+              </Text>
+            </Pressable>
           </View>
 
           {/* Micro Session Timeline Stepper */}
@@ -310,25 +339,47 @@ export default function ActiveWorkoutScreen() {
             </View>
           </View>
 
-          {/* Interactive Rest Timer Strip */}
           {isResting ? (
-            <View style={[styles.restTimerStrip, { backgroundColor: theme.primaryContainer, borderRadius: radii.md }]}>
-              <View style={styles.restTimerRingMini}>
-                <Ionicons name="timer" size={22} color={theme.primary} />
+            <View style={[styles.restHeroCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, borderRadius: radii.lg }]}>
+              <Text style={[styles.restHeroSubtitle, { color: theme.textSecondary }]}>REST INTERVAL</Text>
+              <View style={styles.restRingWrapper}>
+                <RestTimerRing
+                  size={140}
+                  totalSeconds={currentSet?.restSeconds || 90}
+                  secondsLeft={restSecondsRemaining}
+                  onTimeUp={() => {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+                  }}
+                />
               </View>
-              <View style={{ flex: 1 }}>
-                <View style={styles.restTimerHeader}>
-                  <Text style={[styles.restTimerSub, { color: theme.onPrimaryContainer }]}>Auto-Rest Between Sets</Text>
-                  <Text style={[styles.restTimerCountdown, { color: theme.primary }]}>
-                    Rest: {formatTime(restSecondsRemaining)}
-                  </Text>
-                </View>
-                <View style={styles.restVibePrompt}>
-                  <Ionicons name="radio" size={13} color={theme.secondary} />
-                  <Text style={[styles.restVibeText, { color: theme.textSecondary }]}>
-                    Watch will double-pulse when rest ends
-                  </Text>
-                </View>
+
+              <View style={[styles.nextSetPreviewPill, { backgroundColor: theme.card }]}>
+                <Ionicons name="barbell-outline" size={14} color={theme.primary} />
+                <Text style={[styles.nextSetPreviewText, { color: theme.text }]}>
+                  Next: Set {currentSetIndex + 2 <= (currentExercise?.sets.length || 0) ? currentSetIndex + 2 : 1} of {currentExercise?.sets.length}
+                </Text>
+              </View>
+
+              <View style={styles.restActionButtonsRow}>
+                <Pressable
+                  onPress={() => addRestSeconds(15)}
+                  style={[styles.restExtBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+                >
+                  <Text style={[styles.restExtBtnText, { color: theme.text }]}>+15s</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => addRestSeconds(30)}
+                  style={[styles.restExtBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+                >
+                  <Text style={[styles.restExtBtnText, { color: theme.text }]}>+30s</Text>
+                </Pressable>
+                <Pressable
+                  onPress={skipRest}
+                  style={[styles.skipRestBtn, { backgroundColor: theme.primary }]}
+                >
+                  <Ionicons name="play" size={16} color={theme.onPrimary} />
+                  <Text style={[styles.skipRestBtnText, { color: theme.onPrimary }]}>Skip Rest</Text>
+                </Pressable>
               </View>
             </View>
           ) : (
@@ -350,7 +401,69 @@ export default function ActiveWorkoutScreen() {
             </View>
           )}
 
-          {/* Real-time Form & Safety Cue Box */}
+          <View style={[styles.setsTableCard, { backgroundColor: theme.surfaceElevated, borderRadius: radii.md }]}>
+            <View style={styles.setsTableHeader}>
+              <Text style={[styles.setsTableColTitle, { flex: 0.8, color: theme.textSecondary }]}>SET</Text>
+              <Text style={[styles.setsTableColTitle, { flex: 1.5, color: theme.textSecondary }]}>TARGET</Text>
+              <Text style={[styles.setsTableColTitle, { flex: 1.5, color: theme.textSecondary }]}>WEIGHT</Text>
+              <Text style={[styles.setsTableColTitle, { flex: 1, color: theme.textSecondary, textAlign: 'right' }]}>STATUS</Text>
+            </View>
+
+            {currentExercise?.sets.map((s, idx) => {
+              const isCurrent = idx === currentSetIndex;
+              return (
+                <View
+                  key={s.id || idx}
+                  style={[
+                    styles.setTableRow,
+                    {
+                      borderTopColor: theme.borderSubtle,
+                      backgroundColor: isCurrent ? `${theme.primary}12` : 'transparent'
+                    }
+                  ]}
+                >
+                  <Text style={[styles.setTableNum, { color: isCurrent ? theme.primary : theme.text }]}>
+                    {idx + 1}
+                  </Text>
+                  <Text style={[styles.setTableTarget, { color: theme.text }]}>
+                    {s.targetReps} reps
+                  </Text>
+                  <Text style={[styles.setTableWeight, { color: theme.text }]}>
+                    {s.weightKg} kg
+                  </Text>
+                  <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                    {s.completed ? (
+                      <Ionicons name="checkmark-circle" size={20} color={theme.primary} />
+                    ) : (
+                      <View style={[styles.uncompletedCircle, { borderColor: isCurrent ? theme.primary : theme.border }]} />
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+
+            <View style={styles.setsTableActionsRow}>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  addSetToCurrentExercise();
+                }}
+                style={styles.addSetBtn}
+              >
+                <Ionicons name="add-circle-outline" size={16} color={theme.primary} />
+                <Text style={[styles.addSetBtnText, { color: theme.primary }]}>Add Set</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => setShowSwapModal(true)}
+                style={styles.swapExerciseBtn}
+              >
+                <Ionicons name="swap-horizontal" size={16} color={theme.textSecondary} />
+                <Text style={[styles.swapExerciseBtnText, { color: theme.textSecondary }]}>Swap Movement</Text>
+              </Pressable>
+            </View>
+          </View>
+
           <View style={[styles.formCueBox, { backgroundColor: `${theme.primary}12`, borderRadius: radii.md }]}>
             <View style={[styles.formCueIcon, { backgroundColor: theme.primary }]}>
               <Ionicons name="bulb" size={15} color={theme.onPrimary} />
@@ -364,7 +477,6 @@ export default function ActiveWorkoutScreen() {
           </View>
         </View>
 
-        {/* LARGE GYM-FRIENDLY TOUCH CONTROLS */}
         <View style={styles.controlsSection}>
           <Pressable
             accessibilityRole="button"
@@ -388,7 +500,6 @@ export default function ActiveWorkoutScreen() {
             </Text>
           </Pressable>
 
-          {/* Secondary Quick Tweak Bar (Minimum 48dp - 56dp height touch buttons) */}
           <View style={styles.tweakButtonsGrid}>
             <Pressable
               accessibilityRole="button"
@@ -408,12 +519,30 @@ export default function ActiveWorkoutScreen() {
               ]}
             >
               <Ionicons name="add" size={18} color={theme.primary} />
-              <Text style={[styles.tweakBtnText, { color: theme.text }]}>+ Add Rep</Text>
+              <Text style={[styles.tweakBtnText, { color: theme.text }]}>+1 Rep</Text>
             </Pressable>
 
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Drop 5kg Weight"
+              accessibilityLabel="Add 2.5kg Weight"
+              onPress={handleAddWeight}
+              style={({ pressed }) => [
+                styles.tweakBtn,
+                {
+                  backgroundColor: theme.surfaceElevated,
+                  borderColor: theme.border,
+                  borderRadius: radii.md,
+                  opacity: pressed ? 0.8 : 1
+                }
+              ]}
+            >
+              <Ionicons name="arrow-up" size={16} color={theme.primary} />
+              <Text style={[styles.tweakBtnText, { color: theme.text }]}>+2.5kg</Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Drop 2.5kg Weight"
               onPress={handleDropWeight}
               style={({ pressed }) => [
                 styles.tweakBtn,
@@ -425,39 +554,12 @@ export default function ActiveWorkoutScreen() {
                 }
               ]}
             >
-              <Ionicons name="remove" size={18} color={theme.carbs} />
-              <Text style={[styles.tweakBtnText, { color: theme.text }]}>- Drop Weight</Text>
-            </Pressable>
-
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={isResting ? 'Skip Rest' : '+ 30s Rest'}
-              onPress={() => {
-                if (isResting) {
-                  skipRest();
-                } else {
-                  addRestSeconds(30);
-                }
-              }}
-              style={({ pressed }) => [
-                styles.tweakBtn,
-                {
-                  backgroundColor: theme.surfaceElevated,
-                  borderColor: theme.border,
-                  borderRadius: radii.md,
-                  opacity: pressed ? 0.8 : 1
-                }
-              ]}
-            >
-              <Ionicons name="play-forward" size={18} color={theme.secondary} />
-              <Text style={[styles.tweakBtnText, { color: theme.text }]}>
-                {isResting ? 'Skip Rest' : '+ 30s Rest'}
-              </Text>
+              <Ionicons name="arrow-down" size={16} color={theme.carbs} />
+              <Text style={[styles.tweakBtnText, { color: theme.text }]}>-2.5kg</Text>
             </Pressable>
           </View>
         </View>
 
-        {/* LIVE SESSION METRICS FOOTER CARD */}
         <View
           style={[
             styles.metricsFooterCard,
@@ -548,7 +650,7 @@ export default function ActiveWorkoutScreen() {
             <Ionicons name="alert-circle-outline" size={40} color={theme.warning} />
             <Text style={[styles.confirmEndTitle, { color: theme.text }]}>End Workout?</Text>
             <Text style={[styles.confirmEndDesc, { color: theme.textSecondary }]}>
-              You have completed {completedSetsCount} sets. Your telemetry will be saved and synced to your summary.
+              You have completed {completedSetsCount} of {totalSets} planned sets. Your telemetry will be saved and synced to your summary.
             </Text>
 
             <View style={{ width: '100%', gap: 10, marginTop: 10 }}>
@@ -557,6 +659,48 @@ export default function ActiveWorkoutScreen() {
             </View>
           </View>
         </View>
+      </Modal>
+
+      <Modal
+        visible={showSwapModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowSwapModal(false)}
+      >
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Swap Current Movement</Text>
+            <Pressable onPress={() => setShowSwapModal(false)}>
+              <Ionicons name="close" size={24} color={theme.text} />
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
+            <Text style={{ fontSize: 13, color: theme.textSecondary, marginBottom: 4 }}>
+              Select an alternative {currentExercise?.muscleGroup} exercise if equipment is occupied:
+            </Text>
+            {exercises
+              .filter((e) => e.muscleGroup === currentExercise?.muscleGroup && e.id !== currentExercise?.exerciseId)
+              .map((alt) => (
+                <Pressable
+                  key={alt.id}
+                  onPress={() => {
+                    swapCurrentExercise(alt);
+                    setShowSwapModal(false);
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+                  }}
+                  style={[styles.swapModalItem, { backgroundColor: theme.card, borderColor: theme.border, borderRadius: radii.md }]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: theme.text }}>{alt.name}</Text>
+                    <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 2 }}>
+                      {alt.equipment} • {alt.difficulty}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={theme.primary} />
+                </Pressable>
+              ))}
+          </ScrollView>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -843,6 +987,141 @@ const styles = StyleSheet.create({
   },
   controlsSection: {
     gap: 10
+  },
+  restHeroCard: {
+    padding: 16,
+    borderWidth: 1,
+    alignItems: 'center'
+  },
+  restHeroSubtitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    marginBottom: 8
+  },
+  restRingWrapper: {
+    marginVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  nextSetPreviewPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 9999,
+    marginVertical: 8
+  },
+  nextSetPreviewText: {
+    fontSize: 12,
+    fontWeight: '600'
+  },
+  restActionButtonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+    width: '100%'
+  },
+  restExtBtn: {
+    paddingHorizontal: 12,
+    height: 38,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  restExtBtnText: {
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  skipRestBtn: {
+    flex: 1,
+    height: 38,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6
+  },
+  skipRestBtnText: {
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  setsTableCard: {
+    padding: 14,
+    gap: 8
+  },
+  setsTableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: 6
+  },
+  setsTableColTitle: {
+    fontSize: 11,
+    fontWeight: '700'
+  },
+  setTableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderTopWidth: StyleSheet.hairlineWidth
+  },
+  setTableNum: {
+    flex: 0.8,
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  setTableTarget: {
+    flex: 1.5,
+    fontSize: 13,
+    fontWeight: '500'
+  },
+  setTableWeight: {
+    flex: 1.5,
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  uncompletedCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5
+  },
+  setsTableActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(128, 128, 128, 0.2)'
+  },
+  addSetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 4
+  },
+  addSetBtnText: {
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  swapExerciseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 4
+  },
+  swapExerciseBtnText: {
+    fontSize: 13,
+    fontWeight: '600'
+  },
+  swapModalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderWidth: 1
   },
   completeSetBtn64: {
     height: 64,

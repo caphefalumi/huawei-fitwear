@@ -27,6 +27,12 @@ import {
   ErrorState,
   BrandLogo
 } from '../../components/ui';
+import {
+  usePlanQuery,
+  useGeneratePlanMutation,
+  useUpdatePlanMutation,
+  useExercisesQuery
+} from '../../hooks/useQueries';
 
 export default function TrainScreen() {
   const { theme, radii } = useAppTheme();
@@ -40,32 +46,28 @@ export default function TrainScreen() {
   const { user } = useUserStore();
   const previewState = useSettingsStore((state) => state.previewState);
 
-  // Tab segment: 'plan' | 'library'
+  const { data: qPlan } = usePlanQuery();
+  const { data: qExercises } = useExercisesQuery();
+  const generatePlanMutation = useGeneratePlanMutation();
+  const updatePlanMutation = useUpdatePlanMutation();
+
+  const activePlan = qPlan !== undefined ? qPlan : plan;
+  const activeExercises = qExercises || exercises;
+
   const [activeSegment, setActiveSegment] = useState<'plan' | 'library'>('plan');
-
-  // Expanded day index in plan
   const [expandedDayIndex, setExpandedDayIndex] = useState<number | null>(0);
-
-  // Cycle Choice Bottom Sheet
   const [showCycleModal, setShowCycleModal] = useState<boolean>(false);
   const [cycleChoice, setCycleChoice] = useState<'continue' | 'new'>('continue');
-
-  // Plan Generator Modal
   const [showGeneratorModal, setShowGeneratorModal] = useState<boolean>(false);
   const [generatorGoal, setGeneratorGoal] = useState<GoalType>(user?.goal || 'build_muscle');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
-
-  // Watch sync state
   const [watchSynced, setWatchSynced] = useState<boolean>(false);
   const [syncingWatch, setSyncingWatch] = useState<boolean>(false);
-
-  // Library Filters
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedMuscle, setSelectedMuscle] = useState<string>('All');
 
-  // Filter exercises
   const filteredExercises = useMemo(() => {
-    return exercises.filter((ex) => {
+    return activeExercises.filter((ex) => {
       const matchesSearch =
         searchQuery.trim().length === 0 ||
         ex.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -76,32 +78,38 @@ export default function TrainScreen() {
 
       return matchesSearch && matchesMuscle;
     });
-  }, [exercises, searchQuery, selectedMuscle]);
+  }, [activeExercises, searchQuery, selectedMuscle]);
 
-  // Handle Plan Generation
   const handleRunGenerator = async () => {
     setIsGenerating(true);
-    setTimeout(async () => {
+    try {
+      await generatePlanMutation.mutateAsync(generatorGoal);
       await generatePlan(generatorGoal);
       setIsGenerating(false);
       setShowGeneratorModal(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       Alert.alert('Plan Activated', 'Your 6-day split is now synced to your Huawei Watch.');
-    }, 1200);
+    } catch {
+      setIsGenerating(false);
+    }
   };
 
-  // Launch Workout
   const handleLaunchWorkout = () => {
-    if (!plan) return;
+    if (!activePlan) return;
     setShowCycleModal(false);
 
     if (cycleChoice === 'new') {
+      updatePlanMutation.mutate({
+        currentCycle: (activePlan.currentCycle || 1) + 1,
+        currentDayIndex: 0
+      });
       updatePlan({
-        currentCycle: (plan.currentCycle || 1) + 1,
+        currentCycle: (activePlan.currentCycle || 1) + 1,
         currentDayIndex: 0
       });
       startWorkout(0);
     } else {
-      startWorkout(plan.currentDayIndex);
+      startWorkout(activePlan.currentDayIndex);
     }
 
     router.push('/active-workout');
@@ -538,7 +546,8 @@ export default function TrainScreen() {
           <View style={styles.cycleOptionsSection}>
             <Text style={[styles.cycleOptionsTitle, { color: theme.text }]}>Cycle Options</Text>
 
-            <View
+            <Pressable
+              onPress={() => setShowCycleModal(true)}
               style={[
                 styles.cycleProgressCard,
                 {
@@ -573,7 +582,7 @@ export default function TrainScreen() {
                 </Text>
                 <Text style={[styles.cycleOnTrackText, { color: theme.primary }]}>On Track</Text>
               </View>
-            </View>
+            </Pressable>
 
             <Pressable
               onPress={() => setShowGeneratorModal(true)}
@@ -726,6 +735,93 @@ export default function TrainScreen() {
               loading={isGenerating}
               onPress={handleRunGenerator}
               style={{ marginTop: 20 }}
+            />
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      <Modal
+        visible={showCycleModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowCycleModal(false)}
+      >
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Cycle Progression</Text>
+            <Pressable onPress={() => setShowCycleModal(false)}>
+              <Ionicons name="close" size={24} color={theme.text} />
+            </Pressable>
+          </View>
+
+          <View style={{ padding: 20, gap: 16 }}>
+            <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>SELECT CYCLE ENTRY</Text>
+
+            <Pressable
+              onPress={() => setCycleChoice('continue')}
+              style={[
+                styles.goalOptionRow,
+                {
+                  backgroundColor: cycleChoice === 'continue' ? theme.primaryContainer : theme.surfaceElevated,
+                  borderColor: cycleChoice === 'continue' ? theme.primary : theme.border,
+                  borderRadius: radii.md
+                }
+              ]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.goalOptionText,
+                    {
+                      color: cycleChoice === 'continue' ? theme.primary : theme.text,
+                      fontWeight: cycleChoice === 'continue' ? '700' : '500'
+                    }
+                  ]}
+                >
+                  Continue Active Cycle
+                </Text>
+                <Text style={{ fontSize: 13, color: theme.textSecondary, marginTop: 2 }}>
+                  Resume at Day {(plan?.currentDayIndex ?? 0) + 1} of 6 (Cycle {plan?.currentCycle ?? 1})
+                </Text>
+              </View>
+              {cycleChoice === 'continue' && <Ionicons name="checkmark-circle" size={20} color={theme.primary} />}
+            </Pressable>
+
+            <Pressable
+              onPress={() => setCycleChoice('new')}
+              style={[
+                styles.goalOptionRow,
+                {
+                  backgroundColor: cycleChoice === 'new' ? theme.primaryContainer : theme.surfaceElevated,
+                  borderColor: cycleChoice === 'new' ? theme.primary : theme.border,
+                  borderRadius: radii.md
+                }
+              ]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.goalOptionText,
+                    {
+                      color: cycleChoice === 'new' ? theme.primary : theme.text,
+                      fontWeight: cycleChoice === 'new' ? '700' : '500'
+                    }
+                  ]}
+                >
+                  Start New Cycle
+                </Text>
+                <Text style={{ fontSize: 13, color: theme.textSecondary, marginTop: 2 }}>
+                  Begin Cycle {(plan?.currentCycle ?? 1) + 1} at Day 1 with calibrated volume
+                </Text>
+              </View>
+              {cycleChoice === 'new' && <Ionicons name="checkmark-circle" size={20} color={theme.primary} />}
+            </Pressable>
+
+            <PrimaryButton
+              label={cycleChoice === 'new' ? 'Start Fresh Cycle (Day 1)' : 'Continue to Today\'s Workout'}
+              icon="play"
+              onPress={handleLaunchWorkout}
+              style={{ marginTop: 16 }}
             />
           </View>
         </SafeAreaView>

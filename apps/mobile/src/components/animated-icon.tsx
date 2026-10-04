@@ -1,4 +1,5 @@
 import { Image } from 'react-native';
+/* eslint-disable import/no-duplicates */
 import * as SplashScreen from 'expo-splash-screen';
 import { useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';

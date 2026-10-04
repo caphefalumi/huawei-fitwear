@@ -53,7 +53,6 @@ export default function TabsLayout() {
           }
         }}
       >
-        {/* 1. Home Dashboard */}
         <Tabs.Screen
           name="index"
           options={{
@@ -64,18 +63,16 @@ export default function TabsLayout() {
           }}
         />
 
-        {/* 2. Workout Plan */}
         <Tabs.Screen
-          name="train"
+          name="nutrition"
           options={{
-            title: 'Plan',
+            title: 'Nutrition',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? 'barbell' : 'barbell-outline'} size={22} color={color} />
+              <Ionicons name={focused ? 'restaurant' : 'restaurant-outline'} size={21} color={color} />
             )
           }}
         />
 
-        {/* 3. Center Camera Action Button */}
         <Tabs.Screen
           name="camera"
           options={{
@@ -113,18 +110,16 @@ export default function TabsLayout() {
           }}
         />
 
-        {/* 4. Action Guidance Library (Learn) */}
         <Tabs.Screen
-          name="learn"
+          name="train"
           options={{
-            title: 'Learn',
+            title: 'Plan',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? 'book' : 'book-outline'} size={21} color={color} />
+              <Ionicons name={focused ? 'barbell' : 'barbell-outline'} size={22} color={color} />
             )
           }}
         />
 
-        {/* 5. Progress & Analytics */}
         <Tabs.Screen
           name="progress"
           options={{
@@ -135,13 +130,13 @@ export default function TabsLayout() {
           }}
         />
 
-        {/* Hidden from tab bar */}
         <Tabs.Screen
-          name="nutrition"
+          name="learn"
           options={{
             href: null
           }}
         />
+
         <Tabs.Screen
           name="me"
           options={{

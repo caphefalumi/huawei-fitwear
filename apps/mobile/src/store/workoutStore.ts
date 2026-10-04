@@ -32,6 +32,8 @@ interface WorkoutState {
   skipRest: () => void;
   addRestSeconds: (seconds: number) => void;
   tickRest: () => void;
+  addSetToCurrentExercise: () => void;
+  swapCurrentExercise: (newExercise: ExerciseDoc) => void;
   endWorkout: () => Promise<WorkoutSessionDoc | null>;
   resetWorkout: () => void;
 }
@@ -263,6 +265,51 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
     } else {
       set({ restSecondsRemaining: current - 1 });
     }
+  },
+
+  addSetToCurrentExercise: () => {
+    const session = get().activeSession;
+    if (!session) return;
+    const { currentExerciseIndex } = get();
+    const exercises = [...session.exercises];
+    const currentEx = exercises[currentExerciseIndex];
+    if (!currentEx) return;
+
+    const lastSet = currentEx.sets[currentEx.sets.length - 1];
+    const newSet: SetDoc = {
+      id: `set_${currentEx.exerciseId}_${currentEx.sets.length + 1}`,
+      setNumber: currentEx.sets.length + 1,
+      targetReps: lastSet?.targetReps || 10,
+      completedReps: 0,
+      weightKg: lastSet?.weightKg || 60,
+      restSeconds: lastSet?.restSeconds || 90,
+      completed: false,
+      countedBy: 'manual'
+    };
+
+    exercises[currentExerciseIndex] = {
+      ...currentEx,
+      sets: [...currentEx.sets, newSet]
+    };
+    const totalSets = exercises.reduce((acc, curr) => acc + curr.sets.length, 0);
+    set({ activeSession: { ...session, exercises, totalSets } });
+  },
+
+  swapCurrentExercise: (newEx: ExerciseDoc) => {
+    const session = get().activeSession;
+    if (!session) return;
+    const { currentExerciseIndex } = get();
+    const exercises = [...session.exercises];
+    const currentEx = exercises[currentExerciseIndex];
+    if (!currentEx) return;
+
+    exercises[currentExerciseIndex] = {
+      ...currentEx,
+      exerciseId: newEx.id,
+      exerciseName: newEx.name,
+      muscleGroup: newEx.muscleGroup
+    };
+    set({ activeSession: { ...session, exercises } });
   },
 
   endWorkout: async () => {

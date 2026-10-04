@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Animated, StyleSheet, ViewStyle } from 'react-native';
 import { useAppTheme } from '../../theme';
 
@@ -16,7 +16,7 @@ export const SkeletonBlock: React.FC<SkeletonBlockProps> = ({
   style
 }) => {
   const { theme } = useAppTheme();
-  const opacity = useRef(new Animated.Value(0.3)).current;
+  const [opacity] = useState(() => new Animated.Value(0.3));
 
   useEffect(() => {
     const pulse = Animated.loop(

@@ -70,7 +70,7 @@ export const RestTimerRing: React.FC<RestTimerRingProps> = ({
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       if (onTimeUp) onTimeUp();
     }
-  }, [secondsLeft]);
+  }, [secondsLeft, onTimeUp]);
 
   const badgeSize = Math.max(Math.round(size * 0.14), 18);
   const badgeOffset = Math.round(size * 0.05);

@@ -29,3 +29,5 @@ Thumbs.db
 
 # Tool harness metadata
 .pi-glla/
+.opencode/
+.sisyphus/

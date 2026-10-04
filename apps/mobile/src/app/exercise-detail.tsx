@@ -18,6 +18,12 @@ import { useWorkoutStore } from '../store/workoutStore';
 import { PrimaryButton, SecondaryButton } from '../components/ui';
 import { ExerciseDoc } from '../types/types';
 
+let planExerciseCounter = 1000;
+function createPlanExId(): string {
+  planExerciseCounter += 1;
+  return `pe_${planExerciseCounter}`;
+}
+
 export default function ExerciseDetailScreen() {
   const { theme, radii } = useAppTheme();
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -27,10 +33,8 @@ export default function ExerciseDetailScreen() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
-  // Selected or featured exercise
-  const [activeExerciseId, setActiveExerciseId] = useState<string>(
-    id || exercises[0]?.id || 'ex_barbell_bent_over_row'
-  );
+  const [userSelectedId, setUserSelectedId] = useState<string | null>(null);
+  const activeExerciseId = userSelectedId || id || exercises[0]?.id || 'ex_barbell_bent_over_row';
 
   const activeExercise =
     exercises.find((e) => e.id === activeExerciseId) || exercises[0];
@@ -74,7 +78,7 @@ export default function ExerciseDetailScreen() {
     const targetDay = plan.days[targetDayIndex];
 
     const newPlanExercise = {
-      id: `pe_${Date.now()}`,
+      id: createPlanExId(),
       exerciseId: targetEx.id,
       sets: 3,
       repRange: { min: 8, max: 12 },
@@ -340,7 +344,7 @@ export default function ExerciseDetailScreen() {
               return (
                 <Pressable
                   key={ex.id}
-                  onPress={() => setActiveExerciseId(ex.id)}
+                  onPress={() => setUserSelectedId(ex.id)}
                   style={({ pressed }) => [
                     styles.gridExerciseCard,
                     {

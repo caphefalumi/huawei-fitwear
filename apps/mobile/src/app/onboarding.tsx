@@ -10,18 +10,21 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useAppTheme } from '../theme';
 import { useUserStore } from '../store/userStore';
+import { useDeviceStore } from '../store/deviceStore';
 import { PrimaryButton, SecondaryButton, Stepper } from '../components/ui';
 import type { GoalType, SexType, ActivityLevel } from '../types/types';
 
 export default function OnboardingScreen() {
-  const { theme, radii, spacing } = useAppTheme();
+  const { theme } = useAppTheme();
   const { user, completeOnboarding } = useUserStore();
+  const { pairWatch } = useDeviceStore();
 
-  // Step 0: Welcome, Step 1: Sign in, Step 2: Details wizard, Step 3: Targets
   const [step, setStep] = useState<number>(0);
   const [wizardSubStep, setWizardSubStep] = useState<number>(0);
+  const [isPairingWatch, setIsPairingWatch] = useState<boolean>(false);
 
   // Form states
   const [fullName, setFullName] = useState(user.fullName || 'Alex Tran');
@@ -451,89 +454,150 @@ export default function OnboardingScreen() {
     );
   }
 
-  // ================= 4. TARGETS SCREEN =================
   const bmr = calculateBmr();
   const tdee = calculateTdee(bmr);
 
+  if (step === 3) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+        <ScrollView contentContainerStyle={styles.targetsContent}>
+          <Text style={[styles.screenTitle, { color: theme.text }]}>Daily Nutrition Targets</Text>
+          <Text style={[styles.screenSubtitle, { color: theme.textSecondary }]}>
+            Calculated via Mifflin-St Jeor metabolic model. You can fine-tune any target.
+          </Text>
+
+          <View
+            style={[
+              styles.metabolicBanner,
+              { backgroundColor: theme.surfaceElevated, borderColor: theme.border }
+            ]}
+          >
+            <View style={styles.metaCol}>
+              <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>BASE METABOLIC (BMR)</Text>
+              <Text style={[styles.metaValue, { color: theme.text }]}>{bmr} kcal</Text>
+            </View>
+            <View style={[styles.metaDivider, { backgroundColor: theme.border }]} />
+            <View style={styles.metaCol}>
+              <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>EXPENDITURE (TDEE)</Text>
+              <Text style={[styles.metaValue, { color: theme.primary }]}>{tdee} kcal</Text>
+            </View>
+          </View>
+
+          <Text style={[styles.explanationText, { color: theme.textSecondary }]}>
+            Target set for {goal === 'build_muscle' ? 'lean hypertrophy (+200 kcal surplus)' : goal === 'lose_fat' ? 'fat reduction (-400 kcal deficit)' : 'weight maintenance'}.
+          </Text>
+
+          <View style={styles.stepperList}>
+            <Stepper
+              label="DAILY CALORIES"
+              value={calorieTarget}
+              onChange={setCalorieTarget}
+              min={1200}
+              max={4500}
+              step={50}
+              unit="kcal"
+            />
+
+            <Stepper
+              label="PROTEIN (2.0g per kg)"
+              value={proteinTarget}
+              onChange={setProteinTarget}
+              min={50}
+              max={300}
+              step={5}
+              unit="g"
+            />
+
+            <Stepper
+              label="CARBOHYDRATES"
+              value={carbsTarget}
+              onChange={setCarbsTarget}
+              min={50}
+              max={600}
+              step={10}
+              unit="g"
+            />
+
+            <Stepper
+              label="DIETARY FAT"
+              value={fatTarget}
+              onChange={setFatTarget}
+              min={30}
+              max={150}
+              step={5}
+              unit="g"
+            />
+          </View>
+
+          <PrimaryButton
+            label="Next: Pair Smartwatch"
+            icon="arrow-forward"
+            size="large"
+            onPress={() => setStep(4)}
+            style={{ marginTop: 24, marginBottom: 32 }}
+          />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <ScrollView contentContainerStyle={styles.targetsContent}>
-        <Text style={[styles.screenTitle, { color: theme.text }]}>Daily Nutrition Targets</Text>
+      <View style={styles.authContent}>
+        <Pressable style={styles.backButton} onPress={() => setStep(3)}>
+          <Ionicons name="arrow-back" size={24} color={theme.text} />
+        </Pressable>
+
+        <Text style={[styles.screenTitle, { color: theme.text }]}>Pair Huawei Smartwatch</Text>
         <Text style={[styles.screenSubtitle, { color: theme.textSecondary }]}>
-          Calculated via Mifflin-St Jeor metabolic model. You can fine-tune any target.
+          Enable real-time glanceable nutrition, wrist rep counting, and haptic rest alerts.
         </Text>
 
-        {/* BMR and TDEE Summary Banner */}
-        <View
-          style={[
-            styles.metabolicBanner,
-            { backgroundColor: theme.surfaceElevated, borderColor: theme.border }
-          ]}
-        >
-          <View style={styles.metaCol}>
-            <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>BASE METABOLIC (BMR)</Text>
-            <Text style={[styles.metaValue, { color: theme.text }]}>{bmr} kcal</Text>
+        <View style={[styles.watchPairCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+          <View style={[styles.watchIconLg, { backgroundColor: theme.primaryContainer }]}>
+            <Ionicons name="watch" size={40} color={theme.primary} />
           </View>
-          <View style={[styles.metaDivider, { backgroundColor: theme.border }]} />
-          <View style={styles.metaCol}>
-            <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>EXPENDITURE (TDEE)</Text>
-            <Text style={[styles.metaValue, { color: theme.primary }]}>{tdee} kcal</Text>
+          <Text style={[styles.watchPairName, { color: theme.text }]}>Huawei Watch GT 4</Text>
+          <Text style={[styles.watchPairModel, { color: theme.textSecondary }]}>Model ARA-B19 • HarmonyOS NEXT</Text>
+
+          <View style={styles.watchPairPillsRow}>
+            <View style={[styles.microWatchPill, { backgroundColor: theme.card }]}>
+              <Ionicons name="flame" size={12} color={theme.calories} />
+              <Text style={[styles.microWatchPillText, { color: theme.textSecondary }]}>Glance Dial</Text>
+            </View>
+            <View style={[styles.microWatchPill, { backgroundColor: theme.card }]}>
+              <Ionicons name="barbell" size={12} color={theme.protein} />
+              <Text style={[styles.microWatchPillText, { color: theme.textSecondary }]}>IMU Reps</Text>
+            </View>
+            <View style={[styles.microWatchPill, { backgroundColor: theme.card }]}>
+              <Ionicons name="timer" size={12} color={theme.primary} />
+              <Text style={[styles.microWatchPillText, { color: theme.textSecondary }]}>Haptics</Text>
+            </View>
           </View>
-        </View>
-
-        <Text style={[styles.explanationText, { color: theme.textSecondary }]}>
-          Target set for {goal === 'build_muscle' ? 'lean hypertrophy (+200 kcal surplus)' : goal === 'lose_fat' ? 'fat reduction (-400 kcal deficit)' : 'weight maintenance'}.
-        </Text>
-
-        <View style={styles.stepperList}>
-          <Stepper
-            label="DAILY CALORIES"
-            value={calorieTarget}
-            onChange={setCalorieTarget}
-            min={1200}
-            max={4500}
-            step={50}
-            unit="kcal"
-          />
-
-          <Stepper
-            label="PROTEIN (2.0g per kg)"
-            value={proteinTarget}
-            onChange={setProteinTarget}
-            min={50}
-            max={300}
-            step={5}
-            unit="g"
-          />
-
-          <Stepper
-            label="CARBOHYDRATES"
-            value={carbsTarget}
-            onChange={setCarbsTarget}
-            min={50}
-            max={600}
-            step={10}
-            unit="g"
-          />
-
-          <Stepper
-            label="DIETARY FAT"
-            value={fatTarget}
-            onChange={setFatTarget}
-            min={30}
-            max={150}
-            step={5}
-            unit="g"
-          />
         </View>
 
         <PrimaryButton
-          label="Looks Good — Save & Start"
+          label={isPairingWatch ? 'Pairing Watch...' : 'Pair Watch & Start'}
+          icon="bluetooth"
+          size="large"
+          loading={isPairingWatch}
+          onPress={async () => {
+            setIsPairingWatch(true);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+            await pairWatch('Huawei Watch GT 4', 'ARA-B19');
+            setIsPairingWatch(false);
+            await handleFinishOnboarding();
+          }}
+          style={{ marginTop: 20 }}
+        />
+
+        <SecondaryButton
+          label="Skip Watch Setup (Phone Only)"
           size="large"
           onPress={handleFinishOnboarding}
-          style={{ marginTop: 24, marginBottom: 32 }}
+          style={{ marginTop: 12 }}
         />
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -541,6 +605,49 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1
+  },
+  watchPairCard: {
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 8
+  },
+  watchIconLg: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16
+  },
+  watchPairName: {
+    fontSize: 18,
+    fontWeight: '800'
+  },
+  watchPairModel: {
+    fontSize: 12,
+    marginTop: 4,
+    marginBottom: 16
+  },
+  watchPairPillsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    width: '100%',
+    justifyContent: 'center'
+  },
+  microWatchPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8
+  },
+  microWatchPillText: {
+    fontSize: 11,
+    fontWeight: '600'
   },
   welcomeContent: {
     padding: 24,

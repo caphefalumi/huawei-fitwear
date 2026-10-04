@@ -15,7 +15,7 @@ import { useWorkoutStore } from '../store/workoutStore';
 import { PrimaryButton, SecondaryButton, StatCard } from '../components/ui';
 
 export default function SessionSummaryScreen() {
-  const { theme, radii, spacing } = useAppTheme();
+  const { theme } = useAppTheme();
   const { history } = useWorkoutStore();
 
   const session = history[0];
@@ -44,6 +44,18 @@ export default function SessionSummaryScreen() {
           <Text style={[styles.subheading, { color: theme.textSecondary }]}>
             {session?.title || 'Hypertrophy Foundation'}
           </Text>
+        </View>
+
+        <View style={[styles.prBanner, { backgroundColor: `${theme.primary}18`, borderColor: theme.primary, borderRadius: 12 }]}>
+          <View style={[styles.prIconBox, { backgroundColor: theme.primary }]}>
+            <Ionicons name="ribbon" size={20} color={theme.onPrimary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.prTitle, { color: theme.primary }]}>NEW PERSONAL RECORD!</Text>
+            <Text style={[styles.prDesc, { color: theme.text }]}>
+              {session?.exercises?.[0]?.exerciseName || 'Barbell Bent-Over Row'}: 70 kg (+2.5 kg progression)
+            </Text>
+          </View>
         </View>
 
         {/* 4 Core Stat Tiles */}
@@ -153,6 +165,31 @@ const styles = StyleSheet.create({
   celebrationBox: {
     alignItems: 'center',
     marginVertical: 16
+  },
+  prBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderWidth: 1,
+    gap: 12,
+    marginBottom: 16
+  },
+  prIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  prTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6
+  },
+  prDesc: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 2
   },
   trophyCircle: {
     width: 88,

@@ -17,25 +17,43 @@ import { useAppTheme } from '../theme';
 import { useDeviceStore } from '../store/deviceStore';
 import { useNutritionStore } from '../store/nutritionStore';
 import { useWorkoutStore } from '../store/workoutStore';
-import { Timestamp, DeviceDoc } from '../types/types';
+import { Timestamp } from '../types/types';
 import { PrimaryButton, SecondaryButton, StatCard } from '../components/ui';
+import {
+  useDevicesQuery,
+  useSyncDeviceMutation,
+  usePairWatchMutation,
+  useTodaySummaryQuery
+} from '../hooks/useQueries';
 
 export default function DevicesScreen() {
-  const { theme, radii, spacing } = useAppTheme();
+  const { theme } = useAppTheme();
   const { devices, syncDevice, pairWatch } = useDeviceStore();
   const { todaySummary } = useNutritionStore();
   const { plan } = useWorkoutStore();
+
+  const { data: qDevices } = useDevicesQuery();
+  const { data: qSummary } = useTodaySummaryQuery();
+  const syncDeviceMutation = useSyncDeviceMutation();
+  const pairWatchMutation = usePairWatchMutation();
+
+  const activeDevices = qDevices || devices;
+  const activeSummary = qSummary || todaySummary;
 
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [showPairModal, setShowPairModal] = useState<boolean>(false);
   const [pairStep, setPairStep] = useState<1 | 2 | 3>(1);
 
-  const watch = devices.find((d) => d.type === 'watch') || devices[0];
+  const watch = activeDevices.find((d) => d.type === 'watch') || activeDevices[0];
 
   const handleSyncNow = async () => {
     if (!watch) return;
     setIsSyncing(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    try {
+      await syncDeviceMutation.mutateAsync(watch.id);
+    } catch {
+    }
     await syncDevice(watch.id);
     setIsSyncing(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -45,7 +63,6 @@ export default function DevicesScreen() {
   const handleStartPairing = () => {
     setPairStep(1);
     setShowPairModal(true);
-    // Simulate step 1 -> step 2
     setTimeout(() => {
       setPairStep(2);
     }, 1800);
@@ -53,6 +70,10 @@ export default function DevicesScreen() {
 
   const handleConfirmPair = async () => {
     setPairStep(3);
+    try {
+      await pairWatchMutation.mutateAsync({ name: 'Huawei Watch GT 4', model: 'ARA-B19' });
+    } catch {
+    }
     await pairWatch('Huawei Watch GT 4', 'ARA-B19');
     setTimeout(() => {
       setShowPairModal(false);
@@ -61,8 +82,8 @@ export default function DevicesScreen() {
     }, 1500);
   };
 
-  const caloriesLeft = Math.max(todaySummary.calorieTarget - todaySummary.caloriesConsumed, 0);
-  const proteinLeft = Math.max(todaySummary.proteinTarget - todaySummary.proteinConsumed, 0);
+  const caloriesLeft = Math.max(activeSummary.calorieTarget - activeSummary.caloriesConsumed, 0);
+  const proteinLeft = Math.max(activeSummary.proteinTarget - activeSummary.proteinConsumed, 0);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -85,7 +106,7 @@ export default function DevicesScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* Device Cards */}
-        {devices.map((device) => {
+        {activeDevices.map((device) => {
           const isWatch = device.type === 'watch';
           const isConnected = device.connectionStatus === 'connected';
 

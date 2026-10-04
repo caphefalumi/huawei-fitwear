@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -28,6 +28,12 @@ import {
   ErrorState,
   BrandLogo
 } from '../../components/ui';
+import {
+  useMeasurementsQuery,
+  useAddMeasurementMutation,
+  useWorkoutHistoryQuery,
+  useTodaySummaryQuery
+} from '../../hooks/useQueries';
 
 export default function ProgressScreen() {
   const { theme, radii } = useAppTheme();
@@ -35,10 +41,13 @@ export default function ProgressScreen() {
   const { todaySummary } = useNutritionStore();
   const previewState = useSettingsStore((state) => state.previewState);
 
-  // Time Range: '1W' | '1M' | '3M' | 'All'
+  const { data: qMeasurements } = useMeasurementsQuery();
+  const { data: qHistory } = useWorkoutHistoryQuery();
+  const { data: qSummary } = useTodaySummaryQuery();
+  const addMeasurementMutation = useAddMeasurementMutation();
+
   const [timeRange, setTimeRange] = useState<'1W' | '1M' | '3M' | 'All'>('1W');
 
-  // Measurements
   const [measurements, setMeasurements] = useState<BodyMeasurementDoc[]>([]);
   const [showAddMeasureModal, setShowAddMeasureModal] = useState<boolean>(false);
   const [newWeight, setNewWeight] = useState<number>(72.5);
@@ -49,18 +58,142 @@ export default function ProgressScreen() {
     profileService.getMeasurements().then(setMeasurements);
   }, []);
 
+  const activeMeasurements = qMeasurements || measurements;
+  const activeHistory = qHistory || history;
+  const activeSummary = qSummary || todaySummary;
+
   const handleSaveMeasurement = async () => {
-    const saved = await profileService.addMeasurement({
-      date: Timestamp.toDateString(),
-      weightKg: newWeight,
-      bodyFatPercentage: newBodyFat,
-      muscleMassKg: newMuscleMass
-    });
-    setMeasurements((prev) => [...prev, saved]);
+    try {
+      const saved = await addMeasurementMutation.mutateAsync({
+        date: Timestamp.toDateString(),
+        weightKg: newWeight,
+        bodyFatPercentage: newBodyFat,
+        muscleMassKg: newMuscleMass
+      });
+      setMeasurements((prev) => [...prev, saved]);
+    } catch {
+      const saved = await profileService.addMeasurement({
+        date: Timestamp.toDateString(),
+        weightKg: newWeight,
+        bodyFatPercentage: newBodyFat,
+        muscleMassKg: newMuscleMass
+      });
+      setMeasurements((prev) => [...prev, saved]);
+    }
     setShowAddMeasureModal(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     Alert.alert('Saved', 'Measurement recorded and trend updated.');
   };
+
+  const activeRangeData = useMemo(() => {
+    const configs = {
+      '1W': {
+        title: 'Weekly Volume & Calorie Balance',
+        sub: 'Tonnage load paired with intake response',
+        totalVolume: '18,420',
+        volumeTrend: '+8.4%',
+        trendSub: 'vs last week',
+        avgCalories: activeSummary.caloriesConsumed > 0 ? activeSummary.caloriesConsumed.toLocaleString() : '2,140',
+        adherenceCalories: '94% goal hit',
+        avgProtein: activeSummary.proteinConsumed > 0 ? `${Math.round(activeSummary.proteinConsumed)}g` : '132g',
+        adherenceProtein: '92% adherence',
+        tooltipTitle: 'Wed • Workout Peak',
+        tooltipMetrics: '4,200 kg • 2,180 kcal',
+        days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        activeDay: 'Wed',
+        bars: [
+          { x: 16, y: 70, h: 65, active: false },
+          { x: 60, y: 88, h: 47, active: false },
+          { x: 104, y: 38, h: 97, active: true },
+          { x: 148, y: 125, h: 10, active: false },
+          { x: 192, y: 48, h: 87, active: false },
+          { x: 236, y: 58, h: 77, active: false },
+          { x: 280, y: 118, h: 17, active: false }
+        ],
+        pathD: 'M 26 62 Q 70 85, 114 55 T 202 60 T 290 80',
+        insight: 'Wednesday showed optimal glycogen recovery. Keep weekly surplus on heavy pull days.'
+      },
+      '1M': {
+        title: 'Monthly Progressive Overload',
+        sub: '4-week progressive tonnage accumulation',
+        totalVolume: '74,800',
+        volumeTrend: '+12.6%',
+        trendSub: 'vs last month',
+        avgCalories: '2,180',
+        adherenceCalories: '96% goal hit',
+        avgProtein: '138g',
+        adherenceProtein: '95% adherence',
+        tooltipTitle: 'Wk 3 • Peak Volume',
+        tooltipMetrics: '19,850 kg • 2,200 kcal',
+        days: ['W1', 'W2', 'W3', 'W4', 'Recov', 'Peak', 'Target'],
+        activeDay: 'W3',
+        bars: [
+          { x: 16, y: 65, h: 70, active: false },
+          { x: 60, y: 50, h: 85, active: false },
+          { x: 104, y: 25, h: 110, active: true },
+          { x: 148, y: 40, h: 95, active: false },
+          { x: 192, y: 75, h: 60, active: false },
+          { x: 236, y: 30, h: 105, active: false },
+          { x: 280, y: 20, h: 115, active: false }
+        ],
+        pathD: 'M 26 75 Q 104 55, 192 45 T 280 55',
+        insight: 'Week 3 exceeded volume threshold by 12%. Deload planned for end of mesocycle.'
+      },
+      '3M': {
+        title: 'Quarterly Hypertrophy Trend',
+        sub: '12-week volume periodization overview',
+        totalVolume: '228,500',
+        volumeTrend: '+18.2%',
+        trendSub: 'quarterly gain',
+        avgCalories: '2,210',
+        adherenceCalories: '93% goal hit',
+        avgProtein: '140g',
+        adherenceProtein: '94% adherence',
+        tooltipTitle: 'M2 • Peak Mesocycle',
+        tooltipMetrics: '78,400 kg • 2,240 kcal',
+        days: ['M1-A', 'M1-B', 'M2-A', 'M2-B', 'M3-A', 'M3-B', 'Target'],
+        activeDay: 'M2-B',
+        bars: [
+          { x: 16, y: 75, h: 60, active: false },
+          { x: 60, y: 65, h: 70, active: false },
+          { x: 104, y: 45, h: 90, active: false },
+          { x: 148, y: 20, h: 115, active: true },
+          { x: 192, y: 55, h: 80, active: false },
+          { x: 236, y: 35, h: 100, active: false },
+          { x: 280, y: 25, h: 110, active: false }
+        ],
+        pathD: 'M 26 80 Q 148 40, 236 55 T 280 48',
+        insight: 'Mesocycle 2 showed greatest rate of strength adaptation. Lean mass gained +1.8 kg.'
+      },
+      'All': {
+        title: 'All-Time Training Volume',
+        sub: 'Cumulative athletic tonnage since inception',
+        totalVolume: '482,000',
+        volumeTrend: 'All-time High',
+        trendSub: 'lifetime lifts',
+        avgCalories: '2,190',
+        adherenceCalories: '94% goal hit',
+        avgProtein: '139g',
+        adherenceProtein: '93% adherence',
+        tooltipTitle: 'Mar • Lifetime Peak',
+        tooltipMetrics: '88,200 kg volume',
+        days: ['Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'],
+        activeDay: 'Mar',
+        bars: [
+          { x: 16, y: 85, h: 50, active: false },
+          { x: 60, y: 70, h: 65, active: false },
+          { x: 104, y: 55, h: 80, active: false },
+          { x: 148, y: 45, h: 90, active: false },
+          { x: 192, y: 25, h: 110, active: true },
+          { x: 236, y: 35, h: 100, active: false },
+          { x: 280, y: 30, h: 105, active: false }
+        ],
+        pathD: 'M 26 95 Q 70 85, 114 70 T 202 45 T 290 50',
+        insight: 'Consistent progressive overload tracked across 482 metric tons moved.'
+      }
+    };
+    return configs[timeRange] || configs['1W'];
+  }, [timeRange, activeSummary]);
 
   // 1. Loading State
   if (previewState === 'loading') {
@@ -189,9 +322,7 @@ export default function ProgressScreen() {
           </View>
         </View>
 
-        {/* KEY METRICS BENTO GRID */}
         <View style={styles.bentoSection}>
-          {/* Total Workout Volume Card */}
           <View
             style={[
               styles.volumeCard,
@@ -212,17 +343,21 @@ export default function ProgressScreen() {
               </View>
 
               <View style={styles.volumeNumberRow}>
-                <Text style={[styles.volumeNumberLarge, { color: theme.text }]}>18,420</Text>
+                <Text style={[styles.volumeNumberLarge, { color: theme.text }]}>
+                  {activeRangeData.totalVolume}
+                </Text>
                 <Text style={[styles.volumeUnit, { color: theme.textSecondary }]}>kg</Text>
               </View>
 
               <View style={styles.volumeTrendRow}>
                 <View style={[styles.trendPill, { backgroundColor: theme.primaryContainer }]}>
                   <Ionicons name="trending-up" size={13} color={theme.primary} />
-                  <Text style={[styles.trendPillText, { color: theme.primary }]}>+8.4%</Text>
+                  <Text style={[styles.trendPillText, { color: theme.primary }]}>
+                    {activeRangeData.volumeTrend}
+                  </Text>
                 </View>
                 <Text style={[styles.trendCompareText, { color: theme.textSecondary }]}>
-                  vs last week
+                  {activeRangeData.trendSub}
                 </Text>
               </View>
             </View>
@@ -232,9 +367,7 @@ export default function ProgressScreen() {
             </View>
           </View>
 
-          {/* Secondary Metrics Pair */}
           <View style={styles.pairGrid}>
-            {/* Avg Daily Calories */}
             <View
               style={[
                 styles.pairCard,
@@ -251,16 +384,19 @@ export default function ProgressScreen() {
                 <Ionicons name="flame" size={17} color={theme.calories} />
               </View>
               <View style={{ marginVertical: 6 }}>
-                <Text style={[styles.pairCardMainNumber, { color: theme.text }]}>2,140</Text>
-                <Text style={[styles.pairCardUnit, { color: theme.textSecondary }]}>kcal / day avg</Text>
+                <Text style={[styles.pairCardMainNumber, { color: theme.text }]}>
+                  {activeRangeData.avgCalories}
+                </Text>
+                <Text style={[styles.pairCardUnit, { color: theme.textSecondary }]}>kcal / day</Text>
               </View>
               <View style={[styles.adherencePill, { backgroundColor: theme.surfaceElevated }]}>
                 <View style={[styles.microGreenDot, { backgroundColor: theme.onTrack }]} />
-                <Text style={[styles.adherenceText, { color: theme.text }]}>94% goal hit</Text>
+                <Text style={[styles.adherenceText, { color: theme.text }]}>
+                  {activeRangeData.adherenceCalories}
+                </Text>
               </View>
             </View>
 
-            {/* Avg Protein Target */}
             <View
               style={[
                 styles.pairCard,
@@ -277,18 +413,21 @@ export default function ProgressScreen() {
                 <Ionicons name="egg-outline" size={17} color={theme.protein} />
               </View>
               <View style={{ marginVertical: 6 }}>
-                <Text style={[styles.pairCardMainNumber, { color: theme.text }]}>132g</Text>
-                <Text style={[styles.pairCardUnit, { color: theme.textSecondary }]}>daily mean</Text>
+                <Text style={[styles.pairCardMainNumber, { color: theme.text }]}>
+                  {activeRangeData.avgProtein}
+                </Text>
+                <Text style={[styles.pairCardUnit, { color: theme.textSecondary }]}>daily average</Text>
               </View>
               <View style={[styles.adherencePill, { backgroundColor: theme.surfaceElevated }]}>
                 <View style={[styles.microGreenDot, { backgroundColor: theme.primary }]} />
-                <Text style={[styles.adherenceText, { color: theme.text }]}>92% adherence</Text>
+                <Text style={[styles.adherenceText, { color: theme.text }]}>
+                  {activeRangeData.adherenceProtein}
+                </Text>
               </View>
             </View>
           </View>
         </View>
 
-        {/* MAIN TREND CHART CARD (Stitch Weekly Volume & Calorie Balance) */}
         <View
           style={[
             styles.chartCard,
@@ -303,82 +442,74 @@ export default function ProgressScreen() {
           <View style={styles.chartHeaderRow}>
             <View>
               <Text style={[styles.chartCardTitle, { color: theme.text }]}>
-                Weekly Volume & Calorie Balance
+                {activeRangeData.title}
               </Text>
               <Text style={[styles.chartCardSubtitle, { color: theme.textSecondary }]}>
-                Tonnage load paired with intake response
+                {activeRangeData.sub}
               </Text>
             </View>
 
             <View style={styles.chartLegendGroup}>
               <View style={styles.legendItem}>
                 <View style={[styles.legendBarSample, { backgroundColor: theme.primary }]} />
-                <Text style={[styles.legendText, { color: theme.textSecondary }]}>Volume (kg)</Text>
+                <Text style={[styles.legendText, { color: theme.textSecondary }]}>Volume</Text>
               </View>
               <View style={styles.legendItem}>
                 <View style={[styles.legendLineSample, { backgroundColor: theme.calories }]} />
-                <Text style={[styles.legendText, { color: theme.textSecondary }]}>Intake (kcal)</Text>
+                <Text style={[styles.legendText, { color: theme.textSecondary }]}>Intake</Text>
               </View>
             </View>
           </View>
 
-          {/* Tooltip & SVG Chart Canvas */}
           <View style={styles.svgChartContainer}>
-            {/* Wednesday Active Peak Tooltip */}
             <View style={[styles.chartTooltip, { backgroundColor: theme.isDark ? '#273331' : '#121E1C' }]}>
-              <Text style={styles.tooltipTitle}>Wed • Workout Peak</Text>
+              <Text style={styles.tooltipTitle}>{activeRangeData.tooltipTitle}</Text>
               <Text style={styles.tooltipMetrics}>
-                <Text style={{ color: '#4FD6C4', fontWeight: '700' }}>4,200 kg</Text> •{' '}
-                <Text style={{ color: '#FF8A5B', fontWeight: '700' }}>2,180 kcal</Text>
+                <Text style={{ color: theme.primary, fontWeight: '700' }}>
+                  {activeRangeData.tooltipMetrics}
+                </Text>
               </Text>
             </View>
 
             <Svg width="100%" height={160} viewBox="0 0 320 160">
-              {/* Horizontal Gridlines */}
               <Line x1="0" y1="30" x2="320" y2="30" stroke={theme.borderSubtle} strokeDasharray="3, 3" strokeWidth="1" />
               <Line x1="0" y1="75" x2="320" y2="75" stroke={theme.borderSubtle} strokeDasharray="3, 3" strokeWidth="1" />
               <Line x1="0" y1="120" x2="320" y2="120" stroke={theme.borderSubtle} strokeDasharray="3, 3" strokeWidth="1" />
 
-              {/* Volume Bars */}
-              {/* Mon */}
-              <Rect x="16" y="70" width="20" height="65" rx="5" fill={theme.primary} opacity="0.85" />
-              {/* Tue */}
-              <Rect x="60" y="88" width="20" height="47" rx="5" fill={theme.primary} opacity="0.85" />
-              {/* Wed (Peak) */}
-              <Rect x="104" y="38" width="20" height="97" rx="5" fill={theme.primary} />
-              {/* Thu (Rest) */}
-              <Rect x="148" y="125" width="20" height="10" rx="3" fill={theme.primaryContainer} />
-              {/* Fri */}
-              <Rect x="192" y="48" width="20" height="87" rx="5" fill={theme.primary} opacity="0.85" />
-              {/* Sat */}
-              <Rect x="236" y="58" width="20" height="77" rx="5" fill={theme.primary} opacity="0.85" />
-              {/* Sun (Recovery) */}
-              <Rect x="280" y="118" width="20" height="17" rx="4" fill={theme.primaryContainer} />
+              {activeRangeData.bars.map((bar, bIdx) => (
+                <Rect
+                  key={bIdx}
+                  x={bar.x}
+                  y={bar.y}
+                  width="20"
+                  height={bar.h}
+                  rx="5"
+                  fill={bar.active ? theme.primary : theme.primaryContainer}
+                />
+              ))}
 
-              {/* Calorie Intake Curve */}
               <Path
-                d="M 26 62 Q 70 85, 114 55 T 202 60 T 290 80"
+                d={activeRangeData.pathD}
                 fill="none"
-                stroke="#D9480F"
+                stroke={theme.calories}
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
-              <Circle cx="114" cy="55" r="4.5" fill="#FFFFFF" stroke="#D9480F" strokeWidth="2.5" />
-              <Circle cx="202" cy="60" r="3" fill="#D9480F" />
-              <Circle cx="246" cy="68" r="3" fill="#D9480F" />
+              <Circle cx="104" cy="45" r="4.5" fill="#FFFFFF" stroke={theme.calories} strokeWidth="2.5" />
+              <Circle cx="192" cy="50" r="3" fill={theme.calories} />
+              <Circle cx="280" cy="55" r="3" fill={theme.calories} />
             </Svg>
 
-            {/* Day Labels Row */}
             <View style={styles.daysLabelsRow}>
-              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+              {activeRangeData.days.map((day, idx) => (
                 <Text
-                  key={day}
+                  key={idx}
                   style={[
                     styles.dayLabelText,
                     {
-                      color: day === 'Wed' ? theme.primary : theme.textSecondary,
-                      fontWeight: day === 'Wed' ? '700' : '500'
+                      color: day === activeRangeData.activeDay ? theme.primary : theme.textSecondary,
+                      fontWeight: day === activeRangeData.activeDay ? '700' : '500'
                     }
                   ]}
                 >
@@ -388,12 +519,11 @@ export default function ProgressScreen() {
             </View>
           </View>
 
-          {/* Coach Smart Insight Pill */}
           <View style={[styles.coachInsightBox, { backgroundColor: theme.surfaceElevated }]}>
             <Ionicons name="sparkles" size={18} color={theme.primary} />
             <Text style={[styles.coachInsightText, { color: theme.text }]}>
-              <Text style={{ fontWeight: '700', color: theme.primary }}>Volume Surge: </Text>
-              Wednesday showed optimal glycogen recovery. Keep weekly surplus on heavy pull days.
+              <Text style={{ fontWeight: '700', color: theme.primary }}>Coach Insight: </Text>
+              {activeRangeData.insight}
             </Text>
           </View>
         </View>
@@ -458,7 +588,63 @@ export default function ProgressScreen() {
           </View>
         </View>
 
-        {/* LOGGED SESSIONS (WORKOUT HISTORY) */}
+        <View
+          style={[
+            styles.muscleBalanceCard,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+              borderRadius: radii.lg,
+              ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
+            }
+          ]}
+        >
+          <View style={styles.muscleBalanceHeader}>
+            <View>
+              <Text style={[styles.muscleBalanceTitle, { color: theme.text }]}>Body Composition</Text>
+              <Text style={[styles.muscleBalanceSub, { color: theme.textSecondary }]}>
+                Scale trends & lean body mass tracking
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => setShowAddMeasureModal(true)}
+              style={[styles.targetedTag, { backgroundColor: theme.primaryContainer }]}
+            >
+              <Ionicons name="add" size={14} color={theme.primary} />
+              <Text style={[styles.targetedTagText, { color: theme.primary }]}>Log Scale</Text>
+            </Pressable>
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+            <View style={[styles.pairCard, { flex: 1, backgroundColor: theme.surfaceElevated, borderRadius: radii.md, padding: 12 }]}>
+              <Text style={[styles.pairCardLabel, { color: theme.textSecondary, fontSize: 11 }]}>BODY WEIGHT</Text>
+              <Text style={[styles.pairCardMainNumber, { color: theme.text, fontSize: 20, marginVertical: 4 }]}>
+                {activeMeasurements.length > 0 ? activeMeasurements[activeMeasurements.length - 1].weightKg : 72.5}
+                <Text style={{ fontSize: 13, color: theme.textSecondary }}> kg</Text>
+              </Text>
+              <Text style={{ fontSize: 11, color: theme.onTrack }}>-0.4 kg this week</Text>
+            </View>
+
+            <View style={[styles.pairCard, { flex: 1, backgroundColor: theme.surfaceElevated, borderRadius: radii.md, padding: 12 }]}>
+              <Text style={[styles.pairCardLabel, { color: theme.textSecondary, fontSize: 11 }]}>BODY FAT</Text>
+              <Text style={[styles.pairCardMainNumber, { color: theme.text, fontSize: 20, marginVertical: 4 }]}>
+                {activeMeasurements.length > 0 ? activeMeasurements[activeMeasurements.length - 1].bodyFatPercentage : 17.0}
+                <Text style={{ fontSize: 13, color: theme.textSecondary }}>%</Text>
+              </Text>
+              <Text style={{ fontSize: 11, color: theme.primary }}>Lean bulk phase</Text>
+            </View>
+
+            <View style={[styles.pairCard, { flex: 1, backgroundColor: theme.surfaceElevated, borderRadius: radii.md, padding: 12 }]}>
+              <Text style={[styles.pairCardLabel, { color: theme.textSecondary, fontSize: 11 }]}>MUSCLE MASS</Text>
+              <Text style={[styles.pairCardMainNumber, { color: theme.text, fontSize: 20, marginVertical: 4 }]}>
+                {activeMeasurements.length > 0 ? activeMeasurements[activeMeasurements.length - 1].muscleMassKg : 57.0}
+                <Text style={{ fontSize: 13, color: theme.textSecondary }}> kg</Text>
+              </Text>
+              <Text style={{ fontSize: 11, color: theme.protein }}>+0.8 kg gained</Text>
+            </View>
+          </View>
+        </View>
+
         <View style={styles.historySection}>
           <View style={styles.historyHeaderRow}>
             <Text style={[styles.historySectionTitle, { color: theme.text }]}>Logged Sessions</Text>
@@ -468,11 +654,20 @@ export default function ProgressScreen() {
           </View>
 
           <View style={styles.historyStack}>
-            {[
-              { title: 'Pull Hypertrophy', meta: '45m • 4,200 kg volume', time: 'Yesterday', icon: 'barbell', color: '#0F766E' },
-              { title: 'Push Strength', meta: '50m • 4,850 kg volume', time: '3 days ago', icon: 'fitness', color: '#C2410C' },
-              { title: 'Leg Day Foundation', meta: '40m • 5,100 kg volume', time: '5 days ago', icon: 'walk', color: '#4338CA' }
-            ].map((sess, sIdx) => (
+            {(activeHistory && activeHistory.length > 0
+              ? activeHistory.slice(0, 5).map((s) => ({
+                  title: s.title || 'Strength Session',
+                  meta: `${Math.round((s.durationSeconds || 2400) / 60)}m • ${(s.totalVolumeKg || 4200).toLocaleString()} kg volume`,
+                  time: s.date || 'Recent',
+                  icon: 'barbell',
+                  color: '#0F766E'
+                }))
+              : [
+                  { title: 'Pull Hypertrophy', meta: '45m • 4,200 kg volume', time: 'Yesterday', icon: 'barbell', color: '#0F766E' },
+                  { title: 'Push Strength', meta: '50m • 4,850 kg volume', time: '3 days ago', icon: 'fitness', color: '#C2410C' },
+                  { title: 'Leg Day Foundation', meta: '40m • 5,100 kg volume', time: '5 days ago', icon: 'walk', color: '#4338CA' }
+                ]
+            ).map((sess, sIdx) => (
               <Pressable
                 key={sIdx}
                 onPress={() => router.push('/session-summary')}
@@ -508,6 +703,53 @@ export default function ProgressScreen() {
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
               </Pressable>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.historySection}>
+          <View style={styles.historyHeaderRow}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="trophy" size={18} color={theme.primary} />
+              <Text style={[styles.historySectionTitle, { color: theme.text }]}>Personal Records (1RM)</Text>
+            </View>
+            <Text style={{ fontSize: 12, color: theme.primary, fontWeight: '700' }}>All Verified</Text>
+          </View>
+
+          <View style={{ gap: 10 }}>
+            {[
+              { exercise: 'Barbell Flat Bench Press', pr: '100 kg', reps: '5 reps', date: '2 weeks ago', color: '#C2410C' },
+              { exercise: 'Barbell Bent-Over Row', pr: '80 kg', reps: '8 reps', date: 'Yesterday', color: '#0F766E' },
+              { exercise: 'Barbell Back Squat', pr: '125 kg', reps: '4 reps', date: '1 month ago', color: '#4338CA' },
+              { exercise: 'Overhead Dumbbell Press', pr: '32 kg', reps: '8 reps', date: '3 weeks ago', color: '#B45309' }
+            ].map((prItem, idx) => (
+              <View
+                key={idx}
+                style={[
+                  styles.sessionCard,
+                  {
+                    backgroundColor: theme.card,
+                    borderColor: theme.border,
+                    borderRadius: radii.md,
+                    ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
+                  }
+                ]}
+              >
+                <View style={styles.sessionLeft}>
+                  <View style={[styles.sessionIconBox, { backgroundColor: `${prItem.color}15` }]}>
+                    <Ionicons name="ribbon" size={20} color={prItem.color} />
+                  </View>
+                  <View style={{ minWidth: 0, flex: 1 }}>
+                    <Text style={[styles.sessionTitle, { color: theme.text }]} numberOfLines={1}>
+                      {prItem.exercise}
+                    </Text>
+                    <Text style={[styles.sessionMeta, { color: theme.textSecondary }]}>
+                      {prItem.pr} • {prItem.reps} • {prItem.date}
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="checkmark-circle" size={18} color={theme.onTrack} />
+              </View>
             ))}
           </View>
         </View>

@@ -12,13 +12,11 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme, watchFace } from '../theme';
 import { useNutritionStore } from '../store/nutritionStore';
-import { useWorkoutStore } from '../store/workoutStore';
 import { ProgressRing, StatusBadge } from '../components/ui';
 
 export default function WatchPreviewScreen() {
-  const { theme, radii, spacing } = useAppTheme();
+  const { theme } = useAppTheme();
   const { todaySummary } = useNutritionStore();
-  const { plan } = useWorkoutStore();
 
   const [activeWatchPage, setActiveWatchPage] = useState<1 | 2>(1);
 

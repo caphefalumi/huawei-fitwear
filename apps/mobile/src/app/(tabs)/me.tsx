@@ -25,6 +25,10 @@ import {
   SecondaryButton,
   Stepper
 } from '../../components/ui';
+import {
+  useUserProfileQuery,
+  useUpdateProfileMutation
+} from '../../hooks/useQueries';
 
 export default function MeScreen() {
   const { theme, radii } = useAppTheme();
@@ -32,6 +36,10 @@ export default function MeScreen() {
   const { resetNutrition } = useNutritionStore();
   const { resetWorkout } = useWorkoutStore();
   const { devices, resetDevices } = useDeviceStore();
+
+  const { data: qUser } = useUserProfileQuery();
+  const updateProfileMutation = useUpdateProfileMutation();
+  const activeUser = qUser || user;
 
   const themeMode = useSettingsStore((state) => state.themeMode);
   const setThemeMode = useSettingsStore((state) => state.setThemeMode);
@@ -42,7 +50,6 @@ export default function MeScreen() {
 
   const watchDevice = devices.find((d) => d.type === 'watch') || devices[0];
 
-  // Profile Edit Modal
   const [showEditTargetsModal, setShowEditTargetsModal] = useState<boolean>(false);
   const [editCalories, setEditCalories] = useState<number>(user.dailyCalorieTarget);
   const [editProtein, setEditProtein] = useState<number>(user.dailyProteinTarget);
@@ -50,12 +57,27 @@ export default function MeScreen() {
   const [editFat, setEditFat] = useState<number>(user.dailyFatTarget);
 
   const handleSaveTargets = async () => {
-    await updateUser({
-      dailyCalorieTarget: editCalories,
-      dailyProteinTarget: editProtein,
-      dailyCarbsTarget: editCarbs,
-      dailyFatTarget: editFat
-    });
+    try {
+      await updateProfileMutation.mutateAsync({
+        dailyCalorieTarget: editCalories,
+        dailyProteinTarget: editProtein,
+        dailyCarbsTarget: editCarbs,
+        dailyFatTarget: editFat
+      });
+      await updateUser({
+        dailyCalorieTarget: editCalories,
+        dailyProteinTarget: editProtein,
+        dailyCarbsTarget: editCarbs,
+        dailyFatTarget: editFat
+      });
+    } catch {
+      await updateUser({
+        dailyCalorieTarget: editCalories,
+        dailyProteinTarget: editProtein,
+        dailyCarbsTarget: editCarbs,
+        dailyFatTarget: editFat
+      });
+    }
     setShowEditTargetsModal(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     Alert.alert('Targets Saved', 'Daily macro targets synced across your devices.');
@@ -140,20 +162,20 @@ export default function MeScreen() {
         >
           <View style={[styles.avatarCircle, { backgroundColor: theme.surfaceElevated, borderRadius: radii.full }]}>
             <Text style={[styles.avatarText, { color: theme.primary }]}>
-              {user.fullName.split(' ').map((n) => n[0]).join('')}
+              {activeUser.fullName.split(' ').map((n) => n[0]).join('')}
             </Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.userName, { color: theme.text }]}>{user.fullName}</Text>
-            <Text style={[styles.userEmail, { color: theme.textSecondary }]}>{user.email}</Text>
+            <Text style={[styles.userName, { color: theme.text }]}>{activeUser.fullName}</Text>
+            <Text style={[styles.userEmail, { color: theme.textSecondary }]}>{activeUser.email}</Text>
             <View style={styles.badgeRow}>
               <View style={[styles.goalBadge, { backgroundColor: theme.onTrackBg, borderRadius: radii.full }]}>
-                <Text style={[styles.goalBadgeText, { color: theme.primary }]}>
-                  {user.goal.replace('_', ' ').toUpperCase()}
+                <Text style={[styles.goalBadgeText, { color: theme.onTrack }]}>
+                  {activeUser.goal.replace('_', ' ').toUpperCase()}
                 </Text>
               </View>
               <Text style={[styles.userMeta, { color: theme.textMuted }]}>
-                {user.heightCm} cm • {user.weightKg} kg
+                {activeUser.heightCm} cm • {activeUser.weightKg} kg
               </Text>
             </View>
           </View>
@@ -263,7 +285,7 @@ export default function MeScreen() {
           <View style={styles.targetsGrid}>
             <View style={styles.targetItem}>
               <Text style={[styles.targetNumber, { color: theme.text }]}>
-                {user.dailyCalorieTarget.toLocaleString()}
+                {activeUser.dailyCalorieTarget.toLocaleString()}
               </Text>
               <Text style={[styles.targetLabel, { color: theme.textSecondary }]}>
                 KCAL
@@ -272,7 +294,7 @@ export default function MeScreen() {
 
             <View style={styles.targetItem}>
               <Text style={[styles.targetNumber, { color: theme.protein }]}>
-                {user.dailyProteinTarget}g
+                {activeUser.dailyProteinTarget}g
               </Text>
               <Text style={[styles.targetLabel, { color: theme.textSecondary }]}>
                 PROTEIN
@@ -281,7 +303,7 @@ export default function MeScreen() {
 
             <View style={styles.targetItem}>
               <Text style={[styles.targetNumber, { color: theme.carbs }]}>
-                {user.dailyCarbsTarget}g
+                {activeUser.dailyCarbsTarget}g
               </Text>
               <Text style={[styles.targetLabel, { color: theme.textSecondary }]}>
                 CARBS
@@ -290,7 +312,7 @@ export default function MeScreen() {
 
             <View style={styles.targetItem}>
               <Text style={[styles.targetNumber, { color: theme.fat }]}>
-                {user.dailyFatTarget}g
+                {activeUser.dailyFatTarget}g
               </Text>
               <Text style={[styles.targetLabel, { color: theme.textSecondary }]}>
                 FAT

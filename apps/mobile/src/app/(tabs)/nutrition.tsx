@@ -28,6 +28,11 @@ import {
   ErrorState,
   MealNutritionModal
 } from '../../components/ui';
+import {
+  useMealsByDateQuery,
+  useTodaySummaryQuery,
+  useDeleteMealMutation
+} from '../../hooks/useQueries';
 
 export default function NutritionScreen() {
   const { theme, radii } = useAppTheme();
@@ -42,15 +47,20 @@ export default function NutritionScreen() {
   } = useNutritionStore();
   const previewState = useSettingsStore((state) => state.previewState);
 
-  // Hydration state (local telemetry tracking)
+  const { data: qMeals, refetch: refetchMeals, isLoading: mealsLoading } = useMealsByDateQuery(selectedDate);
+  const { data: qSummary } = useTodaySummaryQuery();
+  const deleteMealMutation = useDeleteMealMutation();
+
+  const activeMeals = qMeals || meals;
+  const activeSummary = qSummary || todaySummary;
+
   const [waterMl, setWaterMl] = useState<number>(2000);
   const [selectedMeal, setSelectedMeal] = useState<MealDoc | null>(null);
   const waterTargetMl = 3000;
 
-  // Past 7 days for the horizontal date strip
   const dates = useMemo(() => {
     return Array.from({ length: 7 }).map((_, i) => {
-      const offset = i - 6; // -6 to 0 (today)
+      const offset = i - 6;
       const dateStr = Timestamp.getRelativeDate(offset);
       const d = new Date();
       d.setDate(d.getDate() + offset);
@@ -73,8 +83,9 @@ export default function NutritionScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+            await deleteMealMutation.mutateAsync(id);
             deleteMeal(id);
           }
         }
@@ -133,14 +144,13 @@ export default function NutritionScreen() {
   const isToday = selectedDate === Timestamp.toDateString();
 
   const totalMacroGrams =
-    todaySummary.proteinConsumed + todaySummary.carbsConsumed + todaySummary.fatConsumed;
-  const pPercent = totalMacroGrams > 0 ? Math.round((todaySummary.proteinConsumed / totalMacroGrams) * 100) : 0;
-  const cPercent = totalMacroGrams > 0 ? Math.round((todaySummary.carbsConsumed / totalMacroGrams) * 100) : 0;
+    activeSummary.proteinConsumed + activeSummary.carbsConsumed + activeSummary.fatConsumed;
+  const pPercent = totalMacroGrams > 0 ? Math.round((activeSummary.proteinConsumed / totalMacroGrams) * 100) : 0;
+  const cPercent = totalMacroGrams > 0 ? Math.round((activeSummary.carbsConsumed / totalMacroGrams) * 100) : 0;
   const fPercent = totalMacroGrams > 0 ? Math.max(0, 100 - pPercent - cPercent) : 0;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Offline Banner */}
       {previewState === 'offline' ? (
         <View style={[styles.offlineBanner, { backgroundColor: theme.surfaceElevated }]}>
           <Ionicons name="cloud-offline" size={16} color={theme.textSecondary} />
@@ -155,13 +165,15 @@ export default function NutritionScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={loading}
-            onRefresh={() => loadNutrition(selectedDate)}
+            refreshing={loading || mealsLoading}
+            onRefresh={() => {
+              refetchMeals();
+              loadNutrition(selectedDate);
+            }}
             tintColor={theme.primary}
           />
         }
       >
-        {/* Title Header */}
         <View style={styles.titleRow}>
           <View>
             <Text style={[styles.dateSubtitle, { color: theme.textSecondary }]}>
@@ -180,11 +192,10 @@ export default function NutritionScreen() {
             ]}
             onPress={() => router.push('/snap-meal')}
           >
-            <Ionicons name="camera" size={20} color={theme.primary} />
+            <Ionicons name="camera" size={20} color={theme.secondary} />
           </Pressable>
         </View>
 
-        {/* Horizontal Date Strip */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -229,7 +240,6 @@ export default function NutritionScreen() {
           })}
         </ScrollView>
 
-        {/* Daily Summary Card */}
         <View
           style={[
             styles.summaryCard,
@@ -244,9 +254,9 @@ export default function NutritionScreen() {
           <View style={styles.summaryTopRow}>
             <View style={{ flex: 1 }}>
               <Text style={[styles.summaryKcalBig, { color: theme.text }]}>
-                {todaySummary.caloriesConsumed.toLocaleString()}
+                {activeSummary.caloriesConsumed.toLocaleString()}
                 <Text style={[styles.summaryKcalTarget, { color: theme.textSecondary }]}>
-                  {' '}/ {todaySummary.calorieTarget.toLocaleString()} kcal
+                  {' '}/ {activeSummary.calorieTarget.toLocaleString()} kcal
                 </Text>
               </Text>
               <Text
@@ -254,32 +264,31 @@ export default function NutritionScreen() {
                   styles.summaryRemainingText,
                   {
                     color:
-                      todaySummary.calorieTarget - todaySummary.caloriesConsumed >= 0
-                        ? theme.primary
+                      activeSummary.calorieTarget - activeSummary.caloriesConsumed >= 0
+                        ? theme.secondary
                         : theme.overTarget
                   }
                 ]}
               >
-                {todaySummary.calorieTarget - todaySummary.caloriesConsumed >= 0
-                  ? `${(todaySummary.calorieTarget - todaySummary.caloriesConsumed).toLocaleString()} kcal remaining`
-                  : `${(todaySummary.caloriesConsumed - todaySummary.calorieTarget).toLocaleString()} kcal over target`}
+                {activeSummary.calorieTarget - activeSummary.caloriesConsumed >= 0
+                  ? `${(activeSummary.calorieTarget - activeSummary.caloriesConsumed).toLocaleString()} kcal remaining`
+                  : `${(activeSummary.caloriesConsumed - activeSummary.calorieTarget).toLocaleString()} kcal over target`}
               </Text>
             </View>
-            <StatusBadge status={todaySummary.status} size="small" />
+            <StatusBadge status={activeSummary.status} size="small" />
           </View>
 
-          {/* 3 Macro Rings Row */}
           <View style={[styles.macroRingsRow, { borderTopColor: theme.borderSubtle }]}>
             <View style={styles.macroRingItem}>
               <ProgressRing
                 size={78}
                 strokeWidth={6}
-                progress={todaySummary.proteinConsumed / Math.max(todaySummary.proteinTarget, 1)}
+                progress={activeSummary.proteinConsumed / Math.max(activeSummary.proteinTarget, 1)}
                 color={theme.protein}
-                primaryValue={`${Math.round(todaySummary.proteinConsumed)}g`}
+                primaryValue={`${Math.round(activeSummary.proteinConsumed)}g`}
                 primaryLabel="Protein"
                 icon={{ name: 'arm-flex', color: theme.ringIcon.protein }}
-                accessibilityLabel={`Protein: ${Math.round(todaySummary.proteinConsumed)} of ${todaySummary.proteinTarget} grams`}
+                accessibilityLabel={`Protein: ${Math.round(activeSummary.proteinConsumed)} of ${activeSummary.proteinTarget} grams`}
               />
             </View>
 
@@ -287,12 +296,12 @@ export default function NutritionScreen() {
               <ProgressRing
                 size={78}
                 strokeWidth={6}
-                progress={todaySummary.carbsConsumed / Math.max(todaySummary.carbsTarget, 1)}
+                progress={activeSummary.carbsConsumed / Math.max(activeSummary.carbsTarget, 1)}
                 color={theme.carbs}
-                primaryValue={`${Math.round(todaySummary.carbsConsumed)}g`}
+                primaryValue={`${Math.round(activeSummary.carbsConsumed)}g`}
                 primaryLabel="Carbs"
                 icon={{ name: 'grain', color: theme.ringIcon.carbs }}
-                accessibilityLabel={`Carbohydrates: ${Math.round(todaySummary.carbsConsumed)} of ${todaySummary.carbsTarget} grams`}
+                accessibilityLabel={`Carbohydrates: ${Math.round(activeSummary.carbsConsumed)} of ${activeSummary.carbsTarget} grams`}
               />
             </View>
 
@@ -300,17 +309,16 @@ export default function NutritionScreen() {
               <ProgressRing
                 size={78}
                 strokeWidth={6}
-                progress={todaySummary.fatConsumed / Math.max(todaySummary.fatTarget, 1)}
+                progress={activeSummary.fatConsumed / Math.max(activeSummary.fatTarget, 1)}
                 color={theme.fat}
-                primaryValue={`${Math.round(todaySummary.fatConsumed)}g`}
+                primaryValue={`${Math.round(activeSummary.fatConsumed)}g`}
                 primaryLabel="Fat"
                 icon={{ name: 'water', color: theme.ringIcon.fat }}
-                accessibilityLabel={`Fat: ${Math.round(todaySummary.fatConsumed)} of ${todaySummary.fatTarget} grams`}
+                accessibilityLabel={`Fat: ${Math.round(activeSummary.fatConsumed)} of ${activeSummary.fatTarget} grams`}
               />
             </View>
           </View>
 
-          {/* Macro Ratio Segmented Distribution Bar */}
           <View style={styles.macroDistSection}>
             <View style={styles.macroDistHeader}>
               <Text style={[styles.macroDistTitle, { color: theme.textSecondary }]}>
@@ -334,7 +342,6 @@ export default function NutritionScreen() {
           </View>
         </View>
 
-        {/* HYDRATION TELEMETRY TRACKER */}
         <View
           style={[
             styles.hydrationCard,
@@ -385,18 +392,17 @@ export default function NutritionScreen() {
           </View>
         </View>
 
-        {/* Meals Section Grouped by Category */}
         <View style={styles.categorySection}>
           <View style={styles.sectionHeadingRow}>
             <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>
               LOGGED MEALS
             </Text>
             <Text style={[styles.sectionItemCount, { color: theme.textMuted }]}>
-              {meals.length} {meals.length === 1 ? 'entry' : 'entries'}
+              {activeMeals.length} {activeMeals.length === 1 ? 'entry' : 'entries'}
             </Text>
           </View>
 
-          {meals.length === 0 ? (
+          {activeMeals.length === 0 ? (
             <View style={[styles.emptyCard, { backgroundColor: theme.card, borderColor: theme.border, borderRadius: radii.xl }]}>
               <EmptyState
                 icon="fast-food-outline"
@@ -408,7 +414,7 @@ export default function NutritionScreen() {
             </View>
           ) : (
             mealCategories.map((cat) => {
-              const catMeals = meals.filter((m) => m.type === cat);
+              const catMeals = activeMeals.filter((m) => m.type === cat);
               if (catMeals.length === 0) return null;
 
               const catKcal = catMeals.reduce((acc, m) => acc + m.totalCalories, 0);
