@@ -113,10 +113,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="train"
           options={{
-            title: 'Plan',
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? 'barbell' : 'barbell-outline'} size={22} color={color} />
-            )
+            href: null
           }}
         />
 

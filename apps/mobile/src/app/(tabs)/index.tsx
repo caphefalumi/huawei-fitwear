@@ -322,47 +322,6 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <Pressable
-          onPress={() => router.push('/(tabs)/learn')}
-          style={[
-            styles.card,
-            {
-              backgroundColor: theme.card,
-              borderColor: theme.border,
-              borderRadius: radii.lg,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: 14,
-              ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
-            }
-          ]}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-            <View
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: radii.md,
-                backgroundColor: `${theme.primary}18`,
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <Ionicons name="film" size={20} color={theme.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: theme.text }}>
-                Action Guidance Hub
-              </Text>
-              <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 2 }}>
-                Video form cues & wrist loop animations
-              </Text>
-            </View>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-        </Pressable>
-
         {/* TODAY'S MEALS CAROUSEL */}
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionTitleGroup}>
