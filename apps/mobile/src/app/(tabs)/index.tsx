@@ -187,23 +187,24 @@ export default function HomeScreen() {
           style={[
             styles.heroCard,
             {
-              backgroundColor: '#000000',
+              backgroundColor: theme.card,
               borderColor: theme.border,
               borderWidth: 1,
-              borderRadius: radii.xl
+              borderRadius: radii.xl,
+              ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
             }
           ]}
         >
           <View style={styles.heroHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="watch-outline" size={16} color="#FFFFFF" />
-              <Text style={[styles.heroSubHeader, { color: '#FFFFFF' }]}>
+              <Ionicons name="watch-outline" size={16} color={theme.primary} />
+              <Text style={[styles.heroSubHeader, { color: theme.text }]}>
                 WATCH ACTIVITY RINGS
               </Text>
             </View>
 
-            <View style={[styles.heroPill, { backgroundColor: 'rgba(255, 255, 255, 0.12)' }]}>
-              <Text style={[styles.heroPillText, { color: '#FFFFFF' }]}>Live Mirroring</Text>
+            <View style={[styles.heroPill, { backgroundColor: theme.primaryContainer }]}>
+              <Text style={[styles.heroPillText, { color: theme.onPrimaryContainer }]}>Live Mirroring</Text>
             </View>
           </View>
 
@@ -215,32 +216,34 @@ export default function HomeScreen() {
               innerValue={9}
             />
 
-            <View style={[styles.heroSplitPill, { marginTop: 14 }]}>
+            <View style={[styles.heroSplitPill, { backgroundColor: theme.surfaceElevated, marginTop: 14 }]}>
               <View style={styles.splitPillItem}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#00A3FF' }} />
-                  <Text style={styles.splitPillLabel}>Stand</Text>
+                  <Text style={[styles.splitPillLabel, { color: theme.textSecondary }]}>Stand</Text>
                 </View>
-                <Text style={styles.splitPillValue}>9 <Text style={styles.splitPillUnit}>hrs</Text></Text>
+                <Text style={[styles.splitPillValue, { color: theme.text }]}>
+                  9 <Text style={[styles.splitPillUnit, { color: theme.textSecondary }]}>hrs</Text>
+                </Text>
               </View>
-              <View style={styles.splitPillDivider} />
+              <View style={[styles.splitPillDivider, { backgroundColor: theme.borderSubtle }]} />
               <View style={styles.splitPillItem}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFD200' }} />
-                  <Text style={styles.splitPillLabel}>Exercise</Text>
+                  <Text style={[styles.splitPillLabel, { color: theme.textSecondary }]}>Exercise</Text>
                 </View>
-                <Text style={styles.splitPillValue}>
-                  {activeSummary.workoutsCompleted || 1} <Text style={styles.splitPillUnit}>session</Text>
+                <Text style={[styles.splitPillValue, { color: theme.text }]}>
+                  {activeSummary.workoutsCompleted || 1} <Text style={[styles.splitPillUnit, { color: theme.textSecondary }]}>session</Text>
                 </Text>
               </View>
-              <View style={styles.splitPillDivider} />
+              <View style={[styles.splitPillDivider, { backgroundColor: theme.borderSubtle }]} />
               <View style={styles.splitPillItem}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF4D30' }} />
-                  <Text style={styles.splitPillLabel}>Burned</Text>
+                  <Text style={[styles.splitPillLabel, { color: theme.textSecondary }]}>Burned</Text>
                 </View>
-                <Text style={styles.splitPillValue}>
-                  {activeSummary.caloriesConsumed || 106} <Text style={styles.splitPillUnit}>kcal</Text>
+                <Text style={[styles.splitPillValue, { color: theme.text }]}>
+                  {activeSummary.caloriesConsumed || 106} <Text style={[styles.splitPillUnit, { color: theme.textSecondary }]}>kcal</Text>
                 </Text>
               </View>
             </View>

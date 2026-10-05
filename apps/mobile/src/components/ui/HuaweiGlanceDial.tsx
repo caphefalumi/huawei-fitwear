@@ -44,17 +44,17 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
   innerTarget = 12,
   onPress
 }) => {
-  const { radii } = useAppTheme();
+  const { radii, isDark } = useAppTheme();
 
-  const strokeWidth = Math.round(size * 0.088);
+  const strokeWidth = Math.round(size * 0.08);
   const center = size / 2;
 
-  const rOuter = center - strokeWidth * 0.8;
+  const rOuter = center - strokeWidth * 0.75;
   const rMiddle = rOuter - strokeWidth - 4;
   const rInner = rMiddle - strokeWidth - 4;
 
-  const startAngle = 222;
-  const totalSweep = 248;
+  const startAngle = 220;
+  const totalSweep = 245;
   const maxEndAngle = startAngle + totalSweep;
 
   const outerRatio = Math.min(Math.max(outerValue / Math.max(outerTarget, 1), 0.04), 1);
@@ -67,17 +67,22 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
 
   const colors = {
     outer: '#FF4D30',
-    outerTrack: '#381410',
+    outerTrack: isDark ? '#381410' : 'rgba(255, 77, 48, 0.12)',
     middle: '#FFD200',
-    middleTrack: '#3B320B',
+    middleTrack: isDark ? '#3B320B' : 'rgba(255, 210, 0, 0.18)',
     inner: '#00A3FF',
-    innerTrack: '#0C223A'
+    innerTrack: isDark ? '#0C223A' : 'rgba(0, 163, 255, 0.14)'
   };
 
-  const midBeadPos = polarToCartesian(center, center, rMiddle, startAngle + 3);
-  const innerBeadPos = polarToCartesian(center, center, rInner, startAngle + 3);
+  const midBeadPos = polarToCartesian(center, center, rMiddle, startAngle + 2);
+  const innerBeadPos = polarToCartesian(center, center, rInner, startAngle + 2);
 
   const isOuterLarge = outerValue > 999;
+  const standardFontSize = Math.round(size * 0.115);
+  const outerFontSize = isOuterLarge ? Math.round(size * 0.098) : standardFontSize;
+
+  const rightOffset = size - (center + Math.round(size * 0.16));
+  const topOffset = center + Math.round(size * 0.03);
 
   return (
     <Pressable
@@ -87,7 +92,7 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
         {
           width: size,
           height: size,
-          backgroundColor: '#000000',
+          backgroundColor: 'transparent',
           borderRadius: radii.full
         }
       ]}
@@ -182,17 +187,17 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
         style={[
           styles.numbersStack,
           {
-            right: size - (center + Math.round(size * 0.08)),
-            top: center - Math.round(size * 0.05),
+            right: rightOffset,
+            top: topOffset,
             alignItems: 'flex-end',
             pointerEvents: 'none'
           }
         ]}
       >
-        <Text style={[styles.statNum, { color: colors.inner, fontSize: Math.round(size * 0.12), lineHeight: Math.round(size * 0.13) }]}>
+        <Text style={[styles.statNum, { color: colors.inner, fontSize: standardFontSize, lineHeight: standardFontSize * 1.1 }]}>
           {innerValue}
         </Text>
-        <Text style={[styles.statNum, { color: colors.middle, fontSize: Math.round(size * 0.12), lineHeight: Math.round(size * 0.13), marginVertical: 1 }]}>
+        <Text style={[styles.statNum, { color: colors.middle, fontSize: standardFontSize, lineHeight: standardFontSize * 1.1, marginVertical: 1 }]}>
           {middleValue}
         </Text>
         <Text
@@ -200,8 +205,8 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
             styles.statNum,
             {
               color: colors.outer,
-              fontSize: isOuterLarge ? Math.round(size * 0.10) : Math.round(size * 0.12),
-              lineHeight: isOuterLarge ? Math.round(size * 0.11) : Math.round(size * 0.13)
+              fontSize: outerFontSize,
+              lineHeight: outerFontSize * 1.1
             }
           ]}
           numberOfLines={1}
