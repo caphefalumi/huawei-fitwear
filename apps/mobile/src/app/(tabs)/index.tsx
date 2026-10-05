@@ -50,7 +50,6 @@ export default function HomeScreen() {
   const { data: qPlan } = usePlanQuery();
   const { data: qDevices } = useDevicesQuery();
 
-  const [waterMl, setWaterMl] = useState(1800);
   const [selectedMeal, setSelectedMeal] = useState<MealDoc | null>(null);
 
   useEffect(() => {
@@ -451,50 +450,6 @@ export default function HomeScreen() {
             ))
           )}
         </ScrollView>
-
-        {/* QUICK HEALTH COACH TIP / HYDRATION */}
-        <View
-          style={[
-            styles.hydrationCard,
-            {
-              backgroundColor: theme.surfaceElevated,
-              borderColor: theme.border,
-              borderRadius: radii.lg
-            }
-          ]}
-        >
-          <View style={[styles.hydrationIconCircle, { backgroundColor: `${theme.primary}18` }]}>
-            <Ionicons name="water" size={22} color={theme.primary} />
-          </View>
-
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <View style={styles.hydrationHeaderRow}>
-              <Text style={[styles.hydrationTitle, { color: theme.text }]}>Hydration Tracker</Text>
-              <Text style={[styles.hydrationTargetText, { color: theme.primary }]}>
-                {(waterMl / 1000).toFixed(1)} / 2.5 L
-              </Text>
-            </View>
-            <Text style={[styles.hydrationTip, { color: theme.textSecondary }]} numberOfLines={1}>
-              Drink 1 glass before your Pull workout to sustain muscle pump.
-            </Text>
-          </View>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Add 250ml water"
-            onPress={() => setWaterMl((prev) => Math.min(prev + 250, 4000))}
-            style={({ pressed }) => [
-              styles.addWaterBtn,
-              {
-                backgroundColor: theme.card,
-                borderColor: theme.border,
-                opacity: pressed ? 0.75 : 1
-              }
-            ]}
-          >
-            <Ionicons name="add" size={18} color={theme.primary} />
-          </Pressable>
-        </View>
       </ScrollView>
 
       {/* Detailed Nutrition Facts Modal for Stored Meals */}
@@ -957,45 +912,5 @@ const styles = StyleSheet.create({
   mealCardMacros: {
     fontSize: 12,
     fontWeight: '500'
-  },
-  hydrationCard: {
-    borderWidth: 1,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12
-  },
-  hydrationIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  hydrationHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 2
-  },
-  hydrationTitle: {
-    fontSize: 14,
-    fontWeight: '600'
-  },
-  hydrationTargetText: {
-    fontSize: 13,
-    fontWeight: '700'
-  },
-  hydrationTip: {
-    fontSize: 12,
-    fontWeight: '400'
-  },
-  addWaterBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1
   }
 });

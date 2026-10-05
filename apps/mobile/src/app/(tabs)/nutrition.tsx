@@ -54,9 +54,7 @@ export default function NutritionScreen() {
   const activeMeals = qMeals || meals;
   const activeSummary = qSummary || todaySummary;
 
-  const [waterMl, setWaterMl] = useState<number>(2000);
   const [selectedMeal, setSelectedMeal] = useState<MealDoc | null>(null);
-  const waterTargetMl = 3000;
 
   const dates = useMemo(() => {
     return Array.from({ length: 7 }).map((_, i) => {
@@ -91,11 +89,6 @@ export default function NutritionScreen() {
         }
       ]
     );
-  };
-
-  const handleAddWater = (amount: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setWaterMl((prev) => Math.min(prev + amount, 6000));
   };
 
   // 1. Loading State
@@ -342,56 +335,6 @@ export default function NutritionScreen() {
           </View>
         </View>
 
-        <View
-          style={[
-            styles.hydrationCard,
-            {
-              backgroundColor: theme.card,
-              borderColor: theme.border,
-              borderRadius: radii.xl,
-              ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
-            }
-          ]}
-        >
-          <View style={styles.hydrationHeader}>
-            <View style={styles.hydrationTitleRow}>
-              <Ionicons name="water" size={18} color={theme.protein} />
-              <Text style={[styles.hydrationTitle, { color: theme.text }]}>Hydration</Text>
-            </View>
-            <Text style={[styles.hydrationValue, { color: theme.protein }]}>
-              {waterMl} <Text style={[styles.hydrationTarget, { color: theme.textSecondary }]}>/ {waterTargetMl} ml</Text>
-            </Text>
-          </View>
-          <View style={[styles.hydrationTrack, { backgroundColor: theme.track, borderRadius: radii.full }]}>
-            <View
-              style={[
-                styles.hydrationFill,
-                {
-                  width: `${Math.min(Math.round((waterMl / waterTargetMl) * 100), 100)}%`,
-                  backgroundColor: theme.protein,
-                  borderRadius: radii.full
-                }
-              ]}
-            />
-          </View>
-          <View style={styles.hydrationActions}>
-            <Pressable
-              style={[styles.waterPillBtn, { backgroundColor: theme.surfaceElevated, borderRadius: radii.full }]}
-              onPress={() => handleAddWater(250)}
-            >
-              <Ionicons name="add" size={14} color={theme.text} />
-              <Text style={[styles.waterPillText, { color: theme.text }]}>250 ml</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.waterPillBtn, { backgroundColor: theme.surfaceElevated, borderRadius: radii.full }]}
-              onPress={() => handleAddWater(500)}
-            >
-              <Ionicons name="add" size={14} color={theme.text} />
-              <Text style={[styles.waterPillText, { color: theme.text }]}>500 ml</Text>
-            </Pressable>
-          </View>
-        </View>
-
         <View style={styles.categorySection}>
           <View style={styles.sectionHeadingRow}>
             <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>
@@ -599,57 +542,6 @@ const styles = StyleSheet.create({
   },
   distBarSegment: {
     height: '100%'
-  },
-  hydrationCard: {
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 16
-  },
-  hydrationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10
-  },
-  hydrationTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6
-  },
-  hydrationTitle: {
-    fontSize: 16,
-    fontWeight: '700'
-  },
-  hydrationValue: {
-    fontSize: 15,
-    fontWeight: '800'
-  },
-  hydrationTarget: {
-    fontSize: 12,
-    fontWeight: '500'
-  },
-  hydrationTrack: {
-    height: 8,
-    overflow: 'hidden',
-    marginBottom: 12
-  },
-  hydrationFill: {
-    height: '100%'
-  },
-  hydrationActions: {
-    flexDirection: 'row',
-    gap: 8
-  },
-  waterPillBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6
-  },
-  waterPillText: {
-    fontSize: 12,
-    fontWeight: '700'
   },
   categorySection: {
     marginVertical: 10
