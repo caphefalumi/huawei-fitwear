@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import Svg, { Path, Circle, G } from 'react-native-svg';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../theme';
 
@@ -74,9 +74,9 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
     innerTrack: isDark ? '#0C223A' : 'rgba(0, 163, 255, 0.14)'
   };
 
-  const outerBeadPos = polarToCartesian(center, center, rOuter, startAngle + 2);
-  const midBeadPos = polarToCartesian(center, center, rMiddle, startAngle + 2);
-  const innerBeadPos = polarToCartesian(center, center, rInner, startAngle + 2);
+  const outerBeadPos = polarToCartesian(center, center, rOuter, startAngle);
+  const midBeadPos = polarToCartesian(center, center, rMiddle, startAngle);
+  const innerBeadPos = polarToCartesian(center, center, rInner, startAngle);
 
   const isOuterLarge = outerValue > 999;
   const fontSize = Math.round(size * 0.096);
@@ -143,17 +143,9 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
           strokeLinecap="round"
         />
 
-        <G x={outerBeadPos.x} y={outerBeadPos.y}>
-          <Circle cx={0} cy={0} r={strokeWidth * 0.48} fill={colors.outer} />
-        </G>
-
-        <G x={midBeadPos.x} y={midBeadPos.y}>
-          <Circle cx={0} cy={0} r={strokeWidth * 0.48} fill={colors.middle} />
-        </G>
-
-        <G x={innerBeadPos.x} y={innerBeadPos.y}>
-          <Circle cx={0} cy={0} r={strokeWidth * 0.48} fill={colors.inner} />
-        </G>
+        <Circle cx={outerBeadPos.x} cy={outerBeadPos.y} r={strokeWidth * 0.48} fill={colors.outer} />
+        <Circle cx={midBeadPos.x} cy={midBeadPos.y} r={strokeWidth * 0.48} fill={colors.middle} />
+        <Circle cx={innerBeadPos.x} cy={innerBeadPos.y} r={strokeWidth * 0.48} fill={colors.inner} />
       </Svg>
 
       <View
@@ -204,8 +196,8 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
       <View
         style={{
           position: 'absolute',
-          left: center - Math.round(size * 0.15),
-          width: Math.round(size * 0.38),
+          left: center - Math.round(size * 0.20),
+          width: Math.round(size * 0.40),
           top: center + Math.round(size * 0.03),
           alignItems: 'center',
           justifyContent: 'center',
