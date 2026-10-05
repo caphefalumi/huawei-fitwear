@@ -74,6 +74,7 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
     innerTrack: isDark ? '#0C223A' : 'rgba(0, 163, 255, 0.14)'
   };
 
+  const outerBeadPos = polarToCartesian(center, center, rOuter, startAngle + 2);
   const midBeadPos = polarToCartesian(center, center, rMiddle, startAngle + 2);
   const innerBeadPos = polarToCartesian(center, center, rInner, startAngle + 2);
 
@@ -142,6 +143,10 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
           strokeLinecap="round"
         />
 
+        <G x={outerBeadPos.x} y={outerBeadPos.y}>
+          <Circle cx={0} cy={0} r={strokeWidth * 0.48} fill={colors.outer} />
+        </G>
+
         <G x={midBeadPos.x} y={midBeadPos.y}>
           <Circle cx={0} cy={0} r={strokeWidth * 0.48} fill={colors.middle} />
         </G>
@@ -150,6 +155,21 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
           <Circle cx={0} cy={0} r={strokeWidth * 0.48} fill={colors.inner} />
         </G>
       </Svg>
+
+      <View
+        style={[
+          styles.beadIconOverlay,
+          {
+            top: outerBeadPos.y - strokeWidth * 0.48,
+            left: outerBeadPos.x - strokeWidth * 0.48,
+            width: strokeWidth * 0.96,
+            height: strokeWidth * 0.96,
+            pointerEvents: 'none'
+          }
+        ]}
+      >
+        <Ionicons name="flame" size={Math.max(10, strokeWidth * 0.58)} color="#FFFFFF" />
+      </View>
 
       <View
         style={[
@@ -184,10 +204,11 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
       <View
         style={{
           position: 'absolute',
-          left: center - Math.round(size * 0.20),
-          width: Math.round(size * 0.36),
-          top: center + Math.round(size * 0.02),
-          alignItems: 'flex-end',
+          left: center - Math.round(size * 0.15),
+          width: Math.round(size * 0.38),
+          top: center + Math.round(size * 0.03),
+          alignItems: 'center',
+          justifyContent: 'center',
           pointerEvents: 'none'
         }}
       >
@@ -198,8 +219,7 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
               color: colors.inner,
               fontSize,
               lineHeight,
-              width: '100%',
-              textAlign: 'right'
+              textAlign: 'center'
             }
           ]}
         >
@@ -212,8 +232,7 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
               color: colors.middle,
               fontSize,
               lineHeight,
-              width: '100%',
-              textAlign: 'right',
+              textAlign: 'center',
               marginVertical: 1
             }
           ]}
@@ -227,8 +246,7 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
               color: colors.outer,
               fontSize: outerFontSize,
               lineHeight: Math.round(outerFontSize * 1.15),
-              width: '100%',
-              textAlign: 'right'
+              textAlign: 'center'
             }
           ]}
           numberOfLines={1}
@@ -256,6 +274,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontVariant: ['tabular-nums'],
     letterSpacing: -0.5,
-    textAlign: 'right'
+    textAlign: 'center'
   }
 });
