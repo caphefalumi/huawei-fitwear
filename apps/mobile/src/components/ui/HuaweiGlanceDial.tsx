@@ -35,7 +35,7 @@ function describeArc(x: number, y: number, radius: number, startAngle: number, e
 }
 
 export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
-  size = 260,
+  size = 240,
   outerValue = 106,
   middleValue = 1,
   innerValue = 9,
@@ -46,15 +46,15 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
 }) => {
   const { radii, isDark } = useAppTheme();
 
-  const strokeWidth = Math.round(size * 0.08);
+  const strokeWidth = Math.round(size * 0.07);
   const center = size / 2;
 
-  const rOuter = center - strokeWidth * 0.75;
+  const rOuter = center - strokeWidth * 0.85;
   const rMiddle = rOuter - strokeWidth - 4;
   const rInner = rMiddle - strokeWidth - 4;
 
-  const startAngle = 220;
-  const totalSweep = 245;
+  const startAngle = 225;
+  const totalSweep = 260;
   const maxEndAngle = startAngle + totalSweep;
 
   const outerRatio = Math.min(Math.max(outerValue / Math.max(outerTarget, 1), 0.04), 1);
@@ -78,11 +78,9 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
   const innerBeadPos = polarToCartesian(center, center, rInner, startAngle + 2);
 
   const isOuterLarge = outerValue > 999;
-  const standardFontSize = Math.round(size * 0.115);
-  const outerFontSize = isOuterLarge ? Math.round(size * 0.098) : standardFontSize;
-
-  const rightOffset = size - (center + Math.round(size * 0.16));
-  const topOffset = center + Math.round(size * 0.03);
+  const fontSize = Math.round(size * 0.096);
+  const outerFontSize = isOuterLarge ? Math.round(size * 0.088) : fontSize;
+  const lineHeight = Math.round(fontSize * 1.15);
 
   return (
     <Pressable
@@ -165,7 +163,7 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
           }
         ]}
       >
-        <Ionicons name="walk" size={Math.max(12, strokeWidth * 0.58)} color="#000000" />
+        <Ionicons name="walk" size={Math.max(10, strokeWidth * 0.60)} color="#000000" />
       </View>
 
       <View
@@ -180,24 +178,46 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
           }
         ]}
       >
-        <Ionicons name="body" size={Math.max(11, strokeWidth * 0.54)} color="#FFFFFF" />
+        <Ionicons name="body" size={Math.max(10, strokeWidth * 0.56)} color="#FFFFFF" />
       </View>
 
       <View
-        style={[
-          styles.numbersStack,
-          {
-            right: rightOffset,
-            top: topOffset,
-            alignItems: 'flex-end',
-            pointerEvents: 'none'
-          }
-        ]}
+        style={{
+          position: 'absolute',
+          left: center - Math.round(size * 0.20),
+          width: Math.round(size * 0.36),
+          top: center + Math.round(size * 0.02),
+          alignItems: 'flex-end',
+          pointerEvents: 'none'
+        }}
       >
-        <Text style={[styles.statNum, { color: colors.inner, fontSize: standardFontSize, lineHeight: standardFontSize * 1.1 }]}>
+        <Text
+          style={[
+            styles.statNum,
+            {
+              color: colors.inner,
+              fontSize,
+              lineHeight,
+              width: '100%',
+              textAlign: 'right'
+            }
+          ]}
+        >
           {innerValue}
         </Text>
-        <Text style={[styles.statNum, { color: colors.middle, fontSize: standardFontSize, lineHeight: standardFontSize * 1.1, marginVertical: 1 }]}>
+        <Text
+          style={[
+            styles.statNum,
+            {
+              color: colors.middle,
+              fontSize,
+              lineHeight,
+              width: '100%',
+              textAlign: 'right',
+              marginVertical: 1
+            }
+          ]}
+        >
           {middleValue}
         </Text>
         <Text
@@ -206,7 +226,9 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
             {
               color: colors.outer,
               fontSize: outerFontSize,
-              lineHeight: outerFontSize * 1.1
+              lineHeight: Math.round(outerFontSize * 1.15),
+              width: '100%',
+              textAlign: 'right'
             }
           ]}
           numberOfLines={1}
@@ -228,11 +250,6 @@ const styles = StyleSheet.create({
   beadIconOverlay: {
     position: 'absolute',
     alignItems: 'center',
-    justifyContent: 'center'
-  },
-  numbersStack: {
-    position: 'absolute',
-    alignItems: 'flex-end',
     justifyContent: 'center'
   },
   statNum: {

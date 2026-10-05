@@ -65,6 +65,12 @@ bun lint                     # Lint mobile workspace
   bun run lint                # Lint
   ```
   Lint currently reports a few errors from older code (`snap-meal.tsx`, `SkeletonBlock.tsx`, `use-color-scheme.web.ts`); don't add new ones.
+- **Visual & UI Verification with Playwright**:
+  ```bash
+  # When verifying UI changes on web, capture a screenshot via Playwright CLI:
+  npx playwright screenshot --viewport-size="600,1000" http://localhost:8081/ ./web-screenshot.png
+  ```
+  Follow up by inspecting the generated screenshot using the `look_at` tool to visually confirm alignment, colors, and responsive layout without relying solely on typechecks. Delete temporary screenshot files before committing.
 
 ### Watch Development Rules (`apps/watch`)
 

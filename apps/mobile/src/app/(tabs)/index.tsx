@@ -167,12 +167,8 @@ export default function HomeScreen() {
               Good morning, {activeUser?.fullName || 'Alex'} 👋
             </Text>
             <View style={styles.targetSubRow}>
-              <Text style={[styles.targetHighlight, { color: theme.secondary }]}>
-                Target: {activeSummary.calorieTarget.toLocaleString()} kcal
-              </Text>
-              <View style={[styles.subDot, { backgroundColor: theme.border }]} />
-              <Text style={[styles.subMeta, { color: theme.textSecondary }]}>
-                {nextDay ? nextDay.title : 'Pull day'}
+              <Text style={[styles.targetHighlight, { color: theme.primary }]}>
+                {nextDay ? nextDay.title : 'Daily Activity & Training'}
               </Text>
             </View>
           </View>
@@ -197,18 +193,21 @@ export default function HomeScreen() {
         >
           <View style={styles.heroHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="watch-outline" size={16} color={theme.primary} />
+              <Ionicons name="watch-outline" size={18} color={theme.primary} />
               <Text style={[styles.heroSubHeader, { color: theme.text }]}>
-                WATCH ACTIVITY RINGS
+                Activity Rings
               </Text>
             </View>
 
-            <View style={[styles.heroPill, { backgroundColor: theme.primaryContainer }]}>
-              <Text style={[styles.heroPillText, { color: theme.onPrimaryContainer }]}>Live Mirroring</Text>
+            <View style={styles.watchSyncMiniRow}>
+              <View style={[styles.syncDot, { backgroundColor: theme.onTrack }]} />
+              <Text style={[styles.syncMiniText, { color: theme.textSecondary }]}>
+                Watch Synced
+              </Text>
             </View>
           </View>
 
-          <View style={{ alignItems: 'center', marginVertical: 8 }}>
+          <View style={{ alignItems: 'center', marginVertical: 6 }}>
             <HuaweiGlanceDial
               size={240}
               outerValue={activeSummary.caloriesConsumed || 106}
@@ -216,35 +215,20 @@ export default function HomeScreen() {
               innerValue={9}
             />
 
-            <View style={[styles.heroSplitPill, { backgroundColor: theme.surfaceElevated, marginTop: 14 }]}>
-              <View style={styles.splitPillItem}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#00A3FF' }} />
-                  <Text style={[styles.splitPillLabel, { color: theme.textSecondary }]}>Stand</Text>
-                </View>
-                <Text style={[styles.splitPillValue, { color: theme.text }]}>
-                  9 <Text style={[styles.splitPillUnit, { color: theme.textSecondary }]}>hrs</Text>
-                </Text>
+            <View style={styles.activityLegendRow}>
+              <View style={styles.activityLegendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#00A3FF' }]} />
+                <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>Stand</Text>
               </View>
-              <View style={[styles.splitPillDivider, { backgroundColor: theme.borderSubtle }]} />
-              <View style={styles.splitPillItem}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFD200' }} />
-                  <Text style={[styles.splitPillLabel, { color: theme.textSecondary }]}>Exercise</Text>
-                </View>
-                <Text style={[styles.splitPillValue, { color: theme.text }]}>
-                  {activeSummary.workoutsCompleted || 1} <Text style={[styles.splitPillUnit, { color: theme.textSecondary }]}>session</Text>
-                </Text>
+
+              <View style={styles.activityLegendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#FFD200' }]} />
+                <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>Exercise</Text>
               </View>
-              <View style={[styles.splitPillDivider, { backgroundColor: theme.borderSubtle }]} />
-              <View style={styles.splitPillItem}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF4D30' }} />
-                  <Text style={[styles.splitPillLabel, { color: theme.textSecondary }]}>Burned</Text>
-                </View>
-                <Text style={[styles.splitPillValue, { color: theme.text }]}>
-                  {activeSummary.caloriesConsumed || 106} <Text style={[styles.splitPillUnit, { color: theme.textSecondary }]}>kcal</Text>
-                </Text>
+
+              <View style={styles.activityLegendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#FF4D30' }]} />
+                <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>Move</Text>
               </View>
             </View>
           </View>
@@ -613,7 +597,32 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     padding: 20,
-    alignItems: 'center'
+    alignItems: 'center',
+    maxWidth: 520,
+    width: '100%',
+    alignSelf: 'center'
+  },
+  activityLegendRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 24,
+    marginTop: 14
+  },
+  activityLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4
+  },
+  legendLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.2
   },
   heroHeader: {
     width: '100%',
