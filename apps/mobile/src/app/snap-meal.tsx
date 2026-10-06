@@ -1056,10 +1056,10 @@ const styles = StyleSheet.create({
     height: 3,
     ...Platform.select({
       web: {
-        boxShadow: '0 0 10px #4FD6C4'
+        boxShadow: '0 0 10px #3B82F6'
       },
       default: {
-        shadowColor: '#4FD6C4',
+        shadowColor: '#3B82F6',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.9,
         shadowRadius: 8
