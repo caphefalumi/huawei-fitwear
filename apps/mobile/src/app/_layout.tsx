@@ -11,7 +11,7 @@ import { useAppTheme } from '../theme';
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
-  const { isDark } = useAppTheme();
+  const { theme, isDark } = useAppTheme();
 
   const [fontsLoaded, fontError] = useFonts({
     ...Ionicons.font,
@@ -31,7 +31,7 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
           name="onboarding"
