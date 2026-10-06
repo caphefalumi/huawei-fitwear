@@ -19,7 +19,7 @@ import { Chip, BrandLogo } from '../../components/ui';
 import { ExerciseDoc, MuscleGroup } from '../../types/types';
 
 const muscleGroups: { key: string; label: string; group: MuscleGroup | 'All'; color: string; icon: any; count: number }[] = [
-  { key: 'all', label: 'All', group: 'All', color: '#005E53', icon: 'apps-outline', count: 18 },
+  { key: 'all', label: 'All', group: 'All', color: '#2563EB', icon: 'apps-outline', count: 18 },
   { key: 'chest', label: 'Chest', group: 'Chest', color: '#C2410C', icon: 'barbell-outline', count: 4 },
   { key: 'back', label: 'Back', group: 'Back', color: '#0F766E', icon: 'shield-outline', count: 4 },
   { key: 'shoulders', label: 'Shoulders', group: 'Shoulders', color: '#B45309', icon: 'triangle-outline', count: 3 },
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(0, 94, 83, 0.85)',
+    backgroundColor: 'rgba(37, 99, 235, 0.85)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,

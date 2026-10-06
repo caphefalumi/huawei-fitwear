@@ -13,7 +13,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme, softShadow } from '../../theme';
 import { MealDoc } from '../../types/types';
-import { PrimaryButton } from './PrimaryButton';
 
 interface MealNutritionModalProps {
   meal: MealDoc | null;
@@ -55,7 +54,7 @@ export const MealNutritionModal: React.FC<MealNutritionModalProps> = ({
       onRequestClose={onClose}
     >
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-        {/* Top Modal Navigation Bar */}
+        {/* Top Header Navigation */}
         <View style={[styles.headerBar, { borderBottomColor: theme.borderSubtle }]}>
           <View style={styles.headerLeft}>
             <Pressable
@@ -64,7 +63,7 @@ export const MealNutritionModal: React.FC<MealNutritionModalProps> = ({
               onPress={onClose}
               style={[styles.closeCircleBtn, { backgroundColor: theme.surfaceElevated }]}
             >
-              <Ionicons name="close" size={20} color={theme.text} />
+              <Ionicons name="close" size={18} color={theme.text} />
             </Pressable>
             <View>
               <Text style={[styles.headerTitle, { color: theme.text }]}>Nutrition Facts</Text>
@@ -87,27 +86,19 @@ export const MealNutritionModal: React.FC<MealNutritionModalProps> = ({
             <View style={[styles.photoViewport, { borderRadius: radii.lg, backgroundColor: theme.surfaceElevated }]}>
               <Image source={{ uri: meal.imageUrl }} style={styles.photoImage} resizeMode="cover" />
               <View style={styles.photoGradientOverlay} />
-              <View style={[styles.photoTimeTag, { backgroundColor: theme.primary }]}>
-                <Ionicons name="time-outline" size={12} color={theme.onPrimary} />
-                <Text style={[styles.photoTimeTagText, { color: theme.onPrimary }]}>
-                  {meal.time}
-                </Text>
+              <View style={styles.photoTimeTag}>
+                <Ionicons name="time-outline" size={11} color="#FFFFFF" />
+                <Text style={styles.photoTimeTagText}>{meal.time}</Text>
               </View>
             </View>
           ) : null}
 
-          {/* Meal Main Title & Target Contribution */}
+          {/* Meal Main Title */}
           <View style={styles.titleSection}>
             <Text style={[styles.mealMainTitle, { color: theme.text }]}>{mealTitle}</Text>
-            <View style={styles.watchSyncNoticeRow}>
-              <Ionicons name="watch" size={14} color={theme.onTrack} />
-              <Text style={[styles.watchSyncNoticeText, { color: theme.onTrack }]}>
-                Synced with Huawei Watch GT 4 telemetry
-              </Text>
-            </View>
           </View>
 
-          {/* Total Calories & Macro 2x2 Bento Grid */}
+          {/* Total Energy & 4-Column Clean Macro Card */}
           <View
             style={[
               styles.totalsCard,
@@ -122,94 +113,144 @@ export const MealNutritionModal: React.FC<MealNutritionModalProps> = ({
             <View style={styles.totalsCardHeader}>
               <Text style={[styles.totalsCardTitle, { color: theme.text }]}>Total Energy</Text>
               <View style={[styles.budgetPercentPill, { backgroundColor: theme.primaryContainer }]}>
-                <Ionicons name="checkmark-circle" size={13} color={theme.primary} />
+                <Ionicons name="checkmark-circle" size={12} color={theme.primary} />
                 <Text style={[styles.budgetPercentText, { color: theme.primary }]}>
-                  {Math.round((meal.totalCalories / 2200) * 100)}% daily budget
+                  {Math.round((meal.totalCalories / 2200) * 100)}% daily goal
                 </Text>
               </View>
             </View>
 
-            <View style={styles.macro2x2Grid}>
-              {/* Calories */}
-              <View style={[styles.macroGridCell, { backgroundColor: theme.surfaceElevated }]}>
-                <View style={[styles.macroGridIconCircle, { backgroundColor: `${theme.calories}18` }]}>
-                  <Ionicons name="flame" size={18} color={theme.calories} />
+            {/* Clean 2x2 Macro Cards (Zero Overflow) */}
+            <View style={styles.macroGridContainer}>
+              <View style={styles.macroRow}>
+                {/* Calories */}
+                <View style={[styles.macroCard, { backgroundColor: theme.surfaceElevated }]}>
+                  <View style={[styles.macroCardIcon, { backgroundColor: `${theme.calories}18` }]}>
+                    <Ionicons name="flame" size={16} color={theme.calories} />
+                  </View>
+                  <View style={styles.macroCardTextGroup}>
+                    <Text style={[styles.macroCardValue, { color: theme.text }]}>
+                      {meal.totalCalories}
+                    </Text>
+                    <Text style={[styles.macroCardLabel, { color: theme.textSecondary }]}>
+                      Calories
+                    </Text>
+                  </View>
                 </View>
-                <View>
-                  <Text style={[styles.macroGridValue, { color: theme.text }]}>
-                    {meal.totalCalories}
-                  </Text>
-                  <Text style={[styles.macroGridLabel, { color: theme.textSecondary }]}>
-                    Calories
-                  </Text>
+
+                {/* Protein */}
+                <View style={[styles.macroCard, { backgroundColor: theme.surfaceElevated }]}>
+                  <View style={[styles.macroCardIcon, { backgroundColor: `${theme.protein}18` }]}>
+                    <Ionicons name="barbell" size={16} color={theme.protein} />
+                  </View>
+                  <View style={styles.macroCardTextGroup}>
+                    <Text style={[styles.macroCardValue, { color: theme.text }]}>
+                      {Math.round(meal.totalProtein)}g
+                    </Text>
+                    <Text style={[styles.macroCardLabel, { color: theme.textSecondary }]}>
+                      Protein
+                    </Text>
+                  </View>
                 </View>
               </View>
 
-              {/* Protein */}
-              <View style={[styles.macroGridCell, { backgroundColor: theme.surfaceElevated }]}>
-                <View style={[styles.macroGridIconCircle, { backgroundColor: `${theme.protein}18` }]}>
-                  <Ionicons name="barbell" size={18} color={theme.protein} />
+              <View style={styles.macroRow}>
+                {/* Carbs */}
+                <View style={[styles.macroCard, { backgroundColor: theme.surfaceElevated }]}>
+                  <View style={[styles.macroCardIcon, { backgroundColor: `${theme.carbs}18` }]}>
+                    <Ionicons name="nutrition" size={16} color={theme.carbs} />
+                  </View>
+                  <View style={styles.macroCardTextGroup}>
+                    <Text style={[styles.macroCardValue, { color: theme.text }]}>
+                      {Math.round(meal.totalCarbs)}g
+                    </Text>
+                    <Text style={[styles.macroCardLabel, { color: theme.textSecondary }]}>
+                      Carbs
+                    </Text>
+                  </View>
                 </View>
-                <View>
-                  <Text style={[styles.macroGridValue, { color: theme.text }]}>
-                    {Math.round(meal.totalProtein)}g
-                  </Text>
-                  <Text style={[styles.macroGridLabel, { color: theme.textSecondary }]}>
-                    Protein ({pKcal} kcal)
-                  </Text>
-                </View>
-              </View>
 
-              {/* Carbs */}
-              <View style={[styles.macroGridCell, { backgroundColor: theme.surfaceElevated }]}>
-                <View style={[styles.macroGridIconCircle, { backgroundColor: `${theme.carbs}18` }]}>
-                  <Ionicons name="nutrition" size={18} color={theme.carbs} />
-                </View>
-                <View>
-                  <Text style={[styles.macroGridValue, { color: theme.text }]}>
-                    {Math.round(meal.totalCarbs)}g
-                  </Text>
-                  <Text style={[styles.macroGridLabel, { color: theme.textSecondary }]}>
-                    Carbs ({cKcal} kcal)
-                  </Text>
-                </View>
-              </View>
-
-              {/* Fat */}
-              <View style={[styles.macroGridCell, { backgroundColor: theme.surfaceElevated }]}>
-                <View style={[styles.macroGridIconCircle, { backgroundColor: `${theme.fat}18` }]}>
-                  <Ionicons name="water" size={18} color={theme.fat} />
-                </View>
-                <View>
-                  <Text style={[styles.macroGridValue, { color: theme.text }]}>
-                    {Math.round(meal.totalFat)}g
-                  </Text>
-                  <Text style={[styles.macroGridLabel, { color: theme.textSecondary }]}>
-                    Healthy Fat ({fKcal} kcal)
-                  </Text>
+                {/* Fat */}
+                <View style={[styles.macroCard, { backgroundColor: theme.surfaceElevated }]}>
+                  <View style={[styles.macroCardIcon, { backgroundColor: `${theme.fat}18` }]}>
+                    <Ionicons name="water" size={16} color={theme.fat} />
+                  </View>
+                  <View style={styles.macroCardTextGroup}>
+                    <Text style={[styles.macroCardValue, { color: theme.text }]}>
+                      {Math.round(meal.totalFat)}g
+                    </Text>
+                    <Text style={[styles.macroCardLabel, { color: theme.textSecondary }]}>
+                      Healthy Fat
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>
 
-            {/* Caloric Distribution Spline */}
+            {/* Caloric Distribution Ratio */}
             <View style={styles.ratioSection}>
-              <View style={styles.ratioHeader}>
-                <Text style={[styles.ratioTitle, { color: theme.textSecondary }]}>
-                  CALORIC RATIO
-                </Text>
-                <Text style={[styles.ratioValuesText, { color: theme.textSecondary }]}>
-                  {pPct}% P • {cPct}% C • {fPct}% F
-                </Text>
-              </View>
+              <Text style={[styles.ratioTitle, { color: theme.text }]}>
+                Calorie Breakdown
+              </Text>
+
+              {/* Segmented Progress Bar */}
               <View style={[styles.ratioTrack, { backgroundColor: theme.surfaceElevated }]}>
-                <View style={{ width: `${pPct}%`, height: '100%', backgroundColor: theme.protein }} />
-                <View style={{ width: `${cPct}%`, height: '100%', backgroundColor: theme.carbs }} />
-                <View style={{ width: `${fPct}%`, height: '100%', backgroundColor: theme.fat }} />
+                <View
+                  style={{
+                    width: `${pPct}%`,
+                    height: '100%',
+                    backgroundColor: theme.protein,
+                    borderRadius: 4
+                  }}
+                />
+                <View
+                  style={{
+                    width: `${cPct}%`,
+                    height: '100%',
+                    backgroundColor: theme.carbs,
+                    borderRadius: 4
+                  }}
+                />
+                <View
+                  style={{
+                    width: `${fPct}%`,
+                    height: '100%',
+                    backgroundColor: theme.fat,
+                    borderRadius: 4
+                  }}
+                />
+              </View>
+
+              {/* Explicit, readable labels: Protein • Carbs • Fat */}
+              <View style={styles.ratioLegendRow}>
+                <View style={styles.ratioLegendItem}>
+                  <View style={[styles.ratioDot, { backgroundColor: theme.protein }]} />
+                  <Text style={styles.ratioLegendText}>
+                    <Text style={{ color: theme.protein, fontWeight: '700' }}>{pPct}%</Text>{' '}
+                    <Text style={{ color: theme.textSecondary }}>Protein</Text>
+                  </Text>
+                </View>
+
+                <View style={styles.ratioLegendItem}>
+                  <View style={[styles.ratioDot, { backgroundColor: theme.carbs }]} />
+                  <Text style={styles.ratioLegendText}>
+                    <Text style={{ color: theme.carbs, fontWeight: '700' }}>{cPct}%</Text>{' '}
+                    <Text style={{ color: theme.textSecondary }}>Carbs</Text>
+                  </Text>
+                </View>
+
+                <View style={styles.ratioLegendItem}>
+                  <View style={[styles.ratioDot, { backgroundColor: theme.fat }]} />
+                  <Text style={styles.ratioLegendText}>
+                    <Text style={{ color: theme.fat, fontWeight: '700' }}>{fPct}%</Text>{' '}
+                    <Text style={{ color: theme.textSecondary }}>Fat</Text>
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
 
-          {/* Detected Ingredients / Food Items List */}
+          {/* Clean Ingredients List Card */}
           <View style={styles.ingredientsSection}>
             <View style={styles.ingredientsHeaderRow}>
               <Text style={[styles.ingredientsTitle, { color: theme.text }]}>
@@ -222,9 +263,20 @@ export const MealNutritionModal: React.FC<MealNutritionModalProps> = ({
               </View>
             </View>
 
-            <View style={styles.itemsList}>
-              {meal.items.map((item) => {
-                const macroDotColor =
+            <View
+              style={[
+                styles.ingredientsCard,
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.border,
+                  borderRadius: radii.lg,
+                  ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
+                }
+              ]}
+            >
+              {meal.items.map((item, idx) => {
+                const isLast = idx === meal.items.length - 1;
+                const dotColor =
                   item.protein > item.carbs && item.protein > item.fat
                     ? theme.protein
                     : item.carbs > item.fat
@@ -235,65 +287,29 @@ export const MealNutritionModal: React.FC<MealNutritionModalProps> = ({
                   <View
                     key={item.id}
                     style={[
-                      styles.ingredientCard,
-                      {
-                        backgroundColor: theme.card,
-                        borderColor: theme.border,
-                        borderRadius: radii.md
-                      }
+                      styles.ingredientItemRow,
+                      !isLast && { borderBottomColor: theme.borderSubtle, borderBottomWidth: StyleSheet.hairlineWidth }
                     ]}
                   >
-                    <View style={styles.ingredientTopRow}>
-                      <View style={styles.ingredientNameGroup}>
-                        <View style={[styles.ingredientDot, { backgroundColor: macroDotColor }]} />
-                        <Text style={[styles.ingredientName, { color: theme.text }]}>
+                    <View style={styles.ingredientLeftCol}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <View style={[styles.ingredientDot, { backgroundColor: dotColor }]} />
+                        <Text style={[styles.ingredientName, { color: theme.text }]} numberOfLines={1}>
                           {item.name}
                         </Text>
                       </View>
-                      <Text style={[styles.ingredientWeight, { color: theme.text }]}>
-                        {item.grams}g
+                      <Text style={[styles.ingredientSub, { color: theme.textSecondary }]}>
+                        {item.protein}g P • {item.carbs}g C • {item.fat}g F
                       </Text>
                     </View>
 
-                    <View style={styles.ingredientMetaRow}>
-                      <Text style={[styles.ingredientMacros, { color: theme.textSecondary }]}>
-                        {item.calories} kcal •{' '}
-                        <Text style={{ color: theme.protein, fontWeight: '700' }}>
-                          {item.protein}g P
-                        </Text>{' '}
-                        •{' '}
-                        <Text style={{ color: theme.carbs, fontWeight: '700' }}>
-                          {item.carbs}g C
-                        </Text>{' '}
-                        •{' '}
-                        <Text style={{ color: theme.fat, fontWeight: '700' }}>
-                          {item.fat}g F
-                        </Text>
+                    <View style={styles.ingredientRightCol}>
+                      <Text style={[styles.ingredientCalories, { color: theme.text }]}>
+                        {item.calories} kcal
                       </Text>
-
-                      <View
-                        style={[
-                          styles.confidenceChip,
-                          {
-                            backgroundColor:
-                              item.confidence === 'high' ? theme.onTrackBg : theme.almostThereBg
-                          }
-                        ]}
-                      >
-                        <Ionicons
-                          name={item.confidence === 'high' ? 'checkmark-circle' : 'help-circle'}
-                          size={11}
-                          color={item.confidence === 'high' ? theme.onTrack : theme.almostThere}
-                        />
-                        <Text
-                          style={[
-                            styles.confidenceChipText,
-                            { color: item.confidence === 'high' ? theme.onTrack : theme.almostThere }
-                          ]}
-                        >
-                          {item.confidence === 'high' ? 'Edge AI 96%' : '72% verify'}
-                        </Text>
-                      </View>
+                      <Text style={[styles.ingredientWeight, { color: theme.textSecondary }]}>
+                        {item.grams}g
+                      </Text>
                     </View>
                   </View>
                 );
@@ -301,23 +317,39 @@ export const MealNutritionModal: React.FC<MealNutritionModalProps> = ({
             </View>
           </View>
 
-          {/* Delete Option & Done Button */}
+          {/* Action Footer (Compact Button) */}
           <View style={styles.footerActions}>
-            <PrimaryButton label="Done" onPress={onClose} size="large" />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Done"
+              onPress={onClose}
+              style={({ pressed }) => [
+                styles.doneButton,
+                {
+                  backgroundColor: theme.primary,
+                  opacity: pressed ? 0.88 : 1,
+                  transform: [{ scale: pressed ? 0.98 : 1 }]
+                }
+              ]}
+            >
+              <Text style={[styles.doneButtonText, { color: theme.onPrimary }]}>
+                Done
+              </Text>
+            </Pressable>
 
             {onDelete ? (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Delete meal"
+                accessibilityLabel="Remove meal from log"
                 onPress={() => {
                   onDelete(meal.id);
                   onClose();
                 }}
                 style={styles.deleteMealBtn}
               >
-                <Ionicons name="trash-outline" size={16} color={theme.error} />
+                <Ionicons name="trash-outline" size={15} color={theme.error} />
                 <Text style={[styles.deleteMealText, { color: theme.error }]}>
-                  {"Remove from Today's Log"}
+                  Remove from log
                 </Text>
               </Pressable>
             ) : null}
@@ -333,7 +365,7 @@ const styles = StyleSheet.create({
     flex: 1
   },
   headerBar: {
-    height: 60,
+    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -346,14 +378,14 @@ const styles = StyleSheet.create({
     gap: 12
   },
   closeCircleBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center'
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.2
   },
@@ -362,19 +394,20 @@ const styles = StyleSheet.create({
     fontWeight: '500'
   },
   mealTypeBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
     borderRadius: 9999
   },
   mealTypeBadgeText: {
-    fontSize: 11,
-    fontWeight: '700'
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 40,
-    gap: 16
+    paddingTop: 12,
+    paddingBottom: 36,
+    gap: 14
   },
   photoViewport: {
     width: '100%',
@@ -392,44 +425,39 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)'
+    backgroundColor: 'rgba(0, 0, 0, 0.15)'
   },
   photoTimeTag: {
     position: 'absolute',
-    bottom: 10,
-    right: 10,
+    bottom: 8,
+    right: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 9999
+    borderRadius: 9999,
+    backgroundColor: 'rgba(15, 23, 42, 0.70)'
   },
   photoTimeTagText: {
     fontSize: 11,
-    fontWeight: '600'
+    fontWeight: '600',
+    color: '#FFFFFF'
   },
   titleSection: {
-    gap: 4
+    paddingVertical: 2
   },
   mealMainTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     letterSpacing: -0.3
   },
-  watchSyncNoticeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6
-  },
-  watchSyncNoticeText: {
-    fontSize: 12,
-    fontWeight: '600'
-  },
   totalsCard: {
+    width: '100%',
     borderWidth: 1,
-    padding: 16,
-    gap: 14
+    padding: 14,
+    gap: 12,
+    overflow: 'hidden'
   },
   totalsCardHeader: {
     flexDirection: 'row',
@@ -437,7 +465,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between'
   },
   totalsCardTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700'
   },
   budgetPercentPill: {
@@ -445,69 +473,89 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 2.5,
     borderRadius: 9999
   },
   budgetPercentText: {
     fontSize: 11,
     fontWeight: '700'
   },
-  macro2x2Grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10
+  macroGridContainer: {
+    gap: 8,
+    width: '100%'
   },
-  macroGridCell: {
-    width: '48.5%',
+  macroRow: {
+    flexDirection: 'row',
+    gap: 8,
+    width: '100%'
+  },
+  macroCard: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    padding: 10,
-    borderRadius: 10
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12
   },
-  macroGridIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  macroCardIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center'
   },
-  macroGridValue: {
+  macroCardTextGroup: {
+    flex: 1
+  },
+  macroCardValue: {
     fontSize: 16,
     fontWeight: '800',
     fontVariant: ['tabular-nums']
   },
-  macroGridLabel: {
+  macroCardLabel: {
     fontSize: 11,
     fontWeight: '500'
   },
   ratioSection: {
-    gap: 6,
+    gap: 8,
     paddingTop: 4
   },
-  ratioHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between'
-  },
   ratioTitle: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
-    letterSpacing: 0.5
-  },
-  ratioValuesText: {
-    fontSize: 11,
-    fontWeight: '600'
+    letterSpacing: 0.2
   },
   ratioTrack: {
     width: '100%',
     height: 8,
     borderRadius: 4,
     flexDirection: 'row',
+    gap: 3,
     overflow: 'hidden'
   },
+  ratioLegendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 2
+  },
+  ratioLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
+  ratioDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5
+  },
+  ratioLegendText: {
+    fontSize: 12,
+    fontWeight: '500'
+  },
   ingredientsSection: {
-    gap: 10
+    gap: 8
   },
   ingredientsHeaderRow: {
     flexDirection: 'row',
@@ -515,7 +563,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between'
   },
   ingredientsTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700'
   },
   itemsCountPill: {
@@ -527,72 +575,73 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600'
   },
-  itemsList: {
-    gap: 8
-  },
-  ingredientCard: {
+  ingredientsCard: {
     borderWidth: 1,
-    padding: 12,
-    gap: 6
+    overflow: 'hidden'
   },
-  ingredientTopRow: {
+  ingredientItemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10
   },
-  ingredientNameGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flex: 1
+  ingredientLeftCol: {
+    flex: 1,
+    gap: 2
   },
   ingredientDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5
+    width: 6,
+    height: 6,
+    borderRadius: 3
   },
   ingredientName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600'
   },
-  ingredientWeight: {
+  ingredientSub: {
+    fontSize: 11,
+    fontWeight: '500',
+    paddingLeft: 12
+  },
+  ingredientRightCol: {
+    alignItems: 'flex-end',
+    gap: 1
+  },
+  ingredientCalories: {
     fontSize: 13,
     fontWeight: '700',
     fontVariant: ['tabular-nums']
   },
-  ingredientMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between'
-  },
-  ingredientMacros: {
-    fontSize: 12
-  },
-  confidenceChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 4
-  },
-  confidenceChipText: {
-    fontSize: 10,
-    fontWeight: '700'
+  ingredientWeight: {
+    fontSize: 11,
+    fontWeight: '500',
+    fontVariant: ['tabular-nums']
   },
   footerActions: {
-    gap: 12,
-    marginTop: 6
+    gap: 8,
+    marginTop: 4
+  },
+  doneButton: {
+    height: 44,
+    borderRadius: 9999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%'
+  },
+  doneButtonText: {
+    fontSize: 15,
+    fontWeight: '700'
   },
   deleteMealBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8
+    paddingVertical: 6
   },
   deleteMealText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600'
   }
 });

@@ -23,7 +23,7 @@ export default function TabsLayout() {
             borderRadius: radii.full,
             borderWidth: 1,
             borderColor: theme.border,
-            backgroundColor: theme.isDark ? '#161C1BF0' : '#FFFFFFF2',
+            backgroundColor: theme.isDark ? '#111827F0' : '#FFFFFFF2',
             paddingBottom: 6,
             paddingTop: 6,
             paddingHorizontal: 8,
@@ -31,7 +31,7 @@ export default function TabsLayout() {
               web: {
                 boxShadow: theme.isDark
                   ? '0 12px 32px rgba(0, 0, 0, 0.65)'
-                  : '0 8px 24px rgba(0, 94, 83, 0.10)'
+                  : '0 8px 24px rgba(37, 99, 235, 0.12)'
               },
               default: {
                 shadowColor: theme.shadow,
@@ -90,7 +90,7 @@ export default function TabsLayout() {
                       transform: [{ scale: pressed ? 0.94 : 1 }],
                       ...Platform.select({
                         web: {
-                          boxShadow: '0 4px 16px rgba(0, 94, 83, 0.35)'
+                          boxShadow: '0 4px 16px rgba(37, 99, 235, 0.35)'
                         },
                         default: {
                           shadowColor: theme.primary,

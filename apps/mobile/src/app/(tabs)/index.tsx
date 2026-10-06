@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,13 @@ import {
   Pressable,
   RefreshControl,
   Platform,
-  Image
+  Image,
+  Modal
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAppTheme, softShadow } from '../../theme';
 import { useUserStore } from '../../store/userStore';
 import { useNutritionStore } from '../../store/nutritionStore';
@@ -27,7 +30,14 @@ import {
   MealNutritionModal,
   HuaweiGlanceDial
 } from '../../components/ui';
-import { MealDoc, Timestamp } from '../../types/types';
+import { MealDoc, MealType, Timestamp } from '../../types/types';
+
+const MEAL_FILTERS: { key: 'all' | MealType; label: string; icon: any }[] = [
+  { key: 'all', label: 'All', icon: 'apps-outline' },
+  { key: 'breakfast', label: 'Breakfast', icon: 'sunny-outline' },
+  { key: 'lunch', label: 'Lunch', icon: 'restaurant-outline' },
+  { key: 'dinner', label: 'Dinner', icon: 'moon-outline' }
+];
 import {
   useUserProfileQuery,
   useTodaySummaryQuery,
@@ -40,7 +50,7 @@ export default function HomeScreen() {
   const { theme, radii } = useAppTheme();
   const { user, loadUser } = useUserStore();
   const { todaySummary, meals, loadNutrition, deleteMeal, loading: nutritionLoading } = useNutritionStore();
-  const { plan, loadPlanAndHistory } = useWorkoutStore();
+  const { plan, loadPlanAndHistory, updatePlan, exercises } = useWorkoutStore();
   const { devices, loadDevices } = useDeviceStore();
   const previewState = useSettingsStore((state) => state.previewState);
 
@@ -51,6 +61,18 @@ export default function HomeScreen() {
   const { data: qDevices } = useDevicesQuery();
 
   const [selectedMeal, setSelectedMeal] = useState<MealDoc | null>(null);
+  const [selectedMealCategory, setSelectedMealCategory] = useState<'all' | MealType>('all');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [spinDeg, setSpinDeg] = useState(0);
+  const [previewWorkoutModal, setPreviewWorkoutModal] = useState(false);
+
+  const handleCycleWorkoutDay = () => {
+    if (!activePlan || !activePlan.days || activePlan.days.length === 0) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    setSpinDeg((prev) => prev + 180);
+    const nextIdx = (activePlan.currentDayIndex + 1) % activePlan.days.length;
+    updatePlan({ currentDayIndex: nextIdx });
+  };
 
   useEffect(() => {
     loadUser();
@@ -62,6 +84,10 @@ export default function HomeScreen() {
   const activeUser = userProfile || user;
   const activeSummary = qSummary || todaySummary;
   const activeMeals = qMeals || meals;
+  const filteredMeals = useMemo(() => {
+    if (selectedMealCategory === 'all') return activeMeals;
+    return activeMeals.filter((m) => m.type === selectedMealCategory);
+  }, [activeMeals, selectedMealCategory]);
   const activePlan = qPlan !== undefined ? qPlan : plan;
   const activeDevices = qDevices || devices;
 
@@ -127,10 +153,7 @@ export default function HomeScreen() {
           <BrandLogo size={32} />
           <View>
             <Text style={[styles.brandTitle, { color: theme.primary }]}>AI FitWear</Text>
-            <View style={styles.watchSyncMiniRow}>
-              <View style={[styles.syncDot, { backgroundColor: theme.onTrack }]} />
-              <Text style={[styles.syncMiniText, { color: theme.textSecondary }]}>Watch synced • 2m ago</Text>
-            </View>
+            <Text style={[styles.syncMiniText, { color: theme.textSecondary }]}>Smart Fitness & Nutrition</Text>
           </View>
         </View>
 
@@ -145,8 +168,11 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: 110 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: 130 }]}
         showsVerticalScrollIndicator={false}
+        onScrollBeginDrag={() => {
+          if (dropdownOpen) setDropdownOpen(false);
+        }}
         refreshControl={
           <RefreshControl
             refreshing={nutritionLoading || summaryLoading}
@@ -166,8 +192,9 @@ export default function HomeScreen() {
               Good morning, {activeUser?.fullName || 'Alex'} 👋
             </Text>
             <View style={styles.targetSubRow}>
+              <Ionicons name="sparkles" size={13} color={theme.primary} style={{ marginRight: 4 }} />
               <Text style={[styles.targetHighlight, { color: theme.primary }]}>
-                {nextDay ? nextDay.title : 'Daily Activity & Training'}
+                {nextDay ? `Day ${nextDay.dayNumber} Split • Ready to train` : 'Ready to crush today’s goals!'}
               </Text>
             </View>
           </View>
@@ -198,10 +225,10 @@ export default function HomeScreen() {
               </Text>
             </View>
 
-            <View style={styles.watchSyncMiniRow}>
-              <View style={[styles.syncDot, { backgroundColor: theme.onTrack }]} />
-              <Text style={[styles.syncMiniText, { color: theme.textSecondary }]}>
-                Watch Synced
+            <View style={[styles.liveBadge, { backgroundColor: theme.primaryContainer }]}>
+              <View style={[styles.livePulseDot, { backgroundColor: theme.primary }]} />
+              <Text style={[styles.liveBadgeText, { color: theme.onPrimaryContainer }]}>
+                Live Glance
               </Text>
             </View>
           </View>
@@ -214,26 +241,36 @@ export default function HomeScreen() {
               innerValue={9}
             />
 
-            <View style={styles.activityLegendRow}>
+            <Animated.View
+              entering={FadeInDown.delay(200).springify().damping(16)}
+              style={styles.activityLegendRow}
+            >
               <View style={styles.activityLegendItem}>
                 <View style={[styles.legendDot, { backgroundColor: '#00A3FF' }]} />
-                <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>Stand</Text>
+                <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>
+                  Stand <Text style={{ color: '#00A3FF', fontWeight: '700' }}>9h</Text>
+                </Text>
               </View>
 
               <View style={styles.activityLegendItem}>
                 <View style={[styles.legendDot, { backgroundColor: '#FFD200' }]} />
-                <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>Exercise</Text>
+                <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>
+                  Exercise <Text style={{ color: '#EAB308', fontWeight: '700' }}>{activeSummary.workoutsCompleted || 1}m</Text>
+                </Text>
               </View>
 
               <View style={styles.activityLegendItem}>
                 <View style={[styles.legendDot, { backgroundColor: '#FF4D30' }]} />
-                <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>Move</Text>
+                <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>
+                  Move <Text style={{ color: '#FF4D30', fontWeight: '700' }}>{activeSummary.caloriesConsumed || 1537} kcal</Text>
+                </Text>
               </View>
-            </View>
+            </Animated.View>
           </View>
         </View>
 
-        <View
+        <Animated.View
+          entering={FadeInDown.delay(120).springify().damping(16)}
           style={[
             styles.card,
             {
@@ -245,20 +282,34 @@ export default function HomeScreen() {
           ]}
         >
           <View style={styles.workoutTopRow}>
-            <View style={{ flex: 1 }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="View workout exercises preview"
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                setPreviewWorkoutModal(true);
+              }}
+              style={({ pressed }) => [
+                { flex: 1, opacity: pressed ? 0.8 : 1 }
+              ]}
+            >
               <View style={styles.workoutBadgeRow}>
                 <View style={[styles.musclePill, { backgroundColor: `${theme.primary}18` }]}>
                   <Text style={[styles.musclePillText, { color: theme.primary }]}>
-                    BACK & BICEPS
+                    {nextDay ? nextDay.muscleGroup.toUpperCase() : 'CHEST'}
                   </Text>
                 </View>
                 <Text style={[styles.scheduledText, { color: theme.textSecondary }]}>
                   Scheduled for 17:30
                 </Text>
+                <View style={styles.previewHintPill}>
+                  <Text style={[styles.previewHintText, { color: theme.textMuted }]}>Tap to preview</Text>
+                  <Ionicons name="chevron-forward" size={11} color={theme.textMuted} />
+                </View>
               </View>
 
               <Text style={[styles.workoutTitle, { color: theme.text }]} numberOfLines={1}>
-                {nextDay ? nextDay.title : 'Pull Hypertrophy Routine'}
+                {nextDay ? nextDay.title : 'Chest & Anterior Pectoral Focus'}
               </Text>
 
               <View style={styles.workoutMetaRow}>
@@ -275,12 +326,30 @@ export default function HomeScreen() {
                     {nextDay ? nextDay.estimatedDurationMin : 45} mins
                   </Text>
                 </View>
+                <Text style={{ color: theme.borderSubtle }}>•</Text>
+                <View style={styles.metaItem}>
+                  <Ionicons name="flame-outline" size={15} color={theme.calories} />
+                  <Text style={[styles.metaText, { color: theme.textSecondary }]}>
+                    ~{nextDay ? Math.round(nextDay.estimatedDurationMin * 7.5) : 340} kcal
+                  </Text>
+                </View>
               </View>
-            </View>
+            </Pressable>
 
-            <View style={[styles.workoutCircleIcon, { backgroundColor: theme.primaryContainer }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Switch to next workout split day"
+              onPress={handleCycleWorkoutDay}
+              style={({ pressed }) => [
+                styles.workoutCircleIcon,
+                {
+                  backgroundColor: theme.primaryContainer,
+                  transform: [{ rotate: `${spinDeg}deg` }, { scale: pressed ? 0.90 : 1 }]
+                }
+              ]}
+            >
               <Ionicons name="repeat" size={22} color={theme.primary} />
-            </View>
+            </Pressable>
           </View>
 
           {/* Action Controls: Dual Phone + Watch */}
@@ -320,34 +389,147 @@ export default function HomeScreen() {
               </Text>
             </Pressable>
           </View>
-        </View>
+        </Animated.View>
 
-        {/* TODAY'S MEALS CAROUSEL */}
-        <View style={styles.sectionHeaderRow}>
+        {/* TODAY'S MEALS HEADER WITH ENGLISH DROPDOWN */}
+        <Animated.View
+          entering={FadeInDown.delay(220).springify().damping(16)}
+          style={[styles.sectionHeaderRow, { zIndex: 100 }]}
+        >
           <View style={styles.sectionTitleGroup}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>{"Today's Meals"}</Text>
             <View style={[styles.countBadge, { backgroundColor: theme.surfaceElevated }]}>
               <Text style={[styles.countBadgeText, { color: theme.textSecondary }]}>
-                {activeMeals.length} logged
+                {filteredMeals.length} logged
               </Text>
             </View>
           </View>
 
-          <Pressable
-            onPress={() => router.push('/snap-meal')}
-            style={styles.addMealLink}
-          >
-            <Ionicons name="add-circle" size={18} color={theme.secondary} />
-            <Text style={[styles.addMealLinkText, { color: theme.secondary }]}>Log meal</Text>
-          </Pressable>
-        </View>
+          {/* English Dropdown Filter */}
+          <View style={{ position: 'relative', zIndex: 110 }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Filter meals by category dropdown"
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                setDropdownOpen((prev) => !prev);
+              }}
+              style={({ pressed }) => [
+                styles.dropdownTrigger,
+                {
+                  backgroundColor: theme.surfaceElevated,
+                  borderColor: theme.border,
+                  opacity: pressed ? 0.8 : 1
+                }
+              ]}
+            >
+              <Ionicons
+                name={MEAL_FILTERS.find((f) => f.key === selectedMealCategory)?.icon || 'apps-outline'}
+                size={14}
+                color={theme.primary}
+              />
+              <Text style={[styles.dropdownTriggerText, { color: theme.text }]}>
+                {MEAL_FILTERS.find((f) => f.key === selectedMealCategory)?.label || 'All'}
+              </Text>
+              <Ionicons
+                name={dropdownOpen ? 'chevron-up' : 'chevron-down'}
+                size={13}
+                color={theme.textSecondary}
+              />
+            </Pressable>
+
+            {dropdownOpen && (
+              <>
+                <Pressable
+                  style={{
+                    position: 'absolute',
+                    top: -1000,
+                    left: -1000,
+                    right: -1000,
+                    bottom: -1000,
+                    zIndex: 95
+                  }}
+                  onPress={() => setDropdownOpen(false)}
+                />
+                <View
+                  style={[
+                    styles.dropdownMenu,
+                    {
+                      backgroundColor: theme.card,
+                      borderColor: theme.border,
+                      borderRadius: radii.md,
+                      ...Platform.select({
+                        web: {
+                          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.14)'
+                        },
+                        default: {
+                          shadowColor: theme.shadow,
+                          shadowOffset: { width: 0, height: 6 },
+                          shadowOpacity: 0.16,
+                          shadowRadius: 14,
+                          elevation: 12
+                        }
+                      })
+                    }
+                  ]}
+                >
+                  {MEAL_FILTERS.map((f) => {
+                    const isSelected = selectedMealCategory === f.key;
+                    return (
+                      <Pressable
+                        key={f.key}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                          setSelectedMealCategory(f.key);
+                          setDropdownOpen(false);
+                        }}
+                        style={({ pressed }) => [
+                          styles.dropdownItem,
+                          {
+                            backgroundColor: pressed
+                              ? theme.surfaceElevated
+                              : isSelected
+                              ? `${theme.primary}12`
+                              : 'transparent'
+                          }
+                        ]}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons
+                            name={f.icon}
+                            size={15}
+                            color={isSelected ? theme.primary : theme.textSecondary}
+                          />
+                          <Text
+                            style={[
+                              styles.dropdownItemText,
+                              {
+                                color: isSelected ? theme.primary : theme.text,
+                                fontWeight: isSelected ? '700' : '500'
+                              }
+                            ]}
+                          >
+                            {f.label}
+                          </Text>
+                        </View>
+                        {isSelected && (
+                          <Ionicons name="checkmark" size={15} color={theme.primary} />
+                        )}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+          </View>
+        </Animated.View>
 
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.mealCarouselContainer}
         >
-          {activeMeals.length === 0 ? (
+          {filteredMeals.length === 0 ? (
             <Pressable
               onPress={() => router.push('/snap-meal')}
               style={[
@@ -355,23 +537,28 @@ export default function HomeScreen() {
                 { backgroundColor: theme.card, borderColor: theme.border, borderRadius: radii.lg }
               ]}
             >
-              <Ionicons name="camera-outline" size={28} color={theme.secondary} />
-              <Text style={[styles.emptyMealTitle, { color: theme.text }]}>Snap your first meal</Text>
+              <Ionicons name="camera-outline" size={28} color={theme.primary} />
+              <Text style={[styles.emptyMealTitle, { color: theme.text }]}>
+                {selectedMealCategory === 'all'
+                  ? 'No meals logged today'
+                  : `No ${MEAL_FILTERS.find((f) => f.key === selectedMealCategory)?.label} logged`}
+              </Text>
               <Text style={[styles.emptyMealSub, { color: theme.textSecondary }]}>
-                Tap to auto-calculate nutrition
+                Tap to snap and calculate nutrition
               </Text>
             </Pressable>
           ) : (
-            activeMeals.map((meal) => (
+            filteredMeals.map((meal) => (
               <Pressable
                 key={meal.id}
                 onPress={() => setSelectedMeal(meal)}
-                style={[
+                style={({ pressed }) => [
                   styles.mealCardItem,
                   {
                     backgroundColor: theme.card,
                     borderColor: theme.border,
                     borderRadius: radii.lg,
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
                     ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
                   }
                 ]}
@@ -382,13 +569,14 @@ export default function HomeScreen() {
                   ) : (
                     <Ionicons name="restaurant-outline" size={32} color={theme.primary} />
                   )}
-                  <View style={[styles.mealTypeTag, { backgroundColor: `${theme.card}EE` }]}>
-                    <Text style={[styles.mealTypeTagText, { color: theme.text }]}>
+                  <View style={styles.mealTypeTag}>
+                    <Text style={styles.mealTypeTagText}>
                       {meal.type.toUpperCase()}
                     </Text>
                   </View>
-                  <View style={[styles.mealTimeTag, { backgroundColor: theme.primary }]}>
-                    <Text style={[styles.mealTimeTagText, { color: theme.onPrimary }]}>
+                  <View style={styles.mealTimeTag}>
+                    <Ionicons name="time-outline" size={12} color="#FFFFFF" />
+                    <Text style={styles.mealTimeTagText}>
                       {meal.time}
                     </Text>
                   </View>
@@ -398,12 +586,14 @@ export default function HomeScreen() {
                   <Text style={[styles.mealCardName, { color: theme.text }]} numberOfLines={1}>
                     {meal.items[0]?.name || 'Logged Meal'}
                   </Text>
-                  <Text style={[styles.mealCardMacros, { color: theme.textSecondary }]}>
-                    {meal.totalCalories} kcal •{' '}
-                    <Text style={{ color: theme.protein, fontWeight: '700' }}>
-                      {meal.totalProtein}g Protein
+
+                  {/* Clean Calorie Badge Only */}
+                  <View style={styles.calorieRow}>
+                    <Ionicons name="flame" size={14} color={theme.calories} />
+                    <Text style={[styles.calorieText, { color: theme.calories }]}>
+                      {meal.totalCalories} kcal
                     </Text>
-                  </Text>
+                  </View>
                 </View>
               </Pressable>
             ))
@@ -418,6 +608,170 @@ export default function HomeScreen() {
         onClose={() => setSelectedMeal(null)}
         onDelete={deleteMeal}
       />
+
+      {/* Today's Workout Routine Preview Modal */}
+      <Modal
+        visible={previewWorkoutModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setPreviewWorkoutModal(false)}
+      >
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+          <View style={[styles.modalHeaderBar, { borderBottomColor: theme.borderSubtle }]}>
+            <View style={styles.headerLeft}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close routine preview"
+                onPress={() => setPreviewWorkoutModal(false)}
+                style={[styles.closeCircleBtn, { backgroundColor: theme.surfaceElevated }]}
+              >
+                <Ionicons name="close" size={18} color={theme.text} />
+              </Pressable>
+              <View>
+                <Text style={[styles.modalHeaderTitle, { color: theme.text }]}>Today's Workout</Text>
+                <Text style={[styles.modalHeaderSubtitle, { color: theme.textSecondary }]}>
+                  {nextDay ? `${nextDay.exercises.length} exercises • ~${nextDay.estimatedDurationMin} mins` : 'Routine preview'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={[styles.musclePill, { backgroundColor: `${theme.primary}18` }]}>
+              <Text style={[styles.musclePillText, { color: theme.primary }]}>
+                {nextDay ? nextDay.muscleGroup.toUpperCase() : 'CHEST'}
+              </Text>
+            </View>
+          </View>
+
+          <ScrollView contentContainerStyle={styles.routineScrollContent} showsVerticalScrollIndicator={false}>
+            {/* Routine Title Header Card */}
+            <View
+              style={[
+                styles.routineHeaderCard,
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.border,
+                  borderRadius: radii.lg,
+                  ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
+                }
+              ]}
+            >
+              <Text style={[styles.routineCardTitle, { color: theme.text }]}>
+                {nextDay ? nextDay.title : 'Chest & Anterior Pectoral Focus'}
+              </Text>
+              <View style={styles.routineMetaRow}>
+                <View style={styles.metaItem}>
+                  <Ionicons name="barbell-outline" size={14} color={theme.textSecondary} />
+                  <Text style={[styles.metaText, { color: theme.textSecondary }]}>
+                    {nextDay ? nextDay.exercises.length : 4} exercises
+                  </Text>
+                </View>
+                <Text style={{ color: theme.borderSubtle }}>•</Text>
+                <View style={styles.metaItem}>
+                  <Ionicons name="time-outline" size={14} color={theme.textSecondary} />
+                  <Text style={[styles.metaText, { color: theme.textSecondary }]}>
+                    {nextDay ? nextDay.estimatedDurationMin : 45} mins
+                  </Text>
+                </View>
+                <Text style={{ color: theme.borderSubtle }}>•</Text>
+                <View style={styles.metaItem}>
+                  <Ionicons name="flame-outline" size={14} color={theme.calories} />
+                  <Text style={[styles.metaText, { color: theme.textSecondary }]}>
+                    ~{nextDay ? Math.round(nextDay.estimatedDurationMin * 7.5) : 340} kcal
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Exercise List */}
+            <View style={styles.routineExercisesList}>
+              {(nextDay?.exercises || []).map((pe, idx) => {
+                const exDoc = (exercises || []).find((e) => e.id === pe.exerciseId);
+                return (
+                  <View
+                    key={pe.id || idx}
+                    style={[
+                      styles.routineExerciseCard,
+                      {
+                        backgroundColor: theme.card,
+                        borderColor: theme.border,
+                        borderRadius: radii.md
+                      }
+                    ]}
+                  >
+                    <View style={styles.routineExerciseTop}>
+                      <View style={[styles.exerciseIndexBadge, { backgroundColor: theme.primaryContainer }]}>
+                        <Text style={[styles.exerciseIndexText, { color: theme.primary }]}>
+                          {idx + 1}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.routineExerciseName, { color: theme.text }]} numberOfLines={1}>
+                          {exDoc?.name || 'Exercise'}
+                        </Text>
+                        <Text style={[styles.routineExerciseMeta, { color: theme.textSecondary }]}>
+                          {pe.sets} sets • {pe.repRange.min}-{pe.repRange.max} reps
+                          {pe.targetWeightKg > 0 ? ` • ${pe.targetWeightKg} kg` : ' • Bodyweight'}
+                        </Text>
+                      </View>
+                      <View style={[styles.restTimeBadge, { backgroundColor: theme.surfaceElevated }]}>
+                        <Ionicons name="timer-outline" size={12} color={theme.textSecondary} />
+                        <Text style={[styles.restTimeText, { color: theme.textSecondary }]}>
+                          {pe.restSeconds}s
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.routineActionsRow}>
+              <Pressable
+                onPress={() => {
+                  setPreviewWorkoutModal(false);
+                  router.push('/active-workout');
+                }}
+                style={({ pressed }) => [
+                  styles.routineStartBtn,
+                  {
+                    backgroundColor: theme.primary,
+                    borderRadius: radii.md,
+                    opacity: pressed ? 0.88 : 1
+                  }
+                ]}
+              >
+                <Ionicons name="watch-outline" size={18} color={theme.onPrimary} />
+                <Text style={[styles.routineStartBtnText, { color: theme.onPrimary }]}>
+                  Start on Watch
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  setPreviewWorkoutModal(false);
+                  router.push('/active-workout');
+                }}
+                style={({ pressed }) => [
+                  styles.routineStartBtn,
+                  {
+                    backgroundColor: theme.surfaceElevated,
+                    borderColor: theme.border,
+                    borderWidth: 1,
+                    borderRadius: radii.md,
+                    opacity: pressed ? 0.88 : 1
+                  }
+                ]}
+              >
+                <Ionicons name="phone-portrait-outline" size={18} color={theme.text} />
+                <Text style={[styles.routineStartBtnText, { color: theme.text }]}>
+                  Start on Phone
+                </Text>
+              </Pressable>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -546,10 +900,27 @@ const styles = StyleSheet.create({
     marginBottom: 4
   },
   heroSubHeader: {
-    color: '#DDF3EF',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 0.8
+    letterSpacing: 0.5
+  },
+  liveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 9999
+  },
+  livePulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3
+  },
+  liveBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3
   },
   heroPill: {
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
@@ -586,7 +957,7 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums']
   },
   gaugeUnit: {
-    color: '#DDF3EF',
+    color: '#94A3B8',
     fontSize: 13,
     fontWeight: '600',
     marginTop: 1
@@ -790,14 +1161,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600'
   },
-  addMealLink: {
+  dropdownTrigger: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 9999,
+    borderWidth: 1
   },
-  addMealLinkText: {
-    fontSize: 14,
+  dropdownTriggerText: {
+    fontSize: 13,
     fontWeight: '600'
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 38,
+    right: 0,
+    width: 155,
+    borderWidth: 1,
+    paddingVertical: 4,
+    zIndex: 999
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 8,
+    marginHorizontal: 4
+  },
+  dropdownItemText: {
+    fontSize: 13
   },
   mealCarouselContainer: {
     gap: 12,
@@ -841,35 +1237,169 @@ const styles = StyleSheet.create({
     top: 8,
     left: 8,
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 9999
+    paddingVertical: 3,
+    borderRadius: 9999,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)'
   },
   mealTypeTagText: {
-    fontSize: 11,
-    fontWeight: '700'
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    color: '#0F172A'
   },
   mealTimeTag: {
     position: 'absolute',
     bottom: 8,
     right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 9999
+    paddingVertical: 3.5,
+    borderRadius: 9999,
+    backgroundColor: 'rgba(15, 23, 42, 0.70)'
   },
   mealTimeTagText: {
     fontSize: 11,
-    fontWeight: '600'
+    fontWeight: '600',
+    color: '#FFFFFF'
   },
   mealCardBody: {
     padding: 12
   },
   mealCardName: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
+    marginBottom: 4
+  },
+  previewHintPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    marginLeft: 'auto'
+  },
+  previewHintText: {
+    fontSize: 11,
+    fontWeight: '500'
+  },
+  calorieRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4
+  },
+  calorieText: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums']
+  },
+  modalHeaderBar: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12
+  },
+  closeCircleBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  modalHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2
+  },
+  modalHeaderSubtitle: {
+    fontSize: 11,
+    fontWeight: '500'
+  },
+  routineScrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 36,
+    gap: 14
+  },
+  routineHeaderCard: {
+    borderWidth: 1,
+    padding: 16,
+    gap: 8
+  },
+  routineCardTitle: {
+    fontSize: 17,
+    fontWeight: '700'
+  },
+  routineMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  routineExercisesList: {
+    gap: 8
+  },
+  routineExerciseCard: {
+    borderWidth: 1,
+    padding: 12
+  },
+  routineExerciseTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10
+  },
+  exerciseIndexBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  exerciseIndexText: {
+    fontSize: 12,
+    fontWeight: '800'
+  },
+  routineExerciseName: {
+    fontSize: 14,
+    fontWeight: '700',
     marginBottom: 2
   },
-  mealCardMacros: {
+  routineExerciseMeta: {
     fontSize: 12,
     fontWeight: '500'
+  },
+  restTimeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 9999
+  },
+  restTimeText: {
+    fontSize: 11,
+    fontWeight: '600'
+  },
+  routineActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 6
+  },
+  routineStartBtn: {
+    flex: 1,
+    height: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8
+  },
+  routineStartBtnText: {
+    fontSize: 14,
+    fontWeight: '600'
   }
 });

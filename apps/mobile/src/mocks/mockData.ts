@@ -591,7 +591,7 @@ export const initialMeals: MealDoc[] = [
     syncedToWatch: true,
     createdAt: Timestamp.now() - 4 * 3600000,
     items: [
-      { id: 'i1', name: 'Rolled Oats with Water', grams: 60, calories: 230, protein: 8, carbs: 40, fat: 4, confidence: 'high' },
+      { id: 'i1', name: 'Avocado Toast with Sunny Egg', grams: 180, calories: 280, protein: 18, carbs: 24, fat: 14, confidence: 'high' },
       { id: 'i2', name: 'Boiled Whole Eggs (2 pcs)', grams: 100, calories: 155, protein: 13, carbs: 1.1, fat: 11, confidence: 'high' },
       { id: 'i3', name: 'Liquid Egg Whites', grams: 150, calories: 78, protein: 16.5, carbs: 1, fat: 0.3, confidence: 'high' },
       { id: 'i4', name: 'Honeycrisp Apple', grams: 100, calories: 52, protein: 0.3, carbs: 14, fat: 0.2, confidence: 'high' }
