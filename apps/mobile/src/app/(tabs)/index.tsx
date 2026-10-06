@@ -14,7 +14,6 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme, softShadow } from '../../theme';
 import { useUserStore } from '../../store/userStore';
@@ -228,10 +227,7 @@ export default function HomeScreen() {
             />
 
             {/* Interactive 3-Metric Cards: Stand • Exercise • Move */}
-            <Animated.View
-              entering={FadeInDown.delay(200).springify().damping(16)}
-              style={styles.activityMetricsGrid}
-            >
+            <View style={styles.activityMetricsGrid}>
               {/* Stand (Cyan) */}
               <Pressable
                 accessibilityRole="button"
@@ -324,12 +320,11 @@ export default function HomeScreen() {
                   <View style={[styles.metricMiniFill, { width: '77%', backgroundColor: '#FF4D30' }]} />
                 </View>
               </Pressable>
-            </Animated.View>
+            </View>
           </View>
         </View>
 
-        <Animated.View
-          entering={FadeInDown.delay(120).springify().damping(16)}
+        <View
           style={[
             styles.card,
             {
@@ -448,13 +443,10 @@ export default function HomeScreen() {
               </Text>
             </Pressable>
           </View>
-        </Animated.View>
+        </View>
 
         {/* TODAY'S MEALS HEADER WITH ENGLISH DROPDOWN */}
-        <Animated.View
-          entering={FadeInDown.delay(220).springify().damping(16)}
-          style={[styles.sectionHeaderRow, { zIndex: 100 }]}
-        >
+        <View style={[styles.sectionHeaderRow, { zIndex: 100 }]}>
           <View style={styles.sectionTitleGroup}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>{"Today's Meals"}</Text>
             <View style={[styles.countBadge, { backgroundColor: theme.surfaceElevated }]}>
@@ -581,7 +573,7 @@ export default function HomeScreen() {
               </>
             )}
           </View>
-        </Animated.View>
+        </View>
 
         <ScrollView
           horizontal

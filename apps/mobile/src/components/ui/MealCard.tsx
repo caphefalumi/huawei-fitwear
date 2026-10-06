@@ -17,18 +17,20 @@ export const MealCard: React.FC<MealCardProps> = ({
 }) => {
   const { theme, radii } = useAppTheme();
 
-  const getMealIcon = () => {
+  const getMealTypeTheme = () => {
     switch (meal.type) {
       case 'breakfast':
-        return 'sunny';
+        return { icon: 'sunny' as const, bg: theme.isDark ? '#272010' : '#FEF3C7', color: '#D97706' };
       case 'lunch':
-        return 'restaurant';
+        return { icon: 'restaurant' as const, bg: theme.isDark ? '#1E293B' : '#EFF6FF', color: '#2563EB' };
       case 'dinner':
-        return 'moon';
+        return { icon: 'moon' as const, bg: theme.isDark ? '#26182D' : '#F3E8FF', color: '#9333EA' };
       case 'snack':
-        return 'cafe';
+        return { icon: 'cafe' as const, bg: theme.isDark ? '#122B22' : '#ECFDF5', color: '#059669' };
     }
   };
+
+  const mealTheme = getMealTypeTheme();
 
   return (
     <Pressable
@@ -39,7 +41,7 @@ export const MealCard: React.FC<MealCardProps> = ({
           backgroundColor: theme.card,
           borderColor: theme.border,
           borderRadius: radii.xl,
-          opacity: pressed ? 0.85 : 1,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
           ...(theme.isDark
             ? null
             : Platform.OS === 'web'
@@ -50,13 +52,8 @@ export const MealCard: React.FC<MealCardProps> = ({
     >
       <View style={styles.topRow}>
         <View style={styles.typeBadge}>
-          <View
-            style={[
-              styles.iconCircle,
-              { backgroundColor: theme.surfaceElevated }
-            ]}
-          >
-            <Ionicons name={getMealIcon()} size={16} color={theme.primary} />
+          <View style={[styles.iconCircle, { backgroundColor: mealTheme.bg }]}>
+            <Ionicons name={mealTheme.icon} size={17} color={mealTheme.color} />
           </View>
           <View>
             <Text style={[styles.typeTitle, { color: theme.text }]}>
@@ -77,11 +74,23 @@ export const MealCard: React.FC<MealCardProps> = ({
           </Text>
           {onDelete ? (
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Delete meal"
               onPress={onDelete}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              style={styles.deleteButton}
+              style={({ pressed }) => [
+                styles.deleteButton,
+                { opacity: pressed ? 0.6 : 1 }
+              ]}
             >
-              <Ionicons name="trash-outline" size={16} color={theme.textMuted} />
+              <View
+                style={[
+                  styles.deleteCircle,
+                  { backgroundColor: theme.isDark ? 'rgba(239, 68, 68, 0.18)' : '#FEE2E2' }
+                ]}
+              >
+                <Ionicons name="trash-outline" size={14} color="#EF4444" />
+              </View>
             </Pressable>
           ) : null}
         </View>
@@ -91,7 +100,7 @@ export const MealCard: React.FC<MealCardProps> = ({
       <View style={styles.itemsContainer}>
         {meal.items.map((item) => (
           <View key={item.id} style={styles.itemRow}>
-            <View style={[styles.bullet, { backgroundColor: theme.textMuted }]} />
+            <View style={[styles.bullet, { backgroundColor: theme.borderSubtle }]} />
             <Text
               style={[styles.itemName, { color: theme.text }]}
               numberOfLines={1}
@@ -112,22 +121,19 @@ export const MealCard: React.FC<MealCardProps> = ({
           { borderTopColor: theme.borderSubtle }
         ]}
       >
-        <View style={styles.macroPill}>
-          <Text style={[styles.macroLabel, { color: theme.protein }]}>P</Text>
-          <Text style={[styles.macroVal, { color: theme.text }]}>
-            {Math.round(meal.totalProtein)}g
+        <View style={[styles.macroPill, { backgroundColor: theme.isDark ? '#1E293B' : '#EFF6FF' }]}>
+          <Text style={[styles.macroVal, { color: theme.protein }]}>
+            {Math.round(meal.totalProtein)}g Protein
           </Text>
         </View>
-        <View style={styles.macroPill}>
-          <Text style={[styles.macroLabel, { color: theme.carbs }]}>C</Text>
-          <Text style={[styles.macroVal, { color: theme.text }]}>
-            {Math.round(meal.totalCarbs)}g
+        <View style={[styles.macroPill, { backgroundColor: theme.isDark ? '#272010' : '#FEF3C7' }]}>
+          <Text style={[styles.macroVal, { color: theme.carbs }]}>
+            {Math.round(meal.totalCarbs)}g Carbs
           </Text>
         </View>
-        <View style={styles.macroPill}>
-          <Text style={[styles.macroLabel, { color: theme.fat }]}>F</Text>
-          <Text style={[styles.macroVal, { color: theme.text }]}>
-            {Math.round(meal.totalFat)}g
+        <View style={[styles.macroPill, { backgroundColor: theme.isDark ? '#26182D' : '#F3E8FF' }]}>
+          <Text style={[styles.macroVal, { color: theme.fat }]}>
+            {Math.round(meal.totalFat)}g Fat
           </Text>
         </View>
 
@@ -145,14 +151,14 @@ export const MealCard: React.FC<MealCardProps> = ({
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
-    padding: 16,
-    marginVertical: 6
+    padding: 14,
+    marginVertical: 5
   },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12
+    marginBottom: 10
   },
   typeBadge: {
     flexDirection: 'row',
@@ -167,7 +173,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   typeTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700'
   },
   mealTime: {
@@ -176,25 +182,31 @@ const styles = StyleSheet.create({
   },
   calorieBadge: {
     flexDirection: 'row',
-    alignItems: 'baseline'
+    alignItems: 'center',
+    gap: 3
   },
   calorieValue: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '800',
     fontVariant: ['tabular-nums']
   },
   calorieUnit: {
     fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 3
+    fontWeight: '600'
   },
   deleteButton: {
-    marginLeft: 12,
-    padding: 4
+    marginLeft: 8
+  },
+  deleteCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   itemsContainer: {
-    marginBottom: 12,
-    gap: 4
+    marginBottom: 10,
+    gap: 5
   },
   itemRow: {
     flexDirection: 'row',
@@ -218,22 +230,18 @@ const styles = StyleSheet.create({
   },
   macrosFooter: {
     borderTopWidth: 1,
-    paddingTop: 10,
+    paddingTop: 9,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16
+    gap: 7
   },
   macroPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4
-  },
-  macroLabel: {
-    fontSize: 11,
-    fontWeight: '800'
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6
   },
   macroVal: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     fontVariant: ['tabular-nums']
   },

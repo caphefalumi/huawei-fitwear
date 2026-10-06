@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -7,11 +7,13 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '../lib/queryClient';
 import { useAppTheme } from '../theme';
+import { AnimatedSplashScreen } from '../components/AnimatedSplashScreen';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const { theme, isDark } = useAppTheme();
+  const [showSplash, setShowSplash] = useState(true);
 
   const [fontsLoaded, fontError] = useFonts({
     ...Ionicons.font,
@@ -66,6 +68,10 @@ export default function RootLayout() {
           options={{ headerShown: false, presentation: 'card' }}
         />
       </Stack>
+
+      {showSplash && (
+        <AnimatedSplashScreen onAnimationComplete={() => setShowSplash(false)} />
+      )}
     </QueryClientProvider>
   );
 }

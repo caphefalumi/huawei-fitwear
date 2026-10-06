@@ -23,15 +23,15 @@ function CustomTabBar({ state, navigation }: CustomTabBarProps) {
   const tabHeight = 62;
   const center = tabWidth / 2;
   const pillRadius = 31;
-  const scoopRadius = 45;
-  const scoopDepth = 38; 
 
-  // Smooth V/U shaped concave notch carved symmetrically underneath the center circular camera FAB
+  // Smooth circular cradle contouring symmetrically around and underneath the bottom of the camera FAB
   const d = [
     `M ${pillRadius} 0`,
-    `L ${center - scoopRadius} 0`,
-    `C ${center - scoopRadius + 14} 0, ${center - 24} ${scoopDepth}, ${center} ${scoopDepth}`,
-    `C ${center + 24} ${scoopDepth}, ${center + scoopRadius - 14} 0, ${center + scoopRadius} 0`,
+    `L ${center - 42} 0`,
+    `C ${center - 32} 0, ${center - 28} 8, ${center - 25} 18`,
+    `C ${center - 20} 32, ${center - 13} 39, ${center} 39`,
+    `C ${center + 13} 39, ${center + 20} 32, ${center + 25} 18`,
+    `C ${center + 28} 8, ${center + 32} 0, ${center + 42} 0`,
     `L ${tabWidth - pillRadius} 0`,
     `A ${pillRadius} ${pillRadius} 0 0 1 ${tabWidth} ${pillRadius}`,
     `A ${pillRadius} ${pillRadius} 0 0 1 ${tabWidth - pillRadius} ${tabHeight}`,
@@ -281,11 +281,11 @@ const styles = StyleSheet.create({
     height: 62
   },
   centerCircleBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -24
+    marginTop: -12
   }
 });

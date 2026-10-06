@@ -1,26 +1,25 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   Pressable,
   RefreshControl,
   Alert,
-  Platform
+  Platform,
+  TextInput
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme, softShadow } from '../../theme';
 import { useNutritionStore } from '../../store/nutritionStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { Timestamp, MealType, MealDoc } from '../../types/types';
 import {
   MealCard,
-  PrimaryButton,
-  SecondaryButton,
   ProgressRing,
   StatusBadge,
   SkeletonBlock,
@@ -36,6 +35,8 @@ import {
 
 export default function NutritionScreen() {
   const { theme, radii } = useAppTheme();
+  const insets = useSafeAreaInsets();
+  const dateScrollRef = useRef<ScrollView>(null);
   const {
     meals,
     todaySummary,
@@ -55,10 +56,12 @@ export default function NutritionScreen() {
   const activeSummary = qSummary || todaySummary;
 
   const [selectedMeal, setSelectedMeal] = useState<MealDoc | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
+  // Order dates starting from TODAY (0) to 6 days ago (-6) so TODAY is on the left
   const dates = useMemo(() => {
     return Array.from({ length: 7 }).map((_, i) => {
-      const offset = i - 6;
+      const offset = -i;
       const dateStr = Timestamp.getRelativeDate(offset);
       const d = new Date();
       d.setDate(d.getDate() + offset);
@@ -67,6 +70,16 @@ export default function NutritionScreen() {
       return { dateStr, dayName, dayNum };
     });
   }, []);
+
+  const filteredMeals = useMemo(() => {
+    if (!searchQuery.trim()) return activeMeals;
+    const q = searchQuery.toLowerCase().trim();
+    return activeMeals.filter(
+      (m) =>
+        m.type.toLowerCase().includes(q) ||
+        m.items.some((item) => item.name.toLowerCase().includes(q))
+    );
+  }, [activeMeals, searchQuery]);
 
   useEffect(() => {
     loadNutrition(selectedDate);
@@ -94,7 +107,7 @@ export default function NutritionScreen() {
   // 1. Loading State
   if (previewState === 'loading') {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
         <View style={styles.content}>
           <SkeletonBlock height={32} width={180} />
           <SkeletonBlock height={64} borderRadius={radii.md} style={{ marginVertical: 16 }} />
@@ -102,26 +115,26 @@ export default function NutritionScreen() {
           <SkeletonBlock height={120} borderRadius={radii.lg} style={{ marginBottom: 12 }} />
           <SkeletonBlock height={120} borderRadius={radii.lg} />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   // 2. Error State
   if (previewState === 'error') {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
         <ErrorState
           message="Could not load your nutrition logs. Check local database."
           onRetry={() => loadNutrition(selectedDate)}
         />
-      </SafeAreaView>
+      </View>
     );
   }
 
   // 3. Empty State
   if (previewState === 'empty') {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
         <EmptyState
           icon="restaurant-outline"
           title="No Meals on this Date"
@@ -129,7 +142,7 @@ export default function NutritionScreen() {
           actionLabel="Snap Meal"
           onAction={() => router.push('/snap-meal')}
         />
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -143,7 +156,7 @@ export default function NutritionScreen() {
   const fPercent = totalMacroGrams > 0 ? Math.max(0, 100 - pPercent - cPercent) : 0;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       {previewState === 'offline' ? (
         <View style={[styles.offlineBanner, { backgroundColor: theme.surfaceElevated }]}>
           <Ionicons name="cloud-offline" size={16} color={theme.textSecondary} />
@@ -154,7 +167,7 @@ export default function NutritionScreen() {
       ) : null}
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: 104 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: 140 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -174,26 +187,42 @@ export default function NutritionScreen() {
             </Text>
             <Text style={[styles.pageTitle, { color: theme.text }]}>Nutrition</Text>
           </View>
-          <Pressable
-            style={[
-              styles.cameraHeaderBtn,
-              {
-                backgroundColor: theme.card,
-                borderColor: theme.border,
-                ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
-              }
-            ]}
-            onPress={() => router.push('/snap-meal')}
-          >
-            <Ionicons name="camera" size={20} color={theme.secondary} />
-          </Pressable>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.dateStrip}
+        {/* Search Bar */}
+        <View
+          style={[
+            styles.searchBar,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+              borderRadius: radii.lg,
+              ...(!theme.isDark && Platform.OS === 'web' ? softShadow : null)
+            }
+          ]}
         >
+          <Ionicons name="search" size={17} color={theme.textSecondary} style={{ marginRight: 8 }} />
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search foods, ingredients or meal..."
+            placeholderTextColor={theme.textMuted}
+            style={[styles.searchInput, { color: theme.text }]}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <Pressable
+              onPress={() => setSearchQuery('')}
+              hitSlop={8}
+              style={{ padding: 4 }}
+            >
+              <Ionicons name="close-circle" size={17} color={theme.textMuted} />
+            </Pressable>
+          )}
+        </View>
+
+        {/* Evenly distributed 7-Day Week Strip */}
+        <View style={styles.dateStripRow}>
           {dates.map((item) => {
             const isSelected = item.dateStr === selectedDate;
             return (
@@ -217,6 +246,7 @@ export default function NutritionScreen() {
                     styles.dateDayName,
                     { color: isSelected ? theme.onPrimary : theme.textSecondary }
                   ]}
+                  numberOfLines={1}
                 >
                   {item.dayName}
                 </Text>
@@ -231,7 +261,7 @@ export default function NutritionScreen() {
               </Pressable>
             );
           })}
-        </ScrollView>
+        </View>
 
         <View
           style={[
@@ -313,24 +343,47 @@ export default function NutritionScreen() {
           </View>
 
           <View style={styles.macroDistSection}>
-            <View style={styles.macroDistHeader}>
-              <Text style={[styles.macroDistTitle, { color: theme.textSecondary }]}>
-                MACRO DISTRIBUTION
-              </Text>
-              <Text style={[styles.macroDistSplit, { color: theme.textMuted }]}>
-                {pPercent}% P • {cPercent}% C • {fPercent}% F
-              </Text>
-            </View>
-            <View style={[styles.distBarTrack, { backgroundColor: theme.track, borderRadius: radii.full }]}>
+            <Text style={[styles.macroDistTitle, { color: theme.text }]}>
+              Macro Breakdown
+            </Text>
+
+            <View style={[styles.distBarTrack, { backgroundColor: theme.surfaceElevated, height: 8, borderRadius: 4, gap: 3, flexDirection: 'row', overflow: 'hidden' }]}>
               {pPercent > 0 ? (
-                <View style={[styles.distBarSegment, { width: `${pPercent}%`, backgroundColor: theme.protein }]} />
+                <View style={[styles.distBarSegment, { width: `${pPercent}%`, height: '100%', backgroundColor: theme.protein, borderRadius: 4 }]} />
               ) : null}
               {cPercent > 0 ? (
-                <View style={[styles.distBarSegment, { width: `${cPercent}%`, backgroundColor: theme.carbs }]} />
+                <View style={[styles.distBarSegment, { width: `${cPercent}%`, height: '100%', backgroundColor: theme.carbs, borderRadius: 4 }]} />
               ) : null}
               {fPercent > 0 ? (
-                <View style={[styles.distBarSegment, { width: `${fPercent}%`, backgroundColor: theme.fat }]} />
+                <View style={[styles.distBarSegment, { width: `${fPercent}%`, height: '100%', backgroundColor: theme.fat, borderRadius: 4 }]} />
               ) : null}
+            </View>
+
+            {/* Explicit, readable labels: Protein • Carbs • Fat */}
+            <View style={styles.macroDistLegendRow}>
+              <View style={styles.macroDistLegendItem}>
+                <View style={[styles.legendDot, { backgroundColor: theme.protein }]} />
+                <Text style={styles.legendText}>
+                  <Text style={{ color: theme.protein, fontWeight: '700' }}>{pPercent}%</Text>{' '}
+                  <Text style={{ color: theme.textSecondary }}>Protein</Text>
+                </Text>
+              </View>
+
+              <View style={styles.macroDistLegendItem}>
+                <View style={[styles.legendDot, { backgroundColor: theme.carbs }]} />
+                <Text style={styles.legendText}>
+                  <Text style={{ color: theme.carbs, fontWeight: '700' }}>{cPercent}%</Text>{' '}
+                  <Text style={{ color: theme.textSecondary }}>Carbs</Text>
+                </Text>
+              </View>
+
+              <View style={styles.macroDistLegendItem}>
+                <View style={[styles.legendDot, { backgroundColor: theme.fat }]} />
+                <Text style={styles.legendText}>
+                  <Text style={{ color: theme.fat, fontWeight: '700' }}>{fPercent}%</Text>{' '}
+                  <Text style={{ color: theme.textSecondary }}>Fat</Text>
+                </Text>
+              </View>
             </View>
           </View>
         </View>
@@ -341,23 +394,27 @@ export default function NutritionScreen() {
               LOGGED MEALS
             </Text>
             <Text style={[styles.sectionItemCount, { color: theme.textMuted }]}>
-              {activeMeals.length} {activeMeals.length === 1 ? 'entry' : 'entries'}
+              {filteredMeals.length} {filteredMeals.length === 1 ? 'entry' : 'entries'}
             </Text>
           </View>
 
-          {activeMeals.length === 0 ? (
+          {filteredMeals.length === 0 ? (
             <View style={[styles.emptyCard, { backgroundColor: theme.card, borderColor: theme.border, borderRadius: radii.xl }]}>
               <EmptyState
-                icon="fast-food-outline"
-                title="No Meals Logged"
-                description="Capture food with your camera to immediately recognize calories and macros."
-                actionLabel="Snap a Meal"
-                onAction={() => router.push('/snap-meal')}
+                icon={searchQuery ? 'search-outline' : 'fast-food-outline'}
+                title={searchQuery ? 'No Matching Meals' : 'No Meals Logged'}
+                description={
+                  searchQuery
+                    ? `No meals match "${searchQuery}". Try another keyword.`
+                    : 'Capture food with your camera to immediately recognize calories and macros.'
+                }
+                actionLabel={searchQuery ? 'Clear Search' : 'Snap a Meal'}
+                onAction={() => (searchQuery ? setSearchQuery('') : router.push('/snap-meal'))}
               />
             </View>
           ) : (
             mealCategories.map((cat) => {
-              const catMeals = activeMeals.filter((m) => m.type === cat);
+              const catMeals = filteredMeals.filter((m) => m.type === cat);
               if (catMeals.length === 0) return null;
 
               const catKcal = catMeals.reduce((acc, m) => acc + m.totalCalories, 0);
@@ -385,21 +442,6 @@ export default function NutritionScreen() {
             })
           )}
         </View>
-
-        {/* Bottom Actions */}
-        <View style={styles.bottomButtons}>
-          <PrimaryButton
-            label="Snap Meal"
-            icon="camera"
-            size="large"
-            onPress={() => router.push('/snap-meal')}
-          />
-          <SecondaryButton
-            label="Search Food Library"
-            icon="search"
-            onPress={() => router.push('/snap-meal')}
-          />
-        </View>
       </ScrollView>
 
       {/* Detailed Nutrition Facts Modal for Stored Meals */}
@@ -409,7 +451,7 @@ export default function NutritionScreen() {
         onClose={() => setSelectedMeal(null)}
         onDelete={deleteMeal}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -436,7 +478,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginBottom: 16
+    marginBottom: 12
   },
   dateSubtitle: {
     fontSize: 11,
@@ -449,34 +491,43 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.8
   },
-  cameraHeaderBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
+  searchBar: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center'
+    height: 44,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    marginBottom: 14
   },
-  dateStrip: {
-    gap: 8,
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    paddingVertical: 0
+  },
+  dateStripRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 5,
+    width: '100%',
     marginBottom: 16
   },
   datePill: {
-    width: 52,
-    height: 64,
+    flex: 1,
+    height: 56,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8
+    paddingVertical: 5
   },
   dateDayName: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    marginBottom: 4
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+    marginBottom: 3
   },
   dateDayNum: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800'
   },
   summaryCard: {
@@ -520,28 +571,42 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(128, 128, 128, 0.15)',
     paddingTop: 14
   },
-  macroDistHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6
-  },
   macroDistTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.6
-  },
-  macroDistSplit: {
-    fontSize: 11,
-    fontWeight: '700'
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+    marginBottom: 8
   },
   distBarTrack: {
-    height: 6,
+    height: 8,
     flexDirection: 'row',
+    borderRadius: 4,
+    gap: 3,
     overflow: 'hidden'
   },
   distBarSegment: {
-    height: '100%'
+    height: '100%',
+    borderRadius: 4
+  },
+  macroDistLegendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8
+  },
+  macroDistLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
+  legendDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5
+  },
+  legendText: {
+    fontSize: 12,
+    fontWeight: '500'
   },
   categorySection: {
     marginVertical: 10
@@ -586,9 +651,5 @@ const styles = StyleSheet.create({
   catKcalSummary: {
     fontSize: 11,
     fontWeight: '600'
-  },
-  bottomButtons: {
-    marginTop: 16,
-    gap: 10
   }
 });
