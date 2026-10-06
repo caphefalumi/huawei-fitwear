@@ -15,3 +15,4 @@ export * from './RestTimerRing';
 export * from './BrandLogo';
 export * from './MealNutritionModal';
 export * from './HuaweiGlanceDial';
+export * from './ActivityMetricModal';

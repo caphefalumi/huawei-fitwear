@@ -15,6 +15,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme, softShadow } from '../../theme';
 import { useUserStore } from '../../store/userStore';
 import { useNutritionStore } from '../../store/nutritionStore';
@@ -22,13 +23,14 @@ import { useWorkoutStore } from '../../store/workoutStore';
 import { useDeviceStore } from '../../store/deviceStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import {
-  SyncStatusChip,
   SkeletonBlock,
   EmptyState,
   ErrorState,
   BrandLogo,
   MealNutritionModal,
-  HuaweiGlanceDial
+  HuaweiGlanceDial,
+  ActivityMetricModal,
+  type ActivityMetricType
 } from '../../components/ui';
 import { MealDoc, MealType, Timestamp } from '../../types/types';
 
@@ -48,6 +50,7 @@ import {
 
 export default function HomeScreen() {
   const { theme, radii } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const { user, loadUser } = useUserStore();
   const { todaySummary, meals, loadNutrition, deleteMeal, loading: nutritionLoading } = useNutritionStore();
   const { plan, loadPlanAndHistory, updatePlan, exercises } = useWorkoutStore();
@@ -65,6 +68,7 @@ export default function HomeScreen() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [spinDeg, setSpinDeg] = useState(0);
   const [previewWorkoutModal, setPreviewWorkoutModal] = useState(false);
+  const [selectedActivityMetric, setSelectedActivityMetric] = useState<ActivityMetricType | null>(null);
 
   const handleCycleWorkoutDay = () => {
     if (!activePlan || !activePlan.days || activePlan.days.length === 0) return;
@@ -146,7 +150,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
       {/* Top Header Bar */}
       <View style={[styles.topBar, { borderBottomColor: theme.borderSubtle }]}>
         <View style={styles.topBarBrand}>
@@ -186,25 +190,6 @@ export default function HomeScreen() {
           />
         }
       >
-        <View style={styles.greetingSection}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.greetingHeadline, { color: theme.text }]}>
-              Good morning, {activeUser?.fullName || 'Alex'} 👋
-            </Text>
-            <View style={styles.targetSubRow}>
-              <Ionicons name="sparkles" size={13} color={theme.primary} style={{ marginRight: 4 }} />
-              <Text style={[styles.targetHighlight, { color: theme.primary }]}>
-                {nextDay ? `Day ${nextDay.dayNumber} Split • Ready to train` : 'Ready to crush today’s goals!'}
-              </Text>
-            </View>
-          </View>
-
-          <SyncStatusChip
-            status={previewState === 'offline' ? 'offline' : connectionStatus}
-            onPress={() => router.push('/devices')}
-          />
-        </View>
-
         <View
           style={[
             styles.heroCard,
@@ -235,36 +220,110 @@ export default function HomeScreen() {
 
           <View style={{ alignItems: 'center', marginVertical: 6 }}>
             <HuaweiGlanceDial
-              size={240}
-              outerValue={activeSummary.caloriesConsumed || 106}
+              size={230}
+              outerValue={activeSummary.caloriesConsumed || 1537}
               middleValue={activeSummary.workoutsCompleted || 1}
               innerValue={9}
+              outerTarget={2000}
             />
 
+            {/* Interactive 3-Metric Cards: Stand • Exercise • Move */}
             <Animated.View
               entering={FadeInDown.delay(200).springify().damping(16)}
-              style={styles.activityLegendRow}
+              style={styles.activityMetricsGrid}
             >
-              <View style={styles.activityLegendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#00A3FF' }]} />
-                <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>
-                  Stand <Text style={{ color: '#00A3FF', fontWeight: '700' }}>9h</Text>
+              {/* Stand (Cyan) */}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="View Stand hours chart and telemetry"
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setSelectedActivityMetric('stand');
+                }}
+                style={({ pressed }) => [
+                  styles.activityMetricTile,
+                  {
+                    backgroundColor: theme.surfaceElevated,
+                    borderColor: theme.border,
+                    transform: [{ scale: pressed ? 0.96 : 1 }]
+                  }
+                ]}
+              >
+                <View style={styles.metricTileHeader}>
+                  <View style={[styles.metricTileDot, { backgroundColor: '#00A3FF' }]} />
+                  <Text style={[styles.metricTileTitle, { color: theme.textSecondary }]}>Stand</Text>
+                  <Ionicons name="chevron-forward" size={11} color={theme.textMuted} style={{ marginLeft: 'auto' }} />
+                </View>
+                <Text style={[styles.metricTileValue, { color: theme.text }]} numberOfLines={1}>
+                  9
+                  <Text style={[styles.metricTileUnit, { color: theme.textSecondary }]}>/12h</Text>
                 </Text>
-              </View>
+                <View style={[styles.metricMiniTrack, { backgroundColor: theme.card }]}>
+                  <View style={[styles.metricMiniFill, { width: '75%', backgroundColor: '#00A3FF' }]} />
+                </View>
+              </Pressable>
 
-              <View style={styles.activityLegendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#FFD200' }]} />
-                <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>
-                  Exercise <Text style={{ color: '#EAB308', fontWeight: '700' }}>{activeSummary.workoutsCompleted || 1}m</Text>
+              {/* Exercise (Yellow) */}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="View Exercise minutes chart and telemetry"
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setSelectedActivityMetric('exercise');
+                }}
+                style={({ pressed }) => [
+                  styles.activityMetricTile,
+                  {
+                    backgroundColor: theme.surfaceElevated,
+                    borderColor: theme.border,
+                    transform: [{ scale: pressed ? 0.96 : 1 }]
+                  }
+                ]}
+              >
+                <View style={styles.metricTileHeader}>
+                  <View style={[styles.metricTileDot, { backgroundColor: '#FFD200' }]} />
+                  <Text style={[styles.metricTileTitle, { color: theme.textSecondary }]}>Exercise</Text>
+                  <Ionicons name="chevron-forward" size={11} color={theme.textMuted} style={{ marginLeft: 'auto' }} />
+                </View>
+                <Text style={[styles.metricTileValue, { color: theme.text }]} numberOfLines={1}>
+                  {activeSummary.workoutsCompleted || 1}
+                  <Text style={[styles.metricTileUnit, { color: theme.textSecondary }]}>/30m</Text>
                 </Text>
-              </View>
+                <View style={[styles.metricMiniTrack, { backgroundColor: theme.card }]}>
+                  <View style={[styles.metricMiniFill, { width: '10%', backgroundColor: '#FFD200' }]} />
+                </View>
+              </Pressable>
 
-              <View style={styles.activityLegendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#FF4D30' }]} />
-                <Text style={[styles.legendLabel, { color: theme.textSecondary }]}>
-                  Move <Text style={{ color: '#FF4D30', fontWeight: '700' }}>{activeSummary.caloriesConsumed || 1537} kcal</Text>
+              {/* Move (Red) */}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="View Move calories chart and telemetry"
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  setSelectedActivityMetric('move');
+                }}
+                style={({ pressed }) => [
+                  styles.activityMetricTile,
+                  {
+                    backgroundColor: theme.surfaceElevated,
+                    borderColor: theme.border,
+                    transform: [{ scale: pressed ? 0.96 : 1 }]
+                  }
+                ]}
+              >
+                <View style={styles.metricTileHeader}>
+                  <View style={[styles.metricTileDot, { backgroundColor: '#FF4D30' }]} />
+                  <Text style={[styles.metricTileTitle, { color: theme.textSecondary }]}>Move</Text>
+                  <Ionicons name="chevron-forward" size={11} color={theme.textMuted} style={{ marginLeft: 'auto' }} />
+                </View>
+                <Text style={[styles.metricTileValue, { color: theme.text }]} numberOfLines={1}>
+                  {activeSummary.caloriesConsumed || 1537}
+                  <Text style={[styles.metricTileUnit, { color: theme.textSecondary }]}>/2000 kcal</Text>
                 </Text>
-              </View>
+                <View style={[styles.metricMiniTrack, { backgroundColor: theme.card }]}>
+                  <View style={[styles.metricMiniFill, { width: '77%', backgroundColor: '#FF4D30' }]} />
+                </View>
+              </Pressable>
             </Animated.View>
           </View>
         </View>
@@ -772,7 +831,17 @@ export default function HomeScreen() {
           </ScrollView>
         </SafeAreaView>
       </Modal>
-    </SafeAreaView>
+
+      {/* Activity Metric Trends & Deep Analytics Modal */}
+      <ActivityMetricModal
+        metric={selectedActivityMetric}
+        visible={selectedActivityMetric !== null}
+        onClose={() => setSelectedActivityMetric(null)}
+        caloriesBurned={activeSummary.caloriesConsumed || 1537}
+        exerciseMinutes={activeSummary.workoutsCompleted || 1}
+        standHours={9}
+      />
+    </View>
   );
 }
 
@@ -833,36 +902,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     gap: 16
   },
-  greetingSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12
-  },
-  greetingHeadline: {
-    fontSize: 22,
-    fontWeight: '700',
-    letterSpacing: -0.4
-  },
-  targetSubRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 3
-  },
-  targetHighlight: {
-    fontSize: 13,
-    fontWeight: '600'
-  },
-  subDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2
-  },
-  subMeta: {
-    fontSize: 13,
-    fontWeight: '400'
-  },
   heroCard: {
     padding: 20,
     alignItems: 'center',
@@ -870,27 +909,53 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center'
   },
-  activityLegendRow: {
+  activityMetricsGrid: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 24,
+    gap: 8,
+    width: '100%',
     marginTop: 14
   },
-  activityLegendItem: {
+  activityMetricTile: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+    gap: 4
+  },
+  metricTileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6
+    gap: 5
   },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4
+  metricTileDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3
   },
-  legendLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.2
+  metricTileTitle: {
+    fontSize: 11,
+    fontWeight: '600'
+  },
+  metricTileValue: {
+    fontSize: 14,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
+    marginTop: 1
+  },
+  metricTileUnit: {
+    fontSize: 10,
+    fontWeight: '500'
+  },
+  metricMiniTrack: {
+    height: 4,
+    borderRadius: 2,
+    width: '100%',
+    overflow: 'hidden',
+    marginTop: 3
+  },
+  metricMiniFill: {
+    height: '100%',
+    borderRadius: 2
   },
   heroHeader: {
     width: '100%',

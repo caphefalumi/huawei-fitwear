@@ -1,15 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { View, StyleSheet, Pressable } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withTiming,
   withDelay,
   withSpring,
-  Easing,
   useReducedMotion
 } from 'react-native-reanimated';
 import { useAppTheme } from '../../theme';
@@ -25,34 +23,9 @@ export interface HuaweiGlanceDialProps {
   onPress?: () => void;
 }
 
-function polarToCartesian(centerX: number, centerY: number, radius: number, angleInDegrees: number) {
-  const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180.0;
-  return {
-    x: centerX + radius * Math.cos(angleInRadians),
-    y: centerY + radius * Math.sin(angleInRadians)
-  };
-}
-
-/**
- * Draws an arc starting at startAngle (bottom-left) and sweeping CLOCKWISE to endAngle (up and around to bottom-right).
- */
-function describeArcClockwise(x: number, y: number, radius: number, startAngle: number, endAngle: number) {
-  const diff = endAngle - startAngle;
-  if (diff <= 0.6) {
-    return '';
-  }
-  const start = polarToCartesian(x, y, radius, startAngle);
-  const end = polarToCartesian(x, y, radius, endAngle);
-  const largeArcFlag = diff <= 180 ? '0' : '1';
-  return [
-    'M', start.x, start.y,
-    'A', radius, radius, 0, largeArcFlag, 1, end.x, end.y
-  ].join(' ');
-}
-
 export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
-  size = 240,
-  outerValue = 106,
+  size = 230,
+  outerValue = 1537,
   middleValue = 1,
   innerValue = 9,
   outerTarget = 500,
@@ -60,29 +33,31 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
   innerTarget = 12,
   onPress
 }) => {
-  const { radii, isDark } = useAppTheme();
+  const { radii, isDark, theme } = useAppTheme();
   const reducedMotion = useReducedMotion();
 
-  const strokeWidth = Math.round(size * 0.07);
   const center = size / 2;
+  const strokeWidth = Math.round(size * 0.082); // ~19px thick rings
+  const ringGap = 3.5;
 
-  const rOuter = center - strokeWidth * 0.85;
-  const rMiddle = rOuter - strokeWidth - 4;
-  const rInner = rMiddle - strokeWidth - 4;
+  const rOuter = center - strokeWidth / 2 - 4;
+  const rMiddle = rOuter - strokeWidth - ringGap;
+  const rInner = rMiddle - strokeWidth - ringGap;
 
-  const startAngle = 225; // Góc dưới bên trái (bắt đầu)
-  const totalSweep = 260; // Quét từ góc trái vòng lên đỉnh rồi sang góc phải
-  const maxEndAngle = startAngle + totalSweep; // Góc dưới bên phải (kết thúc)
+  const circOuter = 2 * Math.PI * rOuter;
+  const circMiddle = 2 * Math.PI * rMiddle;
+  const circInner = 2 * Math.PI * rInner;
 
-  // Target ratios (capped between 0.04 and 1)
-  const outerRatio = Math.min(Math.max(outerValue / Math.max(outerTarget, 1), 0.04), 1);
-  const middleRatio = Math.min(Math.max(middleValue / Math.max(middleTarget, 1), 0.04), 1);
-  const innerRatio = Math.min(Math.max(innerValue / Math.max(innerTarget, 1), 0.04), 1);
+  // Target ratios: always leave an open segment so the progress arc and rounded tip are visible like Stand & Exercise
+  const maxArcRatio = 0.82;
+  const outerRatio = Math.min(Math.max(outerValue / Math.max(outerTarget, 1), 0.04), maxArcRatio);
+  const middleRatio = Math.min(Math.max(middleValue / Math.max(middleTarget, 1), 0.04), maxArcRatio);
+  const innerRatio = Math.min(Math.max(innerValue / Math.max(innerTarget, 1), 0.04), maxArcRatio);
 
   // Smooth frame progress (0 -> 1)
   const [animProgress, setAnimProgress] = useState(reducedMotion ? 1 : 0);
 
-  // Bead scales
+  // Bead scales (at 12 o'clock start)
   const outerBeadScale = useSharedValue(reducedMotion ? 1 : 0);
   const midBeadScale = useSharedValue(reducedMotion ? 1 : 0);
   const innerBeadScale = useSharedValue(reducedMotion ? 1 : 0);
@@ -100,13 +75,13 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
     let startTime: number | null = null;
     let animId: number;
 
-    const duration = 1100; // 1.1s cinematic sweep
+    const duration = 1200; // 1.2s smooth cinematic sweep
     const step = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
       const t = Math.min(elapsed / duration, 1);
 
-      // easeOutCubic curve: nhanh ở đầu, trơn mượt ở đoạn về đích
+      // easeOutCubic curve: fast start, silky smooth deceleration
       const eased = 1 - Math.pow(1 - t, 3);
       setAnimProgress(eased);
 
@@ -155,34 +130,14 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
   ]);
 
   // Staggered arc progress calculation
-  // Vòng ngoài (Đỏ/Move): bắt đầu ngay lập tức từ góc trái vòng lên
-  const outerP = Math.min(animProgress / 0.88, 1);
-  const currentOuterRatio = outerP * outerRatio;
-  const currentOuterEnd = startAngle + totalSweep * currentOuterRatio;
+  const outerP = Math.min(animProgress / 0.88, 1) * outerRatio;
+  const midP = Math.min(Math.max((animProgress - 0.08) / 0.84, 0), 1) * middleRatio;
+  const innerP = Math.min(Math.max((animProgress - 0.16) / 0.84, 0), 1) * innerRatio;
 
-  // Vòng giữa (Vàng/Exercise): bắt đầu sau 8% tiến trình
-  const midP = Math.min(Math.max((animProgress - 0.08) / 0.84, 0), 1);
-  const currentMiddleRatio = midP * middleRatio;
-  const currentMiddleEnd = startAngle + totalSweep * currentMiddleRatio;
-
-  // Vòng trong (Xanh/Stand): bắt đầu sau 16% tiến trình
-  const innerP = Math.min(Math.max((animProgress - 0.16) / 0.84, 0), 1);
-  const currentInnerRatio = innerP * innerRatio;
-  const currentInnerEnd = startAngle + totalSweep * currentInnerRatio;
-
-  // Real-time counting numbers in sync with arcs
-  const displayOuterNumber = Math.round(outerP * outerValue);
-  const displayMiddleNumber = Math.round(midP * middleValue);
-  const displayInnerNumber = Math.round(innerP * innerValue);
-
-  // SVG Paths for each arc (from startAngle at left corner sweeping clockwise up and around)
-  const trackPathOuter = describeArcClockwise(center, center, rOuter, startAngle, maxEndAngle);
-  const trackPathMid = describeArcClockwise(center, center, rMiddle, startAngle, maxEndAngle);
-  const trackPathInner = describeArcClockwise(center, center, rInner, startAngle, maxEndAngle);
-
-  const activePathOuter = describeArcClockwise(center, center, rOuter, startAngle, currentOuterEnd);
-  const activePathMid = describeArcClockwise(center, center, rMiddle, startAngle, currentMiddleEnd);
-  const activePathInner = describeArcClockwise(center, center, rInner, startAngle, currentInnerEnd);
+  // Stroke Dash Offsets (clockwise from 12 o'clock)
+  const outerOffset = circOuter * (1 - outerP);
+  const midOffset = circMiddle * (1 - midP);
+  const innerOffset = circInner * (1 - innerP);
 
   const dialAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pressScale.get() }]
@@ -204,23 +159,14 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
     outer: '#FF4D30',
     outerTrack: isDark ? '#381410' : 'rgba(255, 77, 48, 0.12)',
     middle: '#FFD200',
-    middleTrack: isDark ? '#3B320B' : 'rgba(255, 210, 0, 0.18)',
+    middleTrack: isDark ? '#3B320B' : 'rgba(255, 210, 0, 0.16)',
     inner: '#00A3FF',
     innerTrack: isDark ? '#0C223A' : 'rgba(0, 163, 255, 0.14)'
   };
 
-  const outerBeadPos = polarToCartesian(center, center, rOuter, startAngle);
-  const midBeadPos = polarToCartesian(center, center, rMiddle, startAngle);
-  const innerBeadPos = polarToCartesian(center, center, rInner, startAngle);
-
-  const isOuterLarge = outerValue > 999;
-  const fontSize = Math.round(size * 0.096);
-  const outerFontSize = isOuterLarge ? Math.round(size * 0.088) : fontSize;
-  const lineHeight = Math.round(fontSize * 1.15);
-
   const handlePressIn = () => {
     if (!reducedMotion) {
-      pressScale.set(withSpring(0.96, { damping: 15, stiffness: 300 }));
+      pressScale.set(withSpring(0.97, { damping: 15, stiffness: 300 }));
     }
   };
 
@@ -242,7 +188,7 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       accessibilityRole="progressbar"
-      accessibilityLabel={`Activity Glance: ${innerValue} active hours, ${middleValue} exercise minutes, ${outerValue} calories`}
+      accessibilityLabel={`Activity Rings: ${innerValue} hours standing, ${middleValue} exercise minutes, ${outerValue} active calories`}
     >
       <Animated.View
         style={[
@@ -257,66 +203,86 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
         ]}
       >
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          {/* Background Tracks (full sweep from left to right corner) */}
-          <Path
-            d={trackPathOuter}
-            fill="none"
+          {/* Complete 360-Degree Background Tracks */}
+          <Circle
+            cx={center}
+            cy={center}
+            r={rOuter}
             stroke={colors.outerTrack}
             strokeWidth={strokeWidth}
-            strokeLinecap="round"
-          />
-          <Path
-            d={trackPathMid}
             fill="none"
+          />
+          <Circle
+            cx={center}
+            cy={center}
+            r={rMiddle}
             stroke={colors.middleTrack}
             strokeWidth={strokeWidth}
-            strokeLinecap="round"
-          />
-          <Path
-            d={trackPathInner}
             fill="none"
+          />
+          <Circle
+            cx={center}
+            cy={center}
+            r={rInner}
             stroke={colors.innerTrack}
             strokeWidth={strokeWidth}
-            strokeLinecap="round"
+            fill="none"
           />
 
-          {/* Active Arcs: sweeping from left corner, looping up and around to right corner */}
-          {activePathOuter ? (
-            <Path
-              d={activePathOuter}
-              fill="none"
+          {/* Active 360-Degree Progress Arcs (Clockwise from 12 o'clock) */}
+          {outerP > 0 ? (
+            <Circle
+              cx={center}
+              cy={center}
+              r={rOuter}
               stroke={colors.outer}
               strokeWidth={strokeWidth}
+              fill="none"
+              strokeDasharray={`${circOuter} ${circOuter}`}
+              strokeDashoffset={outerOffset}
               strokeLinecap="round"
+              transform={`rotate(-90 ${center} ${center})`}
             />
           ) : null}
-          {activePathMid ? (
-            <Path
-              d={activePathMid}
-              fill="none"
+
+          {midP > 0 ? (
+            <Circle
+              cx={center}
+              cy={center}
+              r={rMiddle}
               stroke={colors.middle}
               strokeWidth={strokeWidth}
+              fill="none"
+              strokeDasharray={`${circMiddle} ${circMiddle}`}
+              strokeDashoffset={midOffset}
               strokeLinecap="round"
+              transform={`rotate(-90 ${center} ${center})`}
             />
           ) : null}
-          {activePathInner ? (
-            <Path
-              d={activePathInner}
-              fill="none"
+
+          {innerP > 0 ? (
+            <Circle
+              cx={center}
+              cy={center}
+              r={rInner}
               stroke={colors.inner}
               strokeWidth={strokeWidth}
+              fill="none"
+              strokeDasharray={`${circInner} ${circInner}`}
+              strokeDashoffset={innerOffset}
               strokeLinecap="round"
+              transform={`rotate(-90 ${center} ${center})`}
             />
           ) : null}
         </Svg>
 
-        {/* Outer Bead (Flame) at bottom-left start */}
+        {/* Outer Bead (Flame) at 12 o'clock start */}
         <Animated.View
           style={[
             styles.beadCircle,
             {
-              top: outerBeadPos.y - strokeWidth * 0.48,
-              left: outerBeadPos.x - strokeWidth * 0.48,
+              top: center - rOuter - strokeWidth * 0.48,
+              left: center - strokeWidth * 0.48,
               width: strokeWidth * 0.96,
               height: strokeWidth * 0.96,
               backgroundColor: colors.outer
@@ -327,13 +293,13 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
           <Ionicons name="flame" size={Math.max(10, strokeWidth * 0.58)} color="#FFFFFF" />
         </Animated.View>
 
-        {/* Middle Bead (Walk/Exercise) at bottom-left start */}
+        {/* Middle Bead (Walk/Exercise) at 12 o'clock start */}
         <Animated.View
           style={[
             styles.beadCircle,
             {
-              top: midBeadPos.y - strokeWidth * 0.48,
-              left: midBeadPos.x - strokeWidth * 0.48,
+              top: center - rMiddle - strokeWidth * 0.48,
+              left: center - strokeWidth * 0.48,
               width: strokeWidth * 0.96,
               height: strokeWidth * 0.96,
               backgroundColor: colors.middle
@@ -344,13 +310,13 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
           <Ionicons name="walk" size={Math.max(10, strokeWidth * 0.60)} color="#000000" />
         </Animated.View>
 
-        {/* Inner Bead (Stand) at bottom-left start */}
+        {/* Inner Bead (Stand) at 12 o'clock start */}
         <Animated.View
           style={[
             styles.beadCircle,
             {
-              top: innerBeadPos.y - strokeWidth * 0.48,
-              left: innerBeadPos.x - strokeWidth * 0.48,
+              top: center - rInner - strokeWidth * 0.48,
+              left: center - strokeWidth * 0.48,
               width: strokeWidth * 0.96,
               height: strokeWidth * 0.96,
               backgroundColor: colors.inner
@@ -361,59 +327,11 @@ export const HuaweiGlanceDial: React.FC<HuaweiGlanceDialProps> = ({
           <Ionicons name="body" size={Math.max(10, strokeWidth * 0.56)} color="#FFFFFF" />
         </Animated.View>
 
-        {/* Center Numbers Container (Counting in sync with arcs) */}
-        <View
-          style={{
-            position: 'absolute',
-            left: center - Math.round(size * 0.20),
-            width: Math.round(size * 0.40),
-            top: center + Math.round(size * 0.03),
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'none'
-          }}
-        >
-          <Text
-            style={[
-              styles.statNum,
-              {
-                color: colors.inner,
-                fontSize,
-                lineHeight,
-                textAlign: 'center'
-              }
-            ]}
-          >
-            {displayInnerNumber}
-          </Text>
-          <Text
-            style={[
-              styles.statNum,
-              {
-                color: colors.middle,
-                fontSize,
-                lineHeight,
-                textAlign: 'center',
-                marginVertical: 1
-              }
-            ]}
-          >
-            {displayMiddleNumber}
-          </Text>
-          <Text
-            style={[
-              styles.statNum,
-              {
-                color: colors.outer,
-                fontSize: outerFontSize,
-                lineHeight: Math.round(outerFontSize * 1.15),
-                textAlign: 'center'
-              }
-            ]}
-            numberOfLines={1}
-          >
-            {displayOuterNumber}
-          </Text>
+        {/* Center Airy Icon Corridor */}
+        <View style={styles.centerCorridor}>
+          <View style={[styles.centerIconBadge, { backgroundColor: `${theme.primary}12` }]}>
+            <Ionicons name="sparkles" size={18} color={theme.primary} />
+          </View>
         </View>
       </Animated.View>
     </Pressable>
@@ -424,8 +342,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden'
+    justifyContent: 'center'
   },
   beadCircle: {
     position: 'absolute',
@@ -434,10 +351,17 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     pointerEvents: 'none'
   },
-  statNum: {
-    fontWeight: '900',
-    fontVariant: ['tabular-nums'],
-    letterSpacing: -0.5,
-    textAlign: 'center'
+  centerCorridor: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'none'
+  },
+  centerIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center'
   }
 });
