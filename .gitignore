@@ -12,6 +12,7 @@ ios/
 # DevEco Studio & HarmonyOS artifacts
 .hvigor/
 .cxx/
+research/
 local.properties
 build/
 *.hap
