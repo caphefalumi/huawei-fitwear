@@ -6,7 +6,7 @@ oh_modules/
 .expo/
 dist/
 web-build/
-
+research/
 # DevEco Studio & HarmonyOS artifacts
 .hvigor/
 .cxx/
