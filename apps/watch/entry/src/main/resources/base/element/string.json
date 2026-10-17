@@ -11,6 +11,10 @@
     {
       "name": "EntryAbility_label",
       "value": "label"
+    },
+    {
+      "name": "bluetooth_permission_reason",
+      "value": "Used to sync workout and text messages with the mobile companion app over Bluetooth Low Energy"
     }
   ]
 }
