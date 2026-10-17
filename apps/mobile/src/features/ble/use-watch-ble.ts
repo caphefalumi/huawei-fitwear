@@ -26,6 +26,14 @@ export interface BleSyncMessage {
   timestamp: string;
 }
 
+export interface UseWatchBleOptions {
+  /**
+   * When true, exposes a local GATT simulator for Expo Go / web.
+   * Leave false (default) for production hardware paths.
+   */
+  enableSimulator?: boolean;
+}
+
 function nowTimeLabel(): string {
   return new Date().toTimeString().slice(0, 8);
 }
@@ -35,8 +43,10 @@ function statusToMode(status: WatchBleStatus): BleConnectionMode {
   return status;
 }
 
-/** React adapter over WatchBleClient, plus an optional local simulator for Expo Go / web. */
-export function useWatchBle() {
+/** React adapter over WatchBleClient. Simulator is opt-in. */
+export function useWatchBle(options: UseWatchBleOptions = {}) {
+  const enableSimulator = options.enableSimulator === true;
+
   const [mode, setMode] = useState<BleConnectionMode>('disconnected');
   const [deviceName, setDeviceName] = useState('None');
   const [errorText, setErrorText] = useState<string | null>(null);
@@ -91,26 +101,28 @@ export function useWatchBle() {
     };
   }, [appendMessage]);
 
-  const connectRealBleWatch = useCallback(async () => {
+  const connect = useCallback(async () => {
     simModeRef.current = false;
-    await clientRef.current?.startScan();
+    await clientRef.current?.connect();
   }, []);
 
   const connectSimulatedWatch = useCallback(() => {
+    if (!enableSimulator) return;
     void clientRef.current?.disconnect();
     simModeRef.current = true;
     setErrorText(null);
-    setDeviceName('HUAWEI WATCH Fitwear (GATT Sim)');
+    setDeviceName('Fitwear Watch (Simulator)');
     setMode('ble-simulated');
     const ready = 'Fitwear Watch Ready';
     appendMessage('watch-to-phone', ready, encodeUtf8Bytes(ready).byteLength);
-  }, [appendMessage]);
+  }, [appendMessage, enableSimulator]);
 
   const disconnect = useCallback(async () => {
     if (simModeRef.current) {
       simModeRef.current = false;
       setMode('disconnected');
       setDeviceName('None');
+      setErrorText(null);
       return;
     }
     await clientRef.current?.disconnect();
@@ -119,9 +131,9 @@ export function useWatchBle() {
   const sendTextToWatch = useCallback(
     async (rawText: string) => {
       const clean = rawText.trim();
-      if (!clean) return;
+      if (!clean) return false;
 
-      if (simModeRef.current && mode === 'ble-simulated') {
+      if (enableSimulator && simModeRef.current && mode === 'ble-simulated') {
         setErrorText(null);
         const bytes = encodeUtf8Bytes(clean);
         appendMessage('phone-to-watch', clean, bytes.byteLength);
@@ -131,26 +143,28 @@ export function useWatchBle() {
           const ack = `ACK from Watch: "${clean}"`;
           appendMessage('watch-to-phone', ack, encodeUtf8Bytes(ack).byteLength);
         }, 350);
-        return;
+        return true;
       }
 
-      await clientRef.current?.sendText(clean);
+      const result = await clientRef.current?.sendText(clean);
+      return result?.ok === true;
     },
-    [appendMessage, mode]
+    [appendMessage, enableSimulator, mode]
   );
 
   const simulateWatchNotification = useCallback(
     (rawText: string) => {
+      if (!enableSimulator) return;
       const clean = rawText.trim();
       if (!clean) return;
       if (mode === 'disconnected') {
         simModeRef.current = true;
-        setDeviceName('HUAWEI WATCH Fitwear (GATT Sim)');
+        setDeviceName('Fitwear Watch (Simulator)');
         setMode('ble-simulated');
       }
       appendMessage('watch-to-phone', clean, encodeUtf8Bytes(clean).byteLength);
     },
-    [appendMessage, mode]
+    [appendMessage, enableSimulator, mode]
   );
 
   const clearMessages = useCallback(() => {
@@ -162,11 +176,16 @@ export function useWatchBle() {
     deviceName,
     errorText,
     messages,
-    connectRealBleWatch,
-    connectSimulatedWatch,
+    isConnected: mode === 'ble-hardware' || mode === 'ble-simulated',
+    isBusy: mode === 'scanning' || mode === 'connecting',
+    /** Scan for the watch and open the GATT link. */
+    connect,
+    /** @deprecated Use `connect`. */
+    connectRealBleWatch: connect,
+    connectSimulatedWatch: enableSimulator ? connectSimulatedWatch : undefined,
     disconnect,
     sendTextToWatch,
-    simulateWatchNotification,
+    simulateWatchNotification: enableSimulator ? simulateWatchNotification : undefined,
     clearMessages,
   };
 }

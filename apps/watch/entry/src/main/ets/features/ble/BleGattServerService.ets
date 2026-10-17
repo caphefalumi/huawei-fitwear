@@ -7,11 +7,18 @@ import { window } from '@kit.ArkUI';
 const DOMAIN: number = 0x0000;
 const TAG: string = 'FitwearBleWatch';
 const DESC_CCC_UUID: string = '00002902-0000-1000-8000-00805F9B34FB';
+const READY_MESSAGE: string = 'Fitwear Watch Ready';
 
 /** Private Fitwear GATT service UUID (not a Bluetooth SIG assigned number). */
 export const SERVICE_UUID: string = 'F17E0001-6B2A-4C8E-9D15-3A7F2E8C4B01';
 /** UTF-8 message characteristic: read / write / notify. */
 export const CHAR_MESSAGE_UUID: string = 'F17E0002-6B2A-4C8E-9D15-3A7F2E8C4B02';
+
+/**
+ * Max UTF-8 payload bytes per write/notify.
+ * Matches mobile BLE_MAX_MESSAGE_BYTES under a 185-byte MTU.
+ */
+export const MAX_MESSAGE_BYTES: number = 180;
 
 export interface BleGattServerListener {
   onStatus(text: string): void;
@@ -61,8 +68,11 @@ function decodeUtf8(buffer: ArrayBuffer): string {
 }
 
 /**
- * BLE GATT peripheral: private service, advertise, notify UTF-8 text.
+ * Production BLE GATT peripheral for Fitwear.
+ * Private service, advertise, UTF-8 notify/write.
  * Caller must hold ohos.permission.ACCESS_BLUETOOTH before start().
+ *
+ * Lifecycle: start(context) → phone connects → sendText() → stop() on page leave.
  */
 export class BleGattServerService {
   private listener: BleGattServerListener;
@@ -72,7 +82,7 @@ export class BleGattServerService {
   private advActive: boolean = false;
   private serverRunning: boolean = false;
   private connectedDeviceId: string = '';
-  private charBuffer: ArrayBuffer = encodeUtf8('Fitwear Watch Ready');
+  private charBuffer: ArrayBuffer = encodeUtf8(READY_MESSAGE);
   private cccBuffer: ArrayBuffer = new ArrayBuffer(2);
 
   constructor(listener: BleGattServerListener) {
@@ -84,6 +94,10 @@ export class BleGattServerService {
 
   isRunning(): boolean {
     return this.serverRunning;
+  }
+
+  isConnected(): boolean {
+    return this.serverRunning && this.connectedDeviceId.length > 0;
   }
 
   getConnectedDeviceId(): string {
@@ -159,7 +173,6 @@ export class BleGattServerService {
       this.listener.onStatus('Starting...');
       this.setKeepScreen(true);
       ble.startAdvertising(advParams, (err: BusinessError, outAdvHandle: number) => {
-        // stop() may have run before this callback; drop orphaned adv handle.
         if (!this.serverRunning) {
           if (!err) {
             try {
@@ -197,41 +210,21 @@ export class BleGattServerService {
     this.listener.onStatus('BLE Stopped');
   }
 
-  /** Tears down GATT/advertising and resets flags. Safe to call after a partial start. */
-  private releaseResources(): void {
-    try {
-      if (this.advHandle !== 0xFF) {
-        ble.stopAdvertising(this.advHandle);
-        this.advHandle = 0xFF;
-      }
-      if (this.gattServer) {
-        this.gattServer.removeService(SERVICE_UUID);
-        this.gattServer.off('connectionStateChange', this.onConnectionStateChange);
-        this.gattServer.off('characteristicRead', this.onCharacteristicRead);
-        this.gattServer.off('characteristicWrite', this.onCharacteristicWrite);
-        this.gattServer.off('descriptorRead', this.onDescriptorRead);
-        this.gattServer.off('descriptorWrite', this.onDescriptorWrite);
-        this.gattServer.close();
-        this.gattServer = undefined;
-      }
-    } catch (err) {
-      const e = err as BusinessError;
-      hilog.error(DOMAIN, TAG, 'release err: %{public}d %{public}s', e.code, e.message);
-    }
-    this.advActive = false;
-    this.serverRunning = false;
-    this.connectedDeviceId = '';
-    this.listener.onConnection('');
-    this.setKeepScreen(false);
-  }
-
-  /** Updates the characteristic buffer and notifies the connected phone. */
+  /**
+   * Updates the characteristic and notifies the connected phone.
+   * Returns the trimmed text on accept, or '' if rejected (empty / too long).
+   */
   sendText(text: string): string {
     const clean = text.trim();
     if (clean.length === 0) {
       return '';
     }
-    this.charBuffer = encodeUtf8(clean);
+    const encoded = encodeUtf8(clean);
+    if (encoded.byteLength > MAX_MESSAGE_BYTES) {
+      this.listener.onStatus(`Too long (${encoded.byteLength}/${MAX_MESSAGE_BYTES})`);
+      return '';
+    }
+    this.charBuffer = encoded;
 
     if (!this.gattServer || this.connectedDeviceId.length === 0) {
       this.listener.onStatus('Saved (No Phone Connected)');
@@ -259,6 +252,38 @@ export class BleGattServerService {
     return clean;
   }
 
+  private releaseResources(): void {
+    try {
+      if (this.advHandle !== 0xFF) {
+        ble.stopAdvertising(this.advHandle);
+        this.advHandle = 0xFF;
+      }
+      if (this.gattServer) {
+        this.gattServer.removeService(SERVICE_UUID);
+        this.gattServer.off('connectionStateChange', this.onConnectionStateChange);
+        this.gattServer.off('characteristicRead', this.onCharacteristicRead);
+        this.gattServer.off('characteristicWrite', this.onCharacteristicWrite);
+        this.gattServer.off('descriptorRead', this.onDescriptorRead);
+        this.gattServer.off('descriptorWrite', this.onDescriptorWrite);
+        this.gattServer.close();
+        this.gattServer = undefined;
+      }
+    } catch (err) {
+      const e = err as BusinessError;
+      hilog.error(DOMAIN, TAG, 'release err: %{public}d %{public}s', e.code, e.message);
+    }
+    this.advActive = false;
+    this.serverRunning = false;
+    this.connectedDeviceId = '';
+    this.listener.onConnection('');
+    this.setKeepScreen(false);
+    // Reset CCC so the next session starts from a known state.
+    const cccView = new Uint8Array(this.cccBuffer);
+    cccView[0] = 1;
+    cccView[1] = 0;
+    this.charBuffer = encodeUtf8(READY_MESSAGE);
+  }
+
   private onConnectionStateChange = (stateInfo: ble.BLEConnectionChangeState): void => {
     if (stateInfo.state === constant.ProfileConnectionState.STATE_CONNECTED) {
       this.connectedDeviceId = stateInfo.deviceId;
@@ -268,6 +293,10 @@ export class BleGattServerService {
     } else if (stateInfo.state === constant.ProfileConnectionState.STATE_DISCONNECTED) {
       this.connectedDeviceId = '';
       this.listener.onConnection('');
+      // Reset CCC; the next client must re-subscribe.
+      const cccView = new Uint8Array(this.cccBuffer);
+      cccView[0] = 0;
+      cccView[1] = 0;
       if (this.serverRunning) {
         this.listener.onStatus('Advertising...');
         this.resumeAdvertising();
@@ -296,6 +325,14 @@ export class BleGattServerService {
   private onCharacteristicWrite = (req: ble.CharacteristicWriteRequest): void => {
     this.connectedDeviceId = req.deviceId;
     this.listener.onConnection(req.deviceId);
+    if (req.value.byteLength > MAX_MESSAGE_BYTES) {
+      this.listener.onStatus(`Write rejected (${req.value.byteLength}B)`);
+      if (req.needRsp) {
+        // ACK the request but ignore the oversized payload (wider client compat).
+        this.sendWriteStatus(req, 0);
+      }
+      return;
+    }
     this.charBuffer = req.value;
     const incoming = decodeUtf8(req.value);
     if (incoming.length > 0) {
@@ -304,10 +341,14 @@ export class BleGattServerService {
     if (!req.needRsp) {
       return;
     }
+    this.sendWriteStatus(req, 0);
+  };
+
+  private sendWriteStatus(req: ble.CharacteristicWriteRequest, status: number): void {
     const response: ble.ServerResponse = {
       deviceId: req.deviceId,
       transId: req.transId,
-      status: 0,
+      status: status,
       offset: req.offset,
       value: new ArrayBuffer(0)
     };
@@ -315,9 +356,9 @@ export class BleGattServerService {
       this.gattServer?.sendResponse(response);
     } catch (err) {
       const e = err as BusinessError;
-      hilog.error(DOMAIN, TAG, 'write err: %{public}d %{public}s', e.code, e.message);
+      hilog.error(DOMAIN, TAG, 'write rsp err: %{public}d %{public}s', e.code, e.message);
     }
-  };
+  }
 
   private onDescriptorRead = (req: ble.DescriptorReadRequest): void => {
     const response: ble.ServerResponse = {

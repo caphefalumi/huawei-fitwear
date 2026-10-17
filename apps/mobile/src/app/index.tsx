@@ -35,7 +35,7 @@ export default function HomeScreen() {
     sendTextToWatch,
     simulateWatchNotification,
     clearMessages,
-  } = useWatchBle();
+  } = useWatchBle({ enableSimulator: true });
 
   const [phoneDraft, setPhoneDraft] = useState('Hello Watch from Mobile!');
   const [watchDraft, setWatchDraft] = useState('Rep 12 | HR 148 bpm');
@@ -98,13 +98,15 @@ export default function HomeScreen() {
                       Scan BLE Watch (ble-plx)
                     </ThemedText>
                   </Pressable>
-                  <Pressable
-                    style={[styles.btn, styles.btnSecondary]}
-                    onPress={connectSimulatedWatch}>
-                    <ThemedText type="smallBold" style={styles.btnTextLight}>
-                      Connect Watch Simulator
-                    </ThemedText>
-                  </Pressable>
+                  {connectSimulatedWatch ? (
+                    <Pressable
+                      style={[styles.btn, styles.btnSecondary]}
+                      onPress={connectSimulatedWatch}>
+                      <ThemedText type="smallBold" style={styles.btnTextLight}>
+                        Connect Watch Simulator
+                      </ThemedText>
+                    </Pressable>
+                  ) : null}
                 </>
               ) : (
                 <Pressable style={[styles.btn, styles.btnDanger]} onPress={disconnect}>
@@ -172,26 +174,30 @@ export default function HomeScreen() {
                 placeholderTextColor="#64748B"
                 style={styles.textInput}
               />
-              <Pressable
-                style={[styles.btn, styles.btnAccent]}
-                onPress={() => simulateWatchNotification(watchDraft)}>
-                <ThemedText type="smallBold" style={styles.btnTextLight}>
-                  Notify
-                </ThemedText>
-              </Pressable>
-            </View>
-            <View style={styles.presetRow}>
-              {WATCH_PRESETS.map((preset) => (
+              {simulateWatchNotification ? (
                 <Pressable
-                  key={preset}
-                  style={styles.chip}
-                  onPress={() => simulateWatchNotification(preset)}>
-                  <ThemedText type="small" style={styles.chipText}>
-                    {preset}
+                  style={[styles.btn, styles.btnAccent]}
+                  onPress={() => simulateWatchNotification(watchDraft)}>
+                  <ThemedText type="smallBold" style={styles.btnTextLight}>
+                    Notify
                   </ThemedText>
                 </Pressable>
-              ))}
+              ) : null}
             </View>
+            {simulateWatchNotification ? (
+              <View style={styles.presetRow}>
+                {WATCH_PRESETS.map((preset) => (
+                  <Pressable
+                    key={preset}
+                    style={styles.chip}
+                    onPress={() => simulateWatchNotification(preset)}>
+                    <ThemedText type="small" style={styles.chipText}>
+                      {preset}
+                    </ThemedText>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
           </ThemedView>
 
           <ThemedView type="backgroundElement" style={styles.card}>
