@@ -1,23 +1,42 @@
-@Entry
-@Component
-struct Index {
-  @State message: string = 'Hello World';
+import { router } from '@kit.ArkUI';
 
+@Entry
+@ComponentV2
+struct Index {
   build() {
-    RelativeContainer() {
-      Text(this.message)
-        .id('HelloWorld')
-        .fontSize($r('app.float.page_text_font_size'))
+    Column({ space: 12 }) {
+      Text($r('app.string.EntryAbility_label'))
+        .fontSize(18)
         .fontWeight(FontWeight.Bold)
-        .alignRules({
-          center: { anchor: '__container__', align: VerticalAlign.Center },
-          middle: { anchor: '__container__', align: HorizontalAlign.Center }
-        })
+        .fontColor('#FFFFFF')
+        .margin({ top: 20 })
+
+      Text('Watch demos')
+        .fontSize(12)
+        .fontColor('#94A3B8')
+
+      Button('Bluetooth')
+        .width('70%')
+        .height(36)
+        .fontSize(14)
+        .backgroundColor('#2563EB')
         .onClick(() => {
-          this.message = 'Welcome';
+          router.pushUrl({ url: 'pages/BlePage' });
+        })
+
+      Button('IMU Sensors')
+        .width('70%')
+        .height(36)
+        .fontSize(14)
+        .backgroundColor('#0D9488')
+        .onClick(() => {
+          router.pushUrl({ url: 'pages/ImuPage' });
         })
     }
-    .height('100%')
     .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .backgroundColor('#020617')
   }
 }

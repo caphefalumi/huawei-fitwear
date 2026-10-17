@@ -10,7 +10,19 @@
     },
     {
       "name": "EntryAbility_label",
-      "value": "label"
+      "value": "Fitwear"
+    },
+    {
+      "name": "bluetooth_permission_reason",
+      "value": "Used to sync workout and text messages with the mobile companion app over Bluetooth Low Energy"
+    },
+    {
+      "name": "accelerometer_permission_reason",
+      "value": "Used to read accelerometer samples on the watch"
+    },
+    {
+      "name": "gyroscope_permission_reason",
+      "value": "Used to read gyroscope samples on the watch"
     }
   ]
 }
