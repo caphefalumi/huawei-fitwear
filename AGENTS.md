@@ -9,7 +9,7 @@ This repository contains two independent sibling applications for a dual-device 
 1. **`apps/mobile`**: React Native (Expo SDK 57, Expo Router, React 19).
    - Package manager: **Bun** (`bun.lock` present).
    - Role: UI, workout state, data aggregation, history.
-   - Code location: `apps/mobile/src/`.
+   - Code location: `apps/mobile/src/` (feature-based: `src/features/<feature>/`).
    - Never create or edit `ios/` or `android/` directories directly; Expo uses Continuous Native Generation (CNG) via `app.json`.
 
 2. **`apps/watch`**: ArkTS (HarmonyOS NEXT, API 11+ / SDK `6.1.1(24)`).
@@ -17,7 +17,7 @@ This repository contains two independent sibling applications for a dual-device 
    - Package manager: **ohpm** (`oh-package.json5`).
    - Role: Sensor sampling (IMU, heart rate), wearable UI, haptics.
    - Never run `bun`, `npm`, or node tools inside `apps/watch`.
-   - Code location: `apps/watch/entry/src/main/ets/`.
+   - Code location: `apps/watch/entry/src/main/ets/` (feature-based: `ets/features/<feature>/`, hub in `ets/pages/`).
 
 ---
 
@@ -39,7 +39,7 @@ bun lint                     # Lint mobile workspace
 ### Mobile Development Rules (`apps/mobile`)
 
 - **Installing packages**: ALWAYS use `npx expo install <package>` or `bunx expo install <package>` instead of direct package manager add. This resolves Expo SDK-compatible versions.
-- **Routing**: Use **Expo Router**. Route screens live in `apps/mobile/src/app/`. Do not put helper functions or shared components inside `src/app/`.
+- **Routing**: Use **Expo Router**. Route screens live in `apps/mobile/src/app/`. Keep feature logic in `src/features/<feature>/`, not in `src/app/`.
 - **Navigation hooks**: Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
 - **Pre-commit verification**:
   ```bash
@@ -51,7 +51,8 @@ bun lint                     # Lint mobile workspace
 ### Watch Development Rules (`apps/watch`)
 
 - Open exclusively in **DevEco Studio**.
-- Wearable pages and components reside in `apps/watch/entry/src/main/ets/pages/`.
+- Feature UI + domain code live together in `apps/watch/entry/src/main/ets/features/<feature>/`.
+- Hub / entry pages reside in `apps/watch/entry/src/main/ets/pages/` and are registered in `main_pages.json`.
 - Application lifecycle handlers reside in `apps/watch/entry/src/main/ets/entryability/`.
 - Follow strict ArkTS typing conventions defined in `apps/watch/code-linter.json5`.
 - Do not add web or node libraries to `apps/watch`.

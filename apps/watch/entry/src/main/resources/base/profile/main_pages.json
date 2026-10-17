@@ -1,7 +1,7 @@
 {
   "src": [
     "pages/Index",
-    "pages/BlePage",
-    "pages/ImuPage"
+    "features/ble/BlePage",
+    "features/imu/ImuPage"
   ]
 }

@@ -21,7 +21,7 @@ struct Index {
         .fontSize(14)
         .backgroundColor('#2563EB')
         .onClick(() => {
-          router.pushUrl({ url: 'pages/BlePage' });
+          router.pushUrl({ url: 'features/ble/BlePage' });
         })
 
       Button('IMU Sensors')
@@ -30,7 +30,7 @@ struct Index {
         .fontSize(14)
         .backgroundColor('#0D9488')
         .onClick(() => {
-          router.pushUrl({ url: 'pages/ImuPage' });
+          router.pushUrl({ url: 'features/imu/ImuPage' });
         })
     }
     .width('100%')

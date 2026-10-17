@@ -1,5 +1,5 @@
 import { router } from '@kit.ArkUI';
-import { ImuSensorService } from '../services/ImuSensorService';
+import { ImuSensorService } from './ImuSensorService';
 
 /** UI refresh stride: 100 ms samples → ~2 Hz text updates (wearable-friendly). */
 const UI_SAMPLE_STRIDE: number = 5;

@@ -1,7 +1,7 @@
 import { abilityAccessCtrl, common, Permissions } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { router } from '@kit.ArkUI';
-import { BleGattServerService } from '../services/BleGattServerService';
+import { BleGattServerService } from './BleGattServerService';
 
 @Entry
 @ComponentV2

@@ -9,7 +9,7 @@ import {
   FITWEAR_CHAR_MESSAGE_UUID,
   FITWEAR_SERVICE_UUID,
   useWatchBle,
-} from '@/hooks/use-watch-ble';
+} from '@/features/ble';
 
 const PHONE_PRESETS = [
   'Start Set: Bench Press',

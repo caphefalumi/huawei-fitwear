@@ -15,3 +15,8 @@ export {
   type WatchBleListener,
   type WatchBleStatus,
 } from './WatchBleClient';
+export {
+  useWatchBle,
+  type BleConnectionMode,
+  type BleSyncMessage,
+} from './use-watch-ble';

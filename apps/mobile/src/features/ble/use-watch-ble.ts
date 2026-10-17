@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { encodeUtf8Bytes } from './codec';
+import { FITWEAR_CHAR_MESSAGE_UUID, FITWEAR_SERVICE_UUID } from './constants';
 import {
-  encodeUtf8Bytes,
-  FITWEAR_CHAR_MESSAGE_UUID,
-  FITWEAR_SERVICE_UUID,
   WatchBleClient,
   type BleDirection,
   type WatchBleStatus,
-} from '@/services/ble';
+} from './WatchBleClient';
 
 export { FITWEAR_CHAR_MESSAGE_UUID, FITWEAR_SERVICE_UUID };
 export type { BleDirection };
