@@ -10,7 +10,15 @@
     },
     {
       "name": "EntryAbility_label",
-      "value": "label"
+      "value": "IMU Test"
+    },
+    {
+      "name": "accelerometer_permission_reason",
+      "value": "Used to read accelerometer samples on the watch"
+    },
+    {
+      "name": "gyroscope_permission_reason",
+      "value": "Used to read gyroscope samples on the watch"
     }
   ]
 }
