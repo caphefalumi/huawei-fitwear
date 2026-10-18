@@ -1,7 +1,7 @@
 {
   "app": {
-    "bundleName": "com.example.watch",
-    "vendor": "example",
+    "bundleName": "com.fitwear.watch",
+    "vendor": "fitwear",
     "versionCode": 1000000,
     "versionName": "1.0.0",
     "buildVersion": "1",
