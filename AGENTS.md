@@ -19,6 +19,11 @@ This repository contains two independent sibling applications for a dual-device 
    - Never run `bun`, `npm`, or node tools inside `apps/watch`.
    - Code location: `apps/watch/entry/src/main/ets/` (feature-based: `ets/features/<feature>/`, hub in `ets/pages/`).
 
+3. **`apps/backend`**: ElysiaJS on Cloudflare Workers (Bun runtime, Prisma ORM, Better Auth, D1 SQLite).
+   - Package manager: **Bun**.
+   - Role: Edge API gateway, Better Auth (Email & Password), Cloudflare D1 data layer via Prisma Client.
+   - Code location: `apps/backend/src/` (Prisma schema in `apps/backend/prisma/schema.prisma`).
+
 ---
 
 ## Commands & Workflows

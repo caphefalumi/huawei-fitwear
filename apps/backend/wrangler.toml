@@ -1,0 +1,9 @@
+name = "fitwear-backend"
+main = "src/index.ts"
+compatibility_date = "2025-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "fitwear-d1"
+database_id = "local-fitwear-d1-id"

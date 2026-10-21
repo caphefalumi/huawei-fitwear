@@ -9,6 +9,9 @@
     "build:ios": "bun --cwd apps/mobile run build:ios",
     "build:android": "bun --cwd apps/mobile run build:android",
     "web": "bun --cwd apps/mobile web",
-    "lint": "bun --cwd apps/mobile lint"
+    "lint": "bun --cwd apps/mobile lint",
+    "backend:dev": "bun --cwd apps/backend dev",
+    "backend:build": "bun --cwd apps/backend build",
+    "backend:typecheck": "bun --cwd apps/backend typecheck"
   }
 }
