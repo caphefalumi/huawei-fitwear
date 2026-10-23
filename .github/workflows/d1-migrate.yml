@@ -11,10 +11,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  migrate:
-    name: Apply D1 Migrations (Remote)
+  typecheck:
+    name: Typecheck
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
 
     steps:
       - name: Checkout repository
@@ -31,8 +31,43 @@ jobs:
       - name: Typecheck backend
         run: bun run backend:typecheck
 
+  test:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install backend dependencies
+        run: bun install --cwd apps/backend
+
       - name: Run backend tests
         run: bun run backend:test
+
+  migrate:
+    name: Apply D1 Migrations (Remote)
+    needs: [typecheck, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install backend dependencies
+        run: bun install --cwd apps/backend
 
       - name: Apply Cloudflare D1 migrations
         env:

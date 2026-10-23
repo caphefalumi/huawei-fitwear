@@ -186,11 +186,10 @@ The remote Cloudflare D1 database is automatically migrated via [`.github/workfl
 - **Triggers**:
   - `push` to `main` when `apps/backend/migrations/**`, `apps/backend/src/db/**`, or the workflow file changes.
   - `workflow_dispatch` for on-demand manual triggers from GitHub Actions UI or `gh workflow run`.
-- **Pipeline Stages**:
-  1. Installs Bun and dependencies.
-  2. Runs static type checking (`bun run backend:typecheck`).
-  3. Executes unit and integration test suites (`bun run backend:test`).
-  4. Applies pending migrations remotely via `bun run db:migrate:remote`.
+- **Pipeline Jobs**:
+  1. `typecheck` (Job 1): Executes static TypeScript verification in parallel.
+  2. `test` (Job 2): Executes unit and integration test suites in parallel.
+  3. `migrate` (Job 3, depends on `[typecheck, test]`): Applies pending D1 migrations remotely via `bun run db:migrate:remote`.
 - **Secrets Management**:
   Secrets are provisioned using Wrangler and GitHub CLI (`gh`):
   ```bash
