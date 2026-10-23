@@ -4,15 +4,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Palette as C } from '@/constants/palette';
 import { useHealth } from '@/features/health/health-store';
+import { useMeals } from '@/features/meals/meals-store';
 import { NutritionRing } from '@/features/home/ring';
 import { BackHeader, Card, MacroBar } from '@/features/home/ui';
 
 export function NutritionScreen() {
   const insets = useSafeAreaInsets();
   const { weightUpdated } = useHealth();
+  const { loggedKcal, loggedMacros } = useMeals();
 
   const targetKcal = weightUpdated ? 2160 : 2200;
-  const consumedKcal = 1320;
+  const consumedKcal = 1320 + loggedKcal;
   const left = targetKcal - consumedKcal;
 
   return (
@@ -52,9 +54,27 @@ export function NutritionScreen() {
       <Card>
         <Text style={styles.cardTitle}>Macronutrients</Text>
         <View style={styles.macros}>
-          <MacroBar label="Protein" value={92} target={140} unit="g" note="48 g remaining" />
-          <MacroBar label="Carbs" value={152} target={265} unit="g" note="113 g remaining" />
-          <MacroBar label="Fat" value={38} target={60} unit="g" note="22 g remaining" />
+          <MacroBar
+            label="Protein"
+            value={92 + loggedMacros.protein}
+            target={140}
+            unit="g"
+            note={`${Math.max(0, Math.round(140 - 92 - loggedMacros.protein))} g remaining`}
+          />
+          <MacroBar
+            label="Carbs"
+            value={152 + loggedMacros.carbs}
+            target={265}
+            unit="g"
+            note={`${Math.max(0, Math.round(265 - 152 - loggedMacros.carbs))} g remaining`}
+          />
+          <MacroBar
+            label="Fat"
+            value={38 + loggedMacros.fat}
+            target={60}
+            unit="g"
+            note={`${Math.max(0, Math.round(60 - 38 - loggedMacros.fat))} g remaining`}
+          />
         </View>
       </Card>
 

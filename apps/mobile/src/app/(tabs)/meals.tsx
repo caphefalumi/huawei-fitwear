@@ -1,5 +1,5 @@
-import { PlaceholderScreen } from '@/components/placeholder-screen';
+import { MealCaptureScreen } from '@/features/meals/capture-screen';
 
 export default function MealsRoute() {
-  return <PlaceholderScreen title="Meals" note="Meal logging is not designed in Figma yet." />;
+  return <MealCaptureScreen />;
 }

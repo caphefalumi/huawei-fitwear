@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Palette as C } from '@/constants/palette';
 import { useHealth } from '@/features/health/health-store';
+import { useMeals } from '@/features/meals/meals-store';
 import { NutritionRing } from '@/features/home/ring';
 import { Card, MacroBar, SectionHeading } from '@/features/home/ui';
 
@@ -20,9 +21,10 @@ const icons = {
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { weightKg, weightUpdated, recovery } = useHealth();
+  const { loggedKcal, loggedMacros } = useMeals();
 
   const targetKcal = weightUpdated ? 2160 : 2200;
-  const consumedKcal = 1320;
+  const consumedKcal = 1320 + loggedKcal;
   const kcalLeft = targetKcal - consumedKcal;
 
   return (
@@ -59,15 +61,21 @@ export function HomeScreen() {
           <NutritionRing kcalLeft={kcalLeft} saved={weightUpdated} />
 
           <View style={styles.macros}>
-            <MacroBar label="Protein" value={92} target={140} unit="g" />
-            <MacroBar label="Carbs" value={152} target={weightUpdated ? 265 : 275} unit="g" />
-            <MacroBar label="Fat" value={38} target={60} unit="g" />
+            <MacroBar label="Protein" value={92 + loggedMacros.protein} target={140} unit="g" />
+            <MacroBar
+              label="Carbs"
+              value={152 + loggedMacros.carbs}
+              target={weightUpdated ? 265 : 275}
+              unit="g"
+            />
+            <MacroBar label="Fat" value={38 + loggedMacros.fat} target={60} unit="g" />
           </View>
         </View>
 
         {weightUpdated ? (
           <Text style={styles.consumedLine}>
-            1,320 consumed · {kcalLeft} kcal left of {targetKcal.toLocaleString('en-US')}
+            {consumedKcal.toLocaleString('en-US')} consumed · {kcalLeft} kcal left of{' '}
+            {targetKcal.toLocaleString('en-US')}
           </Text>
         ) : null}
       </Card>
