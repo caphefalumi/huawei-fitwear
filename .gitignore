@@ -27,5 +27,9 @@ Thumbs.db
 .vscode/
 *.log
 
+# Cloudflare
+.wrangler/
+
 # Tool harness metadata
 .pi-glla/
+tmp/

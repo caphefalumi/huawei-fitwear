@@ -3,7 +3,9 @@ main = "src/index.ts"
 compatibility_date = "2025-06-01"
 compatibility_flags = ["nodejs_compat"]
 
+workers_dev = true
+preview_urls = true
 [[d1_databases]]
 binding = "DB"
 database_name = "fitwear-d1"
-database_id = "local-fitwear-d1-id"
+database_id = "e7f57e76-0a1b-4a58-a4ff-acaaeb10586f"

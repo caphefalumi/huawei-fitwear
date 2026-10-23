@@ -4,24 +4,23 @@
   "private": true,
   "scripts": {
     "dev": "wrangler dev",
-    "build": "bun run prisma:generate && wrangler deploy --dry-run",
-    "deploy": "bun run prisma:generate && wrangler deploy",
-    "prisma:generate": "prisma generate",
+    "build": "wrangler deploy --dry-run",
+    "deploy": "wrangler deploy",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply fitwear-d1 --local",
+    "db:migrate:remote": "wrangler d1 migrations apply fitwear-d1 --remote",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@better-auth/prisma-adapter": "^1.1.20",
-    "@prisma/adapter-d1": "^7.10.1",
-    "@prisma/client": "^7.10.1",
-    "@prisma/config": "^7.10.1",
     "better-auth": "^1.1.20",
     "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.45.4",
     "elysia": "^1.2.25"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250214.0",
     "@types/node": "^22.13.4",
-    "prisma": "^7.10.1",
+    "drizzle-kit": "^0.31.11",
     "typescript": "^5.7.3",
     "wrangler": "^3.109.2"
   }

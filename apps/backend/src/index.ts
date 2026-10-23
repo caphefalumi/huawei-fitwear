@@ -5,6 +5,9 @@ import { getAuth } from './lib/auth';
 const app = new Elysia({
   adapter: CloudflareAdapter,
 })
+  .get('/', ({ request }) => {
+    return "value"
+  })
   // Mount Better Auth handler
   .all('/api/auth/*', ({ request }) => {
     const auth = getAuth();

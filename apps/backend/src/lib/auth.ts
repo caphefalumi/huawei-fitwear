@@ -1,15 +1,22 @@
 import { betterAuth } from 'better-auth';
-import { prismaAdapter } from '@better-auth/prisma-adapter';
+import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { bearer } from 'better-auth/plugins';
-import { getPrisma } from './prisma';
+import { getDb } from '../db';
+import * as schema from '../db/schema';
 
 let authInstance: ReturnType<typeof initAuth> | null = null;
 
 function initAuth(d1?: D1Database) {
-  const prisma = getPrisma(d1);
+  const db = getDb(d1);
   return betterAuth({
-    database: prismaAdapter(prisma, {
+    database: drizzleAdapter(db, {
       provider: 'sqlite',
+      schema: {
+        user: schema.user,
+        session: schema.session,
+        account: schema.account,
+        verification: schema.verification,
+      },
     }),
     emailAndPassword: {
       enabled: true,
@@ -65,8 +72,11 @@ function initAuth(d1?: D1Database) {
 }
 
 export function getAuth(d1?: D1Database) {
+  if (d1) {
+    return initAuth(d1);
+  }
   if (!authInstance) {
-    authInstance = initAuth(d1);
+    authInstance = initAuth();
   }
   return authInstance;
 }
