@@ -19,7 +19,7 @@ const icons = {
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { weightKg, weightUpdated } = useHealth();
+  const { weightKg, weightUpdated, recovery } = useHealth();
 
   const targetKcal = weightUpdated ? 2160 : 2200;
   const consumedKcal = 1320;
@@ -110,8 +110,10 @@ export function HomeScreen() {
       <Pressable style={styles.recovery} onPress={() => router.push('/recovery')}>
         <Image source={icons.shieldCheck} style={styles.recoveryIcon} contentFit="contain" />
         <View style={styles.recoveryText}>
-          <Text style={styles.recoveryTitle}>Right shoulder recovery</Text>
-          <Text style={styles.recoverySub}>2 rest days · 3 light days</Text>
+          <Text style={styles.recoveryTitle}>{recovery.area} recovery</Text>
+          <Text style={styles.recoverySub}>
+            {recovery.restDays} rest days · {recovery.lightDays} light days
+          </Text>
         </View>
         <Image source={icons.chevronRight} style={styles.recoveryChevron} contentFit="contain" />
       </Pressable>

@@ -5,19 +5,21 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Palette as C } from '@/constants/palette';
+import { useHealth } from '@/features/health/health-store';
 import { BackHeader, Card } from '@/features/home/ui';
 
 const GROUPS = [
-  { key: 'chest', label: 'Chest', icon: require('@/assets/images/recovery/body-chest.svg') },
-  { key: 'back', label: 'Back', icon: require('@/assets/images/recovery/body-back.svg') },
+  { key: 'chest', label: 'Chest', area: 'Chest', icon: require('@/assets/images/recovery/body-chest.svg') },
+  { key: 'back', label: 'Back', area: 'Lower back', icon: require('@/assets/images/recovery/body-back.svg') },
   {
     key: 'shoulders',
     label: 'Shoulders',
+    area: 'Right shoulder',
     icon: require('@/assets/images/recovery/body-shoulders.svg'),
   },
-  { key: 'arms', label: 'Arms', icon: require('@/assets/images/recovery/body-arms.svg') },
-  { key: 'legs', label: 'Legs', icon: require('@/assets/images/recovery/body-legs.svg') },
-  { key: 'core', label: 'Core', icon: require('@/assets/images/recovery/body-core.svg') },
+  { key: 'arms', label: 'Arms', area: 'Left shoulder', icon: require('@/assets/images/recovery/body-arms.svg') },
+  { key: 'legs', label: 'Legs', area: 'Right knee', icon: require('@/assets/images/recovery/body-legs.svg') },
+  { key: 'core', label: 'Core', area: 'Lower back', icon: require('@/assets/images/recovery/body-core.svg') },
 ];
 
 const icons = {
@@ -26,16 +28,25 @@ const icons = {
   lock: require('@/assets/images/recovery/lock.svg'),
 };
 
-const DETAIL_ROWS = [
-  { label: 'Starts', value: 'Oct 8, 2026' },
-  { label: 'Rest days', value: '2 days · Oct 8–9' },
-  { label: 'Light days', value: '3 days · Oct 10–12' },
-  { label: 'Back to normal', value: 'Oct 13' },
-];
-
 export function RecoveryScreen() {
   const insets = useSafeAreaInsets();
-  const [selected, setSelected] = useState('shoulders');
+  const { recovery, saveRecovery } = useHealth();
+  const [selected, setSelected] = useState(
+    GROUPS.find((group) => group.area === recovery.area)?.key ?? 'shoulders',
+  );
+
+  const detailRows = [
+    { label: 'Starts', value: recovery.start },
+    { label: 'Rest days', value: `${recovery.restDays} days · Oct 8–9` },
+    { label: 'Light days', value: `${recovery.lightDays} days · Oct 10–12` },
+    { label: 'Back to normal', value: recovery.returnDate },
+  ];
+
+  function handleSave() {
+    const area = GROUPS.find((group) => group.key === selected)?.area ?? recovery.area;
+    saveRecovery({ ...recovery, area });
+    router.back();
+  }
 
   return (
     <ScrollView
@@ -44,7 +55,7 @@ export function RecoveryScreen() {
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
       ]}>
-      <BackHeader label="Profile" onPress={() => router.back()} />
+      <BackHeader label="Home" onPress={() => router.back()} />
 
       <Text style={styles.title}>Recovery plan</Text>
 
@@ -72,13 +83,13 @@ export function RecoveryScreen() {
       <Card>
         <View style={styles.detailHeader}>
           <View style={styles.detailText}>
-            <Text style={styles.cardTitle}>Right shoulder</Text>
-            <Text style={styles.cardNote}>Sore when pressing</Text>
+            <Text style={styles.cardTitle}>{recovery.area}</Text>
+            <Text style={styles.cardNote}>{recovery.note}</Text>
           </View>
           <Image source={icons.circleX} style={styles.detailIcon} contentFit="contain" />
         </View>
 
-        {DETAIL_ROWS.map((row) => (
+        {detailRows.map((row) => (
           <View key={row.label} style={styles.row}>
             <Text style={styles.rowLabel}>{row.label}</Text>
             <Text style={styles.rowValue}>{row.value}</Text>
@@ -97,7 +108,7 @@ export function RecoveryScreen() {
         </View>
       </Card>
 
-      <Pressable style={styles.primaryButton} onPress={() => router.back()}>
+      <Pressable style={styles.primaryButton} onPress={handleSave}>
         <Text style={styles.primaryLabel}>Save recovery plan</Text>
       </Pressable>
 

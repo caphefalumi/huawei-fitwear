@@ -1,19 +1,12 @@
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
 import { useState } from 'react';
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Palette as C } from '@/constants/palette';
 import { useHealth } from '@/features/health/health-store';
+import { HeightSheet, PlanSheet, WeightSheet } from '@/features/profile/sheets';
+import { RecoverySheet } from '@/features/recovery/recovery-sheet';
 
 const icons = {
   chevronRight: require('@/assets/images/profile/chevron-right.svg'),
@@ -37,25 +30,14 @@ function ProfileRow({ label, value, onPress }: RowProps) {
   );
 }
 
+type OpenSheet = 'height' | 'weight' | 'plan' | 'recovery' | null;
+
 export function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { weightKg, saveWeight } = useHealth();
-  const [weightSheetOpen, setWeightSheetOpen] = useState(false);
-  const [draftWeight, setDraftWeight] = useState('');
+  const { weightKg, heightCm, plan, recovery } = useHealth();
+  const [openSheet, setOpenSheet] = useState<OpenSheet>(null);
 
-  function openWeightSheet() {
-    setDraftWeight(weightKg.toFixed(1));
-    setWeightSheetOpen(true);
-  }
-
-  function handleSave() {
-    const next = Number.parseFloat(draftWeight.replace(',', '.'));
-    setWeightSheetOpen(false);
-    if (Number.isFinite(next) && next > 0) {
-      saveWeight(next);
-      router.navigate('/home');
-    }
-  }
+  const close = () => setOpenSheet(null);
 
   return (
     <ScrollView
@@ -80,61 +62,40 @@ export function ProfileScreen() {
         <Text style={styles.sectionTitle}>Profile overview</Text>
         <ProfileRow label="Birthdate" value="14 Jun 1998" />
         <ProfileRow label="Sex / gender" value="Male" />
-        <ProfileRow label="Height" value="175 cm" />
-        <ProfileRow label="Weight" value={`${weightKg.toFixed(1)} kg`} onPress={openWeightSheet} />
+        <ProfileRow
+          label="Height"
+          value={`${heightCm} cm`}
+          onPress={() => setOpenSheet('height')}
+        />
+        <ProfileRow
+          label="Weight"
+          value={`${weightKg.toFixed(1)} kg`}
+          onPress={() => setOpenSheet('weight')}
+        />
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Refine your plan</Text>
-        <ProfileRow label="Goal / target" value="Lose fat" />
-        <ProfileRow label="Workout frequency" value="3 sessions/week" />
-        <ProfileRow label="Daily activity" value="Moderate" />
-        <ProfileRow label="Recovery plan" value="" onPress={() => router.push('/recovery')} />
+        <Pressable onPress={() => setOpenSheet('plan')} hitSlop={8}>
+          <Text style={styles.sectionTitle}>Refine your plan</Text>
+        </Pressable>
+        <ProfileRow label="Goal / target" value={plan.goal} onPress={() => setOpenSheet('plan')} />
+        <ProfileRow
+          label="Workout frequency"
+          value={`${plan.sessions} sessions/week`}
+          onPress={() => setOpenSheet('plan')}
+        />
+        <ProfileRow label="Daily activity" value={plan.activity} onPress={() => setOpenSheet('plan')} />
+        <ProfileRow
+          label="Recovery plan"
+          value={recovery.area}
+          onPress={() => setOpenSheet('recovery')}
+        />
       </View>
 
-      <Modal
-        visible={weightSheetOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setWeightSheetOpen(false)}>
-        <View style={styles.backdrop}>
-          <Pressable style={styles.backdropFill} onPress={() => setWeightSheetOpen(false)} />
-          <View style={[styles.sheet, { paddingBottom: 26 + insets.bottom }]}>
-            <Text style={styles.sheetTitle}>Update weight</Text>
-            <Text style={styles.sheetBody}>
-              Log your weekly weight to keep your nutrition guidance current.
-            </Text>
-
-            <View style={styles.sheetField}>
-              <Text style={styles.sheetLabel}>Current · updated Oct 7</Text>
-              <Text style={styles.sheetCurrent}>{weightKg.toFixed(1)} kg</Text>
-            </View>
-
-            <View style={styles.sheetField}>
-              <Text style={styles.sheetLabel}>New weight · today</Text>
-              <View style={styles.inputRow}>
-                <TextInput
-                  style={styles.input}
-                  value={draftWeight}
-                  onChangeText={setDraftWeight}
-                  keyboardType="decimal-pad"
-                  selectTextOnFocus
-                />
-                <Text style={styles.sheetUnit}>kg</Text>
-              </View>
-            </View>
-
-            <Text style={styles.sheetNote}>Nutrition updates happen behind the scenes.</Text>
-
-            <Pressable style={styles.primaryButton} onPress={handleSave}>
-              <Text style={styles.primaryLabel}>Save update</Text>
-            </Pressable>
-            <Pressable style={styles.secondaryButton} onPress={() => setWeightSheetOpen(false)}>
-              <Text style={styles.secondaryLabel}>Cancel</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+      {openSheet === 'height' ? <HeightSheet visible onClose={close} /> : null}
+      {openSheet === 'weight' ? <WeightSheet visible onClose={close} /> : null}
+      {openSheet === 'plan' ? <PlanSheet visible onClose={close} /> : null}
+      {openSheet === 'recovery' ? <RecoverySheet visible onClose={close} /> : null}
     </ScrollView>
   );
 }
@@ -220,92 +181,5 @@ const styles = StyleSheet.create({
   chevron: {
     width: 16,
     height: 16,
-  },
-  backdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(37, 35, 33, 0.35)',
-  },
-  backdropFill: {
-    flex: 1,
-  },
-  sheet: {
-    backgroundColor: C.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    gap: 14,
-  },
-  sheetTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: C.text,
-  },
-  sheetBody: {
-    fontSize: 12,
-    color: C.textMuted,
-  },
-  sheetField: {
-    backgroundColor: C.background,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 16,
-    padding: 14,
-    gap: 4,
-  },
-  sheetLabel: {
-    fontSize: 11,
-    color: C.textMuted,
-  },
-  sheetCurrent: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: C.text,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 6,
-  },
-  input: {
-    flex: 1,
-    fontSize: 26,
-    fontWeight: '600',
-    color: C.text,
-    padding: 0,
-  },
-  sheetUnit: {
-    fontSize: 14,
-    color: C.textMuted,
-  },
-  sheetNote: {
-    fontSize: 11,
-    color: C.textMuted,
-  },
-  primaryButton: {
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: C.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: C.onAccent,
-  },
-  secondaryButton: {
-    height: 48,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: C.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: C.text,
   },
 });
