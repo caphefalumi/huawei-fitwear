@@ -12,7 +12,8 @@ const icons = {
   eyeOff: require('@/assets/images/auth/eye-off.svg'),
 };
 
-export function LoginScreen({ onCreateAccount, onForgotPassword }: {
+export function LoginScreen({ onLoggedIn, onCreateAccount, onForgotPassword }: {
+  onLoggedIn: () => void;
   onCreateAccount: () => void;
   onForgotPassword?: () => void;
 }) {
@@ -56,7 +57,7 @@ export function LoginScreen({ onCreateAccount, onForgotPassword }: {
         <Text style={styles.forgot}>Forgot password?</Text>
       </Pressable>
 
-      <Pressable style={styles.primaryButton}>
+      <Pressable style={styles.primaryButton} onPress={onLoggedIn}>
         <Text style={styles.primaryLabel}>Log in</Text>
       </Pressable>
 
