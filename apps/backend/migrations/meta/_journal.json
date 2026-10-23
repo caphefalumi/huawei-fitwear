@@ -8,6 +8,13 @@
       "when": 1792599974648,
       "tag": "0000_true_pandemic",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1792743215560,
+      "tag": "0001_public_galactus",
+      "breakpoints": true
     }
   ]
 }
