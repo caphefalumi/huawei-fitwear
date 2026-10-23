@@ -2,7 +2,7 @@
   "name": "fitwear",
   "private": true,
   "scripts": {
-    "postinstall": "bun install --cwd apps/mobile",
+    "postinstall": "bun install --cwd apps/mobile && bun install --cwd apps/backend",
     "start": "bun --cwd apps/mobile start",
     "android": "bun --cwd apps/mobile android",
     "ios": "bun --cwd apps/mobile ios",

@@ -179,6 +179,29 @@ flowchart LR
    bun run db:migrate:remote
    ```
 
+### Remote Migrations via GitHub Actions (CI/CD)
+
+The remote Cloudflare D1 database is automatically migrated via [`.github/workflows/d1-migrate.yml`](file:///C:/Users/Toan/huawei-fitwear/.github/workflows/d1-migrate.yml).
+
+- **Triggers**:
+  - `push` to `main` when `apps/backend/migrations/**`, `apps/backend/src/db/**`, or the workflow file changes.
+  - `workflow_dispatch` for on-demand manual triggers from GitHub Actions UI or `gh workflow run`.
+- **Pipeline Stages**:
+  1. Installs Bun and dependencies.
+  2. Runs static type checking (`bun run backend:typecheck`).
+  3. Executes unit and integration test suites (`bun run backend:test`).
+  4. Applies pending migrations remotely via `bun run db:migrate:remote`.
+- **Secrets Management**:
+  Secrets are provisioned using Wrangler and GitHub CLI (`gh`):
+  ```bash
+  # 1. Retrieve the Cloudflare OAuth / API token from Wrangler
+  TOKEN=$(bun -e "console.log(JSON.parse(require('child_process').execSync('wrangler auth token --json')).token)")
+
+  # 2. Set repository secrets using GitHub CLI
+  gh secret set CLOUDFLARE_API_TOKEN --body "$TOKEN"
+  gh secret set CLOUDFLARE_ACCOUNT_ID --body "cf5f13bd5550ea98e75fea6f3ddd321b"
+  ```
+
 ---
 
 ## 5. Development & Deployment

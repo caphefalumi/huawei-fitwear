@@ -1,0 +1,41 @@
+name: Migrate Cloudflare D1 Remote
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/backend/migrations/**'
+      - 'apps/backend/src/db/**'
+      - '.github/workflows/d1-migrate.yml'
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    name: Apply D1 Migrations (Remote)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install backend dependencies
+        run: bun install --cwd apps/backend
+
+      - name: Typecheck backend
+        run: bun run backend:typecheck
+
+      - name: Run backend tests
+        run: bun run backend:test
+
+      - name: Apply Cloudflare D1 migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bun run db:migrate:remote
