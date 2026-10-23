@@ -1,16 +1,11 @@
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Palette as C } from '@/constants/palette';
 import { useHealth } from '@/features/health/health-store';
+import { NutritionRing } from '@/features/home/ring';
 import { BackHeader, Card, MacroBar } from '@/features/home/ui';
-
-const icons = {
-  ringBg: require('@/assets/images/home/ring-bg.svg'),
-  ringRemaining: require('@/assets/images/home/ring-remaining.svg'),
-};
 
 export function NutritionScreen() {
   const insets = useSafeAreaInsets();
@@ -35,14 +30,7 @@ export function NutritionScreen() {
       </View>
 
       <Card style={styles.center}>
-        <View style={styles.ring}>
-          <Image source={icons.ringBg} style={styles.ringLayer} contentFit="contain" />
-          <Image source={icons.ringRemaining} style={styles.ringLayer} contentFit="contain" />
-          <View style={styles.ringCenter}>
-            <Text style={styles.ringValue}>{left}</Text>
-            <Text style={styles.ringLabel}>kcal left</Text>
-          </View>
-        </View>
+        <NutritionRing kcalLeft={left} saved={weightUpdated} />
 
         <View style={styles.stats}>
           <View style={styles.statRow}>
@@ -103,29 +91,6 @@ const styles = StyleSheet.create({
   },
   center: {
     alignItems: 'center',
-  },
-  ring: {
-    width: 112,
-    height: 112,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ringLayer: {
-    position: 'absolute',
-    width: 112,
-    height: 112,
-  },
-  ringCenter: {
-    alignItems: 'center',
-  },
-  ringValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: C.text,
-  },
-  ringLabel: {
-    fontSize: 9,
-    color: C.textMuted,
   },
   stats: {
     alignSelf: 'stretch',

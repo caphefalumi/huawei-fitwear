@@ -5,14 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Palette as C } from '@/constants/palette';
 import { useHealth } from '@/features/health/health-store';
+import { NutritionRing } from '@/features/home/ring';
 import { Card, MacroBar, SectionHeading } from '@/features/home/ui';
 
 const icons = {
   chevronRight: require('@/assets/images/home/chevron-right.svg'),
-  ringBg: require('@/assets/images/home/ring-bg.svg'),
-  ringRemaining: require('@/assets/images/home/ring-remaining.svg'),
-  ringTrackSaved: require('@/assets/images/home/ring-track-saved.svg'),
-  ringSaved: require('@/assets/images/home/ring-saved.svg'),
   weightChart: require('@/assets/images/home/weight-chart.svg'),
   weightChartSaved: require('@/assets/images/home/weight-chart-saved.svg'),
   previousLog: require('@/assets/images/home/previous-log.svg'),
@@ -59,22 +56,7 @@ export function HomeScreen() {
         </Pressable>
 
         <View style={styles.nutritionBody}>
-          <View style={styles.ring}>
-            <Image
-              source={weightUpdated ? icons.ringTrackSaved : icons.ringBg}
-              style={styles.ringLayer}
-              contentFit="contain"
-            />
-            <Image
-              source={weightUpdated ? icons.ringSaved : icons.ringRemaining}
-              style={styles.ringLayer}
-              contentFit="contain"
-            />
-            <View style={styles.ringCenter}>
-              <Text style={styles.ringValue}>{kcalLeft}</Text>
-              <Text style={styles.ringLabel}>kcal left</Text>
-            </View>
-          </View>
+          <NutritionRing kcalLeft={kcalLeft} saved={weightUpdated} />
 
           <View style={styles.macros}>
             <MacroBar label="Protein" value={92} target={140} unit="g" />
@@ -206,29 +188,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 20,
-  },
-  ring: {
-    width: 112,
-    height: 112,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ringLayer: {
-    position: 'absolute',
-    width: 112,
-    height: 112,
-  },
-  ringCenter: {
-    alignItems: 'center',
-  },
-  ringValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: C.text,
-  },
-  ringLabel: {
-    fontSize: 9,
-    color: C.textMuted,
   },
   macros: {
     flex: 1,
