@@ -33,3 +33,7 @@ Thumbs.db
 # Tool harness metadata
 .pi-glla/
 tmp/
+
+# Test artifacts
+test-results/
+playwright-report/

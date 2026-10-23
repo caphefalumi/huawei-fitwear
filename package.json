@@ -12,6 +12,15 @@
     "lint": "bun --cwd apps/mobile lint",
     "backend:dev": "bun --cwd apps/backend dev",
     "backend:build": "bun --cwd apps/backend build",
-    "backend:typecheck": "bun --cwd apps/backend typecheck"
+    "backend:typecheck": "bun --cwd apps/backend typecheck",
+    "backend:test": "bun --cwd apps/backend test",
+    "backend:test:unit": "bun --cwd apps/backend test:unit",
+    "backend:test:integration": "bun --cwd apps/backend test:integration",
+    "backend:test:e2e": "bun --cwd apps/backend test:e2e",
+    "db:generate": "bun --cwd apps/backend db:generate",
+    "db:migrate:local": "bun --cwd apps/backend db:migrate:local",
+    "db:migrate:remote": "bun --cwd apps/backend db:migrate:remote",
+    "test": "bun --cwd apps/backend test",
+    "test:e2e": "bun --cwd apps/backend test:e2e"
   }
 }
