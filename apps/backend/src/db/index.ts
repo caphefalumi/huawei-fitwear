@@ -5,10 +5,19 @@ import type { DrizzleD1Database } from 'drizzle-orm/d1';
 export type Schema = typeof schema;
 export type Database = DrizzleD1Database<typeof schema>;
 
-let boundEnv: { DB?: D1Database } = {};
+export type WorkerBindings = {
+  DB?: D1Database;
+  fitwear_kv?: KVNamespace;
+};
 
-export function setDatabaseBinding(env: { DB?: D1Database }) {
+let boundEnv: WorkerBindings = {};
+
+export function setDatabaseBinding(env: WorkerBindings) {
   boundEnv = env;
+}
+
+export function getKv(): KVNamespace | undefined {
+  return boundEnv.fitwear_kv;
 }
 
 export function getDb(d1?: D1Database): Database {

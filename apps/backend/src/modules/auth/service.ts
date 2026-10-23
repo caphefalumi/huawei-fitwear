@@ -3,16 +3,18 @@ import { Elysia, status } from 'elysia';
 import { getDb, user as userTable, session as sessionTable } from '../../db';
 import { hashPassword, verifyPassword } from '../../lib/password';
 import { generateId, generateToken } from '../../lib/id';
+
 import type { SignUpBody, SignInBody, UpdateUserBody } from './model';
 
 export abstract class Auth {
   static async signUp(data: SignUpBody, d1?: D1Database) {
     const db = getDb(d1);
+    const email = data.email.toLowerCase();
 
     const existing = await db
       .select({ id: userTable.id })
       .from(userTable)
-      .where(eq(userTable.email, data.email.toLowerCase()))
+      .where(eq(userTable.email, email))
       .get();
 
     if (existing) {
@@ -72,11 +74,12 @@ export abstract class Auth {
 
   static async signIn(data: SignInBody, d1?: D1Database) {
     const db = getDb(d1);
+    const email = data.email.toLowerCase();
 
     const foundUser = await db
       .select()
       .from(userTable)
-      .where(eq(userTable.email, data.email.toLowerCase()))
+      .where(eq(userTable.email, email))
       .get();
 
     if (!foundUser) {

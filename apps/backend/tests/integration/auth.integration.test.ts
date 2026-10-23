@@ -2,6 +2,9 @@ import { describe, expect, it, beforeEach } from 'bun:test';
 import { app } from '../../src/index';
 import { setDatabaseBinding } from '../../src/db';
 import { createTestDatabase } from '../helpers/test-db';
+import { createTestKv } from '../helpers/test-kv';
+import { user as userTable } from '../../src/db/schema';
+import { hashPassword } from '../../src/lib/password';
 
 describe('Integration Test: Auth API Endpoints', () => {
   let testD1: D1Database;
@@ -9,7 +12,7 @@ describe('Integration Test: Auth API Endpoints', () => {
   beforeEach(() => {
     const { d1 } = createTestDatabase();
     testD1 = d1;
-    setDatabaseBinding({ DB: d1 });
+    setDatabaseBinding({ DB: d1, fitwear_kv: createTestKv() });
   });
 
   describe('POST /auth/sign-up', () => {
@@ -75,6 +78,35 @@ describe('Integration Test: Auth API Endpoints', () => {
       expect(err.message).toContain('already exists');
     });
 
+    it('should reject duplicate when user already exists in D1', async () => {
+      const { d1, db } = createTestDatabase();
+      setDatabaseBinding({ DB: d1, fitwear_kv: createTestKv() });
+
+      await db.insert(userTable).values({
+        id: 'legacy-user',
+        email: 'legacy-only@fitwear.dev',
+        password: 'hash',
+        emailVerified: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const res = await app.handle(
+        new Request('http://localhost/auth/sign-up', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: 'legacy-only@fitwear.dev',
+            password: 'Password123!',
+          }),
+        })
+      );
+
+      expect(res.status).toBe(400);
+      const err = await res.json();
+      expect(err.message).toContain('already exists');
+    });
+
     it('should reject invalid email format with 422', async () => {
       const res = await app.handle(
         new Request('http://localhost/auth/sign-up', {
@@ -84,6 +116,37 @@ describe('Integration Test: Auth API Endpoints', () => {
         })
       );
       expect(res.status).toBe(422);
+    });
+  });
+
+  describe('auth rate limits', () => {
+    it('returns 429 with Retry-After when sign-in bucket is exhausted', async () => {
+      const body = JSON.stringify({
+        email: 'unknown@fitwear.dev',
+        password: 'Password123!',
+      });
+      const headers = {
+        'Content-Type': 'application/json',
+        'cf-connecting-ip': '203.0.113.50',
+      };
+
+      for (let i = 0; i < 20; i++) {
+        await app.handle(
+          new Request('http://localhost/auth/sign-in', { method: 'POST', headers, body })
+        );
+      }
+
+      const res = await app.handle(
+        new Request('http://localhost/auth/sign-in', { method: 'POST', headers, body })
+      );
+
+      expect(res.status).toBe(429);
+      const retryAfter = res.headers.get('Retry-After');
+      expect(retryAfter).not.toBeNull();
+      const retryAfterSec = Number(retryAfter);
+      expect(retryAfterSec).toBeGreaterThan(0);
+      const err = await res.json();
+      expect(err.retryAfterSec).toBe(retryAfterSec);
     });
   });
 
@@ -155,6 +218,47 @@ describe('Integration Test: Auth API Endpoints', () => {
       );
 
       expect(res.status).toBe(401);
+    });
+
+    it('should sign in when user was inserted directly into D1', async () => {
+      const password = 'LegacyLogin123!';
+      const { d1, db } = createTestDatabase();
+      setDatabaseBinding({ DB: d1, fitwear_kv: createTestKv() });
+
+      await app.handle(
+        new Request('http://localhost/auth/sign-up', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: 'first@fitwear.dev',
+            password: 'OtherPassword123!',
+          }),
+        })
+      );
+
+      await db.insert(userTable).values({
+        id: 'legacy-signin',
+        email: 'legacy-signin@fitwear.dev',
+        password: await hashPassword(password),
+        emailVerified: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const res = await app.handle(
+        new Request('http://localhost/auth/sign-in', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: 'legacy-signin@fitwear.dev',
+            password,
+          }),
+        })
+      );
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.user.email).toBe('legacy-signin@fitwear.dev');
     });
   });
 
