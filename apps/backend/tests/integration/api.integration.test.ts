@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { app } from '../../src/index';
+import { app } from '../helpers/test-app';
 
 describe('Integration Test: Root & Swagger API', () => {
   it('GET / should return online status and links', async () => {

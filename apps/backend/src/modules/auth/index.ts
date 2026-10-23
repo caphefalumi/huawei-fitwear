@@ -1,6 +1,7 @@
 import { Elysia } from 'elysia';
 import { Auth, authGuard } from './service';
 import { AuthModel } from './model';
+import { assertAuthRateLimit } from './rate-limit';
 
 export const auth = new Elysia({
   prefix: '/auth',
@@ -15,6 +16,7 @@ export const auth = new Elysia({
       return res;
     },
     {
+      beforeHandle: ({ request, set }) => assertAuthRateLimit(request, 'sign-up', set),
       body: AuthModel.signUpBody,
       detail: {
         summary: 'Register a new user account',
@@ -30,6 +32,7 @@ export const auth = new Elysia({
       return res;
     },
     {
+      beforeHandle: ({ request, set }) => assertAuthRateLimit(request, 'sign-in', set),
       body: AuthModel.signInBody,
       detail: {
         summary: 'Sign in with credentials',

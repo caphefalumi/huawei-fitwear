@@ -10,3 +10,7 @@ preview_urls = true
 binding = "DB"
 database_name = "fitwear-d1"
 database_id = "e7f57e76-0a1b-4a58-a4ff-acaaeb10586f"
+
+[[kv_namespaces]]
+binding = "fitwear_kv"
+id = "2127ca61a1d64d8e94029989785ad853"
