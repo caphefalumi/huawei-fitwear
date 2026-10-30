@@ -1,20 +1,27 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Pressable } from '@/components/pressable';
 import { Sheet } from '@/components/sheet';
 import { Palette as C } from '@/constants/palette';
 import { Header, icons } from './meals-ui';
 import { useMeals } from './meals-store';
 
-const CATEGORIES = ['Food', 'Drinks', 'Both'] as const;
+const TUTORIAL_STEPS = [
+  { title: 'Add a ruler', detail: 'Place a 15 cm ruler beside the plate or cup.' },
+  { title: 'Shoot from above', detail: 'Keep the whole meal in frame and hold steady.' },
+  {
+    title: 'Review & edit',
+    detail: 'Swipe left to edit, swipe right to delete, tap an item to change it.',
+  },
+];
 
 export function MealCaptureScreen() {
   const insets = useSafeAreaInsets();
   const { tutorialSeen, dismissTutorial } = useMeals();
-  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>('Food');
   const [description, setDescription] = useState('');
 
   return (
@@ -53,23 +60,6 @@ export function MealCaptureScreen() {
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.fieldLabel}>Category</Text>
-          <View style={styles.chipRow}>
-            {CATEGORIES.map((option) => {
-              const active = option === category;
-              return (
-                <Pressable
-                  key={option}
-                  style={[styles.chip, active && styles.chipActive]}
-                  onPress={() => setCategory(option)}>
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{option}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        <View style={styles.field}>
           <Text style={styles.fieldLabel}>Optional description</Text>
           <TextInput
             value={description}
@@ -99,31 +89,23 @@ export function MealCaptureScreen() {
         </Pressable>
       </ScrollView>
 
-      <Sheet visible={!tutorialSeen} title="Your first capture" onClose={dismissTutorial}>
-        <Text style={styles.tutorialEyebrow}>ONE-TIME GUIDE · 🐒 VoocHealth</Text>
-        <Text style={styles.tutorialBody}>
-          Choose Food or Drinks. Center it with a 15 cm ruler beside the plate or cup, fully in
-          frame.
-        </Text>
-        <View style={styles.tutorialCard}>
-          <Text style={styles.tutorialLine}>← Swipe left: Edit</Text>
-          <Text style={styles.tutorialLine}>Swipe right: Delete →</Text>
-          <Text style={styles.tutorialLine}>Tap an item: choose food or change amount</Text>
+      <Sheet visible={!tutorialSeen} title="Capture your meal" onClose={dismissTutorial}>
+        <Text style={styles.tutorialBody}>Three quick tips for an accurate result.</Text>
+        <View style={styles.tutorialSteps}>
+          {TUTORIAL_STEPS.map((step, index) => (
+            <View key={step.title} style={styles.tutorialStep}>
+              <View style={styles.tutorialMarker}>
+                <Text style={styles.tutorialMarkerLabel}>{index + 1}</Text>
+              </View>
+              <View style={styles.tutorialCopy}>
+                <Text style={styles.tutorialTitle}>{step.title}</Text>
+                <Text style={styles.tutorialDetail}>{step.detail}</Text>
+              </View>
+            </View>
+          ))}
         </View>
-        <Text style={styles.tutorialNote}>
-          Description is optional. Your photo and description are sent to cloud analysis for
-          ingredient detection.
-        </Text>
-        <Pressable
-          style={styles.primary}
-          onPress={() => {
-            dismissTutorial();
-            router.push('/meal');
-          }}>
+        <Pressable style={styles.primary} onPress={dismissTutorial}>
           <Text style={styles.primaryLabel}>Got it</Text>
-        </Pressable>
-        <Pressable style={styles.skip} onPress={dismissTutorial}>
-          <Text style={styles.skipLabel}>Skip</Text>
         </Pressable>
       </Sheet>
     </>
@@ -156,9 +138,11 @@ const styles = StyleSheet.create({
     height: 370,
     borderRadius: 18,
     backgroundColor: '#2B2724',
-    padding: 18,
+    paddingVertical: 44,
+    paddingHorizontal: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 16,
   },
   previewLabel: {
     position: 'absolute',
@@ -208,7 +192,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: -18,
   },
   circleIcon: {
     width: 30,
@@ -224,8 +207,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.45)',
   },
   rulerChip: {
-    position: 'absolute',
-    bottom: 62,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -251,32 +232,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: C.textMuted,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  chip: {
-    flex: 1,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: C.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipActive: {
-    backgroundColor: C.accentTint,
-    borderColor: C.accentBorder,
-  },
-  chipText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: C.textMuted,
-  },
-  chipTextActive: {
-    color: C.accent,
   },
   description: {
     minHeight: 84,
@@ -342,29 +297,42 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: C.text,
   },
-  tutorialEyebrow: {
-    fontSize: 11,
+  tutorialBody: {
+    fontSize: 13,
+    color: C.textMuted,
+  },
+  tutorialSteps: {
+    gap: 14,
+  },
+  tutorialStep: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  tutorialMarker: {
+    width: 24,
+    height: 24,
+    borderRadius: 100,
+    backgroundColor: C.accentTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tutorialMarkerLabel: {
+    fontSize: 12,
     fontWeight: '600',
     color: C.accent,
   },
-  tutorialBody: {
-    fontSize: 13,
-    lineHeight: 19,
+  tutorialCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  tutorialTitle: {
+    fontSize: 14,
+    fontWeight: '600',
     color: C.text,
   },
-  tutorialCard: {
-    backgroundColor: C.background,
-    borderRadius: 12,
-    padding: 14,
-    gap: 6,
-  },
-  tutorialLine: {
+  tutorialDetail: {
     fontSize: 12,
-    color: C.text,
-  },
-  tutorialNote: {
-    fontSize: 11,
-    lineHeight: 16,
+    lineHeight: 17,
     color: C.textMuted,
   },
   primary: {
@@ -378,13 +346,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: C.onAccent,
-  },
-  skip: {
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  skipLabel: {
-    fontSize: 13,
-    color: C.textMuted,
   },
 });

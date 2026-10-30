@@ -1,6 +1,6 @@
 <svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="110.381" height="56.9247" viewBox="0 0 110.381 56.9247" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g id="Weight chart">
-<path id="Weight trend segments" d="M0.38075 0.924678L34.3807 14.9247L68.3807 28.9247L102.381 42.9247" stroke-width="2" stroke="#9D2332"/>
+<path id="Weight trend segments" d="M4.38075 7.92468L38.3807 21.9247L72.3807 35.9247L106.381 49.9247" stroke-width="2" stroke="#9D2332"/>
 <circle id="Dot W1" cx="4.38075" cy="7.92468" r="4" fill="#9D2232"/>
 <circle id="Dot W2" cx="38.3807" cy="21.9247" r="4" fill="#9D2232"/>
 <circle id="Dot W3" cx="72.3808" cy="35.9247" r="4" fill="#9D2232"/>

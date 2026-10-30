@@ -1,11 +1,20 @@
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Pressable } from '@/components/pressable';
 import { Palette as C } from '@/constants/palette';
-import { useHealth } from '@/features/health/health-store';
-import { HeightSheet, PlanSheet, WeightSheet } from '@/features/profile/sheets';
+import { createRecovery, PERIOD_AREA, useHealth } from '@/features/health/health-store';
+import {
+  ActivitySheet,
+  FrequencySheet,
+  GoalSheet,
+  HeightSheet,
+  SexSheet,
+  TargetWeightSheet,
+  WeightSheet,
+} from '@/features/profile/sheets';
 import { RecoverySheet } from '@/features/recovery/recovery-sheet';
 
 const icons = {
@@ -30,11 +39,12 @@ function ProfileRow({ label, value, onPress }: RowProps) {
   );
 }
 
-type OpenSheet = 'height' | 'weight' | 'plan' | 'recovery' | null;
+type OpenSheet = 'height' | 'weight' | 'sex' | 'goal' | 'frequency' | 'activity' | 'target' | 'recovery' | null;
 
 export function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { weightKg, heightCm, plan, recovery } = useHealth();
+  const { weightKg, heightCm, sex, plan, recovery, saveRecovery } = useHealth();
+  const inPeriod = recovery?.area === PERIOD_AREA;
   const [openSheet, setOpenSheet] = useState<OpenSheet>(null);
 
   const close = () => setOpenSheet(null);
@@ -61,7 +71,7 @@ export function ProfileScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Profile overview</Text>
         <ProfileRow label="Birthdate" value="14 Jun 1998" />
-        <ProfileRow label="Sex / gender" value="Male" />
+        <ProfileRow label="Sex / gender" value={sex} onPress={() => setOpenSheet('sex')} />
         <ProfileRow
           label="Height"
           value={`${heightCm} cm`}
@@ -75,26 +85,47 @@ export function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
-        <Pressable onPress={() => setOpenSheet('plan')} hitSlop={8}>
-          <Text style={styles.sectionTitle}>Refine your plan</Text>
-        </Pressable>
-        <ProfileRow label="Goal / target" value={plan.goal} onPress={() => setOpenSheet('plan')} />
+        <Text style={styles.sectionTitle}>Refine your plan</Text>
+        <ProfileRow label="Goal / target" value={plan.goal} onPress={() => setOpenSheet('goal')} />
         <ProfileRow
           label="Workout frequency"
           value={`${plan.sessions} sessions/week`}
-          onPress={() => setOpenSheet('plan')}
+          onPress={() => setOpenSheet('frequency')}
         />
-        <ProfileRow label="Daily activity" value={plan.activity} onPress={() => setOpenSheet('plan')} />
+        <ProfileRow
+          label="Daily activity"
+          value={plan.activity}
+          onPress={() => setOpenSheet('activity')}
+        />
+        <ProfileRow
+          label="Target weight"
+          value={`${plan.targetWeightKg.toFixed(1)} kg`}
+          onPress={() => setOpenSheet('target')}
+        />
         <ProfileRow
           label="Recovery plan"
-          value={recovery.area}
+          value={recovery?.area ?? 'None'}
           onPress={() => setOpenSheet('recovery')}
         />
       </View>
 
+      {sex === 'Female' ? (
+        <Pressable
+          style={[styles.periodButton, inPeriod && styles.periodButtonActive]}
+          onPress={() => saveRecovery(inPeriod ? null : createRecovery(PERIOD_AREA))}>
+          <Text style={[styles.periodLabel, inPeriod && styles.periodLabelActive]}>
+            {inPeriod ? 'My period has ended' : 'I am in my period'}
+          </Text>
+        </Pressable>
+      ) : null}
+
       {openSheet === 'height' ? <HeightSheet visible onClose={close} /> : null}
       {openSheet === 'weight' ? <WeightSheet visible onClose={close} /> : null}
-      {openSheet === 'plan' ? <PlanSheet visible onClose={close} /> : null}
+      {openSheet === 'sex' ? <SexSheet visible onClose={close} /> : null}
+      {openSheet === 'goal' ? <GoalSheet visible onClose={close} /> : null}
+      {openSheet === 'frequency' ? <FrequencySheet visible onClose={close} /> : null}
+      {openSheet === 'activity' ? <ActivitySheet visible onClose={close} /> : null}
+      {openSheet === 'target' ? <TargetWeightSheet visible onClose={close} /> : null}
       {openSheet === 'recovery' ? <RecoverySheet visible onClose={close} /> : null}
     </ScrollView>
   );
@@ -181,5 +212,23 @@ const styles = StyleSheet.create({
   chevron: {
     width: 16,
     height: 16,
+  },
+  periodButton: {
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: C.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  periodButtonActive: {
+    backgroundColor: C.accentTint,
+  },
+  periodLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: C.onAccent,
+  },
+  periodLabelActive: {
+    color: C.accent,
   },
 });

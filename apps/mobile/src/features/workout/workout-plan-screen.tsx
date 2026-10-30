@@ -1,12 +1,14 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Pressable } from '@/components/pressable';
 import { Palette as C } from '@/constants/palette';
 import { Card, SectionHeading } from '@/features/home/ui';
-import { useHealth } from '@/features/health/health-store';
+import { recoveryRanges, useHealth } from '@/features/health/health-store';
+import { routinesFor, type Routine } from '@/features/workout/routines';
 import { RecoverySheet } from '@/features/recovery/recovery-sheet';
 
 const icons = {
@@ -27,51 +29,39 @@ const MUSCLE_GROUPS = [
   {
     key: 'chest',
     label: 'Chest',
-    detail: '3 exercises · 35 min',
     icon: require('@/assets/images/recovery/body-chest.svg'),
     designed: true,
   },
   {
     key: 'back',
     label: 'Back',
-    detail: '4 exercises · 40 min',
     icon: require('@/assets/images/recovery/body-back.svg'),
     designed: false,
   },
   {
     key: 'shoulders',
     label: 'Shoulders',
-    detail: '3 exercises · 30 min',
     icon: require('@/assets/images/recovery/body-shoulders.svg'),
     designed: false,
   },
   {
     key: 'arms',
     label: 'Arms',
-    detail: '4 exercises · 30 min',
     icon: require('@/assets/images/recovery/body-arms.svg'),
     designed: false,
   },
   {
     key: 'legs',
     label: 'Legs',
-    detail: '4 exercises · 45 min',
     icon: require('@/assets/images/recovery/body-legs.svg'),
     designed: false,
   },
   {
     key: 'core',
     label: 'Core',
-    detail: '3 exercises · 20 min',
     icon: require('@/assets/images/recovery/body-core.svg'),
     designed: false,
   },
-];
-
-const NEXT_ROUTINE = [
-  { name: 'Bench press', prescription: '3x10' },
-  { name: 'Incline dumbbell', prescription: '3x12' },
-  { name: 'Cable fly', prescription: '3x12' },
 ];
 
 export function WorkoutPlanScreen() {
@@ -79,7 +69,14 @@ export function WorkoutPlanScreen() {
   const { plan, recovery } = useHealth();
   const [recoveryOpen, setRecoveryOpen] = useState(false);
 
-  const recoveryLine = `Rest Oct 8–9 · light Oct 10–12\nReturn ${recovery.returnDate}, if ready`;
+  const { today, next, adjustedFor } = routinesFor(recovery);
+  const ranges = recovery ? recoveryRanges(recovery) : null;
+  const recoveryLine =
+    recovery && ranges
+      ? `Rest ${ranges.rest} · light ${ranges.light}\nReturn ${recovery.returnDate}, if ready`
+      : '';
+  const summary = (routine: Routine) =>
+    `${routine.name} · ${routine.exercises.length} exercises · ${routine.sets} sets · ${routine.minutes} min`;
 
   return (
     <ScrollView
@@ -108,57 +105,63 @@ export function WorkoutPlanScreen() {
         })}
       </View>
 
-      <Pressable style={styles.recoveryCard} onPress={() => setRecoveryOpen(true)}>
-        <Image source={icons.shieldCheck} style={styles.recoveryIcon} contentFit="contain" />
-        <View style={styles.recoveryCopy}>
-          <Text style={styles.recoveryTitle}>Recovery</Text>
-          <Text style={styles.recoverySub}>{recoveryLine}</Text>
-        </View>
-      </Pressable>
+      {recovery ? (
+        <Pressable style={styles.recoveryCard} onPress={() => setRecoveryOpen(true)}>
+          <Image source={icons.shieldCheck} style={styles.recoveryIcon} contentFit="contain" />
+          <View style={styles.recoveryCopy}>
+            <Text style={styles.recoveryTitle}>Recovery</Text>
+            <Text style={styles.recoverySub}>{recoveryLine}</Text>
+          </View>
+        </Pressable>
+      ) : null}
 
       <View style={styles.section}>
-        <SectionHeading title="Today" actionLabel="Rest day" />
+        <SectionHeading title="Today" actionLabel={today.name} />
         <Card style={styles.todayCard}>
           <View style={styles.todayRow}>
             <View style={styles.todayCopy}>
-              <Text style={styles.todayTitle}>Rest &amp; recovery</Text>
-              <Text style={styles.cardSub}>{recoveryLine}.</Text>
+              <Text style={styles.todayTitle}>Current routine</Text>
+              <Text style={styles.cardSub}>{summary(today)}</Text>
             </View>
             <View style={styles.badge}>
-              <Text style={styles.badgeLabel}>REST</Text>
+              <Text style={styles.badgeLabel}>OCT 8</Text>
             </View>
           </View>
+          <View style={styles.exerciseList}>
+            {today.exercises.map((exercise) => (
+              <View key={exercise.name} style={styles.exerciseRow}>
+                <Text style={styles.exerciseName}>{exercise.name}</Text>
+                <Text style={styles.exercisePrescription}>{exercise.prescription}</Text>
+              </View>
+            ))}
+          </View>
+          {adjustedFor ? (
+            <Text style={styles.footnote}>ADJUSTED FOR {adjustedFor.toUpperCase()}</Text>
+          ) : null}
         </Card>
       </View>
 
       <View style={styles.section}>
-        <SectionHeading title="Upcoming" actionLabel="Oct 10–13" />
+        <SectionHeading title="Upcoming" actionLabel="Oct 9" />
         <Card>
-          <View>
-            <Text style={styles.rowTitle}>Light movement</Text>
-            <Text style={styles.cardSub}>Oct 10–12 · gentle mobility only</Text>
-          </View>
-          <View style={styles.divider} />
-          <View>
-            <View style={styles.nextHeader}>
-              <View style={styles.todayCopy}>
-                <Text style={styles.rowTitle}>Next routine</Text>
-                <Text style={styles.cardSub}>Chest · 3 exercises · 9 sets · 35 min</Text>
-              </View>
-              <View style={styles.badge}>
-                <Text style={styles.badgeLabel}>OCT 13</Text>
-              </View>
+          <View style={styles.nextHeader}>
+            <View style={styles.todayCopy}>
+              <Text style={styles.rowTitle}>Next routine</Text>
+              <Text style={styles.cardSub}>{summary(next)}</Text>
             </View>
-            <View style={styles.exerciseList}>
-              {NEXT_ROUTINE.map((exercise) => (
-                <View key={exercise.name} style={styles.exerciseRow}>
-                  <Text style={styles.exerciseName}>{exercise.name}</Text>
-                  <Text style={styles.exercisePrescription}>{exercise.prescription}</Text>
-                </View>
-              ))}
+            <View style={styles.badge}>
+              <Text style={styles.badgeLabel}>OCT 9</Text>
             </View>
-            <Text style={styles.footnote}>IF READY · not cleared medically</Text>
           </View>
+          <View style={styles.exerciseList}>
+            {next.exercises.map((exercise) => (
+              <View key={exercise.name} style={styles.exerciseRow}>
+                <Text style={styles.exerciseName}>{exercise.name}</Text>
+                <Text style={styles.exercisePrescription}>{exercise.prescription}</Text>
+              </View>
+            ))}
+          </View>
+          {recovery ? <Text style={styles.footnote}>IF READY · not cleared medically</Text> : null}
         </Card>
       </View>
 
@@ -173,7 +176,6 @@ export function WorkoutPlanScreen() {
               onPress={() => router.push('/chest-plan')}>
               <Image source={group.icon} style={styles.groupImage} contentFit="contain" />
               <Text style={styles.groupLabel}>{group.label}</Text>
-              <Text style={styles.groupDetail}>{group.detail}</Text>
             </Pressable>
           ))}
         </View>
@@ -183,9 +185,7 @@ export function WorkoutPlanScreen() {
         <Text style={styles.primaryLabel}>View Chest plan</Text>
       </Pressable>
 
-      {recoveryOpen ? (
-        <RecoverySheet visible onClose={() => setRecoveryOpen(false)} />
-      ) : null}
+      {recoveryOpen ? <RecoverySheet visible onClose={() => setRecoveryOpen(false)} /> : null}
     </ScrollView>
   );
 }
@@ -357,7 +357,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 10,
-    gap: 3,
+    alignItems: 'center',
+    gap: 6,
   },
   groupImage: {
     width: 26,
@@ -368,10 +369,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: C.text,
-  },
-  groupDetail: {
-    fontSize: 9.5,
-    color: C.textMuted,
   },
   primaryButton: {
     height: 52,

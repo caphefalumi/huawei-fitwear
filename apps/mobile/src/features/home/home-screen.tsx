@@ -1,10 +1,13 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Pressable } from '@/components/pressable';
 import { Palette as C } from '@/constants/palette';
-import { useHealth } from '@/features/health/health-store';
+import { recoveryTitle, useHealth } from '@/features/health/health-store';
+import { RecoverySheet } from '@/features/recovery/recovery-sheet';
 import { useMeals } from '@/features/meals/meals-store';
 import { NutritionRing } from '@/features/home/ring';
 import { Card, MacroBar, SectionHeading } from '@/features/home/ui';
@@ -22,6 +25,10 @@ export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { weightKg, weightUpdated, recovery } = useHealth();
   const { loggedKcal, loggedMacros } = useMeals();
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
+
+  useEffect(() => setBannerDismissed(false), [weightKg]);
 
   const targetKcal = weightUpdated ? 2160 : 2200;
   const consumedKcal = 1320 + loggedKcal;
@@ -41,90 +48,92 @@ export function HomeScreen() {
 
       <Text style={styles.title}>Today</Text>
 
-      {weightUpdated ? (
+      {weightUpdated && !bannerDismissed ? (
         <View style={styles.banner}>
           <Image source={icons.check} style={styles.bannerIcon} contentFit="contain" />
           <Text style={styles.bannerText}>Weight saved · nutrition targets updated</Text>
+          <Pressable onPress={() => setBannerDismissed(true)} hitSlop={10}>
+            <Text style={styles.bannerClose}>✕</Text>
+          </Pressable>
         </View>
       ) : null}
 
-      <Card>
-        <Pressable
-          style={styles.cardHeader}
-          onPress={() => router.push('/nutrition')}
-          hitSlop={10}>
-          <Text style={styles.cardHeaderText}>Nutrition</Text>
-          <Image source={icons.chevronRight} style={styles.chevron} contentFit="contain" />
-        </Pressable>
-
-        <View style={styles.nutritionBody}>
-          <NutritionRing kcalLeft={kcalLeft} saved={weightUpdated} />
-
-          <View style={styles.macros}>
-            <MacroBar label="Protein" value={92 + loggedMacros.protein} target={140} unit="g" />
-            <MacroBar
-              label="Carbs"
-              value={152 + loggedMacros.carbs}
-              target={weightUpdated ? 265 : 275}
-              unit="g"
-            />
-            <MacroBar label="Fat" value={38 + loggedMacros.fat} target={60} unit="g" />
-          </View>
-        </View>
-
-        {weightUpdated ? (
-          <Text style={styles.consumedLine}>
-            {consumedKcal.toLocaleString('en-US')} consumed · {kcalLeft} kcal left of{' '}
-            {targetKcal.toLocaleString('en-US')}
-          </Text>
-        ) : null}
-      </Card>
-
-      <View style={styles.section}>
-        <SectionHeading title="Progress" actionLabel="Details" onPress={() => router.push('/progress')} />
+      <Pressable onPress={() => router.push('/nutrition')}>
         <Card>
-          <View style={styles.weightRow}>
-            <View style={styles.weightText}>
-              <Text style={styles.weightLabel}>Latest weight</Text>
-              <View style={styles.weightValueRow}>
-                <Text style={styles.weightValue}>{weightKg.toFixed(1)}</Text>
-                <Text style={styles.weightUnit}>kg</Text>
-              </View>
-              <Text style={styles.weightSub}>
-                {weightUpdated ? 'Logged Oct 8' : '−1.2 kg in 4 weeks'}
-              </Text>
+          <Text style={styles.cardHeaderText}>Nutrition</Text>
+
+          <View style={styles.nutritionBody}>
+            <NutritionRing kcalLeft={kcalLeft} saved={weightUpdated} />
+
+            <View style={styles.macros}>
+              <MacroBar label="Protein" value={92 + loggedMacros.protein} target={140} unit="g" />
+              <MacroBar
+                label="Carbs"
+                value={152 + loggedMacros.carbs}
+                target={weightUpdated ? 265 : 275}
+                unit="g"
+              />
+              <MacroBar label="Fat" value={38 + loggedMacros.fat} target={60} unit="g" />
             </View>
-            <Image
-              source={weightUpdated ? icons.weightChartSaved : icons.weightChart}
-              style={styles.weightChart}
-              contentFit="contain"
-            />
           </View>
 
           {weightUpdated ? (
-            <View style={styles.previousRow}>
-              <Image source={icons.previousLog} style={styles.previousChart} contentFit="contain" />
-              <Text style={styles.previousText}>Previous · Oct 7</Text>
-              <Text style={styles.previousValue}>72.0 kg</Text>
-            </View>
+            <Text style={styles.consumedLine}>
+              {consumedKcal.toLocaleString('en-US')} consumed · {kcalLeft} kcal left of{' '}
+              {targetKcal.toLocaleString('en-US')}
+            </Text>
           ) : null}
-
-          <Pressable onPress={() => router.push('/progress')} hitSlop={8}>
-            <Text style={styles.link}>View full progress →</Text>
-          </Pressable>
         </Card>
+      </Pressable>
+
+      <View style={styles.section}>
+        <SectionHeading title="Progress" />
+        <Pressable onPress={() => router.push('/progress')}>
+          <Card>
+            <View style={styles.weightRow}>
+              <View style={styles.weightText}>
+                <Text style={styles.weightLabel}>Latest weight</Text>
+                <View style={styles.weightValueRow}>
+                  <Text style={styles.weightValue}>{weightKg.toFixed(1)}</Text>
+                  <Text style={styles.weightUnit}>kg</Text>
+                </View>
+                <Text style={styles.weightSub}>
+                  {weightUpdated ? 'Logged Oct 8' : '−1.2 kg in 4 weeks'}
+                </Text>
+              </View>
+              <Image
+                source={weightUpdated ? icons.weightChartSaved : icons.weightChart}
+                style={styles.weightChart}
+                contentFit="contain"
+              />
+            </View>
+
+            {weightUpdated ? (
+              <View style={styles.previousRow}>
+                <Image source={icons.previousLog} style={styles.previousChart} contentFit="contain" />
+                <Text style={styles.previousText}>Previous · Oct 7</Text>
+                <Text style={styles.previousValue}>72.0 kg</Text>
+              </View>
+            ) : null}
+
+          </Card>
+        </Pressable>
       </View>
 
-      <Pressable style={styles.recovery} onPress={() => router.push('/recovery')}>
-        <Image source={icons.shieldCheck} style={styles.recoveryIcon} contentFit="contain" />
-        <View style={styles.recoveryText}>
-          <Text style={styles.recoveryTitle}>{recovery.area} recovery</Text>
-          <Text style={styles.recoverySub}>
-            {recovery.restDays} rest days · {recovery.lightDays} light days
-          </Text>
-        </View>
-        <Image source={icons.chevronRight} style={styles.recoveryChevron} contentFit="contain" />
-      </Pressable>
+      {recovery ? (
+        <Pressable style={styles.recovery} onPress={() => setRecoveryOpen(true)}>
+          <Image source={icons.shieldCheck} style={styles.recoveryIcon} contentFit="contain" />
+          <View style={styles.recoveryText}>
+            <Text style={styles.recoveryTitle}>{recoveryTitle(recovery)}</Text>
+            <Text style={styles.recoverySub}>
+              {recovery.restDays} rest days · {recovery.lightDays} light days
+            </Text>
+          </View>
+          <Image source={icons.chevronRight} style={styles.recoveryChevron} contentFit="contain" />
+        </Pressable>
+      ) : null}
+
+      {recoveryOpen ? <RecoverySheet visible onClose={() => setRecoveryOpen(false)} /> : null}
 
       {weightUpdated ? (
         <Text style={styles.footnote}>Demo personal targets · estimates, not medical advice.</Text>
@@ -176,23 +185,20 @@ const styles = StyleSheet.create({
     height: 14,
   },
   bannerText: {
+    flex: 1,
     fontSize: 12,
     fontWeight: '600',
     color: C.accent,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  bannerClose: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: C.accent,
   },
   cardHeaderText: {
     fontSize: 14,
     fontWeight: '600',
     color: C.text,
-  },
-  chevron: {
-    width: 18,
-    height: 18,
   },
   nutritionBody: {
     flexDirection: 'row',
@@ -263,11 +269,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: C.text,
-  },
-  link: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: C.accent,
   },
   recovery: {
     flexDirection: 'row',
