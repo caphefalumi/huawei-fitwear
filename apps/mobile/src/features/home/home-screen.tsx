@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Pressable } from '@/components/pressable';
@@ -11,12 +12,14 @@ import { routinesFor } from '@/features/workout/routines';
 import { RecoverySheet } from '@/features/recovery/recovery-sheet';
 import { useMeals } from '@/features/meals/meals-store';
 import { NutritionRing } from '@/features/home/ring';
+import { WeightChart } from '@/features/home/weight-chart';
 import { Card, MacroBar, SectionHeading } from '@/features/home/ui';
+
+const DEMO_WEIGHTS = [72.8, 72.5, 72.3, 72.1, 71.9, 71.7, 71.5];
+const WEEK_ACTIVE = [true, true, false, true, true, false, true];
 
 const icons = {
   chevronRight: require('@/assets/images/home/chevron-right.svg'),
-  weightChart: require('@/assets/images/home/weight-chart.svg'),
-  weightChartSaved: require('@/assets/images/home/weight-chart-saved.svg'),
   previousLog: require('@/assets/images/home/previous-log.svg'),
   shieldCheck: require('@/assets/images/home/shield-check.svg'),
   check: require('@/assets/images/home/check.svg'),
@@ -35,6 +38,8 @@ export function HomeScreen() {
   const consumedKcal = 1320 + loggedKcal;
   const kcalLeft = targetKcal - consumedKcal;
   const today = routinesFor(recovery).today;
+  const weights =
+    weightKg >= 70 && weightKg <= 74 ? [...DEMO_WEIGHTS.slice(0, -1), weightKg] : DEMO_WEIGHTS;
 
   return (
     <ScrollView
@@ -50,17 +55,28 @@ export function HomeScreen() {
 
       <Text style={styles.title}>Today</Text>
 
-      <Card style={styles.focus}>
-        <Text style={styles.focusLine} numberOfLines={1}>
-          Today: {today.name} · {today.sets} sets · ~{today.minutes} min
-        </Text>
-        <Text style={styles.focusMuted} numberOfLines={1}>
-          {kcalLeft} kcal left
-        </Text>
-        <Text style={styles.focusMuted} numberOfLines={1}>
-          {recovery ? recoveryTitle(recovery) : 'Watch connected'}
-        </Text>
-      </Card>
+      <Animated.View entering={FadeInUp.duration(250)}>
+        <Card style={styles.focus}>
+          <Text style={styles.focusLine} numberOfLines={1}>
+            Today: {today.name} · {today.sets} sets · ~{today.minutes} min
+          </Text>
+          <Text style={styles.focusMuted} numberOfLines={1}>
+            {kcalLeft} kcal left
+          </Text>
+          <Text style={styles.focusMuted} numberOfLines={1}>
+            {recovery ? recoveryTitle(recovery) : 'Watch connected'}
+          </Text>
+          <View style={styles.weekDots}>
+            {WEEK_ACTIVE.map((active, index) => (
+              <View
+                // ponytail: static demo strip, real activity data when health store has it
+                key={index}
+                style={[styles.dot, active ? styles.dotActive : styles.dotIdle]}
+              />
+            ))}
+          </View>
+        </Card>
+      </Animated.View>
 
       {weightUpdated && !bannerDismissed ? (
         <View style={styles.banner}>
@@ -72,8 +88,9 @@ export function HomeScreen() {
         </View>
       ) : null}
 
-      <Pressable onPress={() => router.push('/nutrition')}>
-        <Card>
+      <Animated.View entering={FadeInUp.delay(60).duration(250)}>
+        <Pressable onPress={() => router.push('/nutrition')}>
+          <Card>
           <Text style={styles.cardHeaderText}>Nutrition</Text>
 
           <View style={styles.nutritionBody}>
@@ -98,29 +115,28 @@ export function HomeScreen() {
             </Text>
           ) : null}
         </Card>
-      </Pressable>
+        </Pressable>
+      </Animated.View>
 
       <View style={styles.section}>
         <SectionHeading title="Progress" />
         <Pressable onPress={() => router.push('/progress')}>
           <Card>
-            <View style={styles.weightRow}>
-              <View style={styles.weightText}>
-                <Text style={styles.weightLabel}>Latest weight</Text>
-                <View style={styles.weightValueRow}>
-                  <Text style={styles.weightValue}>{weightKg.toFixed(1)}</Text>
-                  <Text style={styles.weightUnit}>kg</Text>
-                </View>
-                <Text style={styles.weightSub}>
-                  {weightUpdated ? 'Logged Oct 8' : '−1.2 kg in 4 weeks'}
+            <View style={styles.weightText}>
+              <Text style={styles.weightLabel} numberOfLines={1}>
+                Latest weight
+              </Text>
+              <View style={styles.weightValueRow}>
+                <Text style={styles.weightValue} numberOfLines={1}>
+                  {weightKg.toFixed(1)}
                 </Text>
+                <Text style={styles.weightUnit}>kg</Text>
               </View>
-              <Image
-                source={weightUpdated ? icons.weightChartSaved : icons.weightChart}
-                style={styles.weightChart}
-                contentFit="contain"
-              />
+              <Text style={styles.weightSub} numberOfLines={1}>
+                {weightUpdated ? 'Logged Oct 8' : '−1.2 kg in 4 weeks'}
+              </Text>
             </View>
+            <WeightChart weights={weights} />
 
             {weightUpdated ? (
               <View style={styles.previousRow}>
@@ -240,14 +256,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: C.textMuted,
   },
+  weekDots: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 6,
+  },
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  dotActive: {
+    backgroundColor: C.accent,
+  },
+  dotIdle: {
+    borderWidth: 1,
+    borderColor: C.border,
+  },
   section: {
     gap: 10,
-  },
-  weightRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
   },
   weightText: {
     gap: 2,
@@ -273,10 +300,6 @@ const styles = StyleSheet.create({
   weightSub: {
     fontSize: 11,
     color: C.textMuted,
-  },
-  weightChart: {
-    width: 110,
-    height: 56,
   },
   previousRow: {
     flexDirection: 'row',
