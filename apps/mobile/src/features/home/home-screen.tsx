@@ -25,6 +25,23 @@ const icons = {
   check: require('@/assets/images/home/check.svg'),
 };
 
+/** Ease-out count-up for hero numbers. */
+function useCountUp(target: number, duration = 600) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    const start = Date.now();
+    const tick = () => {
+      const p = Math.min(1, (Date.now() - start) / duration);
+      setVal(Math.round(target * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return val;
+}
+
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { weightKg, weightUpdated, recovery } = useHealth();
@@ -37,6 +54,7 @@ export function HomeScreen() {
   const targetKcal = weightUpdated ? 2160 : 2200;
   const consumedKcal = 1320 + loggedKcal;
   const kcalLeft = targetKcal - consumedKcal;
+  const kcalShown = useCountUp(kcalLeft);
   const today = routinesFor(recovery).today;
   const weights =
     weightKg >= 70 && weightKg <= 74 ? [...DEMO_WEIGHTS.slice(0, -1), weightKg] : DEMO_WEIGHTS;
@@ -61,7 +79,7 @@ export function HomeScreen() {
             Today: {today.name} · {today.sets} sets · ~{today.minutes} min
           </Text>
           <Text style={styles.focusMuted} numberOfLines={1}>
-            {kcalLeft} kcal left
+            {kcalShown} kcal left
           </Text>
           <Text style={styles.focusMuted} numberOfLines={1}>
             {recovery ? recoveryTitle(recovery) : 'Watch connected'}
@@ -94,7 +112,7 @@ export function HomeScreen() {
           <Text style={styles.cardHeaderText}>Nutrition</Text>
 
           <View style={styles.nutritionBody}>
-            <NutritionRing kcalLeft={kcalLeft} saved={weightUpdated} />
+            <NutritionRing kcalLeft={kcalShown} saved={weightUpdated} />
 
             <View style={styles.macros}>
               <MacroBar label="Protein" value={92 + loggedMacros.protein} target={140} unit="g" />
@@ -110,7 +128,7 @@ export function HomeScreen() {
 
           {weightUpdated ? (
             <Text style={styles.consumedLine}>
-              {consumedKcal.toLocaleString('en-US')} consumed · {kcalLeft} kcal left of{' '}
+              {consumedKcal.toLocaleString('en-US')} consumed · {kcalShown} kcal left of{' '}
               {targetKcal.toLocaleString('en-US')}
             </Text>
           ) : null}

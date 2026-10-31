@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Pressable } from '@/components/pressable';
 import { Palette as C } from '@/constants/palette';
@@ -57,6 +58,15 @@ export function MacroBar({
   note?: string;
 }) {
   const fill = Math.max(0, Math.min(1, value / target));
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const t = Animated.timing(anim, { toValue: fill, duration: 500, useNativeDriver: false });
+    t.start();
+    return () => t.stop();
+  }, [anim, fill]);
+
+  const barWidth = anim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
   return (
     <View style={styles.macro}>
       <View style={styles.macroRow}>
@@ -66,7 +76,7 @@ export function MacroBar({
         </Text>
       </View>
       <View style={styles.track}>
-        <View style={[styles.fill, { width: `${fill * 100}%` }]} />
+        <Animated.View style={[styles.fill, { width: barWidth }]} />
       </View>
       {note ? <Text style={styles.macroNote}>{note}</Text> : null}
     </View>

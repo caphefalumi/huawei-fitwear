@@ -3,7 +3,7 @@ import { router, Tabs } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 
 import { Pressable } from '@/components/pressable';
 import { Palette as C } from '@/constants/palette';
@@ -74,6 +74,8 @@ function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
   const [layouts, setLayouts] = useState<Record<string, { x: number; width: number }>>({});
   const bubbleX = useSharedValue(0);
   const bubbleW = useSharedValue(0);
+  const pop = useSharedValue(1);
+  const ripple = useSharedValue(0);
 
   const target = activeName ? layouts[activeName] : undefined;
   const targetX = target ? target.x + BUBBLE_INSET_X : null;
@@ -90,6 +92,25 @@ function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
     transform: [{ translateX: bubbleX.value }],
     width: bubbleW.value,
   }));
+
+  const popStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pop.value }],
+  }));
+
+  const rippleStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + ripple.value * 0.8 }],
+    opacity: 0.45 * (1 - ripple.value),
+  }));
+
+  function handleCapture() {
+    pop.value = withSequence(
+      withTiming(0.88, { duration: 90 }),
+      withSpring(1, { damping: 11, stiffness: 320 }),
+    );
+    ripple.value = 0;
+    ripple.value = withTiming(1, { duration: 450 });
+    router.push('/capture');
+  }
 
   function renderTab(tab: TabDef) {
     const route = state.routes.find((item) => item.name === tab.name);
@@ -123,13 +144,16 @@ function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
       />
       {LEFT_TABS.map(renderTab)}
       <View style={styles.centerSlot}>
-        <Pressable
-          style={styles.capture}
-          accessibilityLabel="Capture meal"
-          onPress={() => router.push('/capture')}>
-          <View style={styles.plusHorizontal} />
-          <View style={styles.plusVertical} />
-        </Pressable>
+        <Animated.View pointerEvents="none" style={[styles.ripple, rippleStyle]} />
+        <Animated.View style={popStyle}>
+          <Pressable
+            style={styles.capture}
+            accessibilityLabel="Capture meal"
+            onPress={handleCapture}>
+            <View style={styles.plusHorizontal} />
+            <View style={styles.plusVertical} />
+          </Pressable>
+        </Animated.View>
       </View>
       {RIGHT_TABS.map(renderTab)}
     </View>
@@ -186,6 +210,15 @@ const styles = StyleSheet.create({
     width: 72,
     height: 58,
     alignItems: 'center',
+  },
+  ripple: {
+    position: 'absolute',
+    top: -24,
+    left: 6,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: C.accent,
   },
   capture: {
     position: 'absolute',
