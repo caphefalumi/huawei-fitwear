@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Pressable } from '@/components/pressable';
 import { Palette as C } from '@/constants/palette';
 import { recoveryTitle, useHealth } from '@/features/health/health-store';
+import { routinesFor } from '@/features/workout/routines';
 import { RecoverySheet } from '@/features/recovery/recovery-sheet';
 import { useMeals } from '@/features/meals/meals-store';
 import { NutritionRing } from '@/features/home/ring';
@@ -33,6 +34,7 @@ export function HomeScreen() {
   const targetKcal = weightUpdated ? 2160 : 2200;
   const consumedKcal = 1320 + loggedKcal;
   const kcalLeft = targetKcal - consumedKcal;
+  const today = routinesFor(recovery).today;
 
   return (
     <ScrollView
@@ -47,6 +49,18 @@ export function HomeScreen() {
       </View>
 
       <Text style={styles.title}>Today</Text>
+
+      <Card style={styles.focus}>
+        <Text style={styles.focusLine} numberOfLines={1}>
+          Today: {today.name} · {today.sets} sets · ~{today.minutes} min
+        </Text>
+        <Text style={styles.focusMuted} numberOfLines={1}>
+          {kcalLeft} kcal left
+        </Text>
+        <Text style={styles.focusMuted} numberOfLines={1}>
+          {recovery ? recoveryTitle(recovery) : 'Watch connected'}
+        </Text>
+      </Card>
 
       {weightUpdated && !bannerDismissed ? (
         <View style={styles.banner}>
@@ -211,6 +225,19 @@ const styles = StyleSheet.create({
   },
   consumedLine: {
     fontSize: 11,
+    color: C.textMuted,
+  },
+  focus: {
+    gap: 4,
+    paddingVertical: 14,
+  },
+  focusLine: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.text,
+  },
+  focusMuted: {
+    fontSize: 12,
     color: C.textMuted,
   },
   section: {
