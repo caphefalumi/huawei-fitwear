@@ -32,7 +32,7 @@ export function NutritionScreen() {
       </View>
 
       <Card style={styles.center}>
-        <NutritionRing kcalLeft={left} saved={weightUpdated} />
+        <NutritionRing kcalLeft={left} progress={consumedKcal / targetKcal} />
 
         <View style={styles.stats}>
           <View style={styles.statRow}>

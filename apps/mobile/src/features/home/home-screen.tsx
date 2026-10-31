@@ -115,7 +115,7 @@ export function HomeScreen() {
           <Text style={styles.cardHeaderText}>Nutrition</Text>
 
           <View style={styles.nutritionBody}>
-            <NutritionRing kcalLeft={kcalShown} saved={weightUpdated} />
+            <NutritionRing kcalLeft={kcalShown} progress={consumedKcal / targetKcal} />
 
             <View style={styles.macros}>
               <MacroBar label="Protein" value={92 + loggedMacros.protein} target={140} unit="g" />
