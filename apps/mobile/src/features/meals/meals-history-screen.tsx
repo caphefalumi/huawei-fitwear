@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Pressable } from '@/components/pressable';
@@ -94,9 +95,11 @@ export function MealsHistoryScreen() {
       {items.length === 0 ? (
         <Text style={styles.empty}>No meals match “{query.trim()}”.</Text>
       ) : (
-        items.map((item) => (
-          <Pressable
+        items.map((item, index) => (
+          <Animated.View
             key={item.id}
+            entering={index < 4 ? FadeInUp.delay(index * 50).duration(220) : undefined}>
+          <Pressable
             style={styles.card}
             onPress={() => router.push(`/meal?log=${item.id}`)}>
             <Image
@@ -118,6 +121,7 @@ export function MealsHistoryScreen() {
             </View>
             <Text style={styles.kcal}>{item.kcal} kcal</Text>
           </Pressable>
+          </Animated.View>
         ))
       )}
     </ScrollView>

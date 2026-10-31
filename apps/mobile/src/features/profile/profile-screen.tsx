@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Pressable } from '@/components/pressable';
@@ -58,7 +59,8 @@ export function ProfileScreen() {
       ]}>
       <Text style={styles.title}>Profile</Text>
 
-      <View style={styles.identity}>
+      <Animated.View entering={FadeInUp.duration(220)}>
+        <View style={styles.identity}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>SN</Text>
         </View>
@@ -67,7 +69,9 @@ export function ProfileScreen() {
           <Text style={styles.userHandle}>Sam Nguyen</Text>
         </View>
       </View>
+      </Animated.View>
 
+      <Animated.View entering={FadeInUp.delay(50).duration(220)}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Profile overview</Text>
         <ProfileRow label="Birthdate" value="14 Jun 1998" />
@@ -83,7 +87,9 @@ export function ProfileScreen() {
           onPress={() => setOpenSheet('weight')}
         />
       </View>
+      </Animated.View>
 
+      <Animated.View entering={FadeInUp.delay(100).duration(220)}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Refine your plan</Text>
         <ProfileRow label="Goal / target" value={plan.goal} onPress={() => setOpenSheet('goal')} />
@@ -108,8 +114,10 @@ export function ProfileScreen() {
           onPress={() => setOpenSheet('recovery')}
         />
       </View>
+      </Animated.View>
 
       {sex === 'Female' ? (
+        <Animated.View entering={FadeInUp.delay(150).duration(220)}>
         <Pressable
           style={[styles.periodButton, inPeriod && styles.periodButtonActive]}
           onPress={() => saveRecovery(inPeriod ? null : createRecovery(PERIOD_AREA))}>
@@ -117,6 +125,7 @@ export function ProfileScreen() {
             {inPeriod ? 'My period has ended' : 'I am in my period'}
           </Text>
         </Pressable>
+        </Animated.View>
       ) : null}
 
       {openSheet === 'height' ? <HeightSheet visible onClose={close} /> : null}

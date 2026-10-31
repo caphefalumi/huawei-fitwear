@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Pressable } from '@/components/pressable';
@@ -106,17 +107,20 @@ export function WorkoutPlanScreen() {
       </View>
 
       {recovery ? (
-        <Pressable style={styles.recoveryCard} onPress={() => setRecoveryOpen(true)}>
+        <Animated.View entering={FadeInUp.duration(220)}>
+          <Pressable style={styles.recoveryCard} onPress={() => setRecoveryOpen(true)}>
           <Image source={icons.shieldCheck} style={styles.recoveryIcon} contentFit="contain" />
           <View style={styles.recoveryCopy}>
             <Text style={styles.recoveryTitle}>Recovery</Text>
             <Text style={styles.recoverySub}>{recoveryLine}</Text>
           </View>
         </Pressable>
+        </Animated.View>
       ) : null}
 
       <View style={styles.section}>
         <SectionHeading title="Today" actionLabel={today.name} />
+        <Animated.View entering={FadeInUp.delay(50).duration(220)}>
         <Card style={styles.todayCard}>
           <View style={styles.todayRow}>
             <View style={styles.todayCopy}>
@@ -139,10 +143,12 @@ export function WorkoutPlanScreen() {
             <Text style={styles.footnote}>ADJUSTED FOR {adjustedFor.toUpperCase()}</Text>
           ) : null}
         </Card>
+        </Animated.View>
       </View>
 
       <View style={styles.section}>
         <SectionHeading title="Upcoming" actionLabel="Oct 9" />
+        <Animated.View entering={FadeInUp.delay(100).duration(220)}>
         <Card>
           <View style={styles.nextHeader}>
             <View style={styles.todayCopy}>
@@ -163,10 +169,12 @@ export function WorkoutPlanScreen() {
           </View>
           {recovery ? <Text style={styles.footnote}>IF READY · not cleared medically</Text> : null}
         </Card>
+        </Animated.View>
       </View>
 
       <View style={styles.section}>
         <SectionHeading title="Browse muscle groups" actionLabel="6 groups" />
+        <Animated.View entering={FadeInUp.delay(150).duration(220)}>
         <View style={styles.groups}>
           {MUSCLE_GROUPS.map((group) => (
             <Pressable
@@ -179,6 +187,7 @@ export function WorkoutPlanScreen() {
             </Pressable>
           ))}
         </View>
+        </Animated.View>
       </View>
 
       <Pressable style={styles.primaryButton} onPress={() => router.push('/chest-plan')}>
