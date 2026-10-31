@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Pressable } from '@/components/pressable';
@@ -9,6 +9,25 @@ import { useHealth } from '@/features/health/health-store';
 import { BackHeader, Card } from '@/features/home/ui';
 import { RANGE_DATA, RANGES, type Range } from '@/features/home/progress-data';
 import { WeightChart } from '@/features/home/weight-chart';
+
+/** Bar grows with a spring each time it appears. */
+function ActivityBar({ height, index }: { height: number; index: number }) {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const t = Animated.spring(anim, {
+      toValue: height,
+      useNativeDriver: false,
+      damping: 9,
+      stiffness: 160,
+      delay: index * 60,
+    });
+    t.start();
+    return () => t.stop();
+  }, [anim, height, index]);
+
+  return <Animated.View style={[styles.bar, { height: anim }]} />;
+}
 
 export function ProgressScreen() {
   const insets = useSafeAreaInsets();
@@ -73,10 +92,10 @@ export function ProgressScreen() {
           <Text style={styles.cardNote}>{data.sessionsNote}</Text>
         </View>
 
-        <View style={styles.bars}>
-          {data.bars.map((week) => (
+        <View key={range} style={styles.bars}>
+          {data.bars.map((week, i) => (
             <View key={week.label} style={styles.barColumn}>
-              <View style={[styles.bar, { height: 12 + (week.sessions / maxSessions) * 48 }]} />
+              <ActivityBar height={12 + (week.sessions / maxSessions) * 48} index={i} />
               <Text style={styles.dateLabel}>{week.label}</Text>
             </View>
           ))}

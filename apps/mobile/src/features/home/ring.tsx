@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Palette as C } from '@/constants/palette';
@@ -22,7 +23,7 @@ const icons = {
 
 export function NutritionRing({ kcalLeft, saved }: { kcalLeft: number; saved: boolean }) {
   return (
-    <View style={styles.ring}>
+    <Animated.View entering={ZoomIn.springify().damping(12)} style={styles.ring}>
       <Image source={icons.track} style={styles.disc} contentFit="fill" />
       <Image
         source={saved ? icons.consumed : icons.remaining}
@@ -37,7 +38,7 @@ export function NutritionRing({ kcalLeft, saved }: { kcalLeft: number; saved: bo
         <Text style={styles.value}>{kcalLeft}</Text>
         <Text style={styles.label}>kcal left</Text>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

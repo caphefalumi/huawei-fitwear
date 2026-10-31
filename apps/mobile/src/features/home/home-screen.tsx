@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -48,6 +48,9 @@ export function HomeScreen() {
   const { loggedKcal, loggedMacros } = useMeals();
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [visit, setVisit] = useState(0);
+
+  useFocusEffect(useCallback(() => setVisit((v) => v + 1), []));
 
   useEffect(() => setBannerDismissed(false), [weightKg]);
 
@@ -106,7 +109,7 @@ export function HomeScreen() {
         </View>
       ) : null}
 
-      <Animated.View entering={FadeInUp.delay(60).duration(250)}>
+      <Animated.View key={visit} entering={FadeInUp.delay(60).duration(250)}>
         <Pressable onPress={() => router.push('/nutrition')}>
           <Card>
           <Text style={styles.cardHeaderText}>Nutrition</Text>
