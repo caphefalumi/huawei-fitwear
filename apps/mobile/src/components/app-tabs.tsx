@@ -144,8 +144,8 @@ function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
       />
       {LEFT_TABS.map(renderTab)}
       <View style={styles.centerSlot}>
-        <Animated.View pointerEvents="none" style={[styles.ripple, rippleStyle]} />
-        <Animated.View style={popStyle}>
+        <Animated.View style={[styles.captureWrap, popStyle]}>
+          <Animated.View pointerEvents="none" style={[styles.ripple, rippleStyle]} />
           <Pressable
             style={styles.capture}
             accessibilityLabel="Capture meal"
@@ -213,16 +213,21 @@ const styles = StyleSheet.create({
   },
   ripple: {
     position: 'absolute',
-    top: -24,
-    left: 6,
+    top: 0,
+    left: 0,
     width: 60,
     height: 60,
     borderRadius: 30,
     backgroundColor: C.accent,
   },
+  captureWrap: {
+    width: 60,
+    height: 60,
+    marginTop: -24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   capture: {
-    position: 'absolute',
-    top: -24,
     width: 60,
     height: 60,
     borderRadius: 30,
