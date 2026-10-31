@@ -32,7 +32,17 @@ Thumbs.db
 
 # Tool harness metadata
 .pi-glla/
+.pi/
+.claude/
+.agents/
 tmp/
+
+# Tool lockfiles (bun is source of truth)
+package-lock.json
+skills-lock.json
+
+# Superpowers working docs (local only)
+docs/superpowers/
 
 # Test artifacts
 test-results/
