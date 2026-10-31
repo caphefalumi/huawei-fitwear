@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Pressable } from '@/components/pressable';
@@ -15,12 +15,12 @@ function ActivityBar({ height, index }: { height: number; index: number }) {
   const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const t = Animated.spring(anim, {
+    const t = Animated.timing(anim, {
       toValue: height,
-      useNativeDriver: false,
-      damping: 9,
-      stiffness: 160,
+      duration: 500,
       delay: index * 60,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      useNativeDriver: false,
     });
     t.start();
     return () => t.stop();
@@ -73,7 +73,7 @@ export function ProgressScreen() {
 
         <Text style={styles.bigValue}>{weightKg.toFixed(1)} kg</Text>
 
-        <WeightChart weights={data.weights} />
+        <WeightChart key={range} weights={data.weights} />
 
         <View style={styles.dates}>
           {data.dates.map((date) => (
