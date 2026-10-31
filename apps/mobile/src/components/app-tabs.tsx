@@ -1,5 +1,4 @@
 import { Image } from 'expo-image';
-import { GlassView } from 'expo-glass-effect';
 import { router, Tabs } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { useEffect, useState } from 'react';
@@ -24,10 +23,11 @@ const RIGHT_TABS = [
 
 type TabDef = (typeof LEFT_TABS)[number];
 
-const PILL_WIDTH = 24;
-const PILL_DURATION = 250;
+const BUBBLE_DURATION = 250;
 const CONTENT_DURATION = 200;
 const LABEL_HEIGHT = 15;
+const BUBBLE_INSET_X = 8;
+const BUBBLE_HEIGHT = 44;
 
 function TabButton({
   tab,
@@ -72,17 +72,23 @@ function TabButton({
 function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
   const activeName = state.routes[state.index]?.name;
   const [layouts, setLayouts] = useState<Record<string, { x: number; width: number }>>({});
-  const pillX = useSharedValue(0);
+  const bubbleX = useSharedValue(0);
+  const bubbleW = useSharedValue(0);
 
   const target = activeName ? layouts[activeName] : undefined;
-  const targetX = target ? target.x + (target.width - PILL_WIDTH) / 2 : null;
+  const targetX = target ? target.x + BUBBLE_INSET_X : null;
+  const targetW = target ? target.width - BUBBLE_INSET_X * 2 : null;
 
   useEffect(() => {
-    if (targetX !== null) pillX.value = withTiming(targetX, { duration: PILL_DURATION });
-  }, [targetX, pillX]);
+    if (targetX !== null && targetW !== null) {
+      bubbleX.value = withTiming(targetX, { duration: BUBBLE_DURATION });
+      bubbleW.value = withTiming(targetW, { duration: BUBBLE_DURATION });
+    }
+  }, [targetX, targetW, bubbleX, bubbleW]);
 
-  const pillStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: pillX.value }],
+  const bubbleStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: bubbleX.value }],
+    width: bubbleW.value,
   }));
 
   function renderTab(tab: TabDef) {
@@ -110,10 +116,11 @@ function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
   }
 
   return (
-    <GlassView
-      style={[styles.bar, { paddingBottom: insets.bottom }]}
-      glassEffectStyle="clear"
-      tintColor="rgba(255,255,255,0.82)">
+    <View style={[styles.bar, { paddingBottom: insets.bottom }]}>
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.bubble, bubbleStyle, { opacity: targetX === null ? 0 : 1 }]}
+      />
       {LEFT_TABS.map(renderTab)}
       <View style={styles.centerSlot}>
         <Pressable
@@ -125,11 +132,7 @@ function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
         </Pressable>
       </View>
       {RIGHT_TABS.map(renderTab)}
-      <Animated.View
-        pointerEvents="none"
-        style={[styles.pill, pillStyle, { opacity: targetX === null ? 0 : 1 }]}
-      />
-    </GlassView>
+    </View>
   );
 }
 
@@ -148,7 +151,7 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.82)',
+    backgroundColor: C.surface,
     borderTopWidth: 1,
     borderTopColor: C.border,
   },
@@ -171,14 +174,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     overflow: 'hidden',
   },
-  pill: {
+  bubble: {
     position: 'absolute',
-    top: 0,
+    top: (58 - BUBBLE_HEIGHT) / 2,
     left: 0,
-    width: PILL_WIDTH,
-    height: 3,
+    height: BUBBLE_HEIGHT,
     borderRadius: 100,
-    backgroundColor: C.accent,
+    backgroundColor: 'rgba(157,35,50,0.12)',
   },
   centerSlot: {
     width: 72,
