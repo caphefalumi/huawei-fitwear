@@ -1,44 +1,21 @@
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Pressable } from '@/components/pressable';
 import { Palette as C } from '@/constants/palette';
 import { useHealth } from '@/features/health/health-store';
 import { BackHeader, Card } from '@/features/home/ui';
-
-const icons = {
-  weightLine: require('@/assets/images/progress/weight-line.svg'),
-  weightDot: require('@/assets/images/progress/weight-dot.svg'),
-  weightDotLatest: require('@/assets/images/progress/weight-dot-latest.svg'),
-};
-
-const RANGES = ['Week', 'Month', '3 mo', 'Year'] as const;
-
-const WEEKS = [
-  { label: 'Sep 17', sessions: 3 },
-  { label: 'Sep 24', sessions: 4 },
-  { label: 'Oct 1', sessions: 3 },
-  { label: 'Oct 8', sessions: 2 },
-];
-
-/** Line geometry taken from the Figma export (weight-line.svg viewBox + vertices). */
-const LINE_VIEWBOX = { width: 268.5, height: 52.4478 };
-const LINE_POINTS = [
-  { x: 0.2948, y: 1.2147 },
-  { x: 89.2948, y: 22.8147 },
-  { x: 134.295, y: 29.6147 },
-  { x: 179.295, y: 36.4147 },
-  { x: 268.295, y: 51.2147 },
-];
-
-const percent = (value: number, total: number): `${number}%` => `${(value / total) * 100}%`;
+import { RANGE_DATA, RANGES, type Range } from '@/features/home/progress-data';
+import { WeightChart } from '@/features/home/weight-chart';
 
 export function ProgressScreen() {
   const insets = useSafeAreaInsets();
   const { weightKg } = useHealth();
-  const [range, setRange] = useState<(typeof RANGES)[number]>('Month');
+  const [range, setRange] = useState<Range>('Month');
+  const data = RANGE_DATA[range];
+  const maxSessions = Math.max(...data.bars.map((bar) => bar.sessions));
 
   return (
     <ScrollView
@@ -71,52 +48,16 @@ export function ProgressScreen() {
         <View style={styles.weightHeader}>
           <Text style={styles.cardTitle}>Weight</Text>
           <View style={styles.pill}>
-            <Text style={styles.pillText}>−1.2 kg</Text>
+            <Text style={styles.pillText}>{data.delta}</Text>
           </View>
         </View>
 
         <Text style={styles.bigValue}>{weightKg.toFixed(1)} kg</Text>
 
-        <View style={styles.chartRow}>
-          <View style={styles.chart}>
-            <View style={styles.grid}>
-              {[0, 1, 2].map((line) => (
-                <View key={line} style={styles.gridLine} />
-              ))}
-            </View>
-
-            <View style={styles.plotWrap}>
-              <View style={styles.plot}>
-                <Image source={icons.weightLine} style={styles.plotLine} contentFit="fill" />
-                {LINE_POINTS.map((point, index) => (
-                  <Image
-                    key={`${point.x}-${point.y}`}
-                    source={
-                      index === LINE_POINTS.length - 1 ? icons.weightDotLatest : icons.weightDot
-                    }
-                    style={[
-                      styles.dot,
-                      {
-                        left: percent(point.x, LINE_VIEWBOX.width),
-                        top: percent(point.y, LINE_VIEWBOX.height),
-                      },
-                    ]}
-                    contentFit="contain"
-                  />
-                ))}
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.axis}>
-            <Text style={styles.axisLabel}>73.5</Text>
-            <Text style={styles.axisLabel}>72.5</Text>
-            <Text style={styles.axisLabel}>71.5</Text>
-          </View>
-        </View>
+        <WeightChart weights={data.weights} />
 
         <View style={styles.dates}>
-          {['Sep 17', 'Sep 24', 'Oct 1', 'Oct 7'].map((date) => (
+          {data.dates.map((date) => (
             <Text key={date} style={styles.dateLabel}>
               {date}
             </Text>
@@ -129,21 +70,21 @@ export function ProgressScreen() {
       <Card>
         <View style={styles.weightHeader}>
           <Text style={styles.cardTitle}>Training activity</Text>
-          <Text style={styles.cardNote}>12 sessions · last 4 weeks</Text>
+          <Text style={styles.cardNote}>{data.sessionsNote}</Text>
         </View>
 
         <View style={styles.bars}>
-          {WEEKS.map((week) => (
+          {data.bars.map((week) => (
             <View key={week.label} style={styles.barColumn}>
-              <View style={[styles.bar, { height: 12 + week.sessions * 12 }]} />
+              <View style={[styles.bar, { height: 12 + (week.sessions / maxSessions) * 48 }]} />
               <Text style={styles.dateLabel}>{week.label}</Text>
             </View>
           ))}
         </View>
 
         <View style={styles.durationRow}>
-          <Text style={styles.bigValue}>2h 18m</Text>
-          <Text style={styles.cardNote}>total duration · this week</Text>
+          <Text style={styles.bigValue}>{data.duration}</Text>
+          <Text style={styles.cardNote}>{data.durationNote}</Text>
         </View>
 
         <Text style={styles.cardNote}>
@@ -253,59 +194,6 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: '600',
     color: C.text,
-  },
-  chartRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: 6,
-  },
-  chart: {
-    flex: 1,
-    height: 124,
-    justifyContent: 'center',
-  },
-  grid: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 12,
-    bottom: 12,
-    justifyContent: 'space-between',
-  },
-  gridLine: {
-    height: 1,
-    backgroundColor: C.border,
-  },
-  plotWrap: {
-    paddingHorizontal: 4,
-  },
-  plot: {
-    width: '100%',
-    aspectRatio: LINE_VIEWBOX.width / LINE_VIEWBOX.height,
-  },
-  plotLine: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  dot: {
-    position: 'absolute',
-    width: 8,
-    height: 8,
-    marginLeft: -4,
-    marginTop: -4,
-  },
-  axis: {
-    width: 26,
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingVertical: 8,
-  },
-  axisLabel: {
-    fontSize: 9,
-    color: C.textMuted,
   },
   dates: {
     flexDirection: 'row',

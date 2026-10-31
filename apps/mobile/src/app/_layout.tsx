@@ -22,7 +22,7 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="nutrition" />
               <Stack.Screen name="progress" />
-              <Stack.Screen name="recovery" />
+              <Stack.Screen name="capture" />
               <Stack.Screen name="chest-plan" />
               <Stack.Screen name="exercise-guide" />
               <Stack.Screen name="meal" />

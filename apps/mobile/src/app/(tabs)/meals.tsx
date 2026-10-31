@@ -1,5 +1,5 @@
-import { MealCaptureScreen } from '@/features/meals/capture-screen';
+import { MealsHistoryScreen } from '@/features/meals/meals-history-screen';
 
 export default function MealsRoute() {
-  return <MealCaptureScreen />;
+  return <MealsHistoryScreen />;
 }

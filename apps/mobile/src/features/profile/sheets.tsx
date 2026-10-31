@@ -1,41 +1,20 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { RadioList } from '@/components/radio-list';
 import { Sheet, SheetActions, SheetField } from '@/components/sheet';
+import { WheelPicker } from '@/components/wheel-picker';
 import { Palette as C } from '@/constants/palette';
-import {
-  useHealth,
-  type PlanPreferences,
-} from '@/features/health/health-store';
+import { useHealth, type Sex } from '@/features/health/health-store';
 
-const ACTIVITY_OPTIONS = ['Sedentary', 'Light', 'Moderate', 'High'];
-const GOAL_OPTIONS = ['Lose fat', 'Maintain', 'Build muscle'];
+const ACTIVITY_OPTIONS = ['Sedentary', 'Light', 'Moderate', 'High'] as const;
+const GOAL_OPTIONS = ['Lose fat', 'Maintain', 'Build muscle'] as const;
+const SEX_OPTIONS: readonly Sex[] = ['Male', 'Female', 'Rather not say'];
 
-function Chips({
-  options,
-  value,
-  onChange,
-}: {
-  options: string[];
-  value: string;
-  onChange: (next: string) => void;
-}) {
-  return (
-    <View style={styles.chips}>
-      {options.map((option) => {
-        const active = option === value;
-        return (
-          <Pressable
-            key={option}
-            style={[styles.chip, active && styles.chipActive]}
-            onPress={() => onChange(option)}>
-            <Text style={[styles.chipLabel, active && styles.chipLabelActive]}>{option}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
+const HEIGHT_VALUES = Array.from({ length: 101 }, (_, index) => 120 + index);
+const SESSION_VALUES = [1, 2, 3, 4, 5, 6, 7];
+
+type SheetProps = { visible: boolean; onClose: () => void };
 
 function NumberField({
   value,
@@ -60,24 +39,26 @@ function NumberField({
   );
 }
 
-export function HeightSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+export function HeightSheet({ visible, onClose }: SheetProps) {
   const { heightCm, saveHeight } = useHealth();
-  const [draft, setDraft] = useState(String(heightCm));
+  const [draft, setDraft] = useState(heightCm);
 
   function handleSave() {
-    const next = Number.parseInt(draft, 10);
+    saveHeight(draft);
     onClose();
-    if (Number.isFinite(next) && next > 0) saveHeight(next);
   }
 
   return (
-    <Sheet visible={visible} title="Update height" onClose={onClose}>
+    <Sheet visible={visible} title="Height" onClose={onClose}>
+      <WheelPicker
+        values={HEIGHT_VALUES}
+        value={draft}
+        onChange={setDraft}
+        format={(value) => `${value} cm`}
+      />
       <Text style={styles.body}>Height contributes to your initial energy estimate.</Text>
-      <SheetField label="Height">
-        <NumberField value={draft} onChange={setDraft} unit="cm" />
-      </SheetField>
       <SheetActions
-        primaryLabel="Save height"
+        primaryLabel="OK"
         secondaryLabel="Cancel"
         onPrimary={handleSave}
         onSecondary={onClose}
@@ -86,7 +67,7 @@ export function HeightSheet({ visible, onClose }: { visible: boolean; onClose: (
   );
 }
 
-export function WeightSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+export function WeightSheet({ visible, onClose }: SheetProps) {
   const { weightKg, saveWeight } = useHealth();
   const [draft, setDraft] = useState(weightKg.toFixed(1));
 
@@ -118,63 +99,102 @@ export function WeightSheet({ visible, onClose }: { visible: boolean; onClose: (
   );
 }
 
-export function PlanSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const { plan, savePlan } = useHealth();
-  const [draft, setDraft] = useState<PlanPreferences>(plan);
-  const [target, setTarget] = useState(String(plan.targetWeightKg));
-  const [sessions, setSessions] = useState(String(plan.sessions));
+export function SexSheet({ visible, onClose }: SheetProps) {
+  const { sex, saveSex } = useHealth();
 
-  function update(patch: Partial<PlanPreferences>) {
-    setDraft((prev) => ({ ...prev, ...patch }));
-  }
+  return (
+    <Sheet visible={visible} title="Sex" onClose={onClose}>
+      <RadioList
+        options={SEX_OPTIONS}
+        value={sex}
+        onChange={(next) => {
+          saveSex(next);
+          onClose();
+        }}
+      />
+    </Sheet>
+  );
+}
+
+export function GoalSheet({ visible, onClose }: SheetProps) {
+  const { plan, savePlan } = useHealth();
+
+  return (
+    <Sheet visible={visible} title="Goal / target" onClose={onClose}>
+      <RadioList
+        options={GOAL_OPTIONS}
+        value={plan.goal as (typeof GOAL_OPTIONS)[number]}
+        onChange={(goal) => {
+          savePlan({ ...plan, goal });
+          onClose();
+        }}
+      />
+    </Sheet>
+  );
+}
+
+export function ActivitySheet({ visible, onClose }: SheetProps) {
+  const { plan, savePlan } = useHealth();
+
+  return (
+    <Sheet visible={visible} title="Daily activity" onClose={onClose}>
+      <RadioList
+        options={ACTIVITY_OPTIONS}
+        value={plan.activity as (typeof ACTIVITY_OPTIONS)[number]}
+        onChange={(activity) => {
+          savePlan({ ...plan, activity });
+          onClose();
+        }}
+      />
+    </Sheet>
+  );
+}
+
+export function FrequencySheet({ visible, onClose }: SheetProps) {
+  const { plan, savePlan } = useHealth();
+  const [draft, setDraft] = useState(plan.sessions);
 
   function handleSave() {
-    const nextTarget = Number.parseFloat(target.replace(',', '.'));
-    const nextSessions = Number.parseInt(sessions, 10);
-    savePlan({
-      ...draft,
-      targetWeightKg: Number.isFinite(nextTarget) && nextTarget > 0 ? nextTarget : plan.targetWeightKg,
-      sessions: Number.isFinite(nextSessions) && nextSessions > 0 ? nextSessions : plan.sessions,
-    });
+    savePlan({ ...plan, sessions: draft });
     onClose();
   }
 
   return (
-    <Sheet visible={visible} title="Refine your plan" onClose={onClose}>
-      <Text style={styles.optional}>OPTIONAL</Text>
-      <Text style={styles.body}>
-        Basics give a starting estimate. Activity and goals personalize it with a little extra
-        input.
-      </Text>
-      <SheetField label="Daily activity">
-        <Chips
-          options={ACTIVITY_OPTIONS}
-          value={draft.activity}
-          onChange={(activity) => update({ activity })}
-        />
-      </SheetField>
-      <SheetField label="Goal">
-        <Chips
-          options={GOAL_OPTIONS}
-          value={draft.goal}
-          onChange={(goal) => update({ goal })}
-        />
-      </SheetField>
-      <View style={styles.pair}>
-        <View style={styles.pairItem}>
-          <SheetField label="Target weight">
-            <NumberField value={target} onChange={setTarget} unit="kg" />
-          </SheetField>
-        </View>
-        <View style={styles.pairItem}>
-          <SheetField label="Sessions / week">
-            <NumberField value={sessions} onChange={setSessions} unit="sessions" />
-          </SheetField>
-        </View>
-      </View>
+    <Sheet visible={visible} title="Workout frequency" onClose={onClose}>
+      <WheelPicker
+        values={SESSION_VALUES}
+        value={draft}
+        onChange={setDraft}
+        format={(value) => `${value} ${value === 1 ? 'session' : 'sessions'}/week`}
+      />
       <SheetActions
-        primaryLabel="Save preferences"
-        secondaryLabel="Skip for now"
+        primaryLabel="OK"
+        secondaryLabel="Cancel"
+        onPrimary={handleSave}
+        onSecondary={onClose}
+      />
+    </Sheet>
+  );
+}
+
+export function TargetWeightSheet({ visible, onClose }: SheetProps) {
+  const { plan, savePlan } = useHealth();
+  const [draft, setDraft] = useState(plan.targetWeightKg.toFixed(1));
+
+  function handleSave() {
+    const next = Number.parseFloat(draft.replace(',', '.'));
+    if (Number.isFinite(next) && next > 0) savePlan({ ...plan, targetWeightKg: next });
+    onClose();
+  }
+
+  return (
+    <Sheet visible={visible} title="Target weight" onClose={onClose}>
+      <SheetField label="Target weight">
+        <NumberField value={draft} onChange={setDraft} unit="kg" />
+      </SheetField>
+      <SheetActions
+        primaryLabel="Save"
+        secondaryLabel="Cancel"
         onPrimary={handleSave}
         onSecondary={onClose}
       />
@@ -186,12 +206,6 @@ const styles = StyleSheet.create({
   body: {
     fontSize: 13,
     color: C.textMuted,
-  },
-  optional: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.6,
-    color: C.accent,
   },
   note: {
     fontSize: 11,
@@ -217,36 +231,5 @@ const styles = StyleSheet.create({
   unit: {
     fontSize: 13,
     color: C.textMuted,
-  },
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  chipActive: {
-    backgroundColor: C.accentTint,
-    borderColor: C.accentBorder,
-  },
-  chipLabel: {
-    fontSize: 13,
-    color: C.textMuted,
-  },
-  chipLabelActive: {
-    fontWeight: '600',
-    color: C.accent,
-  },
-  pair: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  pairItem: {
-    flex: 1,
   },
 });
