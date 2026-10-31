@@ -1,9 +1,10 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Pressable } from '@/components/pressable';
 import { Palette as C } from '@/constants/palette';
 import { useHealth } from '@/features/health/health-store';
 import { BackHeader, Card } from '@/features/home/ui';
@@ -76,7 +77,9 @@ export function ChestPlanScreen() {
 
       <View style={styles.heading}>
         <Text style={styles.title}>Chest</Text>
-        <Text style={styles.subtitle}>Tentative return · {recovery.returnDate}</Text>
+        {recovery ? (
+          <Text style={styles.subtitle}>Tentative return · {recovery.returnDate}</Text>
+        ) : null}
       </View>
 
       <Image
@@ -94,12 +97,14 @@ export function ChestPlanScreen() {
         ))}
       </View>
 
-      <View style={styles.restriction}>
-        <Image source={icons.lock} style={styles.restrictionIcon} contentFit="contain" />
-        <Text style={styles.restrictionText}>
-          View only during {recovery.area.toLowerCase()} recovery. Overload is disabled.
-        </Text>
-      </View>
+      {recovery ? (
+        <View style={styles.restriction}>
+          <Image source={icons.lock} style={styles.restrictionIcon} contentFit="contain" />
+          <Text style={styles.restrictionText}>
+            View only during {recovery.area.toLowerCase()} recovery.
+          </Text>
+        </View>
+      ) : null}
 
       <Text style={styles.sectionTitle}>Exercises</Text>
 
@@ -137,6 +142,8 @@ export function ChestPlanScreen() {
                 <Text style={styles.loadValue}>{loads[exercise.key]}</Text>
                 <Text style={styles.loadUnit}>{exercise.loadUnit}</Text>
               </View>
+            </View>
+            <View style={styles.footerActions}>
               <View style={styles.stepper}>
                 <Pressable style={styles.stepButton} onPress={() => adjust(exercise, -1)}>
                   <View style={styles.minus} />
@@ -146,10 +153,10 @@ export function ChestPlanScreen() {
                   <View style={styles.plus} />
                 </Pressable>
               </View>
-            </View>
-            <View style={styles.watchGroup}>
-              <Image source={icons.play} style={styles.watchIcon} contentFit="contain" />
-              <Text style={styles.watchLabel}>Watch</Text>
+              <View style={styles.watchGroup}>
+                <Image source={icons.play} style={styles.watchIcon} contentFit="contain" />
+                <Text style={styles.watchLabel}>Watch</Text>
+              </View>
             </View>
           </View>
         </Card>
@@ -158,7 +165,9 @@ export function ChestPlanScreen() {
       <Pressable style={styles.disabledAction}>
         <Text style={styles.disabledActionLabel}>Start workout</Text>
       </Pressable>
-      <Text style={styles.footnote}>Resume your regular plan when you’re ready.</Text>
+      {recovery ? (
+        <Text style={styles.footnote}>Resume your regular plan when you’re ready.</Text>
+      ) : null}
     </ScrollView>
   );
 }
@@ -305,42 +314,45 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 3,
-    backgroundColor: C.previewTint,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
   },
   loadValue: {
-    fontSize: 10,
+    fontSize: 14,
     fontWeight: '600',
     color: C.text,
   },
   loadUnit: {
-    fontSize: 10,
+    fontSize: 12,
     color: C.textMuted,
   },
   stepper: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 8,
   },
   stepButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: C.previewTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
   minus: {
-    width: 8,
-    height: 1,
-    backgroundColor: C.textMuted,
+    width: 14,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: C.text,
   },
   plus: {
     position: 'absolute',
-    width: 1,
-    height: 8,
-    backgroundColor: C.textMuted,
+    width: 2,
+    height: 14,
+    borderRadius: 1,
+    backgroundColor: C.text,
+  },
+  footerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
   watchGroup: {
     flexDirection: 'row',

@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable as ScrimPressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Pressable } from '@/components/pressable';
 import { Palette as C } from '@/constants/palette';
 
 type SheetProps = {
@@ -18,7 +19,7 @@ export function Sheet({ visible, title, onClose, children }: SheetProps) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <Pressable style={styles.backdropFill} onPress={onClose} />
+        <ScrimPressable style={styles.backdropFill} onPress={onClose} />
         <View style={[styles.sheet, { paddingBottom: 20 + insets.bottom }]}>
           <Text style={styles.title}>{title}</Text>
           <ScrollView

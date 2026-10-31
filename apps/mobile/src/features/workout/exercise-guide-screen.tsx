@@ -1,9 +1,10 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Pressable } from '@/components/pressable';
 import { Palette as C } from '@/constants/palette';
 import { useHealth } from '@/features/health/health-store';
 import { BackHeader, Card } from '@/features/home/ui';
@@ -119,10 +120,12 @@ export function ExerciseGuideScreen() {
           </View>
         </View>
         <View style={styles.loadRow}>
-          <Text style={styles.loadLabel}>Weight</Text>
-          <View style={styles.loadInput}>
-            <Text style={styles.loadValue}>{load}</Text>
-            <Text style={styles.loadUnit}>{guide.loadUnit}</Text>
+          <View style={styles.loadGroup}>
+            <Text style={styles.loadLabel}>Weight</Text>
+            <View style={styles.loadInput}>
+              <Text style={styles.loadValue}>{load}</Text>
+              <Text style={styles.loadUnit}>{guide.loadUnit}</Text>
+            </View>
           </View>
           <View style={styles.stepper}>
             <Pressable style={styles.stepButton} onPress={() => adjust(-1)}>
@@ -151,12 +154,14 @@ export function ExerciseGuideScreen() {
         ))}
       </View>
 
-      <View style={styles.warning}>
-        <Image source={icons.shieldCheck} style={styles.warningIcon} contentFit="contain" />
-        <Text style={styles.warningText}>
-          {recovery.area} is recovering. Review only; stop if you feel pain.
-        </Text>
-      </View>
+      {recovery ? (
+        <View style={styles.warning}>
+          <Image source={icons.shieldCheck} style={styles.warningIcon} contentFit="contain" />
+          <Text style={styles.warningText}>
+            {recovery.area} is recovering. Review only; stop if you feel pain.
+          </Text>
+        </View>
+      ) : null}
 
       <Pressable style={styles.disabledAction}>
         <Image source={icons.play} style={styles.actionIcon} contentFit="contain" />
@@ -251,6 +256,12 @@ const styles = StyleSheet.create({
   loadRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  loadGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   loadLabel: {
@@ -261,42 +272,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 3,
-    backgroundColor: C.previewTint,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
   },
   loadValue: {
-    fontSize: 10,
+    fontSize: 14,
     fontWeight: '600',
     color: C.text,
   },
   loadUnit: {
-    fontSize: 10,
+    fontSize: 12,
     color: C.textMuted,
   },
   stepper: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 8,
   },
   stepButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: C.previewTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
   minus: {
-    width: 8,
-    height: 1,
-    backgroundColor: C.textMuted,
+    width: 14,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: C.text,
   },
   plus: {
     position: 'absolute',
-    width: 1,
-    height: 8,
-    backgroundColor: C.textMuted,
+    width: 2,
+    height: 14,
+    borderRadius: 1,
+    backgroundColor: C.text,
   },
   cues: {
     gap: 12,

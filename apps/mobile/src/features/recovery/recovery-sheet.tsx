@@ -1,23 +1,29 @@
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { Pressable } from '@/components/pressable';
 import { Sheet, SheetActions, SheetField } from '@/components/sheet';
 import { Palette as C } from '@/constants/palette';
-import { useHealth, type RecoveryPlan } from '@/features/health/health-store';
+import {
+  createRecovery,
+  INJURY_AREAS,
+  PERIOD_AREA,
+  useHealth,
+  type RecoveryPlan,
+} from '@/features/health/health-store';
 
 const icons = {
   shieldCheck: require('@/assets/images/home/shield-check.svg'),
-  lock: require('@/assets/images/recovery/lock.svg'),
-  switchDisabled: require('@/assets/images/recovery/switch-disabled.svg'),
 };
 
-const AREA_OPTIONS = ['Right shoulder', 'Left shoulder', 'Lower back', 'Right knee'];
+const NONE = 'None';
 
 export function RecoverySheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const { recovery, saveRecovery } = useHealth();
-  const [draft, setDraft] = useState<RecoveryPlan>(recovery);
-  const [areaPickerOpen, setAreaPickerOpen] = useState(false);
+  const { recovery, saveRecovery, sex } = useHealth();
+  const [draft, setDraft] = useState<RecoveryPlan | null>(recovery);
+
+  const options = [NONE, ...INJURY_AREAS, ...(sex === 'Female' ? [PERIOD_AREA] : [])];
 
   function handleSave() {
     saveRecovery(draft);
@@ -28,34 +34,45 @@ export function RecoverySheet({ visible, onClose }: { visible: boolean; onClose:
     <Sheet visible={visible} title="Recovery plan" onClose={onClose}>
       <Text style={styles.body}>Pause workouts and ease back with light days.</Text>
 
+      <View style={styles.chips}>
+        {options.map((area) => {
+          const active = area === (draft?.area ?? NONE);
+          return (
+            <Pressable
+              key={area}
+              style={[styles.chip, active && styles.chipActive]}
+              onPress={() => setDraft(area === NONE ? null : createRecovery(area))}>
+              <Text style={[styles.chipLabel, active && styles.chipLabelActive]}>{area}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {draft ? (
+        <RecoveryDetails draft={draft} />
+      ) : (
+        <Text style={styles.selectedNote}>No recovery plan. Your workouts continue as normal.</Text>
+      )}
+
+      <SheetActions
+        primaryLabel="Save recovery plan"
+        secondaryLabel="Cancel"
+        onPrimary={handleSave}
+        onSecondary={onClose}
+      />
+    </Sheet>
+  );
+}
+
+function RecoveryDetails({ draft }: { draft: RecoveryPlan }) {
+  return (
+    <>
       <View style={styles.selectedArea}>
         <View style={styles.selectedCopy}>
           <Text style={styles.selectedTitle}>{draft.area}</Text>
           <Text style={styles.selectedNote}>{draft.note}</Text>
         </View>
-        <Pressable onPress={() => setAreaPickerOpen((prev) => !prev)} hitSlop={8}>
-          <Text style={styles.changeLink}>Change area →</Text>
-        </Pressable>
       </View>
-
-      {areaPickerOpen ? (
-        <View style={styles.chips}>
-          {AREA_OPTIONS.map((area) => {
-            const active = area === draft.area;
-            return (
-              <Pressable
-                key={area}
-                style={[styles.chip, active && styles.chipActive]}
-                onPress={() => {
-                  setDraft((prev) => ({ ...prev, area }));
-                  setAreaPickerOpen(false);
-                }}>
-                <Text style={[styles.chipLabel, active && styles.chipLabelActive]}>{area}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : null}
 
       <View style={styles.pair}>
         <View style={styles.pairItem}>
@@ -83,31 +100,13 @@ export function RecoverySheet({ visible, onClose }: { visible: boolean; onClose:
         <Text style={styles.summaryValue}>{draft.returnDate}</Text>
       </View>
 
-      <View style={styles.disabledRow}>
-        <View style={styles.disabledCopy}>
-          <Text style={styles.disabledTitle}>Overload trigger</Text>
-          <Text style={styles.disabledNote}>Disabled during recovery</Text>
-        </View>
-        <View style={styles.switchGroup}>
-          <Image source={icons.lock} style={styles.switchIcon} contentFit="contain" />
-          <Image source={icons.switchDisabled} style={styles.switchTrack} contentFit="contain" />
-        </View>
-      </View>
-
       <View style={styles.warning}>
         <Image source={icons.shieldCheck} style={styles.warningIcon} contentFit="contain" />
         <Text style={styles.warningText}>
           Today’s workouts stay paused. If pain persists or worsens, seek medical advice.
         </Text>
       </View>
-
-      <SheetActions
-        primaryLabel="Save recovery plan"
-        secondaryLabel="Cancel"
-        onPrimary={handleSave}
-        onSecondary={onClose}
-      />
-    </Sheet>
+    </>
   );
 }
 
@@ -137,11 +136,6 @@ const styles = StyleSheet.create({
   selectedNote: {
     fontSize: 11,
     color: C.textMuted,
-  },
-  changeLink: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: C.accent,
   },
   chips: {
     flexDirection: 'row',
@@ -195,39 +189,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: C.text,
-  },
-  disabledRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: C.card,
-    borderRadius: 16,
-    padding: 14,
-  },
-  disabledCopy: {
-    gap: 3,
-  },
-  disabledTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: C.textMuted,
-  },
-  disabledNote: {
-    fontSize: 11,
-    color: C.textMuted,
-  },
-  switchGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  switchIcon: {
-    width: 14,
-    height: 14,
-  },
-  switchTrack: {
-    width: 40,
-    height: 22,
   },
   warning: {
     flexDirection: 'row',

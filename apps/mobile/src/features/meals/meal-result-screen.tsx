@@ -1,18 +1,10 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import {
-  Animated,
-  PanResponder,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Animated, PanResponder, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Pressable } from '@/components/pressable';
 import { Sheet } from '@/components/sheet';
 import { Palette as C } from '@/constants/palette';
 import { Glyph, Header, PrimaryButton, SectionTitle, icons } from './meals-ui';
@@ -21,15 +13,21 @@ import {
   splitDetail,
   useMeals,
   type MealItem,
+  type MealLog,
 } from './meals-store';
 
 const ACTION_WIDTH = 88;
 
 type SwipeState = 'edit' | 'delete' | null;
 
-export function MealResultScreen() {
+export function MealResultScreen({ log }: { log?: MealLog }) {
   const insets = useSafeAreaInsets();
-  const { mealName, items, totals, removeItem, updateItem, deleteMeal, logMeal } = useMeals();
+  const meals = useMeals();
+  const { removeItem, updateItem, deleteMeal, logMeal, deleteLog } = meals;
+  const readOnly = log !== undefined;
+  const mealName = log?.name ?? meals.mealName;
+  const items = log?.items ?? meals.items;
+  const totals = log ? { kcal: log.kcal, ...log.macros } : meals.totals;
   const [optionsFor, setOptionsFor] = useState<MealItem | null>(null);
   const [amountFor, setAmountFor] = useState<MealItem | null>(null);
   const [amountDraft, setAmountDraft] = useState('');
@@ -61,14 +59,17 @@ export function MealResultScreen() {
           onBack={() => router.back()}
           action="Delete"
           onAction={() => {
-            deleteMeal();
             router.back();
+            if (log) deleteLog(log.id);
+            else deleteMeal();
           }}
         />
 
         <View style={styles.heading}>
           <Text style={styles.title}>{mealName}</Text>
-          <Text style={styles.subtitle}>Oct 8, 2026 · 12:30 PM · {items.length} items</Text>
+          <Text style={styles.subtitle}>
+            {log ? `${log.date}, 2026 · ${log.time}` : 'Oct 8, 2026 · 12:30 PM'} · {items.length} items
+          </Text>
         </View>
 
         <Image
@@ -99,7 +100,11 @@ export function MealResultScreen() {
           </View>
         </View>
 
-        <SectionTitle title="Meal Details" action="+ Add item" onPress={() => router.push('/add-item')} />
+        <SectionTitle
+          title="Meal Details"
+          action={readOnly ? undefined : '+ Add item'}
+          onPress={() => router.push('/add-item')}
+        />
 
         <View style={styles.list}>
           {items.length === 0 ? (
@@ -110,6 +115,7 @@ export function MealResultScreen() {
                 key={item.id}
                 item={item}
                 last={index === items.length - 1}
+                readOnly={readOnly}
                 onPress={() => setOptionsFor(item)}
                 onEdit={() => setOptionsFor(item)}
                 onDelete={() => removeItem(item.id)}
@@ -118,16 +124,22 @@ export function MealResultScreen() {
           )}
         </View>
 
-        <Text style={styles.footnote}>Standard-serving estimates. Adjust portions as needed.</Text>
+        <Text style={styles.footnote}>
+          {readOnly
+            ? 'Standard-serving estimates from when this meal was logged.'
+            : 'Standard-serving estimates. Adjust portions as needed.'}
+        </Text>
 
-        <PrimaryButton
-          label="Log Meal"
-          disabled={items.length === 0}
-          onPress={() => {
-            logMeal();
-            router.replace('/home');
-          }}
-        />
+        {readOnly ? null : (
+          <PrimaryButton
+            label="Log Meal"
+            disabled={items.length === 0}
+            onPress={() => {
+              logMeal();
+              router.replace('/home');
+            }}
+          />
+        )}
       </ScrollView>
 
       <Sheet
@@ -236,12 +248,14 @@ export function MealResultScreen() {
 function MealRow({
   item,
   last,
+  readOnly,
   onPress,
   onEdit,
   onDelete,
 }: {
   item: MealItem;
   last: boolean;
+  readOnly: boolean;
   onPress: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -280,6 +294,32 @@ function MealRow({
     [],
   );
 
+  const content = (
+    <>
+      <Glyph glyph={item.glyph} />
+      <View style={styles.rowText}>
+        <View style={styles.rowTop}>
+          <Text style={styles.itemName}>{item.name}</Text>
+          <Text style={styles.itemKcal}>{item.kcal} kcal</Text>
+        </View>
+        <Text style={styles.itemDetail}>{item.detail}</Text>
+        <Text style={styles.itemMacros}>
+          Protein {item.macros.protein}g · Carbs {item.macros.carbs}g · Fat {item.macros.fat}g
+        </Text>
+      </View>
+    </>
+  );
+
+  if (readOnly) {
+    return (
+      <View style={[styles.rowWrap, !last && styles.rowDivider]}>
+        <View style={styles.rowSurface}>
+          <View style={styles.row}>{content}</View>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.rowWrap, !last && styles.rowDivider]}>
       <View style={styles.rowActions}>
@@ -310,17 +350,7 @@ function MealRow({
             if (state) settle(null);
             else onPress();
           }}>
-          <Glyph glyph={item.glyph} />
-          <View style={styles.rowText}>
-            <View style={styles.rowTop}>
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemKcal}>{item.kcal} kcal</Text>
-            </View>
-            <Text style={styles.itemDetail}>{item.detail}</Text>
-            <Text style={styles.itemMacros}>
-              Protein {item.macros.protein}g · Carbs {item.macros.carbs}g · Fat {item.macros.fat}g
-            </Text>
-          </View>
+          {content}
         </Pressable>
       </Animated.View>
     </View>

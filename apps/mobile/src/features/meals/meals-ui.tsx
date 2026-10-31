@@ -1,15 +1,8 @@
 import { Image } from 'expo-image';
 import type { ReactNode } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { Pressable } from '@/components/pressable';
 import { Palette as C } from '@/constants/palette';
 import type { MealGlyph } from './meals-store';
 
