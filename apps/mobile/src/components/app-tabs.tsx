@@ -1,7 +1,9 @@
 import { Image } from 'expo-image';
 import { router, Tabs } from 'expo-router';
 import type { ComponentProps } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Pressable } from '@/components/pressable';
 import { Palette as C } from '@/constants/palette';
@@ -19,13 +21,64 @@ const RIGHT_TABS = [
   { name: 'profile', label: 'Profile', icon: require('@/assets/images/home/tab-user-round.svg') },
 ];
 
+type TabDef = (typeof LEFT_TABS)[number];
+
+const PILL_WIDTH = 24;
+const PILL_DURATION = 250;
+const CONTENT_DURATION = 200;
+
+function TabButton({
+  tab,
+  active,
+  onPress,
+  onLayout,
+}: {
+  tab: TabDef;
+  active: boolean;
+  onPress: () => void;
+  onLayout: (e: LayoutChangeEvent) => void;
+}) {
+  const color = active ? C.accent : C.textMuted;
+  const progress = useSharedValue(active ? 1 : 0);
+
+  useEffect(() => {
+    progress.value = withTiming(active ? 1 : 0, { duration: CONTENT_DURATION });
+  }, [active, progress]);
+
+  const contentStyle = useAnimatedStyle(() => ({
+    opacity: 0.55 + 0.45 * progress.value,
+    transform: [{ scale: 0.96 + 0.04 * progress.value }],
+  }));
+
+  return (
+    <Pressable style={styles.tab} onPress={onPress} onLayout={onLayout}>
+      <Animated.View style={[styles.tabInner, contentStyle]}>
+        <Image source={tab.icon} style={styles.icon} contentFit="contain" tintColor={color} />
+        <Text style={[styles.label, { color }]}>{tab.label}</Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
   const activeName = state.routes[state.index]?.name;
+  const [layouts, setLayouts] = useState<Record<string, { x: number; width: number }>>({});
+  const pillX = useSharedValue(0);
 
-  function renderTab(tab: (typeof LEFT_TABS)[number]) {
+  const target = activeName ? layouts[activeName] : undefined;
+  const targetX = target ? target.x + (target.width - PILL_WIDTH) / 2 : null;
+
+  useEffect(() => {
+    if (targetX !== null) pillX.value = withTiming(targetX, { duration: PILL_DURATION });
+  }, [targetX, pillX]);
+
+  const pillStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: pillX.value }],
+  }));
+
+  function renderTab(tab: TabDef) {
     const route = state.routes.find((item) => item.name === tab.name);
     const active = activeName === tab.name;
-    const color = active ? C.accent : C.textMuted;
 
     function handlePress() {
       if (!route) return;
@@ -33,11 +86,17 @@ function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
       if (!active && !event.defaultPrevented) navigateToTab(route.key);
     }
 
+    function handleLayout(e: LayoutChangeEvent) {
+      const { x, width } = e.nativeEvent.layout;
+      setLayouts((prev) => {
+        const prevLayout = prev[tab.name];
+        if (prevLayout?.x === x && prevLayout?.width === width) return prev;
+        return { ...prev, [tab.name]: { x, width } };
+      });
+    }
+
     return (
-      <Pressable key={tab.name} style={styles.tab} onPress={handlePress}>
-        <Image source={tab.icon} style={styles.icon} contentFit="contain" tintColor={color} />
-        <Text style={[styles.label, { color }]}>{tab.label}</Text>
-      </Pressable>
+      <TabButton key={tab.name} tab={tab} active={active} onPress={handlePress} onLayout={handleLayout} />
     );
   }
 
@@ -54,6 +113,10 @@ function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
         </Pressable>
       </View>
       {RIGHT_TABS.map(renderTab)}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.pill, pillStyle, { opacity: targetX === null ? 0 : 1 }]}
+      />
     </View>
   );
 }
@@ -82,6 +145,10 @@ const styles = StyleSheet.create({
     height: 58,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  tabInner: {
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
   },
   icon: {
@@ -91,6 +158,15 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 11,
     fontWeight: '500',
+  },
+  pill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: PILL_WIDTH,
+    height: 3,
+    borderRadius: 100,
+    backgroundColor: C.accent,
   },
   centerSlot: {
     width: 72,
