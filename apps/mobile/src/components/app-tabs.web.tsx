@@ -38,6 +38,7 @@ function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps) {
   return (
     <Pressable {...props} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
       <Text style={[styles.label, isFocused && styles.labelActive]}>{children}</Text>
+      {isFocused && <View style={styles.dot} />}
     </Pressable>
   );
 }
@@ -76,7 +77,14 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   labelActive: {
-    fontWeight: '600',
+    fontWeight: '700',
     color: C.accent,
+  },
+  dot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: C.accent,
+    marginTop: 3,
   },
 });

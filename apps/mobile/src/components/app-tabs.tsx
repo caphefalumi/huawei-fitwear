@@ -1,8 +1,9 @@
 import { Image } from 'expo-image';
+import { GlassView } from 'expo-glass-effect';
 import { router, Tabs } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Pressable } from '@/components/pressable';
@@ -26,6 +27,7 @@ type TabDef = (typeof LEFT_TABS)[number];
 const PILL_WIDTH = 24;
 const PILL_DURATION = 250;
 const CONTENT_DURATION = 200;
+const LABEL_HEIGHT = 15;
 
 function TabButton({
   tab,
@@ -50,11 +52,18 @@ function TabButton({
     transform: [{ scale: 0.96 + 0.04 * progress.value }],
   }));
 
+  const labelStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    height: progress.value * LABEL_HEIGHT,
+    marginTop: progress.value * 4,
+    transform: [{ scale: 0.9 + 0.1 * progress.value }],
+  }));
+
   return (
     <Pressable style={styles.tab} onPress={onPress} onLayout={onLayout}>
       <Animated.View style={[styles.tabInner, contentStyle]}>
         <Image source={tab.icon} style={styles.icon} contentFit="contain" tintColor={color} />
-        <Text style={[styles.label, { color }]}>{tab.label}</Text>
+        <Animated.Text style={[styles.label, { color }, labelStyle]}>{tab.label}</Animated.Text>
       </Animated.View>
     </Pressable>
   );
@@ -101,7 +110,10 @@ function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
   }
 
   return (
-    <View style={[styles.bar, { paddingBottom: insets.bottom }]}>
+    <GlassView
+      style={[styles.bar, { paddingBottom: insets.bottom }]}
+      glassEffectStyle="clear"
+      tintColor="rgba(255,255,255,0.82)">
       {LEFT_TABS.map(renderTab)}
       <View style={styles.centerSlot}>
         <Pressable
@@ -117,7 +129,7 @@ function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
         pointerEvents="none"
         style={[styles.pill, pillStyle, { opacity: targetX === null ? 0 : 1 }]}
       />
-    </View>
+    </GlassView>
   );
 }
 
@@ -136,7 +148,7 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: C.surface,
+    backgroundColor: 'rgba(255,255,255,0.82)',
     borderTopWidth: 1,
     borderTopColor: C.border,
   },
@@ -149,7 +161,6 @@ const styles = StyleSheet.create({
   tabInner: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
   },
   icon: {
     width: 22,
@@ -158,6 +169,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 11,
     fontWeight: '500',
+    overflow: 'hidden',
   },
   pill: {
     position: 'absolute',
