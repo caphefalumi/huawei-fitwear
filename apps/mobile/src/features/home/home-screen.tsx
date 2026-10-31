@@ -139,7 +139,10 @@ export function HomeScreen() {
         </Pressable>
       </Animated.View>
 
-      <View style={styles.section}>
+      <Animated.View
+        key={`progress-${visit}`}
+        entering={FadeInUp.delay(120).duration(250)}
+        style={styles.section}>
         <SectionHeading title="Progress" />
         <Pressable onPress={() => router.push('/progress')}>
           <Card>
@@ -169,7 +172,7 @@ export function HomeScreen() {
 
           </Card>
         </Pressable>
-      </View>
+      </Animated.View>
 
       {recovery ? (
         <Pressable style={styles.recovery} onPress={() => setRecoveryOpen(true)}>
