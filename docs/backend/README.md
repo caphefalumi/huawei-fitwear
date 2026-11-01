@@ -1,6 +1,6 @@
 # Fitwear Backend Architecture & Coding Practices Guide
 
-The Fitwear backend is built on **ElysiaJS** running on Cloudflare Workers and D1 Database via Drizzle ORM, powered by Bun runtime native APIs.
+The Fitwear backend runs ElysiaJS on Cloudflare Workers, Drizzle on D1, private meal photos on R2, and meal-image inference on Workers AI. Bun is the local development/test runner, not the production runtime.
 
 ---
 
@@ -8,40 +8,29 @@ The Fitwear backend is built on **ElysiaJS** running on Cloudflare Workers and D
 
 Code is organized into isolated, feature-driven business domains:
 
-```
+```text
 apps/backend/
-├── src/
-│   ├── db/                     # D1 Database connection & Drizzle schemas
-│   │   ├── index.ts            # D1 Drizzle instance helper & binding receiver
-│   │   └── schema.ts           # 3.5NF / BCNF relational schemas (SQLite / D1)
-│   ├── lib/
-│   │   ├── id.ts               # Bun native UUIDv7 and token generator
-│   │   └── password.ts         # Bun native C++ bcrypt password hashing
-│   ├── modules/
-│   │   ├── auth/               # Authentication domain module
-│   │   │   ├── model.ts        # Validation schemas with Elysia's type system (t)
-│   │   │   ├── service.ts      # Decoupled business logic (Auth class) + authGuard macro
-│   │   │   └── index.ts        # Elysia controller router
-│   │   └── user/               # User domain module
-│   │       ├── service.ts      # Decoupled user query operations (User class)
-│   │       └── index.ts        # Elysia controller router
-│   └── index.ts                # Application root: CORS, Swagger UI (/swagger), module mounting
-├── tests/
-│   ├── helpers/
-│   │   ├── test-db.ts          # In-memory SQLite D1 simulator with atomic batch transaction support
-│   │   └── test-server.ts      # Standalone test server runner for Playwright
-│   ├── unit/                   # Unit tests (Bun test)
-│   │   ├── model.unit.test.ts  # Input validation schemas (TypeBox Value.Check)
-│   │   └── password.unit.test.ts # Bun native bcrypt hashing & salt verification
-│   ├── integration/            # Integration tests (Bun test)
-│   │   ├── api.integration.test.ts  # Root & Swagger OpenAPI schema tests
-│   │   ├── auth.integration.test.ts # Sign-up, duplicate checks, login, session, biometrics, sign-out
-│   │   └── user.integration.test.ts # Protected user profile tests
-│   └── e2e/                    # End-to-End tests (Playwright)
-│       ├── api.e2e.ts          # Complete user lifecycle over HTTP network requests
-│       └── swagger.e2e.ts      # Headless Chromium UI testing of Swagger documentation
-└── playwright.config.ts        # Playwright test configuration with automated webServer
+├── src/db/                 # Schema and request-scoped binding access
+├── src/lib/                # Web Crypto IDs, bcrypt, nutrition/date logic, private photos
+├── src/modules/
+│   ├── auth/               # Email/password accounts, sessions, profile updates and Resend password reset
+│   ├── user/               # Current profile
+│   ├── foods/              # Searchable per-100g/ml food catalogue
+│   ├── targets/            # Stored daily targets or profile-derived estimates
+│   ├── meals/              # Logs/items, daily summaries, image inference/private photo reads
+│   ├── health/             # Daily weight history and recovery schedules
+│   ├── exercises/          # Catalogue, technique cues and repetition/time units
+│   └── workouts/           # Sessions, sets, completion and training statistics
+├── migrations/             # Additive SQL migrations and matching Drizzle snapshots
+├── scripts/smoke.ts        # Actual Worker/D1/R2 lifecycle smoke; optional Workers AI call
+├── tests/unit/             # Validation, nutrition, dates, credentials, binding isolation
+├── tests/integration/      # Routes against migrated SQLite with foreign keys enabled
+└── tests/e2e/              # Playwright HTTP lifecycle and authorization checks
 ```
+
+Each feature owns its Elysia `.model()` registry beside its routes. Route body/query schemas are referenced by name, and services import inferred types from their route module; there are no parallel `model.ts` schema files.
+
+The mobile client uses these endpoints rather than seeded personal data. Every private data query is scoped to the authenticated user. Food/exercise catalogue entries are reference data, not generated workout or meal history.
 
 ---
 
@@ -88,10 +77,12 @@ await db.batch([
     .get();
   ```
 
-### D. Always Use Bun Native APIs
-- **UUIDv7**: Primary keys and IDs are generated using `Bun.randomUUIDv7()` (via `src/lib/id.ts`) for high-performance, time-ordered B-tree indexing without external prefixes.
-- **Password Hashing**: `Bun.password.hash(password, { algorithm: 'bcrypt', cost: 10 })` and `Bun.password.verify(...)` avoid third-party crypto bloat.
-- **Environment**: Use `Bun.env` instead of `process.env`.
+### D. Production Runtime Compatibility
+- IDs use `crypto.randomUUID()`; session tokens use 32 cryptographically random bytes.
+- `bcryptjs` uses cost 10 and verifies existing Bun-generated bcrypt hashes without resetting passwords.
+- `withDatabaseBinding()` uses `AsyncLocalStorage.run()` to isolate D1/KV/AI/R2 bindings across concurrent Worker requests.
+- Binding types are generated with `bunx wrangler types` into `worker-configuration.d.ts`; regenerate after binding changes.
+- Mobile requests use bearer tokens and omit cookies. Cross-origin credentialed cookies are disabled; same-origin auth cookies are Secure, HttpOnly and SameSite=Lax.
 
 ### E. Fast Prototyping & Zero Boilerplate
 - **Inherited Controller Tags**: Setting `detail: { tags: ['Authentication'] }` on the controller instance tags all sub-routes automatically.
@@ -114,19 +105,23 @@ await db.batch([
 
 From repository root:
 ```bash
-bun test                          # Run all unit & integration tests
+bun run test                     # Backend Bun tests + mobile Expo Jest tests
 bun run backend:test:unit         # Run unit tests only
 bun run backend:test:integration  # Run integration tests only
-bun run test:e2e                  # Run Playwright E2E tests
+bun run test:e2e                 # Backend API + mobile browser Playwright suites
 ```
 
 From `apps/backend/`:
 ```bash
-bun test                          # Unit & integration tests (Bun test)
+bun run test                     # Unit & integration tests (Bun test)
 bun run test:unit                 # Unit tests (tests/unit)
 bun run test:integration          # Integration tests (tests/integration)
 bun run test:e2e                  # Playwright E2E tests (tests/e2e)
 ```
+
+The mobile browser suite starts a real local Wrangler/D1/R2 backend and Expo web server. Run it from `apps/mobile` with `bun run test:e2e`; install Chromium once with `bunx playwright install chromium`. Use `bun run mobile:typecheck` and `bun run mobile:test` from the root for the mobile gates.
+
+For runtime proof, first apply local migrations and run Wrangler on port 8788, then run `bun scripts/smoke.ts` from `apps/backend`. Set `SMOKE_API_URL` to the deployed Worker to exercise production D1/R2. Set `SMOKE_ANALYZE=1` to include a real Workers AI call (billable provider usage). The smoke deletes its meals/workouts/recovery/targets and revokes both sessions; its uniquely named test accounts and weight logs remain for inspection.
 
 ---
 
@@ -215,3 +210,13 @@ bun run db:migrate:local  # Apply D1 migrations locally (.wrangler/state/v3/d1)
 bun run db:migrate:remote # Apply D1 migrations to remote Cloudflare production D1
 bun run typecheck       # TypeScript verification (tsc --noEmit)
 ```
+
+Production API: https://fitwear-backend.dangduytoan13l.workers.dev
+
+Bindings in `wrangler.toml`: `DB` (D1), `fitwear_kv` (rate limits), `MEAL_IMAGES` (private R2 bucket `fitwear-meal-images`), and `AI` (Workers AI). The image-analysis route uses `@cf/google/gemma-4-26b-a4b-it`; input and output are bounded and validated. Estimates are reviewed/edited before logging, never treated as measurements.
+
+Migrations `0002_feature_persistence.sql` and `0003_meal_item_units.sql` add weights, recovery, food reference data, exercise guidance, weekly session preferences and g/ml persistence. They preserve existing users, credentials, sessions and logs. For application rollback, deploy the preceding Worker version and retain additive columns/tables; do not drop live data. Take a D1 export or Time Travel bookmark before remote migrations.
+
+Password reset uses `POST /auth/password-reset`, `GET /auth/reset-password`, and `POST /auth/reset-password`. Reset tokens are 256-bit, stored only as SHA-256 digests, expire after 30 minutes, and are consumed once; completing a reset revokes all sessions. Requests are rate-limited and return identical success copy for registered and unknown addresses.
+
+Set `RESEND_API_KEY` with `bunx wrangler secret put RESEND_API_KEY` and `RESEND_FROM` to a sender verified in Resend. `RESET_PASSWORD_URL` is configured as a public Worker variable in `wrangler.toml` and defaults to the production Worker form. Never store the API key in `wrangler.toml`, app code, or an `EXPO_PUBLIC_*` variable.

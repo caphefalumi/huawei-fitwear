@@ -2,11 +2,25 @@
 
 React Native application built with **Expo** and **Expo Router**, serving as the Central Brain for the Fitwear ecosystem.
 
+## Cloudflare API integration
+
+The API defaults to `https://fitwear.tm-project.id.vn`. To use a local backend, create `.env.local` in this directory with `EXPO_PUBLIC_API_URL=http://<computer-LAN-IP>:8787`, then restart Metro. Use `127.0.0.1` for web and your computer's LAN IP for a physical phone. Only public configuration belongs in `EXPO_PUBLIC_*`; never put API secrets there.
+
+App accounts are separate from Expo accounts. Sign up with a real email-format address, password and birth date. Native session tokens use SecureStore; web sessions use localStorage and are validated with the server before private routes render. Signing out clears device state even when the network is unavailable.
+
+Meals, portions, daily nutrition, profile preferences, weights, recovery schedules and workout sessions/sets use the API. Empty accounts show empty states, not seeded personal data. Camera/library images are sent to Workers AI only after tapping **Analyze photo**; review estimates before logging. Logged images are stored privately in R2 and read through authenticated requests. Manual food/label entry works independently of inference.
+
+Forgot-password requests return the same message whether an account exists or not. Reset links are single-use, expire after 30 minutes, and open a private Cloudflare Worker reset form. The Worker requires `RESEND_API_KEY` (secret) and `RESEND_FROM` (verified sender); see [backend deployment](../../docs/backend/README.md#password-reset-email). Body composition and wearable measurements are never fabricated from weight or manual set logs.
+
+Testing uses the `jest-expo` preset. `flow-parser` is pinned through an override because React Native's `0.327.0` package omits `dist/utils/isReservedWord.js`; `0.338.0` includes it. Revisit the override when the SDK's parser dependency is fixed.
+
 ---
 
 ## Download & Install Expo Go
 
 Test and run the application on your physical device without installing Android Studio or Xcode:
+
+The BLE integration requires a development build rather than Expo Go. Use the native build commands below for the full application, including its configured native plugins.
 
 1. **Install Expo Go on your phone**:
    - **Android**: Download [Expo Go on Google Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent) (or get the APK directly from [expo.dev/tools#client](https://expo.dev/tools#client)).
@@ -120,10 +134,11 @@ bun run web
 ```text
 apps/mobile/
 ├── src/
-│   ├── app/                 # Expo Router screens (_layout.tsx, index.tsx, explore.tsx)
+│   ├── app/                 # Expo Router auth, protected tabs and detail routes
 │   ├── components/          # Reusable UI elements and themed components
 │   ├── constants/           # Theme palettes and style tokens
-│   └── hooks/               # Custom hooks (color scheme, responsive state)
+│   ├── hooks/               # Custom hooks (color scheme, responsive state)
+│   └── features/            # Auth, meals, health, home, profile, recovery, workouts and BLE
 ├── assets/                  # App icons, splash screens, and images
 ├── app.json                 # Expo configuration & plugins
 ├── package.json             # Dependencies and scripts
@@ -138,6 +153,15 @@ apps/mobile/
 # Run TypeScript type check
 bunx tsc --noEmit
 
+# Expo Jest unit and provider regressions
+bun run test
+
+# Browser lifecycle against the local Wrangler/D1/R2 backend
+bunx playwright install chromium
+bun run test:e2e
+
 # Run linter
 bun run lint
 ```
+
+Playwright starts its own backend on port 8787 and Expo web on 8085. CI uses isolated processes; stop unrelated servers on those ports first. Traces and screenshots are retained for failures under ignored test-output directories.

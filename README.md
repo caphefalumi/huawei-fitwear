@@ -8,6 +8,9 @@ Dual-device fitness ecosystem pairing a mobile client with a HarmonyOS smartwatc
 
 - **`apps/mobile`**: React Native (Expo) application handling user UI, workout tracking, computation, and history.
 - **`apps/watch`**: ArkTS (HarmonyOS NEXT) wearable application handling real-time wrist sensor sampling (IMU) and low-latency interaction.
+- **`apps/backend`**: Elysia API on Cloudflare Workers, D1 persistence, private R2 meal photos and Workers AI image analysis. [Backend guide](docs/backend/README.md).
+
+Mobile defaults to the deployed API at https://fitwear-backend.dangduytoan13l.workers.dev. Override `EXPO_PUBLIC_API_URL` in `apps/mobile/.env.local` for local development; use a LAN-reachable address for physical phones.
 
 ---
 
@@ -97,6 +100,13 @@ cd apps/mobile
 
 # Run TypeScript checks
 bunx tsc --noEmit
+
+# Expo Jest regressions
+bun run test
+
+# Full browser lifecycle (starts Wrangler/D1/R2 + Expo web)
+bunx playwright install chromium
+bun run test:e2e
 ```
 
 ---
@@ -127,6 +137,11 @@ Available from the root directory:
 | `bun run build:android` | Compiles and runs the native Android build locally |
 | `bun web` | Launches the mobile web app in your browser |
 | `bun lint` | Runs mobile code linter |
+| `bun run test` | Runs backend unit/integration and mobile Expo Jest tests |
+| `bun run test:e2e` | Runs backend HTTP and mobile browser Playwright suites |
+| `bun run backend:typecheck` | Checks backend types against generated Worker bindings |
+| `bun run mobile:typecheck` | Checks mobile application and test types |
+| `bun run backend:deploy` | Deploys the backend Worker |
 
 ---
 
