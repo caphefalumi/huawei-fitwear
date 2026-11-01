@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'bun:test';
-import { hashPassword, verifyPassword } from '../../src/lib/password';
+import { hashPassword, isPasswordWithinBcryptLimit, verifyPassword } from '../../src/lib/password';
 
 describe('Password hashing and legacy compatibility', () => {
-  it('should hash password and produce standard bcrypt format', async () => {
+  it('hashes passwords using bcryptjs cost 12', async () => {
     const password = 'SuperSecretPassword123!';
-    const hash = await hashPassword(password);
-
-    expect(hash).toBeString();
-    expect(hash.startsWith('$2')).toBeTrue();
-    expect(hash.length).toBeGreaterThan(40);
+    const encoded = await hashPassword(password);
+    expect(encoded).toStartWith('$2');
+    expect(encoded.slice(4, 6)).toBe('12');
+    expect(encoded.length).toBeGreaterThan(40);
   });
 
   it('should verify correct password successfully', async () => {
@@ -35,6 +34,11 @@ describe('Password hashing and legacy compatibility', () => {
     expect(hash1).not.toBe(hash2);
     expect(await verifyPassword(password, hash1)).toBeTrue();
     expect(await verifyPassword(password, hash2)).toBeTrue();
+  });
+
+  it('rejects passwords that exceed bcrypt’s 72-byte input limit instead of truncating them', async () => {
+    expect(isPasswordWithinBcryptLimit('é'.repeat(37))).toBeFalse();
+    await expect(hashPassword('é'.repeat(37))).rejects.toThrow('72 UTF-8 bytes');
   });
 
   it('accepts an existing Bun bcrypt hash without changing stored credentials', async () => {

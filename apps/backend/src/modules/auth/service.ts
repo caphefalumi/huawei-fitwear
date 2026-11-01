@@ -1,7 +1,8 @@
-import { eq } from 'drizzle-orm';
+import { enqueueEmail } from '../email/queue';
+import { and, eq } from 'drizzle-orm';
 import { Elysia, status } from 'elysia';
 import { getDb, user as userTable, session as sessionTable } from '../../db';
-import { hashPassword, verifyPassword } from '../../lib/password';
+import { hashPassword, isPasswordWithinBcryptLimit, needsPasswordRehash, verifyPassword } from '../../lib/password';
 import { generateId, generateToken } from '../../lib/id';
 
 import type { SignUpBody, SignInBody, UpdateUserBody } from './index';
@@ -19,6 +20,9 @@ export abstract class Auth {
 
     if (existing) {
       throw status(400, { success: false, message: 'A user with this email address already exists' });
+    }
+    if (!isPasswordWithinBcryptLimit(data.password)) {
+      throw status(422, { success: false, message: 'Password must not exceed 72 UTF-8 bytes.' });
     }
 
     const hashedPassword = await hashPassword(data.password);
@@ -60,6 +64,12 @@ export abstract class Auth {
       db.insert(sessionTable).values(newSession),
     ]);
 
+    try {
+      await enqueueEmail({ type: 'welcome', to: newUser.email, name: newUser.name });
+    } catch {
+      console.error(JSON.stringify({ event: 'welcome_email_enqueue_failed', userId }));
+    }
+
     const { password: _, ...safeUser } = newUser;
 
     return {
@@ -84,12 +94,19 @@ export abstract class Auth {
       .get();
 
     if (!foundUser) {
-      throw status(401, { success: false, message: 'Invalid email or password' });
+      throw status(401, { success: false, message: 'Email or password is incorrect.' });
     }
 
     const isValid = await verifyPassword(data.password, foundUser.password);
     if (!isValid) {
-      throw status(401, { success: false, message: 'Invalid email or password' });
+      throw status(401, { success: false, message: 'Email or password is incorrect.' });
+    }
+    if (needsPasswordRehash(foundUser.password) && isPasswordWithinBcryptLimit(data.password)) {
+      const upgradedHash = await hashPassword(data.password);
+      await db.update(userTable)
+        .set({ password: upgradedHash })
+        .where(and(eq(userTable.id, foundUser.id), eq(userTable.password, foundUser.password)))
+        .run();
     }
 
     const sessionId = generateId();

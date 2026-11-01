@@ -33,8 +33,13 @@ export function SignUpScreen({ onSignIn }: { onSignIn: () => void }) {
       setValidationError('Enter your name and a valid email address.');
       return;
     }
-    if (password.length < 8) {
+    if (Array.from(password).length < 8) {
       setValidationError('Password must contain at least 8 characters.');
+      return;
+    }
+    const passwordBytes = encodeURIComponent(password).replace(/%[0-9A-F]{2}/gi, 'x').length;
+    if (passwordBytes > 72) {
+      setValidationError('Password must not exceed 72 UTF-8 bytes.');
       return;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== birthDate || date > new Date()) {
@@ -91,7 +96,8 @@ export function SignUpScreen({ onSignIn }: { onSignIn: () => void }) {
         <AuthField
           label="Password"
           icon={icons.eyeOff}
-          helper="At least 8 characters"
+          helper="At least 8 characters. Maximum 72 UTF-8 bytes."
+          maxLength={72}
           value={password}
           onChangeText={setPassword}
           secureTextEntry

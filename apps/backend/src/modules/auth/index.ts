@@ -1,12 +1,12 @@
 import { Elysia, t, type Static } from 'elysia';
 import { Auth, authGuard } from './service';
-import { assertAuthRateLimit } from './rate-limit';
+import { assertAuthRateLimit, canSendPasswordResetEmail } from './rate-limit';
 import { InvalidPasswordResetToken, isPasswordResetConfigured, passwordResetMessage, passwordResetPage, requestPasswordReset, resetPassword } from './password-reset';
 
 export const AuthSchemas = {
   signUpBody: t.Object({
     email: t.String({ format: 'email', error: 'Valid email is required' }),
-    password: t.String({ minLength: 8, error: 'Password must be at least 8 characters' }),
+    password: t.String({ minLength: 8, maxLength: 72, error: 'Password must be at least 8 characters and no more than 72 characters' }),
     name: t.Optional(t.String()),
     gender: t.Optional(t.Union([t.Literal('male'), t.Literal('female'), t.Literal('other')])),
     birthDate: t.Optional(t.String()),
@@ -35,8 +35,9 @@ export const AuthSchemas = {
     email: t.String({ format: 'email', error: 'Valid email is required' }),
   }),
   passwordResetBody: t.Object({
-    token: t.String({ minLength: 64, maxLength: 64, pattern: '^[a-f0-9]{64}$' }),
-    password: t.String({ minLength: 8, error: 'Password must be at least 8 characters' }),
+    email: t.String({ format: 'email', error: 'Valid email is required' }),
+    code: t.String({ minLength: 8, maxLength: 8, pattern: '^[0-9]{8}$' }),
+    password: t.String({ minLength: 8, maxLength: 72, error: 'Password must be at least 8 characters and no more than 72 characters' }),
   }),
   updateUserBody: t.Object({
     name: t.Optional(t.String()),
@@ -89,11 +90,11 @@ export const auth = new Elysia({
       return res;
     },
     {
-      beforeHandle: ({ request, set }) => assertAuthRateLimit(request, 'sign-up', set),
+      beforeHandle: ({ request, body, set }) => assertAuthRateLimit(request, 'sign-up', set, body.email),
       body: 'auth.signUpBody',
       detail: {
         summary: 'Register a new user account',
-        description: 'Creates user, hashes password with bcrypt, and issues a 30-day session token.',
+        description: 'Creates user, hashes password with bcryptjs cost 12, and issues a 30-day session token.',
       },
     }
   )
@@ -105,7 +106,7 @@ export const auth = new Elysia({
       return res;
     },
     {
-      beforeHandle: ({ request, set }) => assertAuthRateLimit(request, 'sign-in', set),
+      beforeHandle: ({ request, body, set }) => assertAuthRateLimit(request, 'sign-in', set, body.email),
       body: 'auth.signInBody',
       detail: {
         summary: 'Sign in with credentials',
@@ -122,7 +123,9 @@ export const auth = new Elysia({
         return { success: false, message: 'Password reset email is not configured.' };
       }
       try {
-        await requestPasswordReset(body.email);
+        if (await canSendPasswordResetEmail(body.email)) {
+          await requestPasswordReset(body.email);
+        }
       } catch {
         console.error('Password reset email request failed.');
       }
@@ -150,22 +153,25 @@ export const auth = new Elysia({
     { detail: { summary: 'Render the password reset form' } }
   )
   .post(
-    '/reset-password',
-    async ({ body, set }) => {
+'/reset-password',
+    async ({ body, request, set }) => {
+      await assertAuthRateLimit(request, 'password-reset-confirm', set);
       try {
         await resetPassword(body);
         return { success: true, message: 'Password updated. You can now sign in.' };
       } catch (error) {
-        set.status = error instanceof InvalidPasswordResetToken ? 400 : 500;
+        set.status = error instanceof InvalidPasswordResetToken ? 400 : error instanceof RangeError ? 422 : 500;
         return {
           success: false,
           message: error instanceof InvalidPasswordResetToken
-            ? 'This reset link is invalid or expired.'
-            : 'Unable to update your password. Please try again.',
+            ? 'This reset code is invalid or expired.'
+            : error instanceof RangeError
+              ? 'Password must not exceed 72 UTF-8 bytes.'
+              : 'Unable to update your password. Please try again.',
         };
       }
     },
-    { body: 'auth.passwordResetBody', detail: { summary: 'Set a new password with a one-time reset token' } }
+    { body: 'auth.passwordResetBody', detail: { summary: 'Set a new password with an eight-digit reset code' } }
   )
   .get(
     '/session',

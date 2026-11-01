@@ -10,10 +10,13 @@ Code is organized into isolated, feature-driven business domains:
 
 ```text
 apps/backend/
+├── src/app.ts              # Elysia plugin composition and compiled app
+├── src/index.ts            # Cloudflare Worker entrypoint and per-invocation bindings
 ├── src/db/                 # Schema and request-scoped binding access
 ├── src/lib/                # Web Crypto IDs, bcrypt, nutrition/date logic, private photos
 ├── src/modules/
-│   ├── auth/               # Email/password accounts, sessions, profile updates and Resend password reset
+│   ├── auth/               # Email/password accounts, sessions, profile updates and reset requests
+│   ├── email/              # Typed Queue messages and Resend consumer
 │   ├── user/               # Current profile
 │   ├── foods/              # Searchable per-100g/ml food catalogue
 │   ├── targets/            # Stored daily targets or profile-derived estimates
@@ -79,9 +82,12 @@ await db.batch([
 
 ### D. Production Runtime Compatibility
 - IDs use `crypto.randomUUID()`; session tokens use 32 cryptographically random bytes.
-- `bcryptjs` uses cost 10 and verifies existing Bun-generated bcrypt hashes without resetting passwords.
-- `withDatabaseBinding()` uses `AsyncLocalStorage.run()` to isolate D1/KV/AI/R2 bindings across concurrent Worker requests.
-- Binding types are generated with `bunx wrangler types` into `worker-configuration.d.ts`; regenerate after binding changes.
+- `src/app.ts` composes feature plugins and compiles one Elysia app; `src/index.ts` is the Cloudflare module-worker entrypoint and types its `fetch` handler against generated `Env`.
+- Passwords use `bcryptjs` cost 12. Existing bcrypt hashes remain verifiable and are upgraded to cost 12 after successful sign-in.
+- New passwords require at least 8 characters for usability, accept all characters and spaces, and are limited to 72 UTF-8 bytes to prevent bcrypt's silent truncation.
+- Sign-in is throttled by both client IP and a SHA-256-keyed account identifier. Wrong-password and unknown-account logins share one error response; password-reset requests are non-enumerating.
+- The Cloudflare adapter's Elysia handler accepts `Request`; the Worker entrypoint scopes `env` with `AsyncLocalStorage.run()` so D1/KV/AI/R2, Queue and email config remain isolated across concurrent invocations, without mutable request-global variables.
+- Wrangler enables Workers Logs (10% request sampling) and traces (1% sampling) to provide production diagnostics while limiting volume.
 - Mobile requests use bearer tokens and omit cookies. Cross-origin credentialed cookies are disabled; same-origin auth cookies are Secure, HttpOnly and SameSite=Lax.
 
 ### E. Fast Prototyping & Zero Boilerplate
@@ -213,10 +219,12 @@ bun run typecheck       # TypeScript verification (tsc --noEmit)
 
 Production API: https://fitwear-backend.dangduytoan13l.workers.dev
 
-Bindings in `wrangler.toml`: `DB` (D1), `fitwear_kv` (rate limits), `MEAL_IMAGES` (private R2 bucket `fitwear-meal-images`), and `AI` (Workers AI). The image-analysis route uses `@cf/google/gemma-4-26b-a4b-it`; input and output are bounded and validated. Estimates are reviewed/edited before logging, never treated as measurements.
+Bindings in `wrangler.json`: `DB` (D1), `fitwear_kv` (rate limits), `MEAL_IMAGES` (private R2 bucket `fitwear-meal-images`), `AI` (Workers AI), and `EMAIL_QUEUE` (`fitwear-email`). The image-analysis route uses `@cf/google/gemma-4-26b-a4b-it`; input and output are bounded and validated. Estimates are reviewed/edited before logging, never treated as measurements.
 
 Migrations `0002_feature_persistence.sql` and `0003_meal_item_units.sql` add weights, recovery, food reference data, exercise guidance, weekly session preferences and g/ml persistence. They preserve existing users, credentials, sessions and logs. For application rollback, deploy the preceding Worker version and retain additive columns/tables; do not drop live data. Take a D1 export or Time Travel bookmark before remote migrations.
 
-Password reset uses `POST /auth/password-reset`, `GET /auth/reset-password`, and `POST /auth/reset-password`. Reset tokens are 256-bit, stored only as SHA-256 digests, expire after 30 minutes, and are consumed once; completing a reset revokes all sessions. Requests are rate-limited and return identical success copy for registered and unknown addresses.
+Password reset uses `POST /auth/password-reset`, `GET /auth/reset-password`, and `POST /auth/reset-password`. Reset codes are cryptographically generated eight-digit OTPs, stored only as SHA-256 digests, expire after 30 minutes, and are consumed once; completing a reset revokes all sessions. Reset confirmation is rate-limited, requests return identical success copy for registered and unknown addresses, and issuing a new code invalidates the previous code. Resend cooldown state is stored in KV, keyed by a hash of the normalized email, with 1, 2, 4, 8… minute delays capped at one hour. KV has no conditional compare-and-set: concurrent or cross-location requests may race and send duplicates; use D1 or Durable Objects if strict single-send enforcement becomes necessary. Suppressed requests still receive the same generic response.
 
-Set `RESEND_API_KEY` with `bunx wrangler secret put RESEND_API_KEY` and `RESEND_FROM` to a sender verified in Resend. `RESET_PASSWORD_URL` is configured as a public Worker variable in `wrangler.toml` and defaults to the production Worker form. Never store the API key in `wrangler.toml`, app code, or an `EXPO_PUBLIC_*` variable.
+Both email types are delivered through the `fitwear-email` Queue and retried up to five times before reaching `fitwear-email-dlq`. The single push consumer is configured with `max_concurrency = 1` and spaces Resend request starts by at least 110 ms. Failed reset enqueue removes the newly created token record; failed welcome enqueue does not fail signup. Queue message bodies are not logged. Resend idempotency keys use Cloudflare message IDs and only deduplicate within Resend's 24-hour idempotency window.
+
+Set `RESEND_API_KEY` with `bunx wrangler secret put RESEND_API_KEY` and `RESEND_FROM` to a sender verified in Resend. `RESET_PASSWORD_URL`, `RESEND_WELCOME_TEMPLATE_ID`, and `RESEND_PASSWORD_RESET_TEMPLATE_ID` are public Worker variables in `wrangler.json`. Resend templates `fitwear-welcome` and `voochealth-password-reset` are published and used by the Queue consumer; the welcome template accepts `NAME`, and the reset template accepts `RESET_OTP` and `RESET_URL`. Provision the queues once with `bunx wrangler queues create fitwear-email` and `bunx wrangler queues create fitwear-email-dlq`; the Worker consumer configuration is in Wrangler JSON. Never store the API key in `wrangler.json`, app code, or an `EXPO_PUBLIC_*` variable.

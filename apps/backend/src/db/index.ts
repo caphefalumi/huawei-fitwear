@@ -1,3 +1,4 @@
+import type { EmailMessage } from '../modules/email/queue';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import * as schema from './schema';
 import { drizzle } from 'drizzle-orm/d1';
@@ -6,12 +7,13 @@ import type { DrizzleD1Database } from 'drizzle-orm/d1';
 export type Schema = typeof schema;
 export type Database = DrizzleD1Database<typeof schema>;
 
-export type WorkerBindings = Partial<Pick<Env, 'DB' | 'fitwear_kv' | 'AI' | 'MEAL_IMAGES'>> & {
+export type WorkerBindings = Partial<Pick<Env, 'DB' | 'fitwear_kv' | 'AI' | 'MEAL_IMAGES' | 'EMAIL_QUEUE'>> & {
   RESEND_API_KEY?: string;
   RESEND_FROM?: string;
   RESET_PASSWORD_URL?: string;
+  RESEND_WELCOME_TEMPLATE_ID?: string;
+  RESEND_PASSWORD_RESET_TEMPLATE_ID?: string;
 };
-
 const requestBindings = new AsyncLocalStorage<WorkerBindings>();
 
 export function withDatabaseBinding<T>(env: WorkerBindings, run: () => T): T {
@@ -23,13 +25,19 @@ export function getKv(): KVNamespace | undefined {
 }
 
 
-export function getPasswordResetConfig() {
+export function getEmailConfig() {
   const bindings = requestBindings.getStore();
   return {
     apiKey: bindings?.RESEND_API_KEY,
     from: bindings?.RESEND_FROM,
     resetUrl: bindings?.RESET_PASSWORD_URL,
+    welcomeTemplateId: bindings?.RESEND_WELCOME_TEMPLATE_ID,
+    passwordResetTemplateId: bindings?.RESEND_PASSWORD_RESET_TEMPLATE_ID,
   };
+}
+
+export function getEmailQueue(): Queue<EmailMessage> | undefined {
+  return requestBindings.getStore()?.EMAIL_QUEUE;
 }
 export function getAi(): Ai | undefined {
   return requestBindings.getStore()?.AI;

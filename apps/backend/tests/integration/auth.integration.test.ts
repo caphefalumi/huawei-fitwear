@@ -1,17 +1,21 @@
+import { createTestEmailQueue } from '../helpers/test-email-queue';
 import { describe, expect, it, beforeEach } from 'bun:test';
 import { app, setTestDatabaseBinding } from '../helpers/test-app';
 import { createTestDatabase } from '../helpers/test-db';
 import { createTestKv } from '../helpers/test-kv';
 import { user as userTable } from '../../src/db/schema';
 import { hashPassword } from '../../src/lib/password';
+import type { EmailMessage } from '../../src/modules/email/queue';
 
 describe('Integration Test: Auth API Endpoints', () => {
   let testD1: D1Database;
+  let emailQueue: ReturnType<typeof createTestEmailQueue>;
 
   beforeEach(() => {
     const { d1 } = createTestDatabase();
     testD1 = d1;
-    setTestDatabaseBinding({ DB: d1, fitwear_kv: createTestKv() });
+    emailQueue = createTestEmailQueue();
+    setTestDatabaseBinding({ DB: d1, fitwear_kv: createTestKv(), EMAIL_QUEUE: emailQueue.queue });
   });
 
   describe('POST /auth/sign-up', () => {
@@ -44,6 +48,7 @@ describe('Integration Test: Auth API Endpoints', () => {
       expect(data.user.heightCm).toBe(180);
       expect(data.session).toBeDefined();
       expect(data.session.token).toBeString();
+      expect(emailQueue.messages).toEqual([{ type: 'welcome', to: 'jordan@fitwear.dev', name: 'Jordan Smith' }]);
 
       const setCookie = res.headers.get('set-cookie');
       expect(setCookie).toContain('session_token=');
@@ -74,7 +79,23 @@ describe('Integration Test: Auth API Endpoints', () => {
       expect(res2.status).toBe(400);
 
       const err = await res2.json();
-      expect(err.message).toContain('already exists');
+      expect(err.message).toBe('A user with this email address already exists');
+      expect(emailQueue.messages).toHaveLength(1);
+    });
+
+    it('keeps successful signup when welcome queue publication fails', async () => {
+      setTestDatabaseBinding({
+        DB: testD1,
+        fitwear_kv: createTestKv(),
+        EMAIL_QUEUE: { send: async () => { throw new Error('queue unavailable'); } } as unknown as Queue<EmailMessage>,
+      });
+      const response = await app.handle(new Request('http://localhost/auth/sign-up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'queue-failure@fitwear.dev', password: 'SecurePassword123!' }),
+      }));
+      expect(response.status).toBe(200);
+      expect(await testD1.prepare('SELECT id FROM user WHERE email = ?').bind('queue-failure@fitwear.dev').first()).not.toBeNull();
     });
 
     it('should reject duplicate when user already exists in D1', async () => {
@@ -103,7 +124,7 @@ describe('Integration Test: Auth API Endpoints', () => {
 
       expect(res.status).toBe(400);
       const err = await res.json();
-      expect(err.message).toContain('already exists');
+      expect(err.message).toBe('A user with this email address already exists');
     });
 
     it('should reject invalid email format with 422', async () => {
@@ -201,7 +222,7 @@ describe('Integration Test: Auth API Endpoints', () => {
       expect(res.status).toBe(401);
 
       const data = await res.json();
-      expect(data.message).toContain('Invalid email or password');
+      expect(data.message).toBe('Email or password is incorrect.');
     });
 
     it('should reject non-existent email (401)', async () => {
@@ -217,7 +238,30 @@ describe('Integration Test: Auth API Endpoints', () => {
       );
 
       expect(res.status).toBe(401);
+      const body = await res.json();
+      expect(body.message).toBe('Email or password is incorrect.');
     });
+    it('throttles sign-in guesses by account across different IP addresses', async () => {
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const response = await app.handle(new Request('http://localhost/auth/sign-in', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'cf-connecting-ip': `203.0.113.${attempt + 1}`,
+          },
+          body: JSON.stringify({ email: 'target@fitwear.dev', password: 'WrongPassword123!' }),
+        }));
+        expect(response.status).toBe(401);
+      }
+
+      const limited = await app.handle(new Request('http://localhost/auth/sign-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': '203.0.113.99' },
+        body: JSON.stringify({ email: 'target@fitwear.dev', password: 'WrongPassword123!' }),
+      }));
+      expect(limited.status).toBe(429);
+    });
+
 
     it('should sign in when user was inserted directly into D1', async () => {
       const password = 'LegacyLogin123!';
@@ -238,7 +282,7 @@ describe('Integration Test: Auth API Endpoints', () => {
       await db.insert(userTable).values({
         id: 'legacy-signin',
         email: 'legacy-signin@fitwear.dev',
-        password: await hashPassword(password),
+        password: await Bun.password.hash(password, { algorithm: 'bcrypt', cost: 10 }),
         emailVerified: false,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -258,6 +302,9 @@ describe('Integration Test: Auth API Endpoints', () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.user.email).toBe('legacy-signin@fitwear.dev');
+      const updatedHash = await d1.prepare('SELECT password FROM user WHERE id = ?')
+        .bind('legacy-signin').first<{ password: string }>();
+      expect(updatedHash?.password.slice(4, 6)).toBe('12');
     });
   });
 

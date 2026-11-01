@@ -92,7 +92,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount: () => void }
             editable={!pending}
             onSubmitEditing={() => { void submit(); }}
           />
-        ) : <Text style={styles.terms}>Enter your account email. If it matches an account, we’ll send a one-time reset link.</Text>}
+        ) : <Text style={styles.terms}>Enter your account email. If it matches an account, we’ll send an 8-digit reset code.</Text>}
       </View>
 
       {!resetMode ? (
@@ -118,14 +118,14 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount: () => void }
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={resetMode ? 'Send reset link' : 'Log in'}
+        accessibilityLabel={resetMode ? 'Send reset code' : 'Log in'}
         accessibilityState={{ disabled: resetMode ? resetPending : pending, busy: resetMode ? resetPending : pending }}
         disabled={resetMode ? resetPending : pending}
         style={[styles.primaryButton, (resetMode ? resetPending : pending) && styles.disabled]}
         onPress={() => { void (resetMode ? submitPasswordReset() : submit()); }}>
         {(resetMode ? resetPending : pending)
           ? <ActivityIndicator color={AuthColors.onAccent} />
-          : <Text style={styles.primaryLabel}>{resetMode ? 'Send reset link' : 'Log in'}</Text>}
+          : <Text style={styles.primaryLabel}>{resetMode ? 'Send reset code' : 'Log in'}</Text>}
       </Pressable>
 
       {!resetMode ? (

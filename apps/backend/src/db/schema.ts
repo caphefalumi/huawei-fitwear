@@ -45,6 +45,7 @@ export const verification = sqliteTable('verification', {
   uniqueIndex('verification_identifier_value_unique').on(table.identifier, table.value),
 ]);
 
+
 export const dailyTargets = sqliteTable('daily_targets', {
   id: text('id').primaryKey().$defaultFn(() => generateId()),
   userId: text('userId').notNull().references(() => user.id, { onDelete: 'cascade' }),
