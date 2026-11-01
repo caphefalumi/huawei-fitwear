@@ -16,11 +16,12 @@ export function AuthField({ label, icon, helper, ...inputProps }: AuthFieldProps
       <Text style={styles.label}>{label}</Text>
       <View style={styles.box}>
         <TextInput
+          accessibilityLabel={label}
           placeholderTextColor={AuthColors.textMuted}
           {...inputProps}
           style={styles.input}
         />
-        <Image source={icon} style={styles.icon} contentFit="contain" />
+        <Image source={icon} style={styles.icon} contentFit="contain" accessible={false} />
       </View>
       {helper ? <Text style={styles.helper}>{helper}</Text> : null}
     </View>

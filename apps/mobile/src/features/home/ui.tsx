@@ -56,7 +56,7 @@ export function MacroBar({
   unit: string;
   note?: string;
 }) {
-  const fill = Math.max(0, Math.min(1, value / target));
+  const fill = target > 0 ? Math.max(0, Math.min(1, value / target)) : 0;
   return (
     <View style={styles.macro}>
       <View style={styles.macroRow}>

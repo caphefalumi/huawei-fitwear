@@ -1,203 +1,156 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { RadioList } from '@/components/radio-list';
 import { Sheet, SheetActions, SheetField } from '@/components/sheet';
 import { WheelPicker } from '@/components/wheel-picker';
 import { Palette as C } from '@/constants/palette';
-import { useHealth, type Sex } from '@/features/health/health-store';
+import { ACTIVITIES, GOALS, useHealth, type Sex } from '@/features/health/health-store';
 
-const ACTIVITY_OPTIONS = ['Sedentary', 'Light', 'Moderate', 'High'] as const;
-const GOAL_OPTIONS = ['Lose fat', 'Maintain', 'Build muscle'] as const;
+const ACTIVITY_OPTIONS = Object.values(ACTIVITIES);
+const GOAL_OPTIONS = Object.values(GOALS);
 const SEX_OPTIONS: readonly Sex[] = ['Male', 'Female', 'Rather not say'];
-
-const HEIGHT_VALUES = Array.from({ length: 101 }, (_, index) => 120 + index);
 const SESSION_VALUES = [1, 2, 3, 4, 5, 6, 7];
-
 type SheetProps = { visible: boolean; onClose: () => void };
 
-function NumberField({
-  value,
-  onChange,
-  unit,
-}: {
-  value: string;
-  onChange: (next: string) => void;
-  unit: string;
-}) {
+function useSave(onClose: () => void) {
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const active = useRef(true);
+  const busy = useRef(false);
+  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
+  const save = async (mutation: () => Promise<void>) => {
+    if (busy.current) return;
+    busy.current = true;
+    setPending(true);
+    setError(null);
+    try {
+      await mutation();
+      if (active.current) onClose();
+    } catch (cause) {
+      if (active.current) setError(`${cause instanceof Error ? cause.message : 'Could not save.'} Please try again.`);
+    } finally {
+      busy.current = false;
+      if (active.current) setPending(false);
+    }
+  };
+  return { error, pending, save, close: () => { if (!busy.current) onClose(); } };
+}
+
+function NumberField({ value, onChange, unit }: { value: string; onChange: (next: string) => void; unit: string }) {
   return (
     <View style={styles.inputRow}>
-      <TextInput
-        style={styles.input}
-        value={value}
-        onChangeText={onChange}
-        keyboardType="decimal-pad"
-        selectTextOnFocus
-      />
+      <TextInput accessibilityLabel={unit === 'cm' ? 'Height in centimeters' : 'Weight in kilograms'} style={styles.input} value={value} onChangeText={onChange} keyboardType="decimal-pad" selectTextOnFocus />
       <Text style={styles.unit}>{unit}</Text>
     </View>
   );
 }
 
+function positiveNumber(value: string, maximum: number, minimum = 0) {
+  const number = Number(value.trim().replace(',', '.'));
+  if (!Number.isFinite(number) || number <= 0 || number < minimum || number > maximum) {
+    throw new Error(minimum > 0 ? `Enter a number from ${minimum} to ${maximum}.` : `Enter a number greater than 0 and no more than ${maximum}.`);
+  }
+  return number;
+}
+
 export function HeightSheet({ visible, onClose }: SheetProps) {
   const { heightCm, saveHeight } = useHealth();
-  const [draft, setDraft] = useState(heightCm);
-
-  function handleSave() {
-    saveHeight(draft);
-    onClose();
-  }
-
+  const [draft, setDraft] = useState(heightCm?.toString() ?? '');
+  const action = useSave(onClose);
   return (
-    <Sheet visible={visible} title="Height" onClose={onClose}>
-      <WheelPicker
-        values={HEIGHT_VALUES}
-        value={draft}
-        onChange={setDraft}
-        format={(value) => `${value} cm`}
-      />
+    <Sheet visible={visible} title="Height" onClose={action.close}>
+      <NumberField value={draft} onChange={setDraft} unit="cm" />
       <Text style={styles.body}>Height contributes to your initial energy estimate.</Text>
-      <SheetActions
-        primaryLabel="OK"
-        secondaryLabel="Cancel"
-        onPrimary={handleSave}
-        onSecondary={onClose}
-      />
+      {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
+      <SheetActions primaryLabel={action.pending ? 'Saving…' : 'OK'} secondaryLabel="Cancel"
+        onPrimary={() => { void action.save(async () => saveHeight(positiveNumber(draft, 300))); }} onSecondary={action.close} />
     </Sheet>
   );
 }
 
 export function WeightSheet({ visible, onClose }: SheetProps) {
-  const { weightKg, saveWeight } = useHealth();
-  const [draft, setDraft] = useState(weightKg.toFixed(1));
-
-  function handleSave() {
-    const next = Number.parseFloat(draft.replace(',', '.'));
-    onClose();
-    if (Number.isFinite(next) && next > 0) saveWeight(next);
-  }
-
+  const { weightKg, weights, saveWeight } = useHealth();
+  const [draft, setDraft] = useState(weightKg?.toFixed(1) ?? '');
+  const action = useSave(onClose);
   return (
-    <Sheet visible={visible} title="Update weight" onClose={onClose}>
-      <Text style={styles.body}>
-        Log your weekly weight to keep your nutrition guidance current.
-      </Text>
-      <SheetField label="Current · updated Oct 7">
-        <Text style={styles.current}>{weightKg.toFixed(1)} kg</Text>
+    <Sheet visible={visible} title="Update weight" onClose={action.close}>
+      <Text style={styles.body}>Log your weight to keep your nutrition guidance current.</Text>
+      <SheetField label={weights.at(-1) ? `Current · ${weights.at(-1)!.loggedDate}` : 'Current profile weight'}>
+        <Text style={styles.current}>{weightKg === null ? 'Not set' : `${weightKg.toFixed(1)} kg`}</Text>
       </SheetField>
-      <SheetField label="New weight · today">
-        <NumberField value={draft} onChange={setDraft} unit="kg" />
-      </SheetField>
-      <Text style={styles.note}>Nutrition updates happen behind the scenes.</Text>
-      <SheetActions
-        primaryLabel="Save update"
-        secondaryLabel="Cancel"
-        onPrimary={handleSave}
-        onSecondary={onClose}
-      />
+      <SheetField label="New weight · today"><NumberField value={draft} onChange={setDraft} unit="kg" /></SheetField>
+      <Text style={styles.note}>Nutrition targets use your latest profile information.</Text>
+      {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
+      <SheetActions primaryLabel={action.pending ? 'Saving…' : 'Save update'} secondaryLabel="Cancel"
+        onPrimary={() => { void action.save(async () => saveWeight(positiveNumber(draft, 500, 20))); }} onSecondary={action.close} />
     </Sheet>
   );
 }
 
 export function SexSheet({ visible, onClose }: SheetProps) {
   const { sex, saveSex } = useHealth();
-
+  const action = useSave(onClose);
   return (
-    <Sheet visible={visible} title="Sex" onClose={onClose}>
-      <RadioList
-        options={SEX_OPTIONS}
-        value={sex}
-        onChange={(next) => {
-          saveSex(next);
-          onClose();
-        }}
-      />
+    <Sheet visible={visible} title="Sex" onClose={action.close}>
+      <RadioList options={SEX_OPTIONS} value={sex ?? ('' as Sex)} onChange={(next) => { void action.save(() => saveSex(next)); }} />
+      {action.pending ? <Text style={styles.body}>Saving…</Text> : null}
+      {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
     </Sheet>
   );
 }
 
 export function GoalSheet({ visible, onClose }: SheetProps) {
   const { plan, savePlan } = useHealth();
-
+  const action = useSave(onClose);
   return (
-    <Sheet visible={visible} title="Goal / target" onClose={onClose}>
-      <RadioList
-        options={GOAL_OPTIONS}
-        value={plan.goal as (typeof GOAL_OPTIONS)[number]}
-        onChange={(goal) => {
-          savePlan({ ...plan, goal });
-          onClose();
-        }}
-      />
+    <Sheet visible={visible} title="Goal / target" onClose={action.close}>
+      <RadioList options={GOAL_OPTIONS} value={plan.goal as (typeof GOAL_OPTIONS)[number]}
+        onChange={(goal) => { void action.save(() => savePlan({ ...plan, goal })); }} />
+      {action.pending ? <Text style={styles.body}>Saving…</Text> : null}
+      {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
     </Sheet>
   );
 }
 
 export function ActivitySheet({ visible, onClose }: SheetProps) {
   const { plan, savePlan } = useHealth();
-
+  const action = useSave(onClose);
   return (
-    <Sheet visible={visible} title="Daily activity" onClose={onClose}>
-      <RadioList
-        options={ACTIVITY_OPTIONS}
-        value={plan.activity as (typeof ACTIVITY_OPTIONS)[number]}
-        onChange={(activity) => {
-          savePlan({ ...plan, activity });
-          onClose();
-        }}
-      />
+    <Sheet visible={visible} title="Daily activity" onClose={action.close}>
+      <RadioList options={ACTIVITY_OPTIONS} value={plan.activity as (typeof ACTIVITY_OPTIONS)[number]}
+        onChange={(activity) => { void action.save(() => savePlan({ ...plan, activity })); }} />
+      {action.pending ? <Text style={styles.body}>Saving…</Text> : null}
+      {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
     </Sheet>
   );
 }
 
 export function FrequencySheet({ visible, onClose }: SheetProps) {
   const { plan, savePlan } = useHealth();
-  const [draft, setDraft] = useState(plan.sessions);
-
-  function handleSave() {
-    savePlan({ ...plan, sessions: draft });
-    onClose();
-  }
-
+  const [draft, setDraft] = useState(plan.sessions ?? SESSION_VALUES[0]);
+  const action = useSave(onClose);
   return (
-    <Sheet visible={visible} title="Workout frequency" onClose={onClose}>
-      <WheelPicker
-        values={SESSION_VALUES}
-        value={draft}
-        onChange={setDraft}
-        format={(value) => `${value} ${value === 1 ? 'session' : 'sessions'}/week`}
-      />
-      <SheetActions
-        primaryLabel="OK"
-        secondaryLabel="Cancel"
-        onPrimary={handleSave}
-        onSecondary={onClose}
-      />
+    <Sheet visible={visible} title="Workout frequency" onClose={action.close}>
+      <WheelPicker values={SESSION_VALUES} value={draft} onChange={setDraft}
+        format={(value) => `${value} ${value === 1 ? 'session' : 'sessions'}/week`} />
+      {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
+      <SheetActions primaryLabel={action.pending ? 'Saving…' : 'OK'} secondaryLabel="Cancel"
+        onPrimary={() => { void action.save(() => savePlan({ ...plan, sessions: draft })); }} onSecondary={action.close} />
     </Sheet>
   );
 }
 
 export function TargetWeightSheet({ visible, onClose }: SheetProps) {
   const { plan, savePlan } = useHealth();
-  const [draft, setDraft] = useState(plan.targetWeightKg.toFixed(1));
-
-  function handleSave() {
-    const next = Number.parseFloat(draft.replace(',', '.'));
-    if (Number.isFinite(next) && next > 0) savePlan({ ...plan, targetWeightKg: next });
-    onClose();
-  }
-
+  const [draft, setDraft] = useState(plan.targetWeightKg?.toFixed(1) ?? '');
+  const action = useSave(onClose);
   return (
-    <Sheet visible={visible} title="Target weight" onClose={onClose}>
-      <SheetField label="Target weight">
-        <NumberField value={draft} onChange={setDraft} unit="kg" />
-      </SheetField>
-      <SheetActions
-        primaryLabel="Save"
-        secondaryLabel="Cancel"
-        onPrimary={handleSave}
-        onSecondary={onClose}
-      />
+    <Sheet visible={visible} title="Target weight" onClose={action.close}>
+      <SheetField label="Target weight"><NumberField value={draft} onChange={setDraft} unit="kg" /></SheetField>
+      {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
+      <SheetActions primaryLabel={action.pending ? 'Saving…' : 'Save'} secondaryLabel="Cancel"
+        onPrimary={() => { void action.save(async () => savePlan({ ...plan, targetWeightKg: positiveNumber(draft, 1000) })); }} onSecondary={action.close} />
     </Sheet>
   );
 }

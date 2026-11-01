@@ -27,6 +27,15 @@
     },
     "plugins": [
       "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Fitwear to choose meal photos for nutrition analysis.",
+          "cameraPermission": "Allow Fitwear to photograph meals for nutrition analysis.",
+          "microphonePermission": false
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -39,7 +48,9 @@
         "react-native-ble-plx",
         {
           "isBackgroundEnabled": true,
-          "modes": ["central"],
+          "modes": [
+            "central"
+          ],
           "bluetoothAlwaysPermission": "Allow $(PRODUCT_NAME) to connect to your Huawei Watch over Bluetooth Low Energy."
         }
       ]

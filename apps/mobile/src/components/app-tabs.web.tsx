@@ -2,10 +2,10 @@ import {
   TabList,
   TabSlot,
   TabTrigger,
-  TabTriggerSlotProps,
   Tabs,
   type TabListProps,
 } from 'expo-router/ui';
+import type { ComponentProps, ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Palette as C } from '@/constants/palette';
@@ -34,7 +34,7 @@ export default function AppTabs() {
   );
 }
 
-function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps) {
+function TabButton({ children, isFocused, ...props }: Omit<ComponentProps<typeof Pressable>, 'children'> & { children?: ReactNode; isFocused?: boolean }) {
   return (
     <Pressable {...props} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
       <Text style={[styles.label, isFocused && styles.labelActive]}>{children}</Text>

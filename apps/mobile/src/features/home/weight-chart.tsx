@@ -12,6 +12,7 @@ const X_PADDING = 8;
 /** Weight line over three gridlines; the y-axis rounds to whole kilograms around the data. */
 export function WeightChart({ weights }: { weights: number[] }) {
   const [width, setWidth] = useState(0);
+  if (!weights.length) return <Text style={styles.axisLabel}>No weight logs in this period.</Text>;
 
   const top = Math.ceil(Math.max(...weights));
   const bottom = Math.min(Math.floor(Math.min(...weights)), top - 1);

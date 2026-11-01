@@ -1,6 +1,10 @@
 export const RANGES = ['Week', 'Month', '3 mo', 'Year'] as const;
 export type Range = (typeof RANGES)[number];
-
+export type WorkoutStats = {
+  completedSessionCount: number;
+  totalDurationSeconds: number;
+  byDate: { date: string; sessionCount: number }[];
+};
 export type RangeData = {
   delta: string;
   weights: number[];
@@ -10,66 +14,50 @@ export type RangeData = {
   duration: string;
   durationNote: string;
 };
+const RANGE_DAYS: Record<Range, number> = { Week: 7, Month: 30, '3 mo': 90, Year: 365 };
 
-/** Demo progress series; each range ends at the current 72.0 kg baseline. */
-export const RANGE_DATA: Record<Range, RangeData> = {
-  Week: {
-    delta: '−0.4 kg',
-    weights: [72.4, 72.3, 72.3, 72.2, 72.1, 72.1, 72.0],
-    dates: ['Oct 2', 'Oct 4', 'Oct 6', 'Oct 8'],
-    bars: [
-      { label: 'Fri', sessions: 1 },
-      { label: 'Sat', sessions: 0 },
-      { label: 'Sun', sessions: 1 },
-      { label: 'Mon', sessions: 0 },
-      { label: 'Tue', sessions: 1 },
-      { label: 'Wed', sessions: 0 },
-      { label: 'Thu', sessions: 0 },
-    ],
-    sessionsNote: '3 sessions · this week',
-    duration: '1h 05m',
-    durationNote: 'total duration · this week',
-  },
-  Month: {
-    delta: '−1.2 kg',
-    weights: [73.2, 72.8, 72.4, 72.0],
-    dates: ['Sep 17', 'Sep 24', 'Oct 1', 'Oct 7'],
-    bars: [
-      { label: 'Sep 17', sessions: 3 },
-      { label: 'Sep 24', sessions: 4 },
-      { label: 'Oct 1', sessions: 3 },
-      { label: 'Oct 8', sessions: 2 },
-    ],
-    sessionsNote: '12 sessions · last 4 weeks',
-    duration: '2h 18m',
-    durationNote: 'total duration · this week',
-  },
-  '3 mo': {
-    delta: '−3.6 kg',
-    weights: [75.6, 75.0, 74.5, 73.8, 73.2, 72.6, 72.0],
-    dates: ['Jul 8', 'Aug 8', 'Sep 8', 'Oct 7'],
-    bars: [
-      { label: 'Jul', sessions: 10 },
-      { label: 'Aug', sessions: 11 },
-      { label: 'Sep', sessions: 12 },
-      { label: 'Oct', sessions: 5 },
-    ],
-    sessionsNote: '38 sessions · last 3 months',
-    duration: '28h 10m',
-    durationNote: 'total duration · last 3 months',
-  },
-  Year: {
-    delta: '−7.0 kg',
-    weights: [79.0, 77.2, 75.6, 73.8, 72.0],
-    dates: ['Oct 2025', 'Jan', 'Apr', 'Jul', 'Oct 7'],
-    bars: [
-      { label: 'Q1', sessions: 30 },
-      { label: 'Q2', sessions: 34 },
-      { label: 'Q3', sessions: 36 },
-      { label: 'Q4', sessions: 12 },
-    ],
-    sessionsNote: '112 sessions · last 12 months',
-    duration: '84h 30m',
-    durationNote: 'total duration · last 12 months',
-  },
-};
+export function progressBounds(range: Range, now = new Date()) {
+  const from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  from.setDate(from.getDate() - RANGE_DAYS[range] + 1);
+  const key = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return { from: key(from), to: key(now) };
+}
+
+export function progressData(
+  range: Range,
+  logs: { loggedDate: string; weightKg: number }[],
+  stats: WorkoutStats | null,
+  now = new Date(),
+): RangeData {
+  const { from, to } = progressBounds(range, now);
+  const selected = logs.filter((log) => log.loggedDate >= from && log.loggedDate <= to)
+    .sort((a, b) => a.loggedDate.localeCompare(b.loggedDate));
+  const change = selected.length > 1 ? selected[selected.length - 1].weightKg - selected[0].weightKg : null;
+  const count = range === 'Week' ? 7 : range === 'Month' ? 4 : range === '3 mo' ? 3 : 12;
+  const buckets = Array.from({ length: count }, (_, index) => {
+    const date = new Date(`${from}T12:00:00`);
+    date.setDate(date.getDate() + Math.ceil(index * RANGE_DAYS[range] / count));
+    return {
+      label: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      sessions: 0,
+    };
+  });
+  for (const day of stats?.byDate ?? []) {
+    if (day.date < from || day.date > to) continue;
+    const start = new Date(`${from}T12:00:00`);
+    const current = new Date(`${day.date}T12:00:00`);
+    const elapsed = Math.round((current.getTime() - start.getTime()) / 86_400_000);
+    const index = Math.min(count - 1, Math.floor(elapsed * count / RANGE_DAYS[range]));
+    buckets[index].sessions += day.sessionCount;
+  }
+  const minutes = Math.floor((stats?.totalDurationSeconds ?? 0) / 60);
+  return {
+    delta: change === null ? 'Not enough logs' : `${change > 0 ? '+' : ''}${change.toFixed(1)} kg`,
+    weights: selected.map((log) => log.weightKg),
+    dates: selected.length ? [selected[0].loggedDate, ...(selected.length > 1 ? [selected[selected.length - 1].loggedDate] : [])] : [],
+    bars: buckets,
+    sessionsNote: stats ? `${stats.completedSessionCount} completed sessions` : 'Training data unavailable',
+    duration: stats ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : '—',
+    durationNote: `total duration · last ${RANGE_DAYS[range]} days`,
+  };
+}

@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,7 +19,7 @@ import {
 } from './meals-ui';
 import { Image } from 'expo-image';
 import {
-  FOOD_DB,
+  useFoodSearch,
   estimatePortion,
   useMeals,
   type FoodEntry,
@@ -38,6 +38,11 @@ const toDraft = (estimate: MealEstimate) => ({
 export function AddItemScreen() {
   const insets = useSafeAreaInsets();
   const { addItem } = useMeals();
+  const { log: mealId } = useLocalSearchParams<{ log?: string }>();
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const active = useRef(true);
+  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<FoodEntry | null>(null);
   const [amount, setAmount] = useState('180');
@@ -49,10 +54,8 @@ export function AddItemScreen() {
   });
   const [description, setDescription] = useState('');
 
-  const matches = query.trim()
-    ? FOOD_DB.filter((food) => food.name.toLowerCase().includes(query.trim().toLowerCase()))
-    : [];
-  const noMatch = query.trim().length > 0 && matches.length === 0;
+  const { matches, error: searchError, loading } = useFoodSearch(query);
+  const noMatch = query.trim().length > 0 && !loading && !searchError && matches.length === 0;
 
   function selectFood(food: FoodEntry) {
     const estimate = estimatePortion(food, Number(amount) || 100);
@@ -68,22 +71,21 @@ export function AddItemScreen() {
     setDraft(toDraft(estimatePortion(selected, grams)));
   }
 
-  function handleAdd() {
-    if (!selected) return;
-    const grams = Number(amount) || 0;
-    addItem({
-      id: `${selected.id}-${Date.now()}`,
-      name: selected.name,
-      detail: `${grams}${selected.unit} · cooked`,
-      kcal: Number(draft.energy) || 0,
-      macros: {
-        protein: Number(draft.protein) || 0,
-        carbs: Number(draft.carbs) || 0,
-        fat: Number(draft.fat) || 0,
-      },
-      glyph: selected.glyph,
-    });
-    router.back();
+  async function handleAdd() {
+    if (!selected || saving) return;
+    setError(null);
+    if (!amount.trim() || Number(amount) <= 0 || Object.values(draft).some((value) => !value.trim() || !Number.isFinite(Number(value)) || Number(value) < 0)) {
+      setError('Enter a positive portion and all nutrition values (zero is allowed).'); return;
+    }
+    setSaving(true);
+    try {
+      await addItem({
+        id: `${selected.id}-${Date.now()}`, name: selected.name, detail: `${Number(amount)}${selected.unit}`,
+        kcal: Number(draft.energy), macros: { protein: Number(draft.protein), carbs: Number(draft.carbs), fat: Number(draft.fat) }, glyph: selected.glyph,
+      }, mealId);
+      if (active.current) router.back();
+    } catch (cause) { if (active.current) setError(cause instanceof Error ? cause.message : 'Could not add item.'); }
+    finally { if (active.current) setSaving(false); }
   }
 
   return (
@@ -105,6 +107,9 @@ export function AddItemScreen() {
               : 'Search for a food, then add its portion.'}
         </Text>
       </View>
+      {error || searchError ? <Text accessibilityRole="alert" style={styles.footnote}>{error ?? searchError}</Text> : null}
+      {loading ? <Text style={styles.footnote}>Searching foods…</Text> : null}
+      <SecondaryButton label="Enter nutrition manually" onPress={() => router.push({ pathname: '/review-item', params: { name: query, ...(mealId ? { log: mealId } : {}) } })} />
 
       {selected ? (
         <Field label="Search food">
@@ -165,7 +170,7 @@ export function AddItemScreen() {
           <View style={[styles.hintCard, styles.noMatchCard]}>
             <Image source={icons.searchLg} style={styles.noMatchIcon} contentFit="contain" />
             <Text style={styles.noMatchTitle}>No database match</Text>
-            <Text style={styles.hintNote}>Try a different name, or get an estimate to review.</Text>
+            <Text style={styles.hintNote}>Try a different name, or enter nutrition from the label.</Text>
           </View>
 
           <Field label="Description · optional">
@@ -179,21 +184,18 @@ export function AddItemScreen() {
             </Box>
           </Field>
 
-          <Text style={styles.footnote}>
-            Search with AI sends the name and description to the cloud for an editable nutrition
-            estimate.
-          </Text>
+          <Text style={styles.footnote}>No automated text estimate is available. Manual entry uses only the values you enter.</Text>
 
           <PrimaryButton
-            label="Search with AI"
+            label="Enter manually"
             onPress={() =>
               router.push(
-                `/review-item?name=${encodeURIComponent(query.trim())}&description=${encodeURIComponent(description)}`,
+                `/review-item?name=${encodeURIComponent(query.trim())}&description=${encodeURIComponent(description)}${mealId ? `&log=${encodeURIComponent(mealId)}` : ''}`,
               )
             }
           />
           <SecondaryButton label="Search again" onPress={() => setQuery('')} />
-          <Text style={styles.centerNote}>Review and correct the estimate before adding.</Text>
+          <Text style={styles.centerNote}>Enter the label values for the full portion.</Text>
         </>
       ) : null}
 
@@ -218,13 +220,7 @@ export function AddItemScreen() {
             · {selected.per100.carbs} g carbs · {selected.per100.fat} g fat. Edit values as needed.
           </Text>
 
-          <PrimaryButton label="Add Item" onPress={handleAdd} />
-          <SecondaryButton
-            label="Search with AI"
-            onPress={() =>
-              router.push(`/review-item?name=${encodeURIComponent(selected.name)}`)
-            }
-          />
+          <PrimaryButton label={saving ? 'Adding…' : 'Add Item'} disabled={saving} onPress={handleAdd} />
         </>
       ) : null}
     </ScrollView>

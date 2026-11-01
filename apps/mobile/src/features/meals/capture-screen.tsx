@@ -1,14 +1,16 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Pressable } from '@/components/pressable';
 import { Sheet } from '@/components/sheet';
 import { Palette as C } from '@/constants/palette';
-import { Header, icons } from './meals-ui';
-import { useMeals } from './meals-store';
+import { Header, icons, PrimaryButton, SecondaryButton } from './meals-ui';
+import { useMeals, type ApiMealItem } from './meals-store';
+import { apiRequest } from '@/lib/api';
 
 const TUTORIAL_STEPS = [
   { title: 'Add a ruler', detail: 'Place a 15 cm ruler beside the plate or cup.' },
@@ -21,8 +23,49 @@ const TUTORIAL_STEPS = [
 
 export function MealCaptureScreen() {
   const insets = useSafeAreaInsets();
-  const { tutorialSeen, dismissTutorial } = useMeals();
+  const { tutorialSeen, dismissTutorial, setAnalysis, setDraftPhoto, items } = useMeals();
   const [description, setDescription] = useState('');
+  const [image, setImage] = useState<{ uri: string; base64: string; mimeType: 'image/jpeg' | 'image/png' } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const active = useRef(true);
+  const request = useRef(0);
+  useEffect(() => { active.current = true; return () => { active.current = false; request.current++; }; }, []);
+
+  async function pickImage(camera: boolean) {
+    if (busy) return;
+    setError(null);
+    try {
+      if (camera && Platform.OS !== 'web') {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) throw new Error('Camera permission was denied. Allow camera access in settings or choose a library image.');
+      }
+      const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], base64: true, quality: 0.7, allowsEditing: true };
+      const result = camera ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+      if (result.canceled || !active.current) return;
+      const asset = result.assets[0];
+      if (!asset.base64) throw new Error('Could not read this image. Choose another JPEG or PNG.');
+      const mimeType = asset.base64.startsWith('/9j/') ? 'image/jpeg' : asset.base64.startsWith('iVBOR') ? 'image/png' : null;
+      if (!mimeType) throw new Error('Choose a JPEG or PNG image.');
+      if (asset.base64.length > 7_000_000) throw new Error('This image is too large. Crop it or choose a smaller photo (under 5 MB).');
+      setImage({ uri: asset.uri, base64: asset.base64, mimeType });
+    } catch (cause) { if (active.current) setError(cause instanceof Error ? cause.message : 'Could not open image picker.'); }
+  }
+
+  async function analyze() {
+    if (!image || busy) return;
+    if (items.length) { setError('Your current meal draft has items. Review or clear that draft before analyzing another meal.'); return; }
+    const current = ++request.current;
+    setBusy(true); setError(null);
+    try {
+      const result = await apiRequest<{ items: ApiMealItem[] }>('/meals/analyze', { method: 'POST', body: { image: image.base64, mimeType: image.mimeType, ...(description.trim() ? { description: description.trim() } : {}) } });
+      if (!active.current || current !== request.current) return;
+      if (!result.items.length) throw new Error('No food was identified. Try another photo or enter items manually.');
+      setAnalysis(result.items, image.uri, { data: image.base64, mimeType: image.mimeType });
+      router.push('/meal');
+    } catch (cause) { if (active.current && current === request.current) setError(cause instanceof Error ? cause.message : 'Photo analysis is unavailable. You can enter nutrition manually.'); }
+    finally { if (active.current && current === request.current) setBusy(false); }
+  }
 
   return (
     <>
@@ -39,7 +82,7 @@ export function MealCaptureScreen() {
           <Text style={styles.subtitle}>Capture food or drinks.</Text>
         </View>
 
-        <View style={styles.preview}>
+        {image ? <Image source={{ uri: image.uri }} style={styles.preview} contentFit="contain" /> : <View style={styles.preview}>
           <Text style={styles.previewLabel}>• GUIDELINES · NO IMAGE</Text>
 
           <View style={[styles.corner, styles.cornerTopLeft]} />
@@ -57,7 +100,7 @@ export function MealCaptureScreen() {
             <Image source={icons.ruler} style={styles.rulerIcon} contentFit="contain" />
             <Text style={styles.rulerText}>Place 15 cm ruler beside plate or cup</Text>
           </View>
-        </View>
+        </View>}
 
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Optional description</Text>
@@ -71,19 +114,18 @@ export function MealCaptureScreen() {
           />
         </View>
 
-        <Text style={styles.footnote}>
-          Photo and description are sent to cloud analysis for ingredient detection.
-        </Text>
+        <Text style={styles.footnote}>Only when you tap Analyze, your selected photo and description are sent to the configured cloud model. Estimates must be reviewed; no wearable or medical measurements are inferred.</Text>
+        {error ? <Text accessibilityRole="alert" style={styles.footnote}>{error} Manual entry remains available.</Text> : null}
+        <PrimaryButton label={busy ? 'Analyzing photo…' : 'Analyze photo'} disabled={!image || busy} onPress={analyze} />
+        <SecondaryButton label="Enter meal manually" onPress={() => { if (image) setDraftPhoto(image.uri, { data: image.base64, mimeType: image.mimeType }); router.push('/meal'); }} />
 
         <View style={styles.controls}>
-          <Image source={icons.zapOff} style={styles.controlIcon} contentFit="contain" />
-          <Pressable style={styles.shutterRing} onPress={() => router.push('/meal')}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Take meal photo" disabled={busy} style={styles.shutterRing} onPress={() => pickImage(true)}>
             <View style={styles.shutter} />
           </Pressable>
-          <Image source={icons.switchCamera} style={styles.controlIcon} contentFit="contain" />
         </View>
 
-        <Pressable style={styles.libraryButton} onPress={() => router.push('/meal')}>
+        <Pressable disabled={busy} style={styles.libraryButton} onPress={() => pickImage(false)}>
           <Image source={icons.images} style={styles.libraryIcon} contentFit="contain" />
           <Text style={styles.libraryLabel}>Upload from library</Text>
         </Pressable>

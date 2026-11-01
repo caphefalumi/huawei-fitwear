@@ -3,19 +3,17 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Palette as C } from '@/constants/palette';
-import { useHealth } from '@/features/health/health-store';
+import { Pressable } from '@/components/pressable';
 import { useMeals } from '@/features/meals/meals-store';
 import { NutritionRing } from '@/features/home/ring';
 import { BackHeader, Card, MacroBar } from '@/features/home/ui';
 
 export function NutritionScreen() {
   const insets = useSafeAreaInsets();
-  const { weightUpdated } = useHealth();
-  const { loggedKcal, loggedMacros } = useMeals();
-
-  const targetKcal = weightUpdated ? 2160 : 2200;
-  const consumedKcal = 1320 + loggedKcal;
-  const left = targetKcal - consumedKcal;
+  const { summary, loading, error, refresh } = useMeals();
+  const consumed = summary?.consumed;
+  const targets = summary?.targets;
+  const left = summary?.remaining.caloriesKcal;
 
   return (
     <ScrollView
@@ -28,20 +26,24 @@ export function NutritionScreen() {
 
       <View style={styles.heading}>
         <Text style={styles.title}>Nutrition</Text>
-        <Text style={styles.subtitle}>Thursday, Oct 8</Text>
+        <Text style={styles.subtitle}>{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</Text>
       </View>
+      {loading ? <Text style={styles.noteBody}>Loading nutrition…</Text> : null}
+      {error ? <Pressable onPress={() => { void refresh(); }}><Text accessibilityRole="alert">{error} Tap to retry.</Text></Pressable> : null}
+      {!summary && !loading ? <Text style={styles.noteBody}>Nutrition summary is unavailable. Retry to load your targets and logged meals.</Text> : null}
+      {summary && targets && consumed && left !== undefined ? <>
 
       <Card style={styles.center}>
-        <NutritionRing kcalLeft={left} saved={weightUpdated} />
+        <NutritionRing kcalLeft={left} targetKcal={targets.calorieTargetKcal} consumedKcal={consumed.caloriesKcal} />
 
         <View style={styles.stats}>
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Consumed</Text>
-            <Text style={styles.statValue}>{consumedKcal.toLocaleString('en-US')} kcal</Text>
+            <Text style={styles.statValue}>{consumed.caloriesKcal.toLocaleString()} kcal</Text>
           </View>
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Daily target</Text>
-            <Text style={styles.statValue}>{targetKcal.toLocaleString('en-US')} kcal</Text>
+            <Text style={styles.statValue}>{targets.calorieTargetKcal.toLocaleString()} kcal</Text>
           </View>
         </View>
       </Card>
@@ -56,27 +58,28 @@ export function NutritionScreen() {
         <View style={styles.macros}>
           <MacroBar
             label="Protein"
-            value={92 + loggedMacros.protein}
-            target={140}
+            value={consumed.proteinG}
+            target={targets.proteinTargetG}
             unit="g"
-            note={`${Math.max(0, Math.round(140 - 92 - loggedMacros.protein))} g remaining`}
+            note={`${Math.max(0, Math.round(summary.remaining.proteinG))} g remaining`}
           />
           <MacroBar
             label="Carbs"
-            value={152 + loggedMacros.carbs}
-            target={265}
+            value={consumed.carbsG}
+            target={targets.carbsTargetG}
             unit="g"
-            note={`${Math.max(0, Math.round(265 - 152 - loggedMacros.carbs))} g remaining`}
+            note={`${Math.max(0, Math.round(summary.remaining.carbsG))} g remaining`}
           />
           <MacroBar
             label="Fat"
-            value={38 + loggedMacros.fat}
-            target={60}
+            value={consumed.fatG}
+            target={targets.fatTargetG}
             unit="g"
-            note={`${Math.max(0, Math.round(60 - 38 - loggedMacros.fat))} g remaining`}
+            note={`${Math.max(0, Math.round(summary.remaining.fatG))} g remaining`}
           />
         </View>
       </Card>
+      </> : null}
 
       <View style={styles.note}>
         <Text style={styles.noteTitle}>About these numbers</Text>

@@ -8,6 +8,7 @@ import { Pressable } from '@/components/pressable';
 import { Palette as C } from '@/constants/palette';
 import { icons } from './meals-ui';
 import { useMeals, type MealLog } from './meals-store';
+import { MealPhoto } from './meal-photo';
 
 type SortKey = 'newest' | 'kcal' | 'protein' | 'carbs' | 'fat';
 
@@ -24,7 +25,7 @@ const metricOf = (item: MealLog, key: Exclude<SortKey, 'newest'>) =>
 
 export function MealsHistoryScreen() {
   const insets = useSafeAreaInsets();
-  const { history } = useMeals();
+  const { history, loading, error, refresh } = useMeals();
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortKey>('newest');
   const [descending, setDescending] = useState(true);
@@ -57,6 +58,9 @@ export function MealsHistoryScreen() {
         <Text style={styles.title}>Meals</Text>
         <Text style={styles.subtitle}>Your logged meals</Text>
       </View>
+      <Pressable accessibilityRole="button" onPress={() => router.push('/capture')} style={{ paddingVertical: 12 }}><Text style={{ color: C.accent }}>Add meal</Text></Pressable>
+      {loading ? <Text style={styles.subtitle}>Loading meals…</Text> : null}
+      {error ? <View><Text accessibilityRole="alert" style={styles.subtitle}>{error}</Text><Pressable onPress={() => { void refresh(); }} style={{ paddingVertical: 12 }}><Text style={{ color: C.accent }}>Retry</Text></Pressable></View> : null}
 
       <View style={styles.search}>
         <Image source={icons.searchMd} style={styles.searchIcon} contentFit="contain" />
@@ -92,18 +96,14 @@ export function MealsHistoryScreen() {
       </ScrollView>
 
       {items.length === 0 ? (
-        <Text style={styles.empty}>No meals match “{query.trim()}”.</Text>
+        <Text style={styles.empty}>{query.trim() ? `No meals match “${query.trim()}”.` : loading ? 'Loading your meals…' : 'No meals logged yet. Add your first meal above.'}</Text>
       ) : (
         items.map((item) => (
           <Pressable
             key={item.id}
             style={styles.card}
             onPress={() => router.push(`/meal?log=${item.id}`)}>
-            <Image
-              source={require('@/assets/images/meals/meal-photo.png')}
-              style={styles.photo}
-              contentFit="cover"
-            />
+            <MealPhoto mealId={item.id} imageUrl={item.imageUrl} style={styles.photo} compact />
             <View style={styles.copy}>
               <Text style={styles.name} numberOfLines={1}>
                 {item.name}

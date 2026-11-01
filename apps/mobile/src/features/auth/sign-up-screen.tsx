@@ -1,10 +1,11 @@
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Pressable } from '@/components/pressable';
 import { AuthField } from './auth-field';
+import { useAuth } from './auth-store';
 import { AuthColors } from './tokens';
 
 const icons = {
@@ -18,17 +19,46 @@ const icons = {
 
 export function SignUpScreen({ onSignIn }: { onSignIn: () => void }) {
   const insets = useSafeAreaInsets();
-  const [username, setUsername] = useState('Sam.Nguyen');
-  const [password, setPassword] = useState('password1234');
-  const [dateOfBirth, setDateOfBirth] = useState('2 Sep 1976');
-  const [agreed, setAgreed] = useState(true);
+  const { signUp, pending, error } = useAuth();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [agreed, setAgreed] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  async function submit() {
+    const date = new Date(`${birthDate}T00:00:00Z`);
+    if (!name.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setValidationError('Enter your name and a valid email address.');
+      return;
+    }
+    if (password.length < 8) {
+      setValidationError('Password must contain at least 8 characters.');
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== birthDate || date > new Date()) {
+      setValidationError('Enter a valid date of birth in YYYY-MM-DD format, not in the future.');
+      return;
+    }
+    if (!agreed) {
+      setValidationError('Please agree to the terms before creating an account.');
+      return;
+    }
+    setValidationError(null);
+    try {
+      await signUp({ name, email, password, birthDate });
+    } catch {
+      // Keep input values and display the server error from the auth store.
+    }
+  }
 
   return (
     <ScrollView
       style={styles.screen}
       contentContainerStyle={[styles.content, { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom }]}
       keyboardShouldPersistTaps="handled">
-      <Pressable style={styles.back} onPress={onSignIn} hitSlop={8}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Sign in" disabled={pending} style={styles.back} onPress={onSignIn} hitSlop={8}>
         <Image source={icons.chevronLeft} style={styles.backIcon} contentFit="contain" />
         <Text style={styles.backLabel}>Sign in</Text>
       </Pressable>
@@ -37,33 +67,53 @@ export function SignUpScreen({ onSignIn }: { onSignIn: () => void }) {
 
       <View style={styles.form}>
         <AuthField
-          label="Username"
+          label="Name"
           icon={icons.user}
-          helper="3–30 characters, no spaces."
-          value={username}
-          onChangeText={setUsername}
+          value={name}
+          onChangeText={setName}
+          autoCapitalize="words"
+          textContentType="name"
+          autoComplete="name"
+          editable={!pending}
+        />
+        <AuthField
+          label="Email"
+          icon={icons.user}
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
-          textContentType="username"
+          textContentType="emailAddress"
+          autoComplete="email"
+          editable={!pending}
         />
         <AuthField
           label="Password"
           icon={icons.eyeOff}
-          helper="8+ characters, letters & numbers"
+          helper="At least 8 characters"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
           textContentType="newPassword"
+          autoComplete="new-password"
+          editable={!pending}
         />
         <AuthField
           label="Date of birth"
           icon={icons.calendar}
-          value={dateOfBirth}
-          onChangeText={setDateOfBirth}
+          helper="YYYY-MM-DD"
+          placeholder="YYYY-MM-DD"
+          value={birthDate}
+          onChangeText={setBirthDate}
+          autoCapitalize="none"
+          autoCorrect={false}
+          maxLength={10}
+          editable={!pending}
         />
       </View>
 
-      <Pressable style={styles.consent} onPress={() => setAgreed((value) => !value)}>
+      <Pressable accessibilityRole="checkbox" accessibilityLabel="Agree to Terms of Service and User Agreement" aria-checked={agreed} accessibilityState={{ checked: agreed, disabled: pending }} disabled={pending} style={styles.consent} onPress={() => setAgreed((value) => !value)}>
         <View style={[styles.checkbox, !agreed && styles.checkboxUnchecked]}>
           {agreed ? <Image source={icons.check} style={styles.checkIcon} contentFit="contain" /> : null}
         </View>
@@ -73,8 +123,18 @@ export function SignUpScreen({ onSignIn }: { onSignIn: () => void }) {
         </Text>
       </Pressable>
 
-      <Pressable style={styles.primaryButton}>
-        <Text style={styles.primaryLabel}>Create account</Text>
+      {validationError || error ? (
+        <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>{validationError ?? error}</Text>
+      ) : null}
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Create account"
+        accessibilityState={{ disabled: pending, busy: pending }}
+        disabled={pending}
+        onPress={() => { void submit(); }}
+        style={[styles.primaryButton, pending && styles.disabled]}>
+        {pending ? <ActivityIndicator color={AuthColors.onAccent} /> : <Text style={styles.primaryLabel}>Create account</Text>}
       </Pressable>
 
       <View style={styles.privacy}>
@@ -84,7 +144,7 @@ export function SignUpScreen({ onSignIn }: { onSignIn: () => void }) {
 
       <Text style={styles.footer}>
         Already have an account?{' '}
-        <Text style={styles.footerLink} onPress={onSignIn}>
+        <Text accessibilityRole="link" style={styles.footerLink} onPress={pending ? undefined : onSignIn}>
           Sign in
         </Text>
       </Text>
@@ -93,6 +153,8 @@ export function SignUpScreen({ onSignIn }: { onSignIn: () => void }) {
 }
 
 const styles = StyleSheet.create({
+  error: { color: AuthColors.text, fontSize: 13, lineHeight: 20 },
+  disabled: { opacity: 0.6 },
   screen: {
     flex: 1,
     backgroundColor: AuthColors.background,
