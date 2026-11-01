@@ -16,6 +16,7 @@ export const user = sqliteTable('user', {
   targetWeightKg: real('targetWeightKg'),
   activityLevel: text('activityLevel').default('moderately_active'),
   fitnessGoal: text('fitnessGoal').default('muscle_gain'),
+  weeklySessions: integer('weeklySessions').notNull().default(3),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
@@ -77,6 +78,7 @@ export const mealItems = sqliteTable('meal_items', {
   id: text('id').primaryKey().$defaultFn(() => generateId()),
   mealLogId: text('mealLogId').notNull().references(() => mealLogs.id, { onDelete: 'cascade' }),
   foodName: text('foodName').notNull(),
+  servingUnit: text('servingUnit', { enum: ['g', 'ml'] }).notNull().default('g'),
   estimatedWeightG: real('estimatedWeightG').notNull(),
   correctedWeightG: real('correctedWeightG'),
   caloriesKcal: real('caloriesKcal').notNull(),
@@ -90,12 +92,51 @@ export const mealItems = sqliteTable('meal_items', {
   index('meal_items_mealLogId_idx').on(table.mealLogId),
 ]);
 
+export const foods = sqliteTable('foods', {
+  id: text('id').primaryKey().$defaultFn(() => generateId()),
+  name: text('name').notNull().unique(),
+  servingUnit: text('servingUnit').notNull().default('g'),
+  glyph: text('glyph').notNull().default('carrot'),
+  caloriesPer100: real('caloriesPer100').notNull(),
+  proteinPer100G: real('proteinPer100G').notNull(),
+  carbsPer100G: real('carbsPer100G').notNull(),
+  fatPer100G: real('fatPer100G').notNull(),
+});
+
+export const weightLogs = sqliteTable('weight_logs', {
+  id: text('id').primaryKey().$defaultFn(() => generateId()),
+  userId: text('userId').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  loggedDate: text('loggedDate').notNull(),
+  weightKg: real('weightKg').notNull(),
+  createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => [
+  uniqueIndex('weight_logs_userId_loggedDate_unique').on(table.userId, table.loggedDate),
+  index('weight_logs_userId_loggedDate_idx').on(table.userId, table.loggedDate),
+]);
+
+export const recoveryPlans = sqliteTable('recovery_plans', {
+  id: text('id').primaryKey().$defaultFn(() => generateId()),
+  userId: text('userId').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  area: text('area').notNull(),
+  note: text('note'),
+  restDays: integer('restDays').notNull(),
+  lightDays: integer('lightDays').notNull(),
+  startDate: text('startDate').notNull(),
+  createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => [
+  uniqueIndex('recovery_plans_userId_unique').on(table.userId),
+]);
+
 export const exercises = sqliteTable('exercises', {
   id: text('id').primaryKey().$defaultFn(() => generateId()),
   name: text('name').notNull().unique(),
   muscleGroup: text('muscleGroup').notNull(),
   equipment: text('equipment').notNull().default('barbell'),
   cadenceAnimationUrl: text('cadenceAnimationUrl'),
+  cuesJson: text('cuesJson').notNull().default('[]'),
+  defaultSets: integer('defaultSets').notNull().default(3),
+  defaultReps: integer('defaultReps').notNull().default(10),
+  repetitionUnit: text('repetitionUnit', { enum: ['reps', 'seconds', 'minutes'] }).notNull().default('reps'),
 });
 
 export const workoutSessions = sqliteTable('workout_sessions', {
@@ -129,11 +170,27 @@ export const workoutSets = sqliteTable('workout_sets', {
   index('workout_sets_workoutSessionId_idx').on(table.workoutSessionId),
 ]);
 
-export const userRelations = relations(user, ({ many }) => ({
+export const userRelations = relations(user, ({ many, one }) => ({
   sessions: many(session),
   dailyTargets: many(dailyTargets),
   mealLogs: many(mealLogs),
   workoutSessions: many(workoutSessions),
+  weightLogs: many(weightLogs),
+  recoveryPlan: one(recoveryPlans),
+}));
+
+export const weightLogsRelations = relations(weightLogs, ({ one }) => ({
+  user: one(user, {
+    fields: [weightLogs.userId],
+    references: [user.id],
+  }),
+}));
+
+export const recoveryPlansRelations = relations(recoveryPlans, ({ one }) => ({
+  user: one(user, {
+    fields: [recoveryPlans.userId],
+    references: [user.id],
+  }),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -202,6 +259,12 @@ export type MealItem = typeof mealItems.$inferSelect;
 export type NewMealItem = typeof mealItems.$inferInsert;
 export type Exercise = typeof exercises.$inferSelect;
 export type NewExercise = typeof exercises.$inferInsert;
+export type Food = typeof foods.$inferSelect;
+export type NewFood = typeof foods.$inferInsert;
+export type WeightLog = typeof weightLogs.$inferSelect;
+export type NewWeightLog = typeof weightLogs.$inferInsert;
+export type RecoveryPlan = typeof recoveryPlans.$inferSelect;
+export type NewRecoveryPlan = typeof recoveryPlans.$inferInsert;
 export type WorkoutSession = typeof workoutSessions.$inferSelect;
 export type NewWorkoutSession = typeof workoutSessions.$inferInsert;
 export type WorkoutSet = typeof workoutSets.$inferSelect;

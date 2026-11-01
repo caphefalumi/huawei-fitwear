@@ -2,11 +2,12 @@ import { status } from 'elysia';
 import { getKv } from '../../db';
 import { consumeTokenBucket, type TokenBucketOptions } from '../../lib/token-bucket';
 
-export type AuthRateLimitAction = 'sign-in' | 'sign-up';
+export type AuthRateLimitAction = 'sign-in' | 'sign-up' | 'password-reset';
 
 const AUTH_RATE_LIMITS: Record<AuthRateLimitAction, TokenBucketOptions> = {
   'sign-in': { capacity: 20, refillPerSecond: 20 / 60 },
   'sign-up': { capacity: 10, refillPerSecond: 10 / 3600 },
+  'password-reset': { capacity: 5, refillPerSecond: 5 / 3600 },
 };
 
 export function clientIpFromRequest(request: Request): string {

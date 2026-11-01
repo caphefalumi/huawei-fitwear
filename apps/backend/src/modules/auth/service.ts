@@ -4,7 +4,7 @@ import { getDb, user as userTable, session as sessionTable } from '../../db';
 import { hashPassword, verifyPassword } from '../../lib/password';
 import { generateId, generateToken } from '../../lib/id';
 
-import type { SignUpBody, SignInBody, UpdateUserBody } from './model';
+import type { SignUpBody, SignInBody, UpdateUserBody } from './index';
 
 export abstract class Auth {
   static async signUp(data: SignUpBody, d1?: D1Database) {
@@ -41,6 +41,7 @@ export abstract class Auth {
       targetWeightKg: data.targetWeightKg ?? null,
       activityLevel: data.activityLevel ?? 'moderately_active',
       fitnessGoal: data.fitnessGoal ?? 'muscle_gain',
+      weeklySessions: data.weeklySessions ?? 3,
       createdAt: now,
       updatedAt: now,
     };
@@ -138,6 +139,7 @@ export abstract class Auth {
           targetWeightKg: userTable.targetWeightKg,
           activityLevel: userTable.activityLevel,
           fitnessGoal: userTable.fitnessGoal,
+          weeklySessions: userTable.weeklySessions,
           createdAt: userTable.createdAt,
           updatedAt: userTable.updatedAt,
         },
@@ -193,6 +195,7 @@ export abstract class Auth {
         targetWeightKg: userTable.targetWeightKg,
         activityLevel: userTable.activityLevel,
         fitnessGoal: userTable.fitnessGoal,
+        weeklySessions: userTable.weeklySessions,
         createdAt: userTable.createdAt,
         updatedAt: userTable.updatedAt,
       })

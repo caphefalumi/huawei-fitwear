@@ -1,10 +1,17 @@
 import { Elysia } from 'elysia';
 import { CloudflareAdapter } from 'elysia/adapter/cloudflare-worker';
 import { cors } from '@elysiajs/cors';
-import { setDatabaseBinding } from './db';
+import { withDatabaseBinding } from './db';
 import { fitwearOpenapi } from './openapi-config';
 import { auth } from './modules/auth';
 import { user } from './modules/user';
+import { foods } from './modules/foods';
+import { targets } from './modules/targets';
+import { meals } from './modules/meals';
+import { exercises } from './modules/exercises';
+import { workouts } from './modules/workouts';
+import { health } from './modules/health';
+import { mealAnalysis } from './modules/meals/analysis';
 
 export function buildFitwearApp() {
   return new Elysia({ adapter: CloudflareAdapter })
@@ -15,12 +22,19 @@ export function buildFitwearApp() {
         allowedHeaders: ['Content-Type', 'Authorization'],
         exposeHeaders: ['Content-Length'],
         maxAge: 600,
-        credentials: true,
+        credentials: false,
       })
     )
     .use(fitwearOpenapi)
     .use(auth)
     .use(user)
+    .use(foods)
+    .use(targets)
+    .use(meals)
+    .use(mealAnalysis)
+    .use(exercises)
+    .use(workouts)
+    .use(health)
     .get('/', () => ({
       name: 'Fitwear Backend API',
       status: 'online',
@@ -34,7 +48,6 @@ export const app = buildFitwearApp().compile();
 
 export default {
   async fetch(request: Request, env: import('./db').WorkerBindings) {
-    setDatabaseBinding(env);
-    return app.fetch(request);
+    return withDatabaseBinding(env, () => app.fetch(request));
   },
 };
