@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { hashPassword, verifyPassword } from '../../src/lib/password';
 
-describe('Unit Test: Password Hashing (Bun Native Bcrypt)', () => {
+describe('Password hashing and legacy compatibility', () => {
   it('should hash password and produce standard bcrypt format', async () => {
     const password = 'SuperSecretPassword123!';
     const hash = await hashPassword(password);
@@ -35,5 +35,12 @@ describe('Unit Test: Password Hashing (Bun Native Bcrypt)', () => {
     expect(hash1).not.toBe(hash2);
     expect(await verifyPassword(password, hash1)).toBeTrue();
     expect(await verifyPassword(password, hash2)).toBeTrue();
+  });
+
+  it('accepts an existing Bun bcrypt hash without changing stored credentials', async () => {
+    const password = 'ExistingMember123!';
+    const legacyHash = await Bun.password.hash(password, { algorithm: 'bcrypt', cost: 10 });
+    expect(await verifyPassword(password, legacyHash)).toBe(true);
+    expect(await verifyPassword('wrong-password', legacyHash)).toBe(false);
   });
 });

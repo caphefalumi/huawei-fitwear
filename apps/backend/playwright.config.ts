@@ -8,8 +8,8 @@ export default defineConfig({
   retries: 0,
   workers: 1,
   use: {
-    baseURL: 'http://127.0.0.1:8787',
-    trace: 'on-first-retry',
+    baseURL: process.env.E2E_API_URL ?? 'http://127.0.0.1:8787',
+    trace: 'retain-on-failure',
   },
   projects: [
     {
@@ -17,7 +17,7 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
+  webServer: process.env.E2E_API_URL ? undefined : {
     command: 'bun tests/helpers/test-server.ts',
     url: 'http://127.0.0.1:8787/',
     reuseExistingServer: true,

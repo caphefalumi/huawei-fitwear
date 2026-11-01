@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { Value } from '@sinclair/typebox/value';
-import { AuthModel } from '../../src/modules/auth/model';
+import { AuthSchemas } from '../../src/modules/auth';
 
 describe('Unit Test: Auth Validation Schemas', () => {
   describe('signUpBody', () => {
@@ -18,7 +18,7 @@ describe('Unit Test: Auth Validation Schemas', () => {
         fitnessGoal: 'maintenance',
       };
 
-      expect(Value.Check(AuthModel.signUpBody, validPayload)).toBeTrue();
+      expect(Value.Check(AuthSchemas.signUpBody, validPayload)).toBeTrue();
     });
 
     it('should reject invalid email format', () => {
@@ -27,7 +27,7 @@ describe('Unit Test: Auth Validation Schemas', () => {
         password: 'StrongPassword123',
       };
 
-      expect(Value.Check(AuthModel.signUpBody, invalidPayload)).toBeFalse();
+      expect(Value.Check(AuthSchemas.signUpBody, invalidPayload)).toBeFalse();
     });
 
     it('should reject passwords shorter than 8 characters', () => {
@@ -36,7 +36,7 @@ describe('Unit Test: Auth Validation Schemas', () => {
         password: 'short',
       };
 
-      expect(Value.Check(AuthModel.signUpBody, shortPasswordPayload)).toBeFalse();
+      expect(Value.Check(AuthSchemas.signUpBody, shortPasswordPayload)).toBeFalse();
     });
 
     it('should reject invalid gender or enum values', () => {
@@ -46,7 +46,7 @@ describe('Unit Test: Auth Validation Schemas', () => {
         gender: 'alien',
       };
 
-      expect(Value.Check(AuthModel.signUpBody, invalidEnumPayload)).toBeFalse();
+      expect(Value.Check(AuthSchemas.signUpBody, invalidEnumPayload)).toBeFalse();
     });
   });
 
@@ -57,7 +57,7 @@ describe('Unit Test: Auth Validation Schemas', () => {
         password: 'password123',
       };
 
-      expect(Value.Check(AuthModel.signInBody, validPayload)).toBeTrue();
+      expect(Value.Check(AuthSchemas.signInBody, validPayload)).toBeTrue();
     });
 
     it('should reject empty password', () => {
@@ -66,7 +66,7 @@ describe('Unit Test: Auth Validation Schemas', () => {
         password: '',
       };
 
-      expect(Value.Check(AuthModel.signInBody, emptyPasswordPayload)).toBeFalse();
+      expect(Value.Check(AuthSchemas.signInBody, emptyPasswordPayload)).toBeFalse();
     });
   });
 
@@ -77,7 +77,7 @@ describe('Unit Test: Auth Validation Schemas', () => {
         fitnessGoal: 'muscle_gain',
       };
 
-      expect(Value.Check(AuthModel.updateUserBody, partialUpdate)).toBeTrue();
+      expect(Value.Check(AuthSchemas.updateUserBody, partialUpdate)).toBeTrue();
     });
   });
 });

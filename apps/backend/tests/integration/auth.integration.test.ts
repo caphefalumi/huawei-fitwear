@@ -1,6 +1,5 @@
 import { describe, expect, it, beforeEach } from 'bun:test';
-import { app } from '../../src/index';
-import { setDatabaseBinding } from '../../src/db';
+import { app, setTestDatabaseBinding } from '../helpers/test-app';
 import { createTestDatabase } from '../helpers/test-db';
 import { createTestKv } from '../helpers/test-kv';
 import { user as userTable } from '../../src/db/schema';
@@ -12,7 +11,7 @@ describe('Integration Test: Auth API Endpoints', () => {
   beforeEach(() => {
     const { d1 } = createTestDatabase();
     testD1 = d1;
-    setDatabaseBinding({ DB: d1, fitwear_kv: createTestKv() });
+    setTestDatabaseBinding({ DB: d1, fitwear_kv: createTestKv() });
   });
 
   describe('POST /auth/sign-up', () => {
@@ -80,7 +79,7 @@ describe('Integration Test: Auth API Endpoints', () => {
 
     it('should reject duplicate when user already exists in D1', async () => {
       const { d1, db } = createTestDatabase();
-      setDatabaseBinding({ DB: d1, fitwear_kv: createTestKv() });
+      setTestDatabaseBinding({ DB: d1, fitwear_kv: createTestKv() });
 
       await db.insert(userTable).values({
         id: 'legacy-user',
@@ -223,7 +222,7 @@ describe('Integration Test: Auth API Endpoints', () => {
     it('should sign in when user was inserted directly into D1', async () => {
       const password = 'LegacyLogin123!';
       const { d1, db } = createTestDatabase();
-      setDatabaseBinding({ DB: d1, fitwear_kv: createTestKv() });
+      setTestDatabaseBinding({ DB: d1, fitwear_kv: createTestKv() });
 
       await app.handle(
         new Request('http://localhost/auth/sign-up', {

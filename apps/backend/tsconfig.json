@@ -13,13 +13,13 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "types": [
-      "@cloudflare/workers-types",
       "@types/node",
       "@types/bun"
     ]
   },
   "include": [
     "src/**/*",
+    "worker-configuration.d.ts",
     "drizzle.config.ts"
   ],
   "exclude": [

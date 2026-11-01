@@ -1,13 +1,12 @@
 import { describe, expect, it, beforeEach } from 'bun:test';
-import { app } from '../../src/index';
-import { setDatabaseBinding } from '../../src/db';
+import { app, setTestDatabaseBinding } from '../helpers/test-app';
 import { createTestDatabase } from '../helpers/test-db';
 import { createTestKv } from '../helpers/test-kv';
 
 describe('Integration Test: User API Endpoints', () => {
   beforeEach(() => {
     const { d1 } = createTestDatabase();
-    setDatabaseBinding({ DB: d1, fitwear_kv: createTestKv() });
+    setTestDatabaseBinding({ DB: d1, fitwear_kv: createTestKv() });
   });
 
   it('GET /user/me should return current user when authenticated', async () => {

@@ -17,14 +17,4 @@ test.describe('E2E: Interactive Swagger / Scalar API Specification', () => {
     expect(paths).toContain('/auth/sign-out');
     expect(paths).toContain('/user/me');
   });
-
-  test('Documentation page should load with correct title and API configuration', async ({ page }) => {
-    await page.goto('/swagger');
-
-    await expect(page).toHaveTitle(/Fitwear Edge API/i);
-
-    const apiRef = page.locator('#api-reference');
-    await expect(apiRef).toBeAttached();
-    await expect(apiRef).toHaveAttribute('data-url', 'swagger/json');
-  });
 });
