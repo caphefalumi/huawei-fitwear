@@ -222,11 +222,13 @@ export function ProfileScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Connected devices</Text>
-        <ProfileRow
-          label="Huawei Watch (BLE Sync)"
-          value="Telemetry & Sync"
+        <Pressable
+          style={styles.syncTestButton}
+          accessibilityLabel="BLE Sync Test"
           onPress={() => router.push("/ble-sync" as never)}
-        />
+        >
+          <Text style={styles.syncTestButtonLabel}>BLE Sync Test</Text>
+        </Pressable>
       </View>
 
       {sex === "Female" ? (
@@ -386,6 +388,21 @@ const styles = StyleSheet.create({
   chevron: {
     width: 16,
     height: 16,
+  },
+  syncTestButton: {
+    minHeight: 50,
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: C.card,
+    borderWidth: 1,
+    borderColor: C.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  syncTestButtonLabel: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: C.text,
   },
   periodButton: {
     minHeight: 52,

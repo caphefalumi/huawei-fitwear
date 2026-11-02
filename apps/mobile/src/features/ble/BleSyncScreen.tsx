@@ -268,10 +268,10 @@ export function BleSyncScreen() {
               )}
             </View>
             <ThemedText type="title" style={styles.headerTitle}>
-              Huawei Watch Sync
+              BLE Sync Test
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              BLE Gatt Central · IMU Stream & Bidirectional Messaging
+              Huawei Watch · IMU Stream & Bidirectional Messaging
             </ThemedText>
           </View>
 
