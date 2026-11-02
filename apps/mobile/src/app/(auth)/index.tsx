@@ -1,12 +1,7 @@
-import { router } from 'expo-router';
+import { router } from "expo-router";
 
-import { LoginScreen } from '@/features/auth/login-screen';
+import { LoginScreen } from "@/features/auth/login-screen";
 
 export default function LoginRoute() {
-  return (
-    <LoginScreen
-      onLoggedIn={() => router.replace('/home')}
-      onCreateAccount={() => router.push('/sign-up')}
-    />
-  );
+  return <LoginScreen onCreateAccount={() => router.push("/sign-up")} />;
 }

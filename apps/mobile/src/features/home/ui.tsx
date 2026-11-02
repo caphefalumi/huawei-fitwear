@@ -1,12 +1,12 @@
-import { Image } from 'expo-image';
-import type { ReactNode } from 'react';
-import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image } from "expo-image";
+import type { ReactNode } from "react";
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 
-import { Pressable } from '@/components/pressable';
-import { Palette as C } from '@/constants/palette';
+import { Pressable } from "@/components/pressable";
+import { Palette as C } from "@/constants/palette";
 
 const icons = {
-  back: require('@/assets/images/progress/chevron-left.svg'),
+  back: require("@/assets/images/progress/chevron-left.svg"),
 };
 
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
@@ -56,7 +56,7 @@ export function MacroBar({
   unit: string;
   note?: string;
 }) {
-  const fill = Math.max(0, Math.min(1, value / target));
+  const fill = target > 0 ? Math.max(0, Math.min(1, value / target)) : 0;
   return (
     <View style={styles.macro}>
       <View style={styles.macroRow}>
@@ -83,23 +83,23 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   headingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   headingText: {
     fontSize: 17,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   headingAction: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
     color: C.accent,
   },
   back: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   backIcon: {
@@ -114,8 +114,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   macroRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   macroLabel: {
     fontSize: 11,
@@ -123,14 +123,14 @@ const styles = StyleSheet.create({
   },
   macroValue: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   track: {
     height: 5,
     borderRadius: 100,
     backgroundColor: C.card,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   fill: {
     height: 5,

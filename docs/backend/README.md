@@ -1,6 +1,6 @@
 # Fitwear Backend Architecture & Coding Practices Guide
 
-The Fitwear backend is built on **ElysiaJS** running on Cloudflare Workers and D1 Database via Drizzle ORM, powered by Bun runtime native APIs.
+The Fitwear backend runs ElysiaJS on Cloudflare Workers, Drizzle on D1, private meal photos on R2, and meal-image inference on Workers AI. Bun is the local development/test runner, not the production runtime.
 
 ---
 
@@ -8,40 +8,31 @@ The Fitwear backend is built on **ElysiaJS** running on Cloudflare Workers and D
 
 Code is organized into isolated, feature-driven business domains:
 
-```
+```text
 apps/backend/
-├── src/
-│   ├── db/                     # D1 Database connection & Drizzle schemas
-│   │   ├── index.ts            # D1 Drizzle instance helper & binding receiver
-│   │   └── schema.ts           # 3.5NF / BCNF relational schemas (SQLite / D1)
-│   ├── lib/
-│   │   ├── id.ts               # Bun native UUIDv7 and token generator
-│   │   └── password.ts         # Bun native C++ bcrypt password hashing
-│   ├── modules/
-│   │   ├── auth/               # Authentication domain module
-│   │   │   ├── model.ts        # Validation schemas with Elysia's type system (t)
-│   │   │   ├── service.ts      # Decoupled business logic (Auth class) + authGuard macro
-│   │   │   └── index.ts        # Elysia controller router
-│   │   └── user/               # User domain module
-│   │       ├── service.ts      # Decoupled user query operations (User class)
-│   │       └── index.ts        # Elysia controller router
-│   └── index.ts                # Application root: CORS, Swagger UI (/swagger), module mounting
-├── tests/
-│   ├── helpers/
-│   │   ├── test-db.ts          # In-memory SQLite D1 simulator with atomic batch transaction support
-│   │   └── test-server.ts      # Standalone test server runner for Playwright
-│   ├── unit/                   # Unit tests (Bun test)
-│   │   ├── model.unit.test.ts  # Input validation schemas (TypeBox Value.Check)
-│   │   └── password.unit.test.ts # Bun native bcrypt hashing & salt verification
-│   ├── integration/            # Integration tests (Bun test)
-│   │   ├── api.integration.test.ts  # Root & Swagger OpenAPI schema tests
-│   │   ├── auth.integration.test.ts # Sign-up, duplicate checks, login, session, biometrics, sign-out
-│   │   └── user.integration.test.ts # Protected user profile tests
-│   └── e2e/                    # End-to-End tests (Playwright)
-│       ├── api.e2e.ts          # Complete user lifecycle over HTTP network requests
-│       └── swagger.e2e.ts      # Headless Chromium UI testing of Swagger documentation
-└── playwright.config.ts        # Playwright test configuration with automated webServer
+├── src/app.ts              # Elysia plugin composition and compiled app
+├── src/index.ts            # Cloudflare Worker entrypoint and per-invocation bindings
+├── src/db/                 # Schema and request-scoped binding access
+├── src/lib/                # Web Crypto IDs, bcrypt, nutrition/date logic, private photos
+├── src/modules/
+│   ├── auth/               # Email/password accounts, sessions, profile updates and reset requests
+│   ├── email/              # Typed Queue messages and Resend consumer
+│   ├── user/               # Current profile
+│   ├── foods/              # Searchable per-100g/ml food catalogue
+│   ├── targets/            # Stored daily targets or profile-derived estimates
+│   ├── meals/              # Logs/items, daily summaries, image inference/private photo reads
+│   ├── health/             # Daily weight history and recovery schedules
+│   ├── exercises/          # Catalogue, technique cues and repetition/time units
+│   └── workouts/           # Sessions, sets, completion and training statistics
+├── migrations/             # Additive SQL migrations and matching Drizzle snapshots
+├── scripts/smoke.ts        # Actual Worker/D1/R2 lifecycle smoke; optional Workers AI call
+├── tests/unit/             # Validation, nutrition, dates, credentials, binding isolation
+└── tests/integration/      # Routes against migrated SQLite with foreign keys enabled
 ```
+
+Each feature owns its Elysia `.model()` registry beside its routes. Route body/query schemas are referenced by name, and services import inferred types from their route module; there are no parallel `model.ts` schema files.
+
+The mobile client uses these endpoints rather than seeded personal data. Every private data query is scoped to the authenticated user. Food/exercise catalogue entries are reference data, not generated workout or meal history.
 
 ---
 
@@ -88,10 +79,15 @@ await db.batch([
     .get();
   ```
 
-### D. Always Use Bun Native APIs
-- **UUIDv7**: Primary keys and IDs are generated using `Bun.randomUUIDv7()` (via `src/lib/id.ts`) for high-performance, time-ordered B-tree indexing without external prefixes.
-- **Password Hashing**: `Bun.password.hash(password, { algorithm: 'bcrypt', cost: 10 })` and `Bun.password.verify(...)` avoid third-party crypto bloat.
-- **Environment**: Use `Bun.env` instead of `process.env`.
+### D. Production Runtime Compatibility
+- IDs use `crypto.randomUUID()`; session tokens use 32 cryptographically random bytes.
+- `src/app.ts` composes feature plugins and compiles one Elysia app; `src/index.ts` is the Cloudflare module-worker entrypoint and types its `fetch` handler against generated `Env`.
+- Passwords use `bcryptjs` cost 12. Existing bcrypt hashes remain verifiable and are upgraded to cost 12 after successful sign-in.
+- New passwords require at least 8 characters for usability, accept all characters and spaces, and are limited to 72 UTF-8 bytes to prevent bcrypt's silent truncation.
+- Sign-in is throttled by both client IP and a SHA-256-keyed account identifier. Wrong-password and unknown-account logins share one error response; password-reset requests are non-enumerating.
+- The Cloudflare adapter's Elysia handler accepts `Request`; the Worker entrypoint scopes `env` with `AsyncLocalStorage.run()` so D1/KV/AI/R2, Queue and email config remain isolated across concurrent invocations, without mutable request-global variables.
+- Wrangler enables Workers Logs (10% request sampling) and traces (1% sampling) to provide production diagnostics while limiting volume.
+- Mobile requests use bearer tokens and omit cookies. Cross-origin credentialed cookies are disabled; same-origin auth cookies are Secure, HttpOnly and SameSite=Lax.
 
 ### E. Fast Prototyping & Zero Boilerplate
 - **Inherited Controller Tags**: Setting `detail: { tags: ['Authentication'] }` on the controller instance tags all sub-routes automatically.
@@ -108,25 +104,28 @@ await db.batch([
 
 ---
 
-## 3. Test Suites (Unit, Integration & E2E)
+## 3. Test Suites (Unit, Integration & Native E2E)
 
 ### Commands
 
 From repository root:
 ```bash
-bun test                          # Run all unit & integration tests
-bun run backend:test:unit         # Run unit tests only
-bun run backend:test:integration  # Run integration tests only
-bun run test:e2e                  # Run Playwright E2E tests
+bun run test                     # Backend Bun tests + mobile Expo Jest tests
+bun run backend:test:unit        # Run unit tests only
+bun run backend:test:integration # Run integration tests only
+bun run test:e2e                 # Run the single Maestro native mobile flow
 ```
 
 From `apps/backend/`:
 ```bash
-bun test                          # Unit & integration tests (Bun test)
-bun run test:unit                 # Unit tests (tests/unit)
-bun run test:integration          # Integration tests (tests/integration)
-bun run test:e2e                  # Playwright E2E tests (tests/e2e)
+bun run test                     # Unit & integration tests (Bun test)
+bun run test:unit                # Unit tests (tests/unit)
+bun run test:integration         # Integration tests (tests/integration)
 ```
+
+The only E2E test is the native Maestro flow in `apps/mobile/tests/e2e/fitness.yaml`. Mobile CI runs it nightly at 02:00 UTC and on manual workflow dispatch, using an Android emulator and local Wrangler backend with D1 migrations applied. The workflow provisions the backend, native build, emulator, and Maestro CLI.
+
+For runtime proof, first apply local migrations and run Wrangler on port 8788, then run `bun scripts/smoke.ts` from `apps/backend`. Set `SMOKE_API_URL` to the deployed Worker to exercise production D1/R2. Set `SMOKE_ANALYZE=1` to include a real Workers AI call (billable provider usage). The smoke deletes its meals/workouts/recovery/targets and revokes both sessions; its uniquely named test accounts and weight logs remain for inspection.
 
 ---
 
@@ -181,11 +180,11 @@ flowchart LR
 
 ### Remote Migrations via GitHub Actions (CI/CD)
 
-The remote Cloudflare D1 database is automatically migrated via [`.github/workflows/d1-migrate.yml`](file:///C:/Users/Toan/huawei-fitwear/.github/workflows/d1-migrate.yml).
+The remote Cloudflare D1 database is automatically migrated via `.github/workflows/release.yml`.
 
 - **Triggers**:
-  - `push` to `main` when `apps/backend/migrations/**`, `apps/backend/src/db/**`, or the workflow file changes.
-  - `workflow_dispatch` for on-demand manual triggers from GitHub Actions UI or `gh workflow run`.
+  - Every `push` to `main` (no path filter).
+  - `workflow_dispatch` for manual checks; the remote migration job runs only when the selected ref is `main`.
 - **Pipeline Jobs**:
   1. `typecheck` (Job 1): Executes static TypeScript verification in parallel.
   2. `test` (Job 2): Executes unit and integration test suites in parallel.
@@ -215,3 +214,15 @@ bun run db:migrate:local  # Apply D1 migrations locally (.wrangler/state/v3/d1)
 bun run db:migrate:remote # Apply D1 migrations to remote Cloudflare production D1
 bun run typecheck       # TypeScript verification (tsc --noEmit)
 ```
+
+Production API: https://fitwear-backend.dangduytoan13l.workers.dev
+
+Bindings in `wrangler.json`: `DB` (D1), `fitwear_kv` (rate limits), `MEAL_IMAGES` (private R2 bucket `fitwear-meal-images`), `AI` (Workers AI), and `EMAIL_QUEUE` (`fitwear-email`). The image-analysis route uses `@cf/google/gemma-4-26b-a4b-it`; input and output are bounded and validated. Estimates are reviewed/edited before logging, never treated as measurements.
+
+Migrations `0002_feature_persistence.sql` and `0003_meal_item_units.sql` add weights, recovery, food reference data, exercise guidance, weekly session preferences and g/ml persistence. They preserve existing users, credentials, sessions and logs. For application rollback, deploy the preceding Worker version and retain additive columns/tables; do not drop live data. Take a D1 export or Time Travel bookmark before remote migrations.
+
+Password reset uses `POST /auth/password-reset`, `GET /auth/reset-password`, and `POST /auth/reset-password`. Reset codes are cryptographically generated eight-digit OTPs, stored only as SHA-256 digests, expire after 30 minutes, and are consumed once; completing a reset revokes all sessions. Reset confirmation is rate-limited, requests return identical success copy for registered and unknown addresses, and issuing a new code invalidates the previous code. Resend cooldown state is stored in KV, keyed by a hash of the normalized email, with 1, 2, 4, 8… minute delays capped at one hour. KV has no conditional compare-and-set: concurrent or cross-location requests may race and send duplicates; use D1 or Durable Objects if strict single-send enforcement becomes necessary. Suppressed requests still receive the same generic response.
+
+Both email types are delivered through the `fitwear-email` Queue and retried up to five times before reaching `fitwear-email-dlq`. The single push consumer is configured with `max_concurrency = 1` and spaces Resend request starts by at least 110 ms. Failed reset enqueue removes the newly created token record; failed welcome enqueue does not fail signup. Queue message bodies are not logged. Resend idempotency keys use Cloudflare message IDs and only deduplicate within Resend's 24-hour idempotency window.
+
+Set `RESEND_API_KEY` with `bunx wrangler secret put RESEND_API_KEY` and `RESEND_FROM` to a sender verified in Resend. `RESET_PASSWORD_URL`, `RESEND_WELCOME_TEMPLATE_ID`, and `RESEND_PASSWORD_RESET_TEMPLATE_ID` are public Worker variables in `wrangler.json`. Resend templates `fitwear-welcome` and `voochealth-password-reset` are published and used by the Queue consumer; the welcome template accepts `NAME`, and the reset template accepts `RESET_OTP` and `RESET_URL`. Provision the queues once with `bunx wrangler queues create fitwear-email` and `bunx wrangler queues create fitwear-email-dlq`; the Worker consumer configuration is in Wrangler JSON. Never store the API key in `wrangler.json`, app code, or an `EXPO_PUBLIC_*` variable.

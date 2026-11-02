@@ -1,21 +1,57 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Pressable } from '@/components/pressable';
-import { Palette as C } from '@/constants/palette';
-import { useHealth } from '@/features/health/health-store';
-import { BackHeader, Card } from '@/features/home/ui';
-import { RANGE_DATA, RANGES, type Range } from '@/features/home/progress-data';
-import { WeightChart } from '@/features/home/weight-chart';
+import { Pressable } from "@/components/pressable";
+import { Palette as C } from "@/constants/palette";
+import { dateLabel, useHealth } from "@/features/health/health-store";
+import { useWorkouts } from "@/features/workout/workout-store";
+import { apiRequest } from "@/lib/api";
+import { BackHeader, Card } from "@/features/home/ui";
+import {
+  progressBounds,
+  progressData,
+  RANGES,
+  type Range,
+  type WorkoutStats,
+} from "@/features/home/progress-data";
+import { WeightChart } from "@/features/home/weight-chart";
 
 export function ProgressScreen() {
   const insets = useSafeAreaInsets();
-  const { weightKg } = useHealth();
-  const [range, setRange] = useState<Range>('Month');
-  const data = RANGE_DATA[range];
-  const maxSessions = Math.max(...data.bars.map((bar) => bar.sessions));
+  const { weights, plan, loading, error, refresh } = useHealth();
+  const { sessions } = useWorkouts();
+  const [range, setRange] = useState<Range>("Month");
+  const [stats, setStats] = useState<WorkoutStats | null>(null);
+  const [statsError, setStatsError] = useState<string | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    let active = true;
+    const bounds = progressBounds(range);
+    setStats(null);
+    setStatsError(null);
+    setStatsLoading(true);
+    apiRequest<WorkoutStats>(`/workouts/stats?from=${bounds.from}&to=${bounds.to}`)
+      .then((result) => {
+        if (active) setStats(result);
+      })
+      .catch((cause) => {
+        if (active)
+          setStatsError(
+            cause instanceof Error ? cause.message : "Could not load training activity.",
+          );
+      })
+      .finally(() => {
+        if (active) setStatsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [range, sessions, retry]);
+  const data = progressData(range, weights, stats);
+  const maxSessions = Math.max(1, ...data.bars.map((bar) => bar.sessions));
 
   return (
     <ScrollView
@@ -23,10 +59,21 @@ export function ProgressScreen() {
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}>
+      ]}
+    >
       <BackHeader label="Overview" onPress={() => router.back()} />
 
       <Text style={styles.title}>Your progress.</Text>
+      {loading ? <Text style={styles.cardNote}>Loading weight logs…</Text> : null}
+      {error ? (
+        <Pressable
+          onPress={() => {
+            void refresh();
+          }}
+        >
+          <Text accessibilityRole="alert">{error} Tap to retry.</Text>
+        </Pressable>
+      ) : null}
 
       <View style={styles.segments}>
         {RANGES.map((item) => {
@@ -35,10 +82,9 @@ export function ProgressScreen() {
             <Pressable
               key={item}
               style={[styles.segment, active && styles.segmentActive]}
-              onPress={() => setRange(item)}>
-              <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>
-                {item}
-              </Text>
+              onPress={() => setRange(item)}
+            >
+              <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>{item}</Text>
             </Pressable>
           );
         })}
@@ -52,35 +98,54 @@ export function ProgressScreen() {
           </View>
         </View>
 
-        <Text style={styles.bigValue}>{weightKg.toFixed(1)} kg</Text>
+        <Text style={styles.bigValue}>
+          {data.weights.length ? `${data.weights[data.weights.length - 1].toFixed(1)} kg` : "—"}
+        </Text>
 
         <WeightChart weights={data.weights} />
 
         <View style={styles.dates}>
           {data.dates.map((date) => (
             <Text key={date} style={styles.dateLabel}>
-              {date}
+              {dateLabel(date)}
             </Text>
           ))}
         </View>
 
-        <Text style={styles.cardNote}>Goal 70.0 kg · Updated Oct 7</Text>
+        <Text style={styles.cardNote}>
+          {plan.targetWeightKg === null
+            ? "Set a target weight in Profile."
+            : `Goal ${plan.targetWeightKg.toFixed(1)} kg`}
+        </Text>
       </Card>
 
       <Card>
         <View style={styles.weightHeader}>
           <Text style={styles.cardTitle}>Training activity</Text>
-          <Text style={styles.cardNote}>{data.sessionsNote}</Text>
+          <Text style={styles.cardNote}>{statsLoading ? "Loading…" : data.sessionsNote}</Text>
         </View>
+        {statsLoading ? <Text style={styles.cardNote}>Loading training activity…</Text> : null}
+        {statsError ? (
+          <Pressable onPress={() => setRetry((value) => value + 1)}>
+            <Text accessibilityRole="alert">{statsError} Tap to retry.</Text>
+          </Pressable>
+        ) : null}
 
-        <View style={styles.bars}>
-          {data.bars.map((week) => (
-            <View key={week.label} style={styles.barColumn}>
-              <View style={[styles.bar, { height: 12 + (week.sessions / maxSessions) * 48 }]} />
-              <Text style={styles.dateLabel}>{week.label}</Text>
-            </View>
-          ))}
-        </View>
+        {stats ? (
+          <View style={styles.bars}>
+            {data.bars.map((week) => (
+              <View key={week.label} style={styles.barColumn}>
+                <View
+                  style={[
+                    styles.bar,
+                    { height: week.sessions ? 12 + (week.sessions / maxSessions) * 48 : 2 },
+                  ]}
+                />
+                <Text style={styles.dateLabel}>{week.label}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         <View style={styles.durationRow}>
           <Text style={styles.bigValue}>{data.duration}</Text>
@@ -88,31 +153,17 @@ export function ProgressScreen() {
         </View>
 
         <Text style={styles.cardNote}>
-          Logged sessions and total workout time. Weighted exercises are tracked separately in
-          your workout history.
+          Logged sessions and total workout time. Weighted exercises are tracked separately in your
+          workout history.
         </Text>
       </Card>
 
       <Card>
-        <View style={styles.weightHeader}>
-          <Text style={styles.cardTitle}>Body composition</Text>
-          <Text style={styles.cardNote}>Oct 7</Text>
-        </View>
-
-        <View style={styles.compositionRow}>
-          <View style={styles.compositionItem}>
-            <Text style={styles.compositionValue}>19.4%</Text>
-            <Text style={styles.compositionLabel}>Body fat</Text>
-            <Text style={styles.compositionDelta}>−0.6 pp / month</Text>
-          </View>
-          <View style={styles.compositionItem}>
-            <Text style={styles.compositionValue}>32.8 kg</Text>
-            <Text style={styles.compositionLabel}>Muscle mass</Text>
-            <Text style={styles.compositionDelta}>+0.3 kg / month</Text>
-          </View>
-        </View>
-
-        <Text style={styles.cardNote}>Personal-scale estimates, not a diagnosis.</Text>
+        <Text style={styles.cardTitle}>Body composition</Text>
+        <Text style={styles.cardNote}>
+          No body-composition measurements are available. Weight logs do not measure body fat or
+          muscle mass.
+        </Text>
       </Card>
 
       <Card>
@@ -121,7 +172,7 @@ export function ProgressScreen() {
           Basic body info gives you a starting nutrition estimate. Adding daily activity and goals
           helps personalize your plan. More details live in Profile.
         </Text>
-        <Pressable onPress={() => router.push('/profile')} hitSlop={8}>
+        <Pressable onPress={() => router.push("/profile")} hitSlop={8}>
           <Text style={styles.link}>Profile</Text>
         </Pressable>
       </Card>
@@ -140,11 +191,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '400',
+    fontWeight: "400",
     color: C.text,
   },
   segments: {
-    flexDirection: 'row',
+    flexDirection: "row",
     backgroundColor: C.card,
     borderRadius: 12,
     padding: 4,
@@ -154,8 +205,8 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 32,
     borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   segmentActive: {
     backgroundColor: C.surface,
@@ -165,18 +216,18 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   segmentLabelActive: {
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.accent,
   },
   weightHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 8,
   },
   cardTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   pill: {
@@ -187,17 +238,17 @@ const styles = StyleSheet.create({
   },
   pillText: {
     fontSize: 11,
-    fontWeight: '500',
+    fontWeight: "500",
     color: C.accent,
   },
   bigValue: {
     fontSize: 34,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   dates: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   dateLabel: {
     fontSize: 9,
@@ -209,55 +260,31 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   bars: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
     gap: 12,
   },
   barColumn: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 6,
   },
   bar: {
-    width: '100%',
+    width: "100%",
     borderRadius: 6,
     backgroundColor: C.accentTint,
     borderWidth: 1,
     borderColor: C.border,
   },
   durationRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
     gap: 8,
-  },
-  compositionRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  compositionItem: {
-    flex: 1,
-    backgroundColor: C.previewTint,
-    borderRadius: 16,
-    padding: 12,
-    gap: 3,
-  },
-  compositionValue: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: C.text,
-  },
-  compositionLabel: {
-    fontSize: 11,
-    color: C.textMuted,
-  },
-  compositionDelta: {
-    fontSize: 10,
-    color: C.accent,
   },
   link: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.accent,
   },
 });

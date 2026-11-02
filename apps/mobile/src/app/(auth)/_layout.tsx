@@ -1,7 +1,7 @@
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 
-import { AuthColors } from '@/features/auth/tokens';
+import { AuthColors } from "@/features/auth/tokens";
 
 export default function AuthLayout() {
   return (

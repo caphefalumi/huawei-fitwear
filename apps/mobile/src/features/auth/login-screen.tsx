@@ -1,86 +1,200 @@
-import { Image } from 'expo-image';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from "expo-image";
+import { useState } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Pressable } from '@/components/pressable';
-import { AuthField } from './auth-field';
-import { AuthColors } from './tokens';
+import { Pressable } from "@/components/pressable";
+import { AuthField } from "./auth-field";
+import { useAuth } from "./auth-store";
+import { AuthColors } from "./tokens";
 
 const icons = {
-  logo: require('@/assets/images/auth/logo.svg'),
-  user: require('@/assets/images/auth/user-round.svg'),
-  eyeOff: require('@/assets/images/auth/eye-off.svg'),
+  logo: require("@/assets/images/auth/logo.svg"),
+  user: require("@/assets/images/auth/user-round.svg"),
+  eyeOff: require("@/assets/images/auth/eye-off.svg"),
 };
 
-export function LoginScreen({ onLoggedIn, onCreateAccount, onForgotPassword }: {
-  onLoggedIn: () => void;
-  onCreateAccount: () => void;
-  onForgotPassword?: () => void;
-}) {
+export function LoginScreen({ onCreateAccount }: { onCreateAccount: () => void }) {
   const insets = useSafeAreaInsets();
-  const [username, setUsername] = useState('Sam.Nguyen');
-  const [password, setPassword] = useState('password1234');
+  const { signIn, requestPasswordReset, pending, error } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [resetMode, setResetMode] = useState(false);
+  const [resetPending, setResetPending] = useState(false);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
 
+  async function submit() {
+    if (!email.trim() || !password) {
+      setValidationError("Enter your email address and password.");
+      return;
+    }
+    setValidationError(null);
+    try {
+      await signIn(email, password);
+    } catch {
+      // The auth store exposes the server error without discarding entered fields.
+    }
+  }
+
+  async function submitPasswordReset() {
+    if (!email.trim()) {
+      setResetError("Enter your email address.");
+      return;
+    }
+    setResetPending(true);
+    setResetError(null);
+    setResetMessage(null);
+    try {
+      setResetMessage(await requestPasswordReset(email));
+    } catch (cause) {
+      setResetError(cause instanceof Error ? cause.message : "Unable to request a password reset.");
+    } finally {
+      setResetPending(false);
+    }
+  }
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom }]}
-      keyboardShouldPersistTaps="handled">
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
+      ]}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.brand}>
         <Image source={icons.logo} style={styles.brandMark} contentFit="contain" />
         <Text style={styles.brandName}>VoocHealth</Text>
       </View>
 
-      <Text style={styles.welcome}>Welcome back.</Text>
+      <Text style={styles.welcome}>{resetMode ? "Reset your password." : "Welcome back."}</Text>
 
       <View style={styles.credentials}>
         <AuthField
-          label="Username"
+          label="Email"
           icon={icons.user}
-          value={username}
-          onChangeText={setUsername}
+          value={email}
+          onChangeText={setEmail}
+          placeholder="you@example.com"
+          keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
-          textContentType="username"
+          textContentType="emailAddress"
+          autoComplete="email"
+          editable={!pending && !resetPending}
         />
-        <AuthField
-          label="Password"
-          icon={icons.eyeOff}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          textContentType="password"
-        />
+        {!resetMode ? (
+          <AuthField
+            label="Password"
+            icon={icons.eyeOff}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            textContentType="password"
+            autoComplete="current-password"
+            editable={!pending}
+            onSubmitEditing={() => {
+              void submit();
+            }}
+          />
+        ) : (
+          <Text style={styles.terms}>
+            Enter your account email. If it matches an account, we’ll send an 8-digit reset code.
+          </Text>
+        )}
       </View>
 
-      <Pressable onPress={onForgotPassword} hitSlop={8}>
-        <Text style={styles.forgot}>Forgot password?</Text>
+      {!resetMode ? (
+        <Pressable
+          accessibilityRole="button"
+          disabled={pending}
+          onPress={() => {
+            setResetMode(true);
+            setResetError(null);
+            setResetMessage(null);
+            setValidationError(null);
+          }}
+        >
+          <Text style={styles.forgot}>Forgot password?</Text>
+        </Pressable>
+      ) : null}
+
+      {resetMessage ? (
+        <Text accessibilityRole="status" accessibilityLiveRegion="polite" style={styles.terms}>
+          {resetMessage}
+        </Text>
+      ) : null}
+      {resetError || (!resetMode && (validationError || error)) ? (
+        <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>
+          {resetMode ? resetError : (validationError ?? error)}
+        </Text>
+      ) : null}
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={resetMode ? "Send reset code" : "Log in"}
+        accessibilityState={{
+          disabled: resetMode ? resetPending : pending,
+          busy: resetMode ? resetPending : pending,
+        }}
+        disabled={resetMode ? resetPending : pending}
+        style={[styles.primaryButton, (resetMode ? resetPending : pending) && styles.disabled]}
+        onPress={() => {
+          void (resetMode ? submitPasswordReset() : submit());
+        }}
+      >
+        {(resetMode ? resetPending : pending) ? (
+          <ActivityIndicator color={AuthColors.onAccent} />
+        ) : (
+          <Text style={styles.primaryLabel}>{resetMode ? "Send reset code" : "Log in"}</Text>
+        )}
       </Pressable>
 
-      <Pressable style={styles.primaryButton} onPress={onLoggedIn}>
-        <Text style={styles.primaryLabel}>Log in</Text>
-      </Pressable>
-
-      <Text style={styles.terms}>
-        By continuing, you agree to <Text style={styles.link}>Terms of Service</Text> and{' '}
-        <Text style={styles.link}>User Agreement</Text>.
-      </Text>
+      {!resetMode ? (
+        <Text style={styles.terms}>
+          By continuing, you agree to <Text style={styles.link}>Terms of Service</Text> and{" "}
+          <Text style={styles.link}>User Agreement</Text>.
+        </Text>
+      ) : null}
 
       <View style={styles.footer}>
         <View style={styles.separator} />
-        <Text style={styles.footerText}>
-          No account?{'  '}
-          <Text style={styles.footerLink} onPress={onCreateAccount}>
-            Create account
+        {resetMode ? (
+          <Text style={styles.footerText}>
+            Remembered your password?{"  "}
+            <Text
+              accessibilityRole="link"
+              style={styles.footerLink}
+              onPress={() => {
+                setResetMode(false);
+                setResetError(null);
+                setResetMessage(null);
+              }}
+            >
+              Back to log in
+            </Text>
           </Text>
-        </Text>
+        ) : (
+          <Text style={styles.footerText}>
+            No account?{"  "}
+            <Text
+              accessibilityRole="link"
+              style={styles.footerLink}
+              onPress={pending ? undefined : onCreateAccount}
+            >
+              Create account
+            </Text>
+          </Text>
+        )}
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  error: { color: AuthColors.text, fontSize: 13, lineHeight: 20 },
+  disabled: { opacity: 0.6 },
   screen: {
     flex: 1,
     backgroundColor: AuthColors.background,
@@ -90,8 +204,8 @@ const styles = StyleSheet.create({
     gap: 22,
   },
   brand: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 9,
   },
   brandMark: {
@@ -100,14 +214,14 @@ const styles = StyleSheet.create({
   },
   brandName: {
     fontSize: 19,
-    fontWeight: '400',
+    fontWeight: "400",
     color: AuthColors.text,
   },
   welcome: {
     marginTop: 70,
     fontSize: 36,
     lineHeight: 41,
-    fontWeight: '600',
+    fontWeight: "600",
     color: AuthColors.text,
   },
   credentials: {
@@ -115,14 +229,14 @@ const styles = StyleSheet.create({
   },
   forgot: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
     color: AuthColors.accent,
-    textAlign: 'right',
+    textAlign: "right",
   },
   primaryButton: {
     height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: AuthColors.accent,
     borderWidth: 1,
     borderColor: AuthColors.accentBorder,
@@ -130,20 +244,20 @@ const styles = StyleSheet.create({
   },
   primaryLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: AuthColors.onAccent,
   },
   terms: {
     fontSize: 11,
     lineHeight: 19,
     color: AuthColors.textMuted,
-    textAlign: 'center',
+    textAlign: "center",
   },
   link: {
     color: AuthColors.accent,
   },
   footer: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: 15,
     paddingTop: 20,
   },
@@ -158,7 +272,7 @@ const styles = StyleSheet.create({
     color: AuthColors.textMuted,
   },
   footerLink: {
-    fontWeight: '600',
+    fontWeight: "600",
     color: AuthColors.accent,
   },
 });

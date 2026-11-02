@@ -1,17 +1,24 @@
-import { PermissionsAndroid, Platform } from 'react-native';
-import { BleError, BleManager, Characteristic, Device, State, Subscription } from 'react-native-ble-plx';
+import { PermissionsAndroid, Platform } from "react-native";
+import {
+  BleError,
+  BleManager,
+  Characteristic,
+  Device,
+  State,
+  Subscription,
+} from "react-native-ble-plx";
 
-import { base64ToBytes, bytesToBase64, decodeUtf8Bytes, encodeUtf8Bytes } from './codec';
+import { base64ToBytes, bytesToBase64, decodeUtf8Bytes, encodeUtf8Bytes } from "./codec";
 import {
   BLE_MAX_MESSAGE_BYTES,
   BLE_REQUESTED_MTU,
   BLE_SCAN_TIMEOUT_MS,
   FITWEAR_CHAR_MESSAGE_UUID,
   FITWEAR_SERVICE_UUID,
-} from './constants';
+} from "./constants";
 
-export type BleDirection = 'phone-to-watch' | 'watch-to-phone';
-export type WatchBleStatus = 'disconnected' | 'scanning' | 'connecting' | 'connected';
+export type BleDirection = "phone-to-watch" | "watch-to-phone";
+export type WatchBleStatus = "disconnected" | "scanning" | "connecting" | "connected";
 
 export interface WatchBleListener {
   onStatus(status: WatchBleStatus): void;
@@ -25,7 +32,7 @@ export type WatchBleSendResult =
   | { ok: false; error: string };
 
 async function requestAndroidBlePermissions(): Promise<boolean> {
-  if (Platform.OS !== 'android') return true;
+  if (Platform.OS !== "android") return true;
   if (Platform.Version >= 31) {
     const result = await PermissionsAndroid.requestMultiple([
       PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
@@ -33,12 +40,12 @@ async function requestAndroidBlePermissions(): Promise<boolean> {
       PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
     ]);
     return (
-      result['android.permission.BLUETOOTH_SCAN'] === PermissionsAndroid.RESULTS.GRANTED &&
-      result['android.permission.BLUETOOTH_CONNECT'] === PermissionsAndroid.RESULTS.GRANTED
+      result["android.permission.BLUETOOTH_SCAN"] === PermissionsAndroid.RESULTS.GRANTED &&
+      result["android.permission.BLUETOOTH_CONNECT"] === PermissionsAndroid.RESULTS.GRANTED
     );
   }
   const granted = await PermissionsAndroid.request(
-    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
   );
   return granted === PermissionsAndroid.RESULTS.GRANTED;
 }
@@ -63,7 +70,7 @@ export class WatchBleClient {
   private disconnectSub: Subscription | null = null;
   private stateSub: Subscription | null = null;
   private scanTimeout: ReturnType<typeof setTimeout> | null = null;
-  private status: WatchBleStatus = 'disconnected';
+  private status: WatchBleStatus = "disconnected";
   /** Bumped on disconnect/destroy/new scan so in-flight connect callbacks abort. */
   private session = 0;
 
@@ -76,7 +83,7 @@ export class WatchBleClient {
   }
 
   isConnected(): boolean {
-    return this.status === 'connected' && this.connectedDevice !== null;
+    return this.status === "connected" && this.connectedDevice !== null;
   }
 
   /** Alias for startScan — preferred public name. */
@@ -89,14 +96,14 @@ export class WatchBleClient {
 
     const hasPerm = await requestAndroidBlePermissions();
     if (!hasPerm) {
-      this.listener.onError('Bluetooth permissions denied.');
+      this.listener.onError("Bluetooth permissions denied.");
       return;
     }
 
     const manager = this.getOrCreateManager();
     if (!manager) {
       this.listener.onError(
-        'Native BLE module unavailable. Use a development build with react-native-ble-plx.'
+        "Native BLE module unavailable. Use a development build with react-native-ble-plx.",
       );
       return;
     }
@@ -110,7 +117,7 @@ export class WatchBleClient {
         return;
       }
     } catch (err) {
-      this.listener.onError(err instanceof Error ? err.message : 'Unable to read Bluetooth state');
+      this.listener.onError(err instanceof Error ? err.message : "Unable to read Bluetooth state");
       return;
     }
 
@@ -127,8 +134,8 @@ export class WatchBleClient {
 
     this.cleanupSubscriptions({ keepStateListener: true });
     const session = ++this.session;
-    this.setStatus('scanning');
-    this.listener.onDeviceName('Scanning…');
+    this.setStatus("scanning");
+    this.listener.onDeviceName("Scanning…");
 
     this.scanTimeout = setTimeout(() => {
       if (session !== this.session) return;
@@ -137,10 +144,10 @@ export class WatchBleClient {
       } catch {
         // ignore
       }
-      if (this.status === 'scanning') {
-        this.listener.onError('Scan timed out. Start the BLE server on the watch and retry.');
-        this.listener.onDeviceName('None');
-        this.setStatus('disconnected');
+      if (this.status === "scanning") {
+        this.listener.onError("Scan timed out. Start the BLE server on the watch and retry.");
+        this.listener.onDeviceName("None");
+        this.setStatus("disconnected");
       }
     }, BLE_SCAN_TIMEOUT_MS);
 
@@ -151,12 +158,12 @@ export class WatchBleClient {
         if (session !== this.session) return;
         if (scanError) {
           this.cleanupSubscriptions({ keepStateListener: true });
-          this.setStatus('disconnected');
-          this.listener.onDeviceName('None');
+          this.setStatus("disconnected");
+          this.listener.onDeviceName("None");
           this.listener.onError(`Scan failed: ${scanError.message}`);
           return;
         }
-        if (!scannedDevice || this.status !== 'scanning') return;
+        if (!scannedDevice || this.status !== "scanning") return;
 
         try {
           manager.stopDeviceScan();
@@ -166,7 +173,7 @@ export class WatchBleClient {
         this.clearScanTimeout();
 
         try {
-          this.setStatus('connecting');
+          this.setStatus("connecting");
           const connected = await scannedDevice.connect({ requestMTU: BLE_REQUESTED_MTU });
           if (session !== this.session) {
             await this.safeCancel(connected);
@@ -185,8 +192,8 @@ export class WatchBleClient {
             if (this.connectedDevice?.id === device?.id) {
               this.connectedDevice = null;
             }
-            this.listener.onDeviceName('None');
-            this.setStatus('disconnected');
+            this.listener.onDeviceName("None");
+            this.setStatus("disconnected");
           });
 
           this.monitorSub = connected.monitorCharacteristicForService(
@@ -202,36 +209,36 @@ export class WatchBleClient {
                 return;
               }
               if (characteristic?.value) {
-                this.emitBytes('watch-to-phone', base64ToBytes(characteristic.value));
+                this.emitBytes("watch-to-phone", base64ToBytes(characteristic.value));
               }
-            }
+            },
           );
 
           const initialChar = await connected.readCharacteristicForService(
             FITWEAR_SERVICE_UUID,
-            FITWEAR_CHAR_MESSAGE_UUID
+            FITWEAR_CHAR_MESSAGE_UUID,
           );
           if (session !== this.session) return;
           if (initialChar?.value) {
-            this.emitBytes('watch-to-phone', base64ToBytes(initialChar.value));
+            this.emitBytes("watch-to-phone", base64ToBytes(initialChar.value));
           }
 
           this.listener.onDeviceName(
-            connected.name || connected.localName || `Watch (${connected.id})`
+            connected.name || connected.localName || `Watch (${connected.id})`,
           );
           this.listener.onError(null);
-          this.setStatus('connected');
+          this.setStatus("connected");
         } catch (connErr) {
           if (session !== this.session) return;
           this.cleanupSubscriptions({ keepStateListener: true });
           this.connectedDevice = null;
-          this.listener.onDeviceName('None');
-          this.setStatus('disconnected');
+          this.listener.onDeviceName("None");
+          this.setStatus("disconnected");
           this.listener.onError(
-            connErr instanceof Error ? connErr.message : 'Failed to connect to watch'
+            connErr instanceof Error ? connErr.message : "Failed to connect to watch",
           );
         }
-      }
+      },
     );
   }
 
@@ -243,15 +250,15 @@ export class WatchBleClient {
     if (dev) {
       await this.safeCancel(dev);
     }
-    this.listener.onDeviceName('None');
+    this.listener.onDeviceName("None");
     this.listener.onError(null);
-    this.setStatus('disconnected');
+    this.setStatus("disconnected");
   }
 
   async sendText(rawText: string): Promise<WatchBleSendResult> {
     const clean = rawText.trim();
     if (!clean) {
-      return { ok: false, error: 'Message is empty.' };
+      return { ok: false, error: "Message is empty." };
     }
 
     const bytes = encodeUtf8Bytes(clean);
@@ -261,8 +268,8 @@ export class WatchBleClient {
       return { ok: false, error };
     }
 
-    if (!this.connectedDevice || this.status !== 'connected') {
-      const error = 'Not connected to the watch.';
+    if (!this.connectedDevice || this.status !== "connected") {
+      const error = "Not connected to the watch.";
       this.listener.onError(error);
       return { ok: false, error };
     }
@@ -272,12 +279,12 @@ export class WatchBleClient {
       await this.connectedDevice.writeCharacteristicWithResponseForService(
         FITWEAR_SERVICE_UUID,
         FITWEAR_CHAR_MESSAGE_UUID,
-        bytesToBase64(bytes)
+        bytesToBase64(bytes),
       );
-      this.emitBytes('phone-to-watch', bytes);
+      this.emitBytes("phone-to-watch", bytes);
       return { ok: true, text: clean, byteLength: bytes.byteLength };
     } catch (err) {
-      const error = err instanceof Error ? err.message : 'Write failed.';
+      const error = err instanceof Error ? err.message : "Write failed.";
       this.listener.onError(error);
       return { ok: false, error };
     }
@@ -297,7 +304,7 @@ export class WatchBleClient {
       // ignore
     }
     this.manager = null;
-    this.status = 'disconnected';
+    this.status = "disconnected";
   }
 
   private setStatus(status: WatchBleStatus): void {
@@ -324,12 +331,12 @@ export class WatchBleClient {
     this.stateSub = manager.onStateChange((state) => {
       if (state === State.PoweredOn) return;
       if (
-        this.status === 'connected' ||
-        this.status === 'scanning' ||
-        this.status === 'connecting'
+        this.status === "connected" ||
+        this.status === "scanning" ||
+        this.status === "connecting"
       ) {
         void this.disconnect().then(() => {
-          this.listener.onError('Bluetooth turned off.');
+          this.listener.onError("Bluetooth turned off.");
         });
       }
     }, false);

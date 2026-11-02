@@ -1,84 +1,25 @@
-import { Image } from 'expo-image';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from "expo-image";
+import { router, useLocalSearchParams } from "expo-router";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Pressable } from '@/components/pressable';
-import { Palette as C } from '@/constants/palette';
-import { useHealth } from '@/features/health/health-store';
-import { BackHeader, Card } from '@/features/home/ui';
-
-const icons = {
-  play: require('@/assets/images/workout/play.svg'),
-  shieldCheck: require('@/assets/images/home/shield-check.svg'),
-};
-
-type Guide = {
-  name: string;
-  sets: number;
-  reps: number;
-  load: number;
-  loadUnit: string;
-  step: number;
-  cues: { title: string; detail: string }[];
-};
-
-const GUIDES: Record<string, Guide> = {
-  'bench-press': {
-    name: 'Barbell bench press',
-    sets: 3,
-    reps: 10,
-    load: 30,
-    loadUnit: 'kg',
-    step: 2.5,
-    cues: [
-      { title: 'Stable feet & back', detail: 'Feet on floor, hips and upper back on bench.' },
-      {
-        title: 'Straight wrists',
-        detail: 'Grip wider than shoulders, squeeze scapula before lowering.',
-      },
-      { title: 'Controlled lowering', detail: 'Lower slowly to chest, exhale on press. No bounce.' },
-    ],
-  },
-  'incline-dumbbell-press': {
-    name: 'Incline dumbbell press',
-    sets: 3,
-    reps: 12,
-    load: 10,
-    loadUnit: 'kg/hand',
-    step: 2,
-    cues: [
-      { title: 'Bench at 30°', detail: 'Steep enough for upper chest, low enough to protect shoulders.' },
-      { title: 'Elbows at 45°', detail: 'Keep elbows slightly tucked, wrists stacked over elbows.' },
-      { title: 'Even press', detail: 'Press both dumbbells together, stop before they touch.' },
-    ],
-  },
-  'cable-chest-fly': {
-    name: 'Cable chest fly',
-    sets: 3,
-    reps: 12,
-    load: 7.5,
-    loadUnit: 'kg/side',
-    step: 2.5,
-    cues: [
-      { title: 'Slight forward lean', detail: 'Step forward, keep a soft bend in the elbows.' },
-      { title: 'Arc, don’t press', detail: 'Bring hands together in a wide arc, not a press.' },
-      { title: 'Slow return', detail: 'Let the cables pull back over two seconds.' },
-    ],
-  },
-};
+import { Pressable } from "@/components/pressable";
+import { Palette as C } from "@/constants/palette";
+import { useHealth } from "@/features/health/health-store";
+import { BackHeader, Card } from "@/features/home/ui";
+import { WorkoutSessionPanel } from "@/features/workout/workout-session-panel";
+import { useWorkouts } from "@/features/workout/workout-store";
 
 export function ExerciseGuideScreen() {
   const insets = useSafeAreaInsets();
-  const { name } = useLocalSearchParams<{ name?: string }>();
+  const { name, group, sessionId } = useLocalSearchParams<{
+    name?: string;
+    group?: string;
+    sessionId?: string;
+  }>();
   const { recovery } = useHealth();
-  const guide = GUIDES[name ?? 'bench-press'] ?? GUIDES['bench-press'];
-  const [load, setLoad] = useState(guide.load);
-
-  function adjust(direction: -1 | 1) {
-    setLoad((prev) => Math.max(0, Number((prev + direction * guide.step).toFixed(1))));
-  }
+  const { exercises, loading, error, refresh } = useWorkouts();
+  const guide = exercises.find((exercise) => exercise.id === name);
 
   return (
     <ScrollView
@@ -86,87 +27,83 @@ export function ExerciseGuideScreen() {
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}>
-      <BackHeader label="Chest plan" onPress={() => router.back()} />
-
-      <View style={styles.heading}>
-        <Text style={styles.title}>{guide.name}</Text>
-        <Text style={styles.subtitle}>Technique guide</Text>
-      </View>
-
-      <View style={styles.demoWrap}>
-        <Image
-          source={require('@/assets/images/workout/bench-demo.svg')}
-          style={styles.demo}
-          contentFit="cover"
-        />
-        <View style={styles.demoPlay}>
-          <Image source={icons.play} style={styles.demoPlayIcon} contentFit="contain" />
-        </View>
-        <View style={styles.demoBadge}>
-          <Text style={styles.demoBadgeLabel}>Demo GIF</Text>
-        </View>
-      </View>
-
-      <Card style={styles.prescriptionCard}>
-        <View style={styles.prescriptionRow}>
-          <View style={styles.prescription}>
-            <Text style={styles.prescriptionValue}>{guide.sets} sets</Text>
-            <Text style={styles.prescriptionLabel}>Sets</Text>
-          </View>
-          <View style={styles.prescription}>
-            <Text style={styles.prescriptionValue}>{guide.reps} reps</Text>
-            <Text style={styles.prescriptionLabel}>Reps</Text>
-          </View>
-        </View>
-        <View style={styles.loadRow}>
-          <View style={styles.loadGroup}>
-            <Text style={styles.loadLabel}>Weight</Text>
-            <View style={styles.loadInput}>
-              <Text style={styles.loadValue}>{load}</Text>
-              <Text style={styles.loadUnit}>{guide.loadUnit}</Text>
-            </View>
-          </View>
-          <View style={styles.stepper}>
-            <Pressable style={styles.stepButton} onPress={() => adjust(-1)}>
-              <View style={styles.minus} />
-            </Pressable>
-            <Pressable style={styles.stepButton} onPress={() => adjust(1)}>
-              <View style={styles.minus} />
-              <View style={styles.plus} />
-            </Pressable>
-          </View>
-        </View>
-      </Card>
-
-      <View style={styles.cues}>
-        <Text style={styles.sectionTitle}>3 key cues</Text>
-        {guide.cues.map((cue, index) => (
-          <View key={cue.title} style={styles.cue}>
-            <View style={styles.cueMarker}>
-              <Text style={styles.cueMarkerLabel}>{index + 1}</Text>
-            </View>
-            <View style={styles.cueCopy}>
-              <Text style={styles.cueTitle}>{cue.title}</Text>
-              <Text style={styles.cueDetail}>{cue.detail}</Text>
-            </View>
-          </View>
-        ))}
-      </View>
-
-      {recovery ? (
-        <View style={styles.warning}>
-          <Image source={icons.shieldCheck} style={styles.warningIcon} contentFit="contain" />
-          <Text style={styles.warningText}>
-            {recovery.area} is recovering. Review only; stop if you feel pain.
+      ]}
+    >
+      <BackHeader label="Workout plan" onPress={() => router.back()} />
+      {!guide ? (
+        <>
+          <Text style={styles.title}>{loading ? "Loading exercise…" : "Exercise unavailable"}</Text>
+          <Text accessibilityRole={error ? "alert" : undefined} style={styles.subtitle}>
+            {error ??
+              (loading
+                ? "Loading the exercise catalog."
+                : "Return to the workout plan and choose an available exercise.")}
           </Text>
-        </View>
-      ) : null}
-
-      <Pressable style={styles.disabledAction}>
-        <Image source={icons.play} style={styles.actionIcon} contentFit="contain" />
-        <Text style={styles.disabledActionLabel}>Start workout</Text>
-      </Pressable>
+          <Pressable onPress={() => void refresh()}>
+            <Text style={styles.cueTitle}>Retry loading exercises</Text>
+          </Pressable>
+        </>
+      ) : (
+        <>
+          <View style={styles.heading}>
+            <Text style={styles.title}>{guide.name}</Text>
+            <Text style={styles.subtitle}>
+              {guide.muscleGroup} · {guide.equipment} · Technique guide
+            </Text>
+          </View>
+          {guide.cadenceAnimationUrl ? (
+            <View style={styles.demoWrap}>
+              <Image
+                source={{ uri: guide.cadenceAnimationUrl }}
+                style={styles.demo}
+                contentFit="contain"
+              />
+            </View>
+          ) : null}
+          <Card style={styles.prescriptionCard}>
+            <View style={styles.prescriptionRow}>
+              <View style={styles.prescription}>
+                <Text style={styles.prescriptionValue}>{guide.defaultSets}</Text>
+                <Text style={styles.prescriptionLabel}>planned sets</Text>
+              </View>
+              <View style={styles.prescription}>
+                <Text style={styles.prescriptionValue}>{guide.defaultReps}</Text>
+                <Text style={styles.prescriptionLabel}>target {guide.repetitionUnit}</Text>
+              </View>
+            </View>
+            <Text style={styles.subtitle}>
+              General exercise guidance, not a saved personal load.
+            </Text>
+          </Card>
+          <View style={styles.cues}>
+            <Text style={styles.sectionTitle}>Technique cues</Text>
+            {guide.cues.map((cue, index) => (
+              <View key={cue.title} style={styles.cue}>
+                <View style={styles.cueMarker}>
+                  <Text style={styles.cueMarkerLabel}>{index + 1}</Text>
+                </View>
+                <View style={styles.cueCopy}>
+                  <Text style={styles.cueTitle}>{cue.title}</Text>
+                  <Text style={styles.cueDetail}>{cue.detail}</Text>
+                </View>
+              </View>
+            ))}
+            {!guide.cues.length ? (
+              <Text style={styles.subtitle}>
+                No technique cues are available for this exercise.
+              </Text>
+            ) : null}
+          </View>
+          <WorkoutSessionPanel
+            key={`${name}-${sessionId ?? ""}`}
+            title={group ?? guide.muscleGroup}
+            split={group ?? guide.muscleGroup}
+            exercises={[guide]}
+            sessionId={sessionId}
+            recovery={Boolean(recovery)}
+          />
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -185,7 +122,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '400',
+    fontWeight: "400",
     color: C.text,
   },
   subtitle: {
@@ -194,55 +131,25 @@ const styles = StyleSheet.create({
   },
   demoWrap: {
     borderRadius: 18,
-    overflow: 'hidden',
+    overflow: "hidden",
     backgroundColor: C.card,
   },
   demo: {
-    width: '100%',
+    width: "100%",
     aspectRatio: 354 / 160,
-  },
-  demoPlay: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    marginTop: -22,
-    marginLeft: -22,
-    width: 44,
-    height: 44,
-    borderRadius: 100,
-    backgroundColor: C.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  demoPlayIcon: {
-    width: 18,
-    height: 18,
-  },
-  demoBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    backgroundColor: C.surface,
-  },
-  demoBadgeLabel: {
-    fontSize: 10,
-    color: C.text,
   },
   prescriptionCard: {
     padding: 14,
     gap: 12,
   },
   prescriptionRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   prescription: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
     gap: 5,
   },
   prescriptionValue: {
@@ -253,70 +160,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: C.textMuted,
   },
-  loadRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  loadGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  loadLabel: {
-    fontSize: 10,
-    color: C.textMuted,
-  },
-  loadInput: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 3,
-  },
-  loadValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: C.text,
-  },
-  loadUnit: {
-    fontSize: 12,
-    color: C.textMuted,
-  },
-  stepper: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  stepButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: C.previewTint,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  minus: {
-    width: 14,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: C.text,
-  },
-  plus: {
-    position: 'absolute',
-    width: 2,
-    height: 14,
-    borderRadius: 1,
-    backgroundColor: C.text,
-  },
   cues: {
     gap: 12,
   },
   sectionTitle: {
     fontSize: 17,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   cue: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
   },
   cueMarker: {
@@ -324,12 +177,12 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 100,
     backgroundColor: C.card,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   cueMarkerLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   cueCopy: {
@@ -338,48 +191,12 @@ const styles = StyleSheet.create({
   },
   cueTitle: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   cueDetail: {
     fontSize: 12,
     lineHeight: 17,
-    color: C.textMuted,
-  },
-  warning: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: C.accentTint,
-    borderRadius: 14,
-    padding: 14,
-  },
-  warningIcon: {
-    width: 18,
-    height: 18,
-  },
-  warningText: {
-    flex: 1,
-    fontSize: 11,
-    lineHeight: 16,
-    color: C.textMuted,
-  },
-  disabledAction: {
-    flexDirection: 'row',
-    gap: 8,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: C.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionIcon: {
-    width: 14,
-    height: 14,
-  },
-  disabledActionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
     color: C.textMuted,
   },
 });
