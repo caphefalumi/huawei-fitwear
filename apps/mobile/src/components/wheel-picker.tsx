@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -7,9 +7,9 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   type ScrollViewInstance,
-} from 'react-native';
+} from "react-native";
 
-import { Palette as C } from '@/constants/palette';
+import { Palette as C } from "@/constants/palette";
 
 const ITEM_HEIGHT = 44;
 const VISIBLE_ROWS = 5;
@@ -46,7 +46,8 @@ export function WheelPicker({ values, value, onChange, format }: WheelPickerProp
         onLayout={() => scrollRef.current?.scrollTo({ y: index * ITEM_HEIGHT, animated: false })}
         onScroll={(event) => setIndex(indexFrom(event))}
         onMomentumScrollEnd={(event) => onChange(values[indexFrom(event)])}
-        onScrollEndDrag={(event) => onChange(values[indexFrom(event)])}>
+        onScrollEndDrag={(event) => onChange(values[indexFrom(event)])}
+      >
         {values.map((item, itemIndex) => {
           const active = itemIndex === index;
           return (
@@ -67,7 +68,7 @@ const styles = StyleSheet.create({
     height: ITEM_HEIGHT * VISIBLE_ROWS,
   },
   band: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     top: PADDING,
@@ -78,8 +79,8 @@ const styles = StyleSheet.create({
   },
   item: {
     height: ITEM_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   itemLabel: {
     fontSize: 17,
@@ -87,7 +88,7 @@ const styles = StyleSheet.create({
   },
   itemLabelActive: {
     fontSize: 22,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.accent,
   },
 });

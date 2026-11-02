@@ -1,4 +1,4 @@
-const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+const BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 export function encodeUtf8Bytes(text: string): Uint8Array {
   const bytes: number[] = [];
@@ -16,7 +16,7 @@ export function encodeUtf8Bytes(text: string): Uint8Array {
 }
 
 export function decodeUtf8Bytes(bytes: Uint8Array): string {
-  let out = '';
+  let out = "";
   let i = 0;
   while (i < bytes.length) {
     const c = bytes[i++];
@@ -35,7 +35,7 @@ export function decodeUtf8Bytes(bytes: Uint8Array): string {
 }
 
 export function bytesToBase64(bytes: Uint8Array): string {
-  let out = '';
+  let out = "";
   for (let i = 0; i < bytes.length; i += 3) {
     const b0 = bytes[i];
     const hasB1 = i + 1 < bytes.length;
@@ -45,20 +45,20 @@ export function bytesToBase64(bytes: Uint8Array): string {
 
     out += BASE64_CHARS[b0 >> 2];
     out += BASE64_CHARS[((b0 & 0x03) << 4) | (b1 >> 4)];
-    out += hasB1 ? BASE64_CHARS[((b1 & 0x0f) << 2) | (b2 >> 6)] : '=';
-    out += hasB2 ? BASE64_CHARS[b2 & 0x3f] : '=';
+    out += hasB1 ? BASE64_CHARS[((b1 & 0x0f) << 2) | (b2 >> 6)] : "=";
+    out += hasB2 ? BASE64_CHARS[b2 & 0x3f] : "=";
   }
   return out;
 }
 
 export function base64ToBytes(b64: string): Uint8Array {
-  const clean = b64.replace(/[^A-Za-z0-9+/=]/g, '');
+  const clean = b64.replace(/[^A-Za-z0-9+/=]/g, "");
   const out: number[] = [];
   for (let i = 0; i < clean.length; i += 4) {
     const c0 = BASE64_CHARS.indexOf(clean[i]);
     const c1 = BASE64_CHARS.indexOf(clean[i + 1]);
-    const c2 = clean[i + 2] === '=' ? -1 : BASE64_CHARS.indexOf(clean[i + 2]);
-    const c3 = clean[i + 3] === '=' ? -1 : BASE64_CHARS.indexOf(clean[i + 3]);
+    const c2 = clean[i + 2] === "=" ? -1 : BASE64_CHARS.indexOf(clean[i + 2]);
+    const c3 = clean[i + 3] === "=" ? -1 : BASE64_CHARS.indexOf(clean[i + 3]);
     if (c0 < 0 || c1 < 0) break;
     out.push((c0 << 2) | (c1 >> 4));
     if (c2 >= 0) {
@@ -71,7 +71,7 @@ export function base64ToBytes(b64: string): Uint8Array {
   return new Uint8Array(out);
 }
 
-const SAMPLE_CHECK = 'Rep 10 | HR 142 bpm';
+const SAMPLE_CHECK = "Rep 10 | HR 142 bpm";
 if (decodeUtf8Bytes(base64ToBytes(bytesToBase64(encodeUtf8Bytes(SAMPLE_CHECK)))) !== SAMPLE_CHECK) {
-  throw new Error('BLE UTF-8/Base64 codec self-check failed');
+  throw new Error("BLE UTF-8/Base64 codec self-check failed");
 }

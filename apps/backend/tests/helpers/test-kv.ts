@@ -2,10 +2,10 @@ export function createTestKv(): KVNamespace {
   const store = new Map<string, string>();
 
   return {
-    get: async (key: string, type?: 'text' | 'json' | 'arrayBuffer' | 'stream') => {
+    get: async (key: string, type?: "text" | "json" | "arrayBuffer" | "stream") => {
       const value = store.get(key);
       if (value === undefined) return null;
-      if (type === 'json') return JSON.parse(value);
+      if (type === "json") return JSON.parse(value);
       return value;
     },
     put: async (key: string, value: string) => {

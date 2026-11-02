@@ -1,82 +1,82 @@
-import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from "expo-image";
+import { router } from "expo-router";
+import { useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Pressable } from '@/components/pressable';
-import { Palette as C } from '@/constants/palette';
-import { Card, SectionHeading } from '@/features/home/ui';
-import { recoveryRanges, useHealth } from '@/features/health/health-store';
-import { routinesFor, type Routine } from '@/features/workout/routines';
-import { RecoverySheet } from '@/features/recovery/recovery-sheet';
+import { Pressable } from "@/components/pressable";
+import { Palette as C } from "@/constants/palette";
+import { Card, SectionHeading } from "@/features/home/ui";
+import { recoveryRanges, useHealth } from "@/features/health/health-store";
+import { routinesFor, type Routine } from "@/features/workout/routines";
+import { useWorkouts } from "@/features/workout/workout-store";
+import { RecoverySheet } from "@/features/recovery/recovery-sheet";
 
 const icons = {
-  shieldCheck: require('@/assets/images/home/shield-check.svg'),
+  shieldCheck: require("@/assets/images/home/shield-check.svg"),
+  chest: require("@/assets/images/recovery/body-chest.svg"),
+  back: require("@/assets/images/recovery/body-back.svg"),
+  shoulders: require("@/assets/images/recovery/body-shoulders.svg"),
+  arms: require("@/assets/images/recovery/body-arms.svg"),
+  legs: require("@/assets/images/recovery/body-legs.svg"),
+  core: require("@/assets/images/recovery/body-core.svg"),
 };
-
-const WEEK = [
-  { day: 'Mon', date: '05' },
-  { day: 'Tue', date: '06' },
-  { day: 'Wed', date: '07' },
-  { day: 'Thu', date: '08' },
-  { day: 'Fri', date: '09' },
-  { day: 'Sat', date: '10' },
-  { day: 'Sun', date: '11' },
-];
-
-const MUSCLE_GROUPS = [
-  {
-    key: 'chest',
-    label: 'Chest',
-    icon: require('@/assets/images/recovery/body-chest.svg'),
-    designed: true,
-  },
-  {
-    key: 'back',
-    label: 'Back',
-    icon: require('@/assets/images/recovery/body-back.svg'),
-    designed: false,
-  },
-  {
-    key: 'shoulders',
-    label: 'Shoulders',
-    icon: require('@/assets/images/recovery/body-shoulders.svg'),
-    designed: false,
-  },
-  {
-    key: 'arms',
-    label: 'Arms',
-    icon: require('@/assets/images/recovery/body-arms.svg'),
-    designed: false,
-  },
-  {
-    key: 'legs',
-    label: 'Legs',
-    icon: require('@/assets/images/recovery/body-legs.svg'),
-    designed: false,
-  },
-  {
-    key: 'core',
-    label: 'Core',
-    icon: require('@/assets/images/recovery/body-core.svg'),
-    designed: false,
-  },
-];
 
 export function WorkoutPlanScreen() {
   const insets = useSafeAreaInsets();
   const { plan, recovery } = useHealth();
+  const { exercises, sessions, loading, error, refresh, hasMore, loadMore } = useWorkouts();
   const [recoveryOpen, setRecoveryOpen] = useState(false);
-
-  const { today, next, adjustedFor } = routinesFor(recovery);
+  const { today, next } = routinesFor(recovery, exercises);
   const ranges = recovery ? recoveryRanges(recovery) : null;
-  const recoveryLine =
-    recovery && ranges
-      ? `Rest ${ranges.rest} · light ${ranges.light}\nReturn ${recovery.returnDate}, if ready`
-      : '';
-  const summary = (routine: Routine) =>
-    `${routine.name} · ${routine.exercises.length} exercises · ${routine.sets} sets · ${routine.minutes} min`;
+  const now = new Date();
+  const weekStart = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() - ((now.getDay() + 6) % 7),
+  );
+  const week = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(weekStart);
+    date.setDate(date.getDate() + index);
+    return date;
+  });
+  const groups = [...new Set(exercises.map((exercise) => exercise.muscleGroup))];
+
+  function routineCard(routine: Routine, label: string) {
+    return (
+      <View style={styles.section} key={routine.id}>
+        <SectionHeading title={label} actionLabel={routine.name} />
+        <Card style={styles.todayCard}>
+          <View style={styles.todayRow}>
+            <View style={styles.todayCopy}>
+              <Text style={styles.todayTitle}>{routine.name}</Text>
+              <Text style={styles.cardSub}>
+                {routine.exercises.length} exercises · {routine.sets} planned sets
+              </Text>
+            </View>
+            <View style={styles.badge}>
+              <Text style={styles.badgeLabel}>PLAN</Text>
+            </View>
+          </View>
+          <View style={styles.exerciseList}>
+            {routine.exercises.map((exercise) => (
+              <View key={exercise.id} style={styles.exerciseRow}>
+                <Text style={styles.exerciseName}>{exercise.name}</Text>
+                <Text style={styles.exercisePrescription}>{exercise.prescription}</Text>
+              </View>
+            ))}
+          </View>
+          <Pressable
+            onPress={() =>
+              router.push({ pathname: "/chest-plan", params: { group: routine.name } })
+            }
+          >
+            <Text style={styles.footnote}>VIEW PLAN</Text>
+          </Pressable>
+        </Card>
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -84,107 +84,119 @@ export function WorkoutPlanScreen() {
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}>
+      ]}
+    >
       <View style={styles.heading}>
         <Text style={styles.eyebrow}>My plan</Text>
         <Text style={styles.title}>Workout plan</Text>
         <Text style={styles.subtitle}>
-          {plan.sessions}x/week · fat loss &amp; muscle maintenance
+          {plan.sessions != null
+            ? `${plan.sessions} sessions/week`
+            : "Set a weekly goal in your profile"}
+          {plan.goal ? ` · ${plan.goal}` : ""}
         </Text>
       </View>
-
       <View style={styles.week}>
-        {WEEK.map((day) => {
-          const active = day.date === '08';
+        {week.map((date) => {
+          const active = date.toDateString() === now.toDateString();
           return (
-            <View key={day.date} style={[styles.day, active && styles.dayActive]}>
-              <Text style={[styles.dayLabel, active && styles.dayLabelActive]}>{day.day}</Text>
-              <Text style={[styles.dayDate, active && styles.dayDateActive]}>{day.date}</Text>
+            <View key={date.toISOString()} style={[styles.day, active && styles.dayActive]}>
+              <Text style={[styles.dayLabel, active && styles.dayLabelActive]}>
+                {date.toLocaleDateString(undefined, { weekday: "short" })}
+              </Text>
+              <Text style={[styles.dayDate, active && styles.dayDateActive]}>{date.getDate()}</Text>
             </View>
           );
         })}
       </View>
-
-      {recovery ? (
+      {loading ? <Text style={styles.subtitle}>Loading workouts…</Text> : null}
+      {error ? (
+        <Text accessibilityRole="alert" style={styles.subtitle}>
+          {error}
+        </Text>
+      ) : null}
+      <Pressable disabled={loading} onPress={() => void refresh()}>
+        <Text style={styles.footnote}>Refresh workouts</Text>
+      </Pressable>
+      {recovery && ranges ? (
         <Pressable style={styles.recoveryCard} onPress={() => setRecoveryOpen(true)}>
           <Image source={icons.shieldCheck} style={styles.recoveryIcon} contentFit="contain" />
           <View style={styles.recoveryCopy}>
             <Text style={styles.recoveryTitle}>Recovery</Text>
-            <Text style={styles.recoverySub}>{recoveryLine}</Text>
+            <Text style={styles.recoverySub}>
+              Rest {ranges.rest} · light {ranges.light}
+              {"\n"}Return {recovery.returnDate}, if ready
+            </Text>
           </View>
         </Pressable>
       ) : null}
-
+      {today ? routineCard(today, "Explore a routine") : null}
+      {next ? routineCard(next, "More routines") : null}
       <View style={styles.section}>
-        <SectionHeading title="Today" actionLabel={today.name} />
-        <Card style={styles.todayCard}>
-          <View style={styles.todayRow}>
-            <View style={styles.todayCopy}>
-              <Text style={styles.todayTitle}>Current routine</Text>
-              <Text style={styles.cardSub}>{summary(today)}</Text>
-            </View>
-            <View style={styles.badge}>
-              <Text style={styles.badgeLabel}>OCT 8</Text>
-            </View>
-          </View>
-          <View style={styles.exerciseList}>
-            {today.exercises.map((exercise) => (
-              <View key={exercise.name} style={styles.exerciseRow}>
-                <Text style={styles.exerciseName}>{exercise.name}</Text>
-                <Text style={styles.exercisePrescription}>{exercise.prescription}</Text>
-              </View>
-            ))}
-          </View>
-          {adjustedFor ? (
-            <Text style={styles.footnote}>ADJUSTED FOR {adjustedFor.toUpperCase()}</Text>
-          ) : null}
-        </Card>
-      </View>
-
-      <View style={styles.section}>
-        <SectionHeading title="Upcoming" actionLabel="Oct 9" />
-        <Card>
-          <View style={styles.nextHeader}>
-            <View style={styles.todayCopy}>
-              <Text style={styles.rowTitle}>Next routine</Text>
-              <Text style={styles.cardSub}>{summary(next)}</Text>
-            </View>
-            <View style={styles.badge}>
-              <Text style={styles.badgeLabel}>OCT 9</Text>
-            </View>
-          </View>
-          <View style={styles.exerciseList}>
-            {next.exercises.map((exercise) => (
-              <View key={exercise.name} style={styles.exerciseRow}>
-                <Text style={styles.exerciseName}>{exercise.name}</Text>
-                <Text style={styles.exercisePrescription}>{exercise.prescription}</Text>
-              </View>
-            ))}
-          </View>
-          {recovery ? <Text style={styles.footnote}>IF READY · not cleared medically</Text> : null}
-        </Card>
-      </View>
-
-      <View style={styles.section}>
-        <SectionHeading title="Browse muscle groups" actionLabel="6 groups" />
+        <SectionHeading title="Browse muscle groups" actionLabel={`${groups.length} groups`} />
+        {!groups.length && !loading ? (
+          <Text style={styles.subtitle}>No exercises are available yet. Refresh to try again.</Text>
+        ) : null}
         <View style={styles.groups}>
-          {MUSCLE_GROUPS.map((group) => (
+          {groups.map((group) => (
             <Pressable
-              key={group.key}
+              key={group}
               style={styles.group}
-              disabled={!group.designed}
-              onPress={() => router.push('/chest-plan')}>
-              <Image source={group.icon} style={styles.groupImage} contentFit="contain" />
-              <Text style={styles.groupLabel}>{group.label}</Text>
+              onPress={() => router.push({ pathname: "/chest-plan", params: { group } })}
+            >
+              <Image
+                source={icons[group.toLowerCase() as keyof typeof icons] ?? icons.shieldCheck}
+                style={styles.groupImage}
+                contentFit="contain"
+              />
+              <Text style={styles.groupLabel}>{group}</Text>
             </Pressable>
           ))}
         </View>
       </View>
-
-      <Pressable style={styles.primaryButton} onPress={() => router.push('/chest-plan')}>
-        <Text style={styles.primaryLabel}>View Chest plan</Text>
-      </Pressable>
-
+      <View style={styles.section}>
+        <SectionHeading title="Workout history" actionLabel={`${sessions.length} loaded`} />
+        {!sessions.length && !loading ? (
+          <Text style={styles.subtitle}>
+            No saved workouts yet. Choose a group to start your first session.
+          </Text>
+        ) : null}
+        {sessions.map((session) => (
+          <Pressable
+            key={session.id}
+            onPress={() =>
+              router.push({
+                pathname: "/chest-plan",
+                params: { sessionId: session.id, group: session.workoutSplit },
+              })
+            }
+          >
+            <Card>
+              <Text style={styles.rowTitle}>{session.sessionTitle}</Text>
+              <Text style={styles.cardSub}>
+                {new Date(session.startedAt).toLocaleString()} ·{" "}
+                {session.completedAt ? "Completed" : "In progress"}
+              </Text>
+              {session.completedAt ? (
+                <Text style={styles.cardSub}>
+                  {Math.max(
+                    0,
+                    Math.round(
+                      (Date.parse(session.completedAt) - Date.parse(session.startedAt)) / 60000,
+                    ),
+                  )}{" "}
+                  min elapsed
+                </Text>
+              ) : null}
+            </Card>
+          </Pressable>
+        ))}
+        {hasMore ? (
+          <Pressable disabled={loading} onPress={() => void loadMore()}>
+            <Text style={styles.footnote}>Load older workouts</Text>
+          </Pressable>
+        ) : null}
+      </View>
       {recoveryOpen ? <RecoverySheet visible onClose={() => setRecoveryOpen(false)} /> : null}
     </ScrollView>
   );
@@ -204,12 +216,12 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
     color: C.textMuted,
   },
   title: {
     fontSize: 28,
-    fontWeight: '400',
+    fontWeight: "400",
     color: C.text,
   },
   subtitle: {
@@ -217,8 +229,8 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   week: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     gap: 6,
   },
   day: {
@@ -226,8 +238,8 @@ const styles = StyleSheet.create({
     height: 58,
     borderRadius: 14,
     backgroundColor: C.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: 2,
   },
   dayActive: {
@@ -242,15 +254,15 @@ const styles = StyleSheet.create({
   },
   dayDate: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   dayDateActive: {
     color: C.onAccent,
   },
   recoveryCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     backgroundColor: C.accentTint,
     borderRadius: 18,
@@ -266,7 +278,7 @@ const styles = StyleSheet.create({
   },
   recoveryTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   recoverySub: {
@@ -281,8 +293,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   todayRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   todayCopy: {
@@ -291,7 +303,7 @@ const styles = StyleSheet.create({
   },
   todayTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   cardSub: {
@@ -307,21 +319,12 @@ const styles = StyleSheet.create({
   },
   badgeLabel: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.accent,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: C.border,
-  },
-  nextHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
   },
   rowTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   exerciseList: {
@@ -329,8 +332,8 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   exerciseRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   exerciseName: {
     fontSize: 12,
@@ -347,17 +350,17 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   groups: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   group: {
-    width: '31%',
+    width: "31%",
     backgroundColor: C.surface,
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 10,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 6,
   },
   groupImage: {
@@ -367,19 +370,7 @@ const styles = StyleSheet.create({
   },
   groupLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
-  },
-  primaryButton: {
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: C.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: C.onAccent,
   },
 });

@@ -1,4 +1,4 @@
-import { Pressable as RNPressable, StyleSheet, type PressableProps } from 'react-native';
+import { Pressable as RNPressable, StyleSheet, type PressableProps } from "react-native";
 
 /** Pressable with shared press feedback and a web-only hover state. */
 export function Pressable({ style, disabled, onPress, ...props }: PressableProps) {
@@ -10,7 +10,7 @@ export function Pressable({ style, disabled, onPress, ...props }: PressableProps
       disabled={disabled}
       onPress={onPress}
       style={(state) => [
-        typeof style === 'function' ? style(state) : style,
+        typeof style === "function" ? style(state) : style,
         interactive && (state as { hovered?: boolean }).hovered && styles.hovered,
         interactive && state.pressed && styles.pressed,
       ]}

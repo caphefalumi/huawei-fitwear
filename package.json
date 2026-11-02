@@ -1,26 +1,44 @@
 {
   "name": "fitwear",
   "private": true,
+  "workspaces": [
+    "apps/mobile",
+    "apps/backend"
+  ],
   "scripts": {
-    "postinstall": "bun install --cwd apps/mobile && bun install --cwd apps/backend",
-    "start": "bun --cwd apps/mobile start",
-    "android": "bun --cwd apps/mobile android",
-    "ios": "bun --cwd apps/mobile ios",
-    "build:ios": "bun --cwd apps/mobile run build:ios",
-    "build:android": "bun --cwd apps/mobile run build:android",
-    "web": "bun --cwd apps/mobile web",
-    "lint": "bun --cwd apps/mobile lint",
-    "backend:dev": "bun --cwd apps/backend dev",
-    "backend:build": "bun --cwd apps/backend build",
-    "backend:typecheck": "bun --cwd apps/backend typecheck",
-    "backend:test": "bun --cwd apps/backend test",
-    "backend:test:unit": "bun --cwd apps/backend test:unit",
-    "backend:test:integration": "bun --cwd apps/backend test:integration",
-    "backend:test:e2e": "bun --cwd apps/backend test:e2e",
-    "db:generate": "bun --cwd apps/backend db:generate",
-    "db:migrate:local": "bun --cwd apps/backend db:migrate:local",
-    "db:migrate:remote": "bun --cwd apps/backend db:migrate:remote",
-    "test": "bun --cwd apps/backend test",
-    "test:e2e": "bun --cwd apps/backend test:e2e"
-  }
+    "start": "bun run --cwd apps/mobile start",
+    "android": "bun run --cwd apps/mobile android",
+    "ios": "bun run --cwd apps/mobile ios",
+    "build:ios": "bun run --cwd apps/mobile build:ios",
+    "build:android": "bun run --cwd apps/mobile build:android",
+    "web": "bun run --cwd apps/mobile web",
+    "lint:mobile": "bun run --cwd apps/mobile lint",
+    "lint:backend": "bun run --cwd apps/backend lint",
+    "lint": "bun run lint:mobile && bun run lint:backend",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "backend:dev": "bun run --cwd apps/backend dev",
+    "backend:build": "bun run --cwd apps/backend build",
+    "backend:deploy": "bun run --cwd apps/backend deploy",
+    "backend:typecheck": "bun run --cwd apps/backend typecheck",
+    "backend:test": "bun run --cwd apps/backend test",
+    "backend:test:unit": "bun run --cwd apps/backend test:unit",
+    "backend:test:integration": "bun run --cwd apps/backend test:integration",
+    "db:generate": "bun run --cwd apps/backend db:generate",
+    "db:migrate:local": "bun run --cwd apps/backend db:migrate:local",
+    "db:migrate:remote": "bun run --cwd apps/backend db:migrate:remote",
+    "mobile:typecheck": "bun run --cwd apps/mobile typecheck",
+    "mobile:test": "bun run --cwd apps/mobile test",
+    "mobile:test:e2e": "bun run --cwd apps/mobile test:e2e",
+    "test": "bun run backend:test && bun run mobile:test",
+    "test:e2e": "bun run mobile:test:e2e"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.75.0",
+    "oxlint": "^1.90.0"
+  },
+  "overrides": {
+    "flow-parser": "0.338.0"
+  },
+  "packageManager": "bun@1.4.4"
 }
