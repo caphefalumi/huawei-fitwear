@@ -52,11 +52,15 @@ jobs:
         run: echo "mobile=true" >> "$GITHUB_OUTPUT"
 
   mobile:
-    name: Mobile tests
+    name: Mobile ${{ matrix.suite }} tests
     needs: changes
     if: needs.changes.outputs.mobile == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [unit, e2e]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -68,7 +72,8 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - name: Setup Node.js for Jest ESM
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 26
@@ -77,17 +82,22 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Typecheck mobile
+        if: matrix.suite == 'unit'
         run: bun run --cwd apps/mobile typecheck
+
       - name: Run mobile Jest unit tests
+        if: matrix.suite == 'unit'
         run: bun run --cwd apps/mobile test
 
       - name: Setup Java for Android E2E
+        if: matrix.suite == 'e2e'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Install Maestro CLI
+        if: matrix.suite == 'e2e'
         run: |
           export MAESTRO_VERSION=2.12.0
           curl -fsSL https://get.maestro.mobile.dev | bash
@@ -95,9 +105,11 @@ jobs:
           "$HOME/.maestro/bin/maestro" --version
 
       - name: Apply local D1 migrations
+        if: matrix.suite == 'e2e'
         run: bun run --cwd apps/backend db:migrate:local
 
       - name: Start local backend
+        if: matrix.suite == 'e2e'
         run: |
           bun run --cwd apps/backend dev --local --ip 0.0.0.0 --port 8787 > "$RUNNER_TEMP/wrangler.log" 2>&1 &
           for attempt in $(seq 1 60); do
@@ -111,18 +123,21 @@ jobs:
           exit 1
 
       - name: Generate Android project
+        if: matrix.suite == 'e2e'
         working-directory: apps/mobile
         env:
           EXPO_PUBLIC_API_URL: http://10.0.2.2:8787
         run: bunx expo prebuild --platform android --no-install
 
       - name: Build Android debug APK
+        if: matrix.suite == 'e2e'
         working-directory: apps/mobile/android
         env:
           EXPO_PUBLIC_API_URL: http://10.0.2.2:8787
         run: ./gradlew assembleDebug --no-daemon
 
       - name: Run the single Maestro end-to-end flow
+        if: matrix.suite == 'e2e'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -132,7 +147,6 @@ jobs:
           script: |
             adb install apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
             maestro test apps/mobile/.maestro/fitness.yaml
-
   required:
     name: Mobile checks
     if: always()
