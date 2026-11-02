@@ -6,10 +6,6 @@
 
 <!-- List commands or manual scenarios actually run and their results. Include platform/device details for mobile or watch changes. State anything not tested and why. Nightly E2E is not evidence for this commit unless it ran against it. -->
 
-## Screenshots or recordings
-
-<!-- For UI changes, show the affected screen and relevant states. Remove this section for non-UI changes. Do not include personal data or credentials. -->
-
 ## Risks and rollout
 
 <!-- Note breaking API changes, D1 migrations, new bindings/secrets, compatibility concerns, and rollback steps when applicable. Write “None” for low-risk changes. Never paste secret values. -->
