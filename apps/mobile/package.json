@@ -15,8 +15,8 @@
     "lint:expo": "expo lint",
     "fmt": "oxfmt",
     "typecheck": "tsc --noEmit",
-    "test": "jest --runInBand",
-    "test:watch": "jest --watch",
+    "test": "node ./node_modules/jest/bin/jest.js --runInBand",
+    "test:watch": "node ./node_modules/jest/bin/jest.js --watch",
     "test:e2e": "playwright test"
   },
   "dependencies": {
