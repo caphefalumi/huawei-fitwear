@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   backend:
-    name: Backend checks
+    name: Backend Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
