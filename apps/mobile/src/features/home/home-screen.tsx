@@ -1,32 +1,45 @@
-import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from "expo-image";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Pressable } from '@/components/pressable';
-import { Palette as C } from '@/constants/palette';
-import { dateLabel, recoveryTitle, useHealth } from '@/features/health/health-store';
-import { useAuth } from '@/features/auth/auth-store';
-import { useWorkouts } from '@/features/workout/workout-store';
-import { WeightChart } from '@/features/home/weight-chart';
-import { RecoverySheet } from '@/features/recovery/recovery-sheet';
-import { useMeals } from '@/features/meals/meals-store';
-import { NutritionRing } from '@/features/home/ring';
-import { Card, MacroBar, SectionHeading } from '@/features/home/ui';
+import { Pressable } from "@/components/pressable";
+import { Palette as C } from "@/constants/palette";
+import { dateLabel, recoveryTitle, useHealth } from "@/features/health/health-store";
+import { useAuth } from "@/features/auth/auth-store";
+import { useWorkouts } from "@/features/workout/workout-store";
+import { WeightChart } from "@/features/home/weight-chart";
+import { RecoverySheet } from "@/features/recovery/recovery-sheet";
+import { useMeals } from "@/features/meals/meals-store";
+import { NutritionRing } from "@/features/home/ring";
+import { Card, MacroBar, SectionHeading } from "@/features/home/ui";
 
 const icons = {
-  chevronRight: require('@/assets/images/home/chevron-right.svg'),
-  shieldCheck: require('@/assets/images/home/shield-check.svg'),
-  check: require('@/assets/images/home/check.svg'),
+  chevronRight: require("@/assets/images/home/chevron-right.svg"),
+  shieldCheck: require("@/assets/images/home/shield-check.svg"),
+  check: require("@/assets/images/home/check.svg"),
 };
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { weightKg, weights, weightUpdated, recovery, error: healthError, loading: healthLoading, refresh: refreshHealth } = useHealth();
+  const {
+    weightKg,
+    weights,
+    weightUpdated,
+    recovery,
+    error: healthError,
+    loading: healthLoading,
+    refresh: refreshHealth,
+  } = useHealth();
   const { summary, loading: mealsLoading, error: mealsError, refresh: refreshMeals } = useMeals();
-  const { sessions, loading: workoutsLoading, error: workoutsError, refresh: refreshWorkouts } = useWorkouts();
+  const {
+    sessions,
+    loading: workoutsLoading,
+    error: workoutsError,
+    refresh: refreshWorkouts,
+  } = useWorkouts();
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   useEffect(() => setBannerDismissed(false), [weightKg]);
@@ -40,16 +53,39 @@ export function HomeScreen() {
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}>
+      ]}
+    >
       <View style={styles.topRow}>
-        <Text style={styles.date}>{new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase()}</Text>
+        <Text style={styles.date}>
+          {new Date()
+            .toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
+            .toUpperCase()}
+        </Text>
         <Text style={styles.name}>{user?.name}</Text>
       </View>
 
       <Text style={styles.title}>Today</Text>
-      {healthLoading || mealsLoading ? <Text style={styles.weightSub}>Loading today’s data…</Text> : null}
-      {healthError ? <Pressable onPress={() => { void refreshHealth(); }}><Text accessibilityRole="alert">{healthError} Tap to retry health data.</Text></Pressable> : null}
-      {mealsError ? <Pressable onPress={() => { void refreshMeals(); }}><Text accessibilityRole="alert">{mealsError} Tap to retry nutrition.</Text></Pressable> : null}
+      {healthLoading || mealsLoading ? (
+        <Text style={styles.weightSub}>Loading today’s data…</Text>
+      ) : null}
+      {healthError ? (
+        <Pressable
+          onPress={() => {
+            void refreshHealth();
+          }}
+        >
+          <Text accessibilityRole="alert">{healthError} Tap to retry health data.</Text>
+        </Pressable>
+      ) : null}
+      {mealsError ? (
+        <Pressable
+          onPress={() => {
+            void refreshMeals();
+          }}
+        >
+          <Text accessibilityRole="alert">{mealsError} Tap to retry nutrition.</Text>
+        </Pressable>
+      ) : null}
 
       {weightUpdated && !bannerDismissed ? (
         <View style={styles.banner}>
@@ -61,42 +97,69 @@ export function HomeScreen() {
         </View>
       ) : null}
 
-      <Pressable onPress={() => router.push('/nutrition')}>
+      <Pressable onPress={() => router.push("/nutrition")}>
         <Card>
           <Text style={styles.cardHeaderText}>Nutrition</Text>
 
           {summary ? (
             <>
               <View style={styles.nutritionBody}>
-                <NutritionRing kcalLeft={summary.remaining.caloriesKcal} targetKcal={summary.targets.calorieTargetKcal} consumedKcal={summary.consumed.caloriesKcal} />
+                <NutritionRing
+                  kcalLeft={summary.remaining.caloriesKcal}
+                  targetKcal={summary.targets.calorieTargetKcal}
+                  consumedKcal={summary.consumed.caloriesKcal}
+                />
                 <View style={styles.macros}>
-                  <MacroBar label="Protein" value={summary.consumed.proteinG} target={summary.targets.proteinTargetG} unit="g" />
-                  <MacroBar label="Carbs" value={summary.consumed.carbsG} target={summary.targets.carbsTargetG} unit="g" />
-                  <MacroBar label="Fat" value={summary.consumed.fatG} target={summary.targets.fatTargetG} unit="g" />
+                  <MacroBar
+                    label="Protein"
+                    value={summary.consumed.proteinG}
+                    target={summary.targets.proteinTargetG}
+                    unit="g"
+                  />
+                  <MacroBar
+                    label="Carbs"
+                    value={summary.consumed.carbsG}
+                    target={summary.targets.carbsTargetG}
+                    unit="g"
+                  />
+                  <MacroBar
+                    label="Fat"
+                    value={summary.consumed.fatG}
+                    target={summary.targets.fatTargetG}
+                    unit="g"
+                  />
                 </View>
               </View>
-              <Text style={styles.consumedLine}>{summary.consumed.caloriesKcal.toLocaleString()} consumed · {summary.remaining.caloriesKcal} kcal left of {summary.targets.calorieTargetKcal.toLocaleString()}</Text>
+              <Text style={styles.consumedLine}>
+                {summary.consumed.caloriesKcal.toLocaleString()} consumed ·{" "}
+                {summary.remaining.caloriesKcal} kcal left of{" "}
+                {summary.targets.calorieTargetKcal.toLocaleString()}
+              </Text>
             </>
-          ) : <Text style={styles.weightSub}>Your nutrition summary will appear after it loads.</Text>}
+          ) : (
+            <Text style={styles.weightSub}>Your nutrition summary will appear after it loads.</Text>
+          )}
         </Card>
       </Pressable>
 
       <View style={styles.section}>
         <SectionHeading title="Progress" />
-        <Pressable onPress={() => router.push('/progress')}>
+        <Pressable onPress={() => router.push("/progress")}>
           <Card>
             <View style={styles.weightRow}>
               <View style={styles.weightText}>
                 <Text style={styles.weightLabel}>Latest weight</Text>
                 <View style={styles.weightValueRow}>
-                  <Text style={styles.weightValue}>{weightKg?.toFixed(1) ?? '—'}</Text>
+                  <Text style={styles.weightValue}>{weightKg?.toFixed(1) ?? "—"}</Text>
                   <Text style={styles.weightUnit}>kg</Text>
                 </View>
                 <Text style={styles.weightSub}>
-                  {latest ? `Logged ${dateLabel(latest.loggedDate)}` : 'No weight logs yet'}
+                  {latest ? `Logged ${dateLabel(latest.loggedDate)}` : "No weight logs yet"}
                 </Text>
               </View>
-              <View style={{ flex: 1 }}><WeightChart weights={weights.slice(-14).map((row) => row.weightKg)} /></View>
+              <View style={{ flex: 1 }}>
+                <WeightChart weights={weights.slice(-14).map((row) => row.weightKg)} />
+              </View>
             </View>
 
             {previous ? (
@@ -105,22 +168,39 @@ export function HomeScreen() {
                 <Text style={styles.previousValue}>{previous.weightKg.toFixed(1)} kg</Text>
               </View>
             ) : null}
-
           </Card>
         </Pressable>
       </View>
       <View style={styles.section}>
-        <SectionHeading title="Workouts" actionLabel="Plan" onPress={() => router.push('/workout')} />
+        <SectionHeading
+          title="Workouts"
+          actionLabel="Plan"
+          onPress={() => router.push("/workout")}
+        />
         <Card>
           {workoutsLoading ? <Text style={styles.weightSub}>Loading workouts…</Text> : null}
-          {workoutsError ? <Pressable onPress={() => { void refreshWorkouts(); }}><Text accessibilityRole="alert">{workoutsError} Tap to retry.</Text></Pressable> : null}
+          {workoutsError ? (
+            <Pressable
+              onPress={() => {
+                void refreshWorkouts();
+              }}
+            >
+              <Text accessibilityRole="alert">{workoutsError} Tap to retry.</Text>
+            </Pressable>
+          ) : null}
           {completed.map((session) => (
             <View key={session.id}>
               <Text style={styles.cardHeaderText}>{session.sessionTitle}</Text>
-              <Text style={styles.weightSub}>Completed {new Date(session.completedAt!).toLocaleDateString()}</Text>
+              <Text style={styles.weightSub}>
+                Completed {new Date(session.completedAt!).toLocaleDateString()}
+              </Text>
             </View>
           ))}
-          {!workoutsLoading && !completed.length ? <Text style={styles.weightSub}>No completed workouts yet. Open your plan to start a session.</Text> : null}
+          {!workoutsLoading && !completed.length ? (
+            <Text style={styles.weightSub}>
+              No completed workouts yet. Open your plan to start a session.
+            </Text>
+          ) : null}
         </Card>
       </View>
 
@@ -154,9 +234,9 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   date: {
     fontSize: 12,
@@ -164,18 +244,18 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.accent,
   },
   title: {
     fontSize: 28,
-    fontWeight: '400',
+    fontWeight: "400",
     color: C.text,
     marginTop: -6,
   },
   banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     backgroundColor: C.accentTint,
     borderRadius: 12,
@@ -189,22 +269,22 @@ const styles = StyleSheet.create({
   bannerText: {
     flex: 1,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.accent,
   },
   bannerClose: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.accent,
   },
   cardHeaderText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   nutritionBody: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 20,
   },
   macros: {
@@ -219,9 +299,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   weightRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
   },
   weightText: {
@@ -232,13 +312,13 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   weightValueRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
     gap: 4,
   },
   weightValue: {
     fontSize: 27,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   weightUnit: {
@@ -250,8 +330,8 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   previousRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   previousText: {
@@ -261,12 +341,12 @@ const styles = StyleSheet.create({
   },
   previousValue: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   recovery: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     backgroundColor: C.card,
     borderRadius: 12,
@@ -282,7 +362,7 @@ const styles = StyleSheet.create({
   },
   recoveryTitle: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   recoverySub: {
@@ -296,6 +376,6 @@ const styles = StyleSheet.create({
   footnote: {
     fontSize: 10,
     color: C.textMuted,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

@@ -1,5 +1,5 @@
-import type { RecoveryPlan } from '@/features/health/health-store';
-import type { Exercise } from '@/features/workout/workout-store';
+import type { RecoveryPlan } from "@/features/health/health-store";
+import type { Exercise } from "@/features/workout/workout-store";
 
 export type RoutineExercise = Exercise & { prescription: string };
 export type Routine = {
@@ -30,7 +30,7 @@ export type RoutinePair = { today: Routine | null; next: Routine | null };
 
 export function routinesFor(recovery: RecoveryPlan | null, catalog: Exercise[]): RoutinePair {
   return {
-    today: routineForGroup(recovery ? 'Recovery' : 'Chest', catalog),
-    next: routineForGroup(recovery ? 'Core' : 'Back', catalog),
+    today: routineForGroup(recovery ? "Recovery" : "Chest", catalog),
+    next: routineForGroup(recovery ? "Core" : "Back", catalog),
   };
 }

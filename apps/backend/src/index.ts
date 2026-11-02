@@ -1,6 +1,6 @@
-import { consumeEmailBatch } from './modules/email/queue';
-import { withDatabaseBinding } from './db';
-import { app } from './app';
+import { consumeEmailBatch } from "./modules/email/queue";
+import { withDatabaseBinding } from "./db";
+import { app } from "./app";
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {

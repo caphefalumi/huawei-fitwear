@@ -91,6 +91,7 @@ bun start
 - **iOS**: Open the native **Camera** app, point it at the terminal QR code, and tap the prompt to open in **Expo Go**.
 
 > **Note**: If your phone cannot reach your computer over local Wi-Fi, run Metro in tunnel mode:
+>
 > ```bash
 > bunx expo start --tunnel
 > ```

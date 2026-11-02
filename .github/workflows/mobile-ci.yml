@@ -7,6 +7,7 @@ on:
   merge_group:
     types:
       - checks_requested
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -21,7 +22,7 @@ jobs:
     name: Detect mobile changes
     runs-on: ubuntu-latest
     outputs:
-      mobile: ${{ steps.merge_scope.outputs.mobile || steps.filter.outputs.mobile }}
+      mobile: ${{ steps.manual_scope.outputs.mobile || steps.merge_scope.outputs.mobile || steps.filter.outputs.mobile }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -41,6 +42,10 @@ jobs:
               - 'package.json'
               - 'bun.lock'
               - '.github/workflows/**'
+      - name: Run mobile suite when manually dispatched
+        id: manual_scope
+        if: github.event_name == 'workflow_dispatch'
+        run: echo "mobile=true" >> "$GITHUB_OUTPUT"
       - name: Run mobile suite for merge group
         id: merge_scope
         if: github.event_name == 'merge_group'

@@ -1,70 +1,120 @@
-import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from "expo-image";
+import { router } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import { Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Pressable } from '@/components/pressable';
-import { Sheet } from '@/components/sheet';
-import { Palette as C } from '@/constants/palette';
-import { Header, icons, PrimaryButton, SecondaryButton } from './meals-ui';
-import { useMeals, type ApiMealItem } from './meals-store';
-import { apiRequest } from '@/lib/api';
+import { Pressable } from "@/components/pressable";
+import { Sheet } from "@/components/sheet";
+import { Palette as C } from "@/constants/palette";
+import { Header, icons, PrimaryButton, SecondaryButton } from "./meals-ui";
+import { useMeals, type ApiMealItem } from "./meals-store";
+import { apiRequest } from "@/lib/api";
 
 const TUTORIAL_STEPS = [
-  { title: 'Add a ruler', detail: 'Place a 15 cm ruler beside the plate or cup.' },
-  { title: 'Shoot from above', detail: 'Keep the whole meal in frame and hold steady.' },
+  { title: "Add a ruler", detail: "Place a 15 cm ruler beside the plate or cup." },
+  { title: "Shoot from above", detail: "Keep the whole meal in frame and hold steady." },
   {
-    title: 'Review & edit',
-    detail: 'Swipe left to edit, swipe right to delete, tap an item to change it.',
+    title: "Review & edit",
+    detail: "Swipe left to edit, swipe right to delete, tap an item to change it.",
   },
 ];
 
 export function MealCaptureScreen() {
   const insets = useSafeAreaInsets();
   const { tutorialSeen, dismissTutorial, setAnalysis, setDraftPhoto, items } = useMeals();
-  const [description, setDescription] = useState('');
-  const [image, setImage] = useState<{ uri: string; base64: string; mimeType: 'image/jpeg' | 'image/png' } | null>(null);
+  const [description, setDescription] = useState("");
+  const [image, setImage] = useState<{
+    uri: string;
+    base64: string;
+    mimeType: "image/jpeg" | "image/png";
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const active = useRef(true);
   const request = useRef(0);
-  useEffect(() => { active.current = true; return () => { active.current = false; request.current++; }; }, []);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+      request.current++;
+    };
+  }, []);
 
   async function pickImage(camera: boolean) {
     if (busy) return;
     setError(null);
     try {
-      if (camera && Platform.OS !== 'web') {
+      if (camera && Platform.OS !== "web") {
         const permission = await ImagePicker.requestCameraPermissionsAsync();
-        if (!permission.granted) throw new Error('Camera permission was denied. Allow camera access in settings or choose a library image.');
+        if (!permission.granted)
+          throw new Error(
+            "Camera permission was denied. Allow camera access in settings or choose a library image.",
+          );
       }
-      const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], base64: true, quality: 0.7, allowsEditing: true };
-      const result = camera ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+      const options: ImagePicker.ImagePickerOptions = {
+        mediaTypes: ["images"],
+        base64: true,
+        quality: 0.7,
+        allowsEditing: true,
+      };
+      const result = camera
+        ? await ImagePicker.launchCameraAsync(options)
+        : await ImagePicker.launchImageLibraryAsync(options);
       if (result.canceled || !active.current) return;
       const asset = result.assets[0];
-      if (!asset.base64) throw new Error('Could not read this image. Choose another JPEG or PNG.');
-      const mimeType = asset.base64.startsWith('/9j/') ? 'image/jpeg' : asset.base64.startsWith('iVBOR') ? 'image/png' : null;
-      if (!mimeType) throw new Error('Choose a JPEG or PNG image.');
-      if (asset.base64.length > 7_000_000) throw new Error('This image is too large. Crop it or choose a smaller photo (under 5 MB).');
+      if (!asset.base64) throw new Error("Could not read this image. Choose another JPEG or PNG.");
+      const mimeType = asset.base64.startsWith("/9j/")
+        ? "image/jpeg"
+        : asset.base64.startsWith("iVBOR")
+          ? "image/png"
+          : null;
+      if (!mimeType) throw new Error("Choose a JPEG or PNG image.");
+      if (asset.base64.length > 7_000_000)
+        throw new Error("This image is too large. Crop it or choose a smaller photo (under 5 MB).");
       setImage({ uri: asset.uri, base64: asset.base64, mimeType });
-    } catch (cause) { if (active.current) setError(cause instanceof Error ? cause.message : 'Could not open image picker.'); }
+    } catch (cause) {
+      if (active.current)
+        setError(cause instanceof Error ? cause.message : "Could not open image picker.");
+    }
   }
 
   async function analyze() {
     if (!image || busy) return;
-    if (items.length) { setError('Your current meal draft has items. Review or clear that draft before analyzing another meal.'); return; }
+    if (items.length) {
+      setError(
+        "Your current meal draft has items. Review or clear that draft before analyzing another meal.",
+      );
+      return;
+    }
     const current = ++request.current;
-    setBusy(true); setError(null);
+    setBusy(true);
+    setError(null);
     try {
-      const result = await apiRequest<{ items: ApiMealItem[] }>('/meals/analyze', { method: 'POST', body: { image: image.base64, mimeType: image.mimeType, ...(description.trim() ? { description: description.trim() } : {}) } });
+      const result = await apiRequest<{ items: ApiMealItem[] }>("/meals/analyze", {
+        method: "POST",
+        body: {
+          image: image.base64,
+          mimeType: image.mimeType,
+          ...(description.trim() ? { description: description.trim() } : {}),
+        },
+      });
       if (!active.current || current !== request.current) return;
-      if (!result.items.length) throw new Error('No food was identified. Try another photo or enter items manually.');
+      if (!result.items.length)
+        throw new Error("No food was identified. Try another photo or enter items manually.");
       setAnalysis(result.items, image.uri, { data: image.base64, mimeType: image.mimeType });
-      router.push('/meal');
-    } catch (cause) { if (active.current && current === request.current) setError(cause instanceof Error ? cause.message : 'Photo analysis is unavailable. You can enter nutrition manually.'); }
-    finally { if (active.current && current === request.current) setBusy(false); }
+      router.push("/meal");
+    } catch (cause) {
+      if (active.current && current === request.current)
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "Photo analysis is unavailable. You can enter nutrition manually.",
+        );
+    } finally {
+      if (active.current && current === request.current) setBusy(false);
+    }
   }
 
   return (
@@ -74,7 +124,8 @@ export function MealCaptureScreen() {
         contentContainerStyle={[
           styles.content,
           { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-        ]}>
+        ]}
+      >
         <Header label="Meals" onBack={() => router.back()} />
 
         <View style={styles.heading}>
@@ -82,25 +133,29 @@ export function MealCaptureScreen() {
           <Text style={styles.subtitle}>Capture food or drinks.</Text>
         </View>
 
-        {image ? <Image source={{ uri: image.uri }} style={styles.preview} contentFit="contain" /> : <View style={styles.preview}>
-          <Text style={styles.previewLabel}>• GUIDELINES · NO IMAGE</Text>
+        {image ? (
+          <Image source={{ uri: image.uri }} style={styles.preview} contentFit="contain" />
+        ) : (
+          <View style={styles.preview}>
+            <Text style={styles.previewLabel}>• GUIDELINES · NO IMAGE</Text>
 
-          <View style={[styles.corner, styles.cornerTopLeft]} />
-          <View style={[styles.corner, styles.cornerTopRight]} />
-          <View style={[styles.corner, styles.cornerBottomLeft]} />
-          <View style={[styles.corner, styles.cornerBottomRight]} />
+            <View style={[styles.corner, styles.cornerTopLeft]} />
+            <View style={[styles.corner, styles.cornerTopRight]} />
+            <View style={[styles.corner, styles.cornerBottomLeft]} />
+            <View style={[styles.corner, styles.cornerBottomRight]} />
 
-          <View style={styles.circle}>
-            <Image source={icons.utensils} style={styles.circleIcon} contentFit="contain" />
-            <Text style={styles.circleTitle}>Place food or drink here</Text>
-            <Text style={styles.circleNote}>Top-down shot · keep steady</Text>
+            <View style={styles.circle}>
+              <Image source={icons.utensils} style={styles.circleIcon} contentFit="contain" />
+              <Text style={styles.circleTitle}>Place food or drink here</Text>
+              <Text style={styles.circleNote}>Top-down shot · keep steady</Text>
+            </View>
+
+            <View style={styles.rulerChip}>
+              <Image source={icons.ruler} style={styles.rulerIcon} contentFit="contain" />
+              <Text style={styles.rulerText}>Place 15 cm ruler beside plate or cup</Text>
+            </View>
           </View>
-
-          <View style={styles.rulerChip}>
-            <Image source={icons.ruler} style={styles.rulerIcon} contentFit="contain" />
-            <Text style={styles.rulerText}>Place 15 cm ruler beside plate or cup</Text>
-          </View>
-        </View>}
+        )}
 
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Optional description</Text>
@@ -114,13 +169,36 @@ export function MealCaptureScreen() {
           />
         </View>
 
-        <Text style={styles.footnote}>Only when you tap Analyze, your selected photo and description are sent to the configured cloud model. Estimates must be reviewed; no wearable or medical measurements are inferred.</Text>
-        {error ? <Text accessibilityRole="alert" style={styles.footnote}>{error} Manual entry remains available.</Text> : null}
-        <PrimaryButton label={busy ? 'Analyzing photo…' : 'Analyze photo'} disabled={!image || busy} onPress={analyze} />
-        <SecondaryButton label="Enter meal manually" onPress={() => { if (image) setDraftPhoto(image.uri, { data: image.base64, mimeType: image.mimeType }); router.push('/meal'); }} />
+        <Text style={styles.footnote}>
+          Only when you tap Analyze, your selected photo and description are sent to the configured
+          cloud model. Estimates must be reviewed; no wearable or medical measurements are inferred.
+        </Text>
+        {error ? (
+          <Text accessibilityRole="alert" style={styles.footnote}>
+            {error} Manual entry remains available.
+          </Text>
+        ) : null}
+        <PrimaryButton
+          label={busy ? "Analyzing photo…" : "Analyze photo"}
+          disabled={!image || busy}
+          onPress={analyze}
+        />
+        <SecondaryButton
+          label="Enter meal manually"
+          onPress={() => {
+            if (image) setDraftPhoto(image.uri, { data: image.base64, mimeType: image.mimeType });
+            router.push("/meal");
+          }}
+        />
 
         <View style={styles.controls}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Take meal photo" disabled={busy} style={styles.shutterRing} onPress={() => pickImage(true)}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Take meal photo"
+            disabled={busy}
+            style={styles.shutterRing}
+            onPress={() => pickImage(true)}
+          >
             <View style={styles.shutter} />
           </Pressable>
         </View>
@@ -169,7 +247,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '400',
+    fontWeight: "400",
     color: C.text,
   },
   subtitle: {
@@ -179,26 +257,26 @@ const styles = StyleSheet.create({
   preview: {
     height: 370,
     borderRadius: 18,
-    backgroundColor: '#2B2724',
+    backgroundColor: "#2B2724",
     paddingVertical: 44,
     paddingHorizontal: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: 16,
   },
   previewLabel: {
-    position: 'absolute',
+    position: "absolute",
     top: 14,
     left: 18,
     fontSize: 10,
     letterSpacing: 0.4,
-    color: 'rgba(255,255,255,0.55)',
+    color: "rgba(255,255,255,0.55)",
   },
   corner: {
-    position: 'absolute',
+    position: "absolute",
     width: 26,
     height: 26,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderColor: "rgba(255,255,255,0.35)",
   },
   cornerTopLeft: {
     top: 44,
@@ -229,10 +307,10 @@ const styles = StyleSheet.create({
     height: 192,
     borderRadius: 96,
     borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(255,255,255,0.28)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderStyle: "dashed",
+    borderColor: "rgba(255,255,255,0.28)",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   circleIcon: {
@@ -241,23 +319,23 @@ const styles = StyleSheet.create({
   },
   circleTitle: {
     fontSize: 12,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.92)',
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.92)",
   },
   circleNote: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.45)',
+    color: "rgba(255,255,255,0.45)",
   },
   rulerChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(255,255,255,0.28)',
+    borderStyle: "dashed",
+    borderColor: "rgba(255,255,255,0.28)",
   },
   rulerIcon: {
     width: 20,
@@ -265,14 +343,14 @@ const styles = StyleSheet.create({
   },
   rulerText: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.8)',
+    color: "rgba(255,255,255,0.8)",
   },
   field: {
     gap: 8,
   },
   fieldLabel: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
     color: C.textMuted,
   },
   description: {
@@ -285,7 +363,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 12,
     color: C.text,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   footnote: {
     fontSize: 11,
@@ -293,9 +371,9 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   controls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 24,
     marginTop: -2,
   },
@@ -309,9 +387,9 @@ const styles = StyleSheet.create({
     height: 76,
     borderRadius: 38,
     borderWidth: 1,
-    borderColor: 'rgba(157,35,50,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: "rgba(157,35,50,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   shutter: {
     width: 58,
@@ -320,9 +398,9 @@ const styles = StyleSheet.create({
     backgroundColor: C.accent,
   },
   libraryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
     height: 52,
     borderRadius: 14,
@@ -336,7 +414,7 @@ const styles = StyleSheet.create({
   },
   libraryLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   tutorialBody: {
@@ -347,7 +425,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   tutorialStep: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   tutorialMarker: {
@@ -355,12 +433,12 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 100,
     backgroundColor: C.accentTint,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   tutorialMarkerLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.accent,
   },
   tutorialCopy: {
@@ -369,7 +447,7 @@ const styles = StyleSheet.create({
   },
   tutorialTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   tutorialDetail: {
@@ -381,12 +459,12 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 14,
     backgroundColor: C.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   primaryLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.onAccent,
   },
 });

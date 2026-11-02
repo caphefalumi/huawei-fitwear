@@ -1,25 +1,35 @@
-import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from "expo-image";
+import { router } from "expo-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Animated,
+  PanResponder,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Pressable } from '@/components/pressable';
-import { Sheet } from '@/components/sheet';
-import { Palette as C } from '@/constants/palette';
-import { Glyph, Header, PrimaryButton, SectionTitle, icons } from './meals-ui';
+import { Pressable } from "@/components/pressable";
+import { Sheet } from "@/components/sheet";
+import { Palette as C } from "@/constants/palette";
+import { Glyph, Header, PrimaryButton, SectionTitle, icons } from "./meals-ui";
 import {
   rescaleItem,
   splitDetail,
   useMeals,
   type MealItem,
-  type MealLog, type MealType, mealTypeLabel,
-} from './meals-store';
-import { MealPhoto } from './meal-photo';
+  type MealLog,
+  type MealType,
+  mealTypeLabel,
+} from "./meals-store";
+import { MealPhoto } from "./meal-photo";
 
 const ACTION_WIDTH = 88;
 
-type SwipeState = 'edit' | 'delete' | null;
+type SwipeState = "edit" | "delete" | null;
 
 export function MealResultScreen({ log }: { log?: MealLog }) {
   const insets = useSafeAreaInsets();
@@ -30,18 +40,30 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
   const totals = log ? { kcal: log.kcal, ...log.macros } : meals.totals;
   const [optionsFor, setOptionsFor] = useState<MealItem | null>(null);
   const [amountFor, setAmountFor] = useState<MealItem | null>(null);
-  const [amountDraft, setAmountDraft] = useState('');
+  const [amountDraft, setAmountDraft] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const active = useRef(true);
-  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
   const photo = log?.imageUrl ?? (log ? null : meals.draftImage);
   async function perform(action: () => Promise<void>, after?: () => void) {
     if (pending) return;
-    setPending(true); setActionError(null);
-    try { await action(); if (active.current) after?.(); }
-    catch (cause) { if (active.current) setActionError(cause instanceof Error ? cause.message : 'Could not save your change.'); }
-    finally { if (active.current) setPending(false); }
+    setPending(true);
+    setActionError(null);
+    try {
+      await action();
+      if (active.current) after?.();
+    } catch (cause) {
+      if (active.current)
+        setActionError(cause instanceof Error ? cause.message : "Could not save your change.");
+    } finally {
+      if (active.current) setPending(false);
+    }
   }
 
   function openAmount(item: MealItem) {
@@ -53,8 +75,14 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
   function saveAmount() {
     if (!amountFor) return;
     const next = Number(amountDraft);
-    if (!Number.isFinite(next) || next <= 0) { setActionError('Enter a positive portion.'); return; }
-    void perform(() => updateItem(amountFor.id, rescaleItem(amountFor, next), log?.id), () => setAmountFor(null));
+    if (!Number.isFinite(next) || next <= 0) {
+      setActionError("Enter a positive portion.");
+      return;
+    }
+    void perform(
+      () => updateItem(amountFor.id, rescaleItem(amountFor, next), log?.id),
+      () => setAmountFor(null),
+    );
   }
 
   return (
@@ -64,14 +92,22 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
         contentContainerStyle={[
           styles.content,
           { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-        ]}>
+        ]}
+      >
         <Header
           label="Meal"
           onBack={() => router.back()}
           action="Delete"
           onAction={() => {
-            if (log) void perform(() => deleteLog(log.id), () => router.back());
-            else { deleteMeal(); router.back(); }
+            if (log)
+              void perform(
+                () => deleteLog(log.id),
+                () => router.back(),
+              );
+            else {
+              deleteMeal();
+              router.back();
+            }
           }}
         />
 
@@ -82,10 +118,32 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           </Text>
         </View>
 
-        {actionError || meals.error ? <Text accessibilityRole="alert" style={styles.footnote}>{actionError ?? meals.error}</Text> : null}
+        {actionError || meals.error ? (
+          <Text accessibilityRole="alert" style={styles.footnote}>
+            {actionError ?? meals.error}
+          </Text>
+        ) : null}
         <MealPhoto mealId={log?.id} imageUrl={photo} style={styles.photo} />
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((type) => <Pressable key={type} disabled={pending || meals.busy} accessibilityRole="radio" accessibilityState={{ selected: (log?.mealType ?? meals.mealType) === type }} style={{ padding: 12 }} onPress={() => { if (log) void perform(() => meals.updateMealType(log.id, type)); else meals.setMealType(type); }}><Text style={{ color: (log?.mealType ?? meals.mealType) === type ? C.accent : C.text }}>{mealTypeLabel(type)}</Text></Pressable>)}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {(["breakfast", "lunch", "dinner", "snack"] as MealType[]).map((type) => (
+            <Pressable
+              key={type}
+              disabled={pending || meals.busy}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: (log?.mealType ?? meals.mealType) === type }}
+              style={{ padding: 12 }}
+              onPress={() => {
+                if (log) void perform(() => meals.updateMealType(log.id, type));
+                else meals.setMealType(type);
+              }}
+            >
+              <Text
+                style={{ color: (log?.mealType ?? meals.mealType) === type ? C.accent : C.text }}
+              >
+                {mealTypeLabel(type)}
+              </Text>
+            </Pressable>
+          ))}
         </View>
 
         <View style={styles.totalsCard}>
@@ -98,9 +156,9 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           </View>
           <View style={styles.macroRow}>
             {[
-              { value: totals.protein, label: 'Protein' },
-              { value: totals.carbs, label: 'Carbs' },
-              { value: totals.fat, label: 'Fat' },
+              { value: totals.protein, label: "Protein" },
+              { value: totals.carbs, label: "Carbs" },
+              { value: totals.fat, label: "Fat" },
             ].map((macro) => (
               <View key={macro.label} style={styles.macroCell}>
                 <Text style={styles.macroValue}>{macro.value} g</Text>
@@ -113,12 +171,14 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
         <SectionTitle
           title="Meal Details"
           action="+ Add item"
-          onPress={() => router.push(log ? `/add-item?log=${log.id}` : '/add-item')}
+          onPress={() => router.push(log ? `/add-item?log=${log.id}` : "/add-item")}
         />
 
         <View style={styles.list}>
           {items.length === 0 ? (
-            <Text style={styles.empty}>No items yet. Add a food or drink to estimate this meal.</Text>
+            <Text style={styles.empty}>
+              No items yet. Add a food or drink to estimate this meal.
+            </Text>
           ) : (
             items.map((item, index) => (
               <MealRow
@@ -127,7 +187,12 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
                 last={index === items.length - 1}
                 onPress={() => setOptionsFor(item)}
                 onEdit={() => setOptionsFor(item)}
-                onDelete={() => { void perform(() => removeItem(item.id, log?.id), log && items.length === 1 ? () => router.back() : undefined); }}
+                onDelete={() => {
+                  void perform(
+                    () => removeItem(item.id, log?.id),
+                    log && items.length === 1 ? () => router.back() : undefined,
+                  );
+                }}
               />
             ))
           )}
@@ -139,31 +204,51 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
 
         {log ? null : (
           <PrimaryButton
-            label={pending ? 'Logging…' : 'Log Meal'}
+            label={pending ? "Logging…" : "Log Meal"}
             disabled={items.length === 0 || pending || meals.busy}
-            onPress={() => { void perform(logMeal, () => router.replace('/home')); }}
+            onPress={() => {
+              void perform(logMeal, () => router.replace("/home"));
+            }}
           />
         )}
       </ScrollView>
 
       <Sheet
         visible={optionsFor !== null}
-        title={optionsFor?.name ?? ''}
-        onClose={() => setOptionsFor(null)}>
-        {actionError ? <Text accessibilityRole="alert" style={styles.footnote}>{actionError}</Text> : null}
+        title={optionsFor?.name ?? ""}
+        onClose={() => setOptionsFor(null)}
+      >
+        {actionError ? (
+          <Text accessibilityRole="alert" style={styles.footnote}>
+            {actionError}
+          </Text>
+        ) : null}
         <Text style={styles.sheetSubtitle}>
-          {optionsFor ? `${splitDetail(optionsFor.detail).amount} ${splitDetail(optionsFor.detail).unit} · selected item` : ''}
+          {optionsFor
+            ? `${splitDetail(optionsFor.detail).amount} ${splitDetail(optionsFor.detail).unit} · selected item`
+            : ""}
         </Text>
-        <Pressable style={styles.optionRow} onPress={() => { const id = optionsFor?.id; setOptionsFor(null); router.push(`/review-item?id=${id ?? ''}${log ? `&log=${log.id}` : ''}`); }}>
-          <View style={styles.optionText}><Text style={styles.optionTitle}>Edit nutrition</Text><Text style={styles.optionNote}>Review the name, portion, calories and macros</Text></View>
+        <Pressable
+          style={styles.optionRow}
+          onPress={() => {
+            const id = optionsFor?.id;
+            setOptionsFor(null);
+            router.push(`/review-item?id=${id ?? ""}${log ? `&log=${log.id}` : ""}`);
+          }}
+        >
+          <View style={styles.optionText}>
+            <Text style={styles.optionTitle}>Edit nutrition</Text>
+            <Text style={styles.optionNote}>Review the name, portion, calories and macros</Text>
+          </View>
         </Pressable>
 
         <Pressable
           style={styles.optionRow}
           onPress={() => {
             setOptionsFor(null);
-            router.push(`/replace-food?id=${optionsFor?.id ?? ''}${log ? `&log=${log.id}` : ''}`);
-          }}>
+            router.push(`/replace-food?id=${optionsFor?.id ?? ""}${log ? `&log=${log.id}` : ""}`);
+          }}
+        >
           <Image source={icons.search} style={styles.optionIcon} contentFit="contain" />
           <View style={styles.optionText}>
             <Text style={styles.optionTitle}>Search food</Text>
@@ -185,8 +270,16 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           style={styles.optionRow}
           onPress={() => {
             const target = optionsFor;
-            if (target) void perform(() => removeItem(target.id, log?.id), () => { setOptionsFor(null); if (log && items.length === 1) router.back(); });
-          }}>
+            if (target)
+              void perform(
+                () => removeItem(target.id, log?.id),
+                () => {
+                  setOptionsFor(null);
+                  if (log && items.length === 1) router.back();
+                },
+              );
+          }}
+        >
           <Image source={icons.close} style={styles.optionIcon} contentFit="contain" />
           <View style={styles.optionText}>
             <Text style={[styles.optionTitle, styles.optionDanger]}>Delete item</Text>
@@ -200,19 +293,24 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
         </Pressable>
       </Sheet>
 
-      <Sheet
-        visible={amountFor !== null}
-        title="Change amount"
-        onClose={() => setAmountFor(null)}>
-        {actionError ? <Text accessibilityRole="alert" style={styles.footnote}>{actionError}</Text> : null}
+      <Sheet visible={amountFor !== null} title="Change amount" onClose={() => setAmountFor(null)}>
+        {actionError ? (
+          <Text accessibilityRole="alert" style={styles.footnote}>
+            {actionError}
+          </Text>
+        ) : null}
         <Text style={styles.sheetSubtitle}>
-          {amountFor ? `${amountFor.name}${splitDetail(amountFor.detail).note ? ` · ${splitDetail(amountFor.detail).note}` : ''}` : ''}
+          {amountFor
+            ? `${amountFor.name}${splitDetail(amountFor.detail).note ? ` · ${splitDetail(amountFor.detail).note}` : ""}`
+            : ""}
         </Text>
 
         <View style={styles.previousRow}>
           <Text style={styles.previousLabel}>Previous amount</Text>
           <Text style={styles.previousValue}>
-            {amountFor ? `${splitDetail(amountFor.detail).amount} ${splitDetail(amountFor.detail).unit}` : ''}
+            {amountFor
+              ? `${splitDetail(amountFor.detail).amount} ${splitDetail(amountFor.detail).unit}`
+              : ""}
           </Text>
         </View>
 
@@ -224,7 +322,9 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
             keyboardType="numeric"
             style={styles.amountInput}
           />
-          <Text style={styles.amountUnit}>{amountFor ? splitDetail(amountFor.detail).unit : 'g'}</Text>
+          <Text style={styles.amountUnit}>
+            {amountFor ? splitDetail(amountFor.detail).unit : "g"}
+          </Text>
         </View>
 
         {amountFor ? (
@@ -244,7 +344,11 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           </View>
         ) : null}
 
-        <PrimaryButton label={pending ? 'Saving…' : 'Save amount'} disabled={pending} onPress={saveAmount} />
+        <PrimaryButton
+          label={pending ? "Saving…" : "Save amount"}
+          disabled={pending}
+          onPress={saveAmount}
+        />
         <Pressable style={styles.sheetCancel} onPress={() => setAmountFor(null)}>
           <Text style={styles.sheetCancelLabel}>Cancel</Text>
         </Pressable>
@@ -272,7 +376,7 @@ function MealRow({
   const settle = (next: SwipeState) => {
     setState(next);
     Animated.timing(translateX, {
-      toValue: next === 'edit' ? -ACTION_WIDTH : next === 'delete' ? ACTION_WIDTH : 0,
+      toValue: next === "edit" ? -ACTION_WIDTH : next === "delete" ? ACTION_WIDTH : 0,
       duration: 160,
       useNativeDriver: true,
     }).start();
@@ -290,8 +394,8 @@ function MealRow({
           translateX.setValue(Math.max(-ACTION_WIDTH, Math.min(ACTION_WIDTH, gesture.dx)));
         },
         onPanResponderRelease: (_, gesture) => {
-          if (gesture.dx < -ACTION_WIDTH / 2) settle('edit');
-          else if (gesture.dx > ACTION_WIDTH / 2) settle('delete');
+          if (gesture.dx < -ACTION_WIDTH / 2) settle("edit");
+          else if (gesture.dx > ACTION_WIDTH / 2) settle("delete");
           else settle(null);
         },
       }),
@@ -316,7 +420,6 @@ function MealRow({
     </>
   );
 
-
   return (
     <View style={[styles.rowWrap, !last && styles.rowDivider]}>
       <View style={styles.rowActions}>
@@ -325,7 +428,8 @@ function MealRow({
           onPress={() => {
             settle(null);
             onDelete();
-          }}>
+          }}
+        >
           <Text style={styles.deleteActionLabel}>Delete</Text>
         </Pressable>
         <Pressable
@@ -333,20 +437,23 @@ function MealRow({
           onPress={() => {
             settle(null);
             onEdit();
-          }}>
+          }}
+        >
           <Text style={styles.editActionLabel}>Edit</Text>
         </Pressable>
       </View>
 
       <Animated.View
         style={[styles.rowSurface, { transform: [{ translateX }] }]}
-        {...panResponder.panHandlers}>
+        {...panResponder.panHandlers}
+      >
         <Pressable
           style={styles.row}
           onPress={() => {
             if (state) settle(null);
             else onPress();
-          }}>
+          }}
+        >
           {content}
         </Pressable>
       </Animated.View>
@@ -369,7 +476,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '400',
+    fontWeight: "400",
     color: C.text,
   },
   subtitle: {
@@ -377,7 +484,7 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   photo: {
-    width: '100%',
+    width: "100%",
     height: 154,
     borderRadius: 14,
   },
@@ -390,18 +497,18 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   totalsTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
   },
   kcalRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+    flexDirection: "row",
+    alignItems: "flex-end",
     gap: 6,
   },
   kcalValue: {
     fontSize: 34,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   kcalUnit: {
@@ -414,7 +521,7 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   macroRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   macroCell: {
     flex: 1,
@@ -422,7 +529,7 @@ const styles = StyleSheet.create({
   },
   macroValue: {
     fontSize: 19,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   macroLabel: {
@@ -434,7 +541,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   empty: {
     padding: 18,
@@ -442,41 +549,41 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   rowWrap: {
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   rowDivider: {
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   rowActions: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   deleteAction: {
     width: ACTION_WIDTH,
     backgroundColor: C.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   deleteActionLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.onAccent,
   },
   editAction: {
     width: ACTION_WIDTH,
     backgroundColor: C.card,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   editActionLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.accent,
   },
   rowSurface: {
@@ -484,7 +591,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -494,18 +601,18 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   rowTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   itemName: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   itemKcal: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   itemDetail: {
@@ -526,8 +633,8 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     backgroundColor: C.surface,
     borderWidth: 1,
@@ -549,7 +656,7 @@ const styles = StyleSheet.create({
   },
   optionTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   optionNote: {
@@ -561,7 +668,7 @@ const styles = StyleSheet.create({
     height: 16,
   },
   sheetCancel: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 12,
   },
   sheetCancelLabel: {
@@ -569,9 +676,9 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   previousRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   previousLabel: {
     fontSize: 12,
@@ -579,17 +686,17 @@ const styles = StyleSheet.create({
   },
   previousValue: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   fieldLabel: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
     color: C.textMuted,
   },
   amountBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     backgroundColor: C.surface,
     borderWidth: 1,
@@ -614,9 +721,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   estimateTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   estimateLabel: {
     fontSize: 12,
@@ -624,7 +731,7 @@ const styles = StyleSheet.create({
   },
   estimateValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   estimateMacros: {

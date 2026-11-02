@@ -1,14 +1,14 @@
-import { Image } from 'expo-image';
-import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { Image } from "expo-image";
+import { StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 
-import { AuthColors } from './tokens';
+import { AuthColors } from "./tokens";
 
 type AuthFieldProps = {
   label: string;
   icon: number;
   helper?: string;
-  style?: TextInputProps['style'];
-} & Omit<TextInputProps, 'style'>;
+  style?: TextInputProps["style"];
+} & Omit<TextInputProps, "style">;
 
 export function AuthField({ label, icon, helper, ...inputProps }: AuthFieldProps) {
   return (
@@ -34,13 +34,13 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
     color: AuthColors.textMuted,
   },
   box: {
     height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     paddingHorizontal: 15,
     backgroundColor: AuthColors.surface,

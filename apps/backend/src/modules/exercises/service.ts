@@ -1,7 +1,7 @@
-import { and, asc, count, eq, like, type SQL } from 'drizzle-orm';
-import { status } from 'elysia';
-import { getDb, exercises as exercisesTable } from '../../db';
-import type { ExerciseListQuery } from './index';
+import { and, asc, count, eq, like, type SQL } from "drizzle-orm";
+import { status } from "elysia";
+import { getDb, exercises as exercisesTable } from "../../db";
+import type { ExerciseListQuery } from "./index";
 
 const DEFAULT_LIMIT = 100;
 const withGuide = (row: typeof exercisesTable.$inferSelect) => {
@@ -17,7 +17,11 @@ export abstract class Exercises {
     if (query.muscleGroup) filters.push(eq(exercisesTable.muscleGroup, query.muscleGroup));
     if (query.equipment) filters.push(eq(exercisesTable.equipment, query.equipment));
     if (query.q?.trim()) filters.push(like(exercisesTable.name, `%${query.q.trim()}%`));
-    const totals = await db.select({ count: count() }).from(exercisesTable).where(and(...filters)).get();
+    const totals = await db
+      .select({ count: count() })
+      .from(exercisesTable)
+      .where(and(...filters))
+      .get();
 
     const rows = await db
       .select()
@@ -40,7 +44,7 @@ export abstract class Exercises {
       .get();
 
     if (!exercise) {
-      throw status(404, { success: false, message: 'Exercise not found' });
+      throw status(404, { success: false, message: "Exercise not found" });
     }
 
     return withGuide(exercise);

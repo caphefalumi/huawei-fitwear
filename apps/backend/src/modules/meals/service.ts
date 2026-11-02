@@ -1,12 +1,18 @@
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
-import { status } from 'elysia';
-import { getDb, mealItems as mealItemsTable, mealLogs as mealLogsTable } from '../../db';
-import { generateId } from '../../lib/id';
-import { isDateKey, toDateKey } from '../../lib/date';
-import { sumNutrition, type NutritionTotals } from '../../lib/nutrition';
-import { deleteMealImage, saveMealImage } from '../../lib/meal-images';
-import { Targets } from '../targets/service';
-import type { MealCreateBody, MealItemBody, MealItemUpdateBody, MealListQuery, MealUpdateBody } from './index';
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { status } from "elysia";
+import { getDb, mealItems as mealItemsTable, mealLogs as mealLogsTable } from "../../db";
+import { generateId } from "../../lib/id";
+import { isDateKey, toDateKey } from "../../lib/date";
+import { sumNutrition, type NutritionTotals } from "../../lib/nutrition";
+import { deleteMealImage, saveMealImage } from "../../lib/meal-images";
+import { Targets } from "../targets/service";
+import type {
+  MealCreateBody,
+  MealItemBody,
+  MealItemUpdateBody,
+  MealListQuery,
+  MealUpdateBody,
+} from "./index";
 
 const DEFAULT_LIMIT = 20;
 
@@ -27,14 +33,14 @@ const itemTotals = (items: MealItemRecord[]): NutritionTotals =>
       proteinG: item.proteinG,
       carbsG: item.carbsG,
       fatG: item.fatG,
-    }))
+    })),
   );
 
 const buildItemRow = (mealLogId: string, item: MealItemBody, createdAt: Date) => ({
   id: generateId(),
   mealLogId,
   foodName: item.foodName,
-  servingUnit: item.servingUnit ?? 'g',
+  servingUnit: item.servingUnit ?? "g",
   estimatedWeightG: item.estimatedWeightG,
   correctedWeightG: item.correctedWeightG ?? null,
   caloriesKcal: item.caloriesKcal,
@@ -47,16 +53,20 @@ const buildItemRow = (mealLogId: string, item: MealItemBody, createdAt: Date) =>
 });
 
 export abstract class Meals {
-  static async create(userId: string, body: MealCreateBody, d1?: D1Database): Promise<MealWithItems> {
+  static async create(
+    userId: string,
+    body: MealCreateBody,
+    d1?: D1Database,
+  ): Promise<MealWithItems> {
     const db = getDb(d1);
     const now = new Date();
     const loggedAt = body.loggedAt === undefined ? now : new Date(body.loggedAt);
     if (body.targetDate && !isDateKey(body.targetDate)) {
-      throw status(400, { success: false, message: 'targetDate must be a valid calendar date' });
+      throw status(400, { success: false, message: "targetDate must be a valid calendar date" });
     }
 
     if (Number.isNaN(loggedAt.getTime())) {
-      throw status(400, { success: false, message: 'loggedAt must be a valid ISO timestamp' });
+      throw status(400, { success: false, message: "loggedAt must be a valid ISO timestamp" });
     }
 
     const mealLog = {
@@ -65,7 +75,7 @@ export abstract class Meals {
       targetDate: body.targetDate ?? toDateKey(loggedAt),
       mealType: body.mealType,
       imageUrl: body.imageUrl ?? null,
-      scaleReferenceType: body.scaleReferenceType ?? 'finger',
+      scaleReferenceType: body.scaleReferenceType ?? "finger",
       aiConfidenceOverall: body.aiConfidenceOverall ?? null,
       loggedAt,
       createdAt: now,
@@ -84,7 +94,7 @@ export abstract class Meals {
         try {
           await deleteMealImage(userId, mealLog.id);
         } catch (cleanupError) {
-          console.error('Meal image rollback failed', { mealId: mealLog.id, error: cleanupError });
+          console.error("Meal image rollback failed", { mealId: mealLog.id, error: cleanupError });
         }
       }
       throw error;
@@ -95,7 +105,8 @@ export abstract class Meals {
 
   static async list(userId: string, query: MealListQuery, d1?: D1Database) {
     const db = getDb(d1);
-    if (query.date && !isDateKey(query.date)) throw status(400, { success: false, message: 'date must be a valid calendar date' });
+    if (query.date && !isDateKey(query.date))
+      throw status(400, { success: false, message: "date must be a valid calendar date" });
     const limit = query.limit ?? DEFAULT_LIMIT;
     const offset = query.offset ?? 0;
 
@@ -122,8 +133,8 @@ export abstract class Meals {
       .where(
         inArray(
           mealItemsTable.mealLogId,
-          logs.map((log) => log.id)
-        )
+          logs.map((log) => log.id),
+        ),
       )
       .all();
 
@@ -152,7 +163,7 @@ export abstract class Meals {
       .get();
 
     if (!log) {
-      throw status(404, { success: false, message: 'Meal log not found' });
+      throw status(404, { success: false, message: "Meal log not found" });
     }
 
     const items = await db
@@ -168,7 +179,8 @@ export abstract class Meals {
     const db = getDb(d1);
     await Meals.byId(userId, mealId, d1);
 
-    if (Object.keys(body).length) await db.update(mealLogsTable).set(body).where(eq(mealLogsTable.id, mealId)).run();
+    if (Object.keys(body).length)
+      await db.update(mealLogsTable).set(body).where(eq(mealLogsTable.id, mealId)).run();
 
     return Meals.byId(userId, mealId, d1);
   }
@@ -183,7 +195,7 @@ export abstract class Meals {
     ]);
     await deleteMealImage(userId, mealId);
 
-    return { success: true, message: 'Meal log deleted' };
+    return { success: true, message: "Meal log deleted" };
   }
 
   static async addItem(userId: string, mealId: string, item: MealItemBody, d1?: D1Database) {
@@ -201,7 +213,7 @@ export abstract class Meals {
     mealId: string,
     itemId: string,
     body: MealItemUpdateBody,
-    d1?: D1Database
+    d1?: D1Database,
   ) {
     const db = getDb(d1);
     await Meals.byId(userId, mealId, d1);
@@ -213,10 +225,11 @@ export abstract class Meals {
       .get();
 
     if (!existing) {
-      throw status(404, { success: false, message: 'Meal item not found' });
+      throw status(404, { success: false, message: "Meal item not found" });
     }
 
-    if (Object.keys(body).length) await db.update(mealItemsTable).set(body).where(eq(mealItemsTable.id, itemId)).run();
+    if (Object.keys(body).length)
+      await db.update(mealItemsTable).set(body).where(eq(mealItemsTable.id, itemId)).run();
 
     return Meals.byId(userId, mealId, d1);
   }
@@ -226,7 +239,7 @@ export abstract class Meals {
     const meal = await Meals.byId(userId, mealId, d1);
 
     if (!meal.items.some((item) => item.id === itemId)) {
-      throw status(404, { success: false, message: 'Meal item not found' });
+      throw status(404, { success: false, message: "Meal item not found" });
     }
 
     if (meal.items.length === 1) {
@@ -240,17 +253,22 @@ export abstract class Meals {
 
   static async dailySummary(userId: string, date?: string, d1?: D1Database) {
     const targetDate = date ?? toDateKey();
-    if (!isDateKey(targetDate)) throw status(400, { success: false, message: 'date must be a valid calendar date' });
+    if (!isDateKey(targetDate))
+      throw status(400, { success: false, message: "date must be a valid calendar date" });
     const db = getDb(d1);
     const [totals, resolvedTargets] = await Promise.all([
-      db.select({
-        caloriesKcal: sql<number>`coalesce(sum(${mealItemsTable.caloriesKcal}), 0)`,
-        proteinG: sql<number>`coalesce(sum(${mealItemsTable.proteinG}), 0)`,
-        carbsG: sql<number>`coalesce(sum(${mealItemsTable.carbsG}), 0)`,
-        fatG: sql<number>`coalesce(sum(${mealItemsTable.fatG}), 0)`,
-        mealCount: sql<number>`count(distinct ${mealLogsTable.id})`,
-      }).from(mealLogsTable).leftJoin(mealItemsTable, eq(mealItemsTable.mealLogId, mealLogsTable.id))
-        .where(and(eq(mealLogsTable.userId, userId), eq(mealLogsTable.targetDate, targetDate))).get(),
+      db
+        .select({
+          caloriesKcal: sql<number>`coalesce(sum(${mealItemsTable.caloriesKcal}), 0)`,
+          proteinG: sql<number>`coalesce(sum(${mealItemsTable.proteinG}), 0)`,
+          carbsG: sql<number>`coalesce(sum(${mealItemsTable.carbsG}), 0)`,
+          fatG: sql<number>`coalesce(sum(${mealItemsTable.fatG}), 0)`,
+          mealCount: sql<number>`count(distinct ${mealLogsTable.id})`,
+        })
+        .from(mealLogsTable)
+        .leftJoin(mealItemsTable, eq(mealItemsTable.mealLogId, mealLogsTable.id))
+        .where(and(eq(mealLogsTable.userId, userId), eq(mealLogsTable.targetDate, targetDate)))
+        .get(),
       Targets.resolve(userId, targetDate, d1),
     ]);
     const consumed = sumNutrition([totals!]);

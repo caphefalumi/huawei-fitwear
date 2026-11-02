@@ -1,175 +1,272 @@
-import { sqliteTable, text, integer, real, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
-import { relations } from 'drizzle-orm';
-import { generateId } from '../lib/id';
+import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { relations } from "drizzle-orm";
+import { generateId } from "../lib/id";
 
-export const user = sqliteTable('user', {
-  id: text('id').primaryKey().$defaultFn(() => generateId()),
-  email: text('email').notNull().unique(),
-  password: text('password').notNull(),
-  name: text('name'),
-  emailVerified: integer('emailVerified', { mode: 'boolean' }).notNull().default(false),
-  image: text('image'),
-  gender: text('gender'),
-  birthDate: text('birthDate'),
-  heightCm: real('heightCm'),
-  currentWeightKg: real('currentWeightKg'),
-  targetWeightKg: real('targetWeightKg'),
-  activityLevel: text('activityLevel').default('moderately_active'),
-  fitnessGoal: text('fitnessGoal').default('muscle_gain'),
-  weeklySessions: integer('weeklySessions').notNull().default(3),
-  createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+export const user = sqliteTable("user", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => generateId()),
+  email: text("email").notNull().unique(),
+  password: text("password").notNull(),
+  name: text("name"),
+  emailVerified: integer("emailVerified", { mode: "boolean" }).notNull().default(false),
+  image: text("image"),
+  gender: text("gender"),
+  birthDate: text("birthDate"),
+  heightCm: real("heightCm"),
+  currentWeightKg: real("currentWeightKg"),
+  targetWeightKg: real("targetWeightKg"),
+  activityLevel: text("activityLevel").default("moderately_active"),
+  fitnessGoal: text("fitnessGoal").default("muscle_gain"),
+  weeklySessions: integer("weeklySessions").notNull().default(3),
+  createdAt: integer("createdAt", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer("updatedAt", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
 
-export const session = sqliteTable('session', {
-  id: text('id').primaryKey().$defaultFn(() => generateId()),
-  token: text('token').notNull().unique(),
-  expiresAt: integer('expiresAt', { mode: 'timestamp' }).notNull(),
-  userId: text('userId').notNull().references(() => user.id, { onDelete: 'cascade' }),
-  ipAddress: text('ipAddress'),
-  userAgent: text('userAgent'),
-  createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-}, (table) => [
-  index('session_userId_idx').on(table.userId),
-]);
+export const session = sqliteTable(
+  "session",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    token: text("token").notNull().unique(),
+    expiresAt: integer("expiresAt", { mode: "timestamp" }).notNull(),
+    userId: text("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    ipAddress: text("ipAddress"),
+    userAgent: text("userAgent"),
+    createdAt: integer("createdAt", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updatedAt", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [index("session_userId_idx").on(table.userId)],
+);
 
-export const verification = sqliteTable('verification', {
-  id: text('id').primaryKey().$defaultFn(() => generateId()),
-  identifier: text('identifier').notNull(),
-  value: text('value').notNull(),
-  expiresAt: integer('expiresAt', { mode: 'timestamp' }).notNull(),
-  createdAt: integer('createdAt', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-  updatedAt: integer('updatedAt', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-}, (table) => [
-  uniqueIndex('verification_identifier_value_unique').on(table.identifier, table.value),
-]);
+export const verification = sqliteTable(
+  "verification",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: integer("expiresAt", { mode: "timestamp" }).notNull(),
+    createdAt: integer("createdAt", { mode: "timestamp" }).$defaultFn(() => new Date()),
+    updatedAt: integer("updatedAt", { mode: "timestamp" }).$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("verification_identifier_value_unique").on(table.identifier, table.value),
+  ],
+);
 
+export const dailyTargets = sqliteTable(
+  "daily_targets",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    userId: text("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    targetDate: text("targetDate").notNull(),
+    calorieTargetKcal: integer("calorieTargetKcal").notNull(),
+    proteinTargetG: real("proteinTargetG").notNull(),
+    carbsTargetG: real("carbsTargetG").notNull(),
+    fatTargetG: real("fatTargetG").notNull(),
+    createdAt: integer("createdAt", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updatedAt", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("daily_targets_userId_targetDate_unique").on(table.userId, table.targetDate),
+    index("daily_targets_userId_targetDate_idx").on(table.userId, table.targetDate),
+  ],
+);
 
-export const dailyTargets = sqliteTable('daily_targets', {
-  id: text('id').primaryKey().$defaultFn(() => generateId()),
-  userId: text('userId').notNull().references(() => user.id, { onDelete: 'cascade' }),
-  targetDate: text('targetDate').notNull(),
-  calorieTargetKcal: integer('calorieTargetKcal').notNull(),
-  proteinTargetG: real('proteinTargetG').notNull(),
-  carbsTargetG: real('carbsTargetG').notNull(),
-  fatTargetG: real('fatTargetG').notNull(),
-  createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-}, (table) => [
-  uniqueIndex('daily_targets_userId_targetDate_unique').on(table.userId, table.targetDate),
-  index('daily_targets_userId_targetDate_idx').on(table.userId, table.targetDate),
-]);
+export const mealLogs = sqliteTable(
+  "meal_logs",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    userId: text("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    targetDate: text("targetDate").notNull(),
+    mealType: text("mealType").notNull(),
+    imageUrl: text("imageUrl"),
+    scaleReferenceType: text("scaleReferenceType").default("finger"),
+    aiConfidenceOverall: real("aiConfidenceOverall"),
+    loggedAt: integer("loggedAt", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    createdAt: integer("createdAt", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [index("meal_logs_userId_targetDate_idx").on(table.userId, table.targetDate)],
+);
 
-export const mealLogs = sqliteTable('meal_logs', {
-  id: text('id').primaryKey().$defaultFn(() => generateId()),
-  userId: text('userId').notNull().references(() => user.id, { onDelete: 'cascade' }),
-  targetDate: text('targetDate').notNull(),
-  mealType: text('mealType').notNull(),
-  imageUrl: text('imageUrl'),
-  scaleReferenceType: text('scaleReferenceType').default('finger'),
-  aiConfidenceOverall: real('aiConfidenceOverall'),
-  loggedAt: integer('loggedAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-}, (table) => [
-  index('meal_logs_userId_targetDate_idx').on(table.userId, table.targetDate),
-]);
+export const mealItems = sqliteTable(
+  "meal_items",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    mealLogId: text("mealLogId")
+      .notNull()
+      .references(() => mealLogs.id, { onDelete: "cascade" }),
+    foodName: text("foodName").notNull(),
+    servingUnit: text("servingUnit", { enum: ["g", "ml"] })
+      .notNull()
+      .default("g"),
+    estimatedWeightG: real("estimatedWeightG").notNull(),
+    correctedWeightG: real("correctedWeightG"),
+    caloriesKcal: real("caloriesKcal").notNull(),
+    proteinG: real("proteinG").notNull(),
+    carbsG: real("carbsG").notNull(),
+    fatG: real("fatG").notNull(),
+    aiConfidence: real("aiConfidence"),
+    boundingBoxJson: text("boundingBoxJson"),
+    createdAt: integer("createdAt", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [index("meal_items_mealLogId_idx").on(table.mealLogId)],
+);
 
-export const mealItems = sqliteTable('meal_items', {
-  id: text('id').primaryKey().$defaultFn(() => generateId()),
-  mealLogId: text('mealLogId').notNull().references(() => mealLogs.id, { onDelete: 'cascade' }),
-  foodName: text('foodName').notNull(),
-  servingUnit: text('servingUnit', { enum: ['g', 'ml'] }).notNull().default('g'),
-  estimatedWeightG: real('estimatedWeightG').notNull(),
-  correctedWeightG: real('correctedWeightG'),
-  caloriesKcal: real('caloriesKcal').notNull(),
-  proteinG: real('proteinG').notNull(),
-  carbsG: real('carbsG').notNull(),
-  fatG: real('fatG').notNull(),
-  aiConfidence: real('aiConfidence'),
-  boundingBoxJson: text('boundingBoxJson'),
-  createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-}, (table) => [
-  index('meal_items_mealLogId_idx').on(table.mealLogId),
-]);
-
-export const foods = sqliteTable('foods', {
-  id: text('id').primaryKey().$defaultFn(() => generateId()),
-  name: text('name').notNull().unique(),
-  servingUnit: text('servingUnit').notNull().default('g'),
-  glyph: text('glyph').notNull().default('carrot'),
-  caloriesPer100: real('caloriesPer100').notNull(),
-  proteinPer100G: real('proteinPer100G').notNull(),
-  carbsPer100G: real('carbsPer100G').notNull(),
-  fatPer100G: real('fatPer100G').notNull(),
+export const foods = sqliteTable("foods", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => generateId()),
+  name: text("name").notNull().unique(),
+  servingUnit: text("servingUnit").notNull().default("g"),
+  glyph: text("glyph").notNull().default("carrot"),
+  caloriesPer100: real("caloriesPer100").notNull(),
+  proteinPer100G: real("proteinPer100G").notNull(),
+  carbsPer100G: real("carbsPer100G").notNull(),
+  fatPer100G: real("fatPer100G").notNull(),
 });
 
-export const weightLogs = sqliteTable('weight_logs', {
-  id: text('id').primaryKey().$defaultFn(() => generateId()),
-  userId: text('userId').notNull().references(() => user.id, { onDelete: 'cascade' }),
-  loggedDate: text('loggedDate').notNull(),
-  weightKg: real('weightKg').notNull(),
-  createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-}, (table) => [
-  uniqueIndex('weight_logs_userId_loggedDate_unique').on(table.userId, table.loggedDate),
-  index('weight_logs_userId_loggedDate_idx').on(table.userId, table.loggedDate),
-]);
+export const weightLogs = sqliteTable(
+  "weight_logs",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    userId: text("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    loggedDate: text("loggedDate").notNull(),
+    weightKg: real("weightKg").notNull(),
+    createdAt: integer("createdAt", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("weight_logs_userId_loggedDate_unique").on(table.userId, table.loggedDate),
+    index("weight_logs_userId_loggedDate_idx").on(table.userId, table.loggedDate),
+  ],
+);
 
-export const recoveryPlans = sqliteTable('recovery_plans', {
-  id: text('id').primaryKey().$defaultFn(() => generateId()),
-  userId: text('userId').notNull().references(() => user.id, { onDelete: 'cascade' }),
-  area: text('area').notNull(),
-  note: text('note'),
-  restDays: integer('restDays').notNull(),
-  lightDays: integer('lightDays').notNull(),
-  startDate: text('startDate').notNull(),
-  createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-}, (table) => [
-  uniqueIndex('recovery_plans_userId_unique').on(table.userId),
-]);
+export const recoveryPlans = sqliteTable(
+  "recovery_plans",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    userId: text("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    area: text("area").notNull(),
+    note: text("note"),
+    restDays: integer("restDays").notNull(),
+    lightDays: integer("lightDays").notNull(),
+    startDate: text("startDate").notNull(),
+    createdAt: integer("createdAt", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [uniqueIndex("recovery_plans_userId_unique").on(table.userId)],
+);
 
-export const exercises = sqliteTable('exercises', {
-  id: text('id').primaryKey().$defaultFn(() => generateId()),
-  name: text('name').notNull().unique(),
-  muscleGroup: text('muscleGroup').notNull(),
-  equipment: text('equipment').notNull().default('barbell'),
-  cadenceAnimationUrl: text('cadenceAnimationUrl'),
-  cuesJson: text('cuesJson').notNull().default('[]'),
-  defaultSets: integer('defaultSets').notNull().default(3),
-  defaultReps: integer('defaultReps').notNull().default(10),
-  repetitionUnit: text('repetitionUnit', { enum: ['reps', 'seconds', 'minutes'] }).notNull().default('reps'),
+export const exercises = sqliteTable("exercises", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => generateId()),
+  name: text("name").notNull().unique(),
+  muscleGroup: text("muscleGroup").notNull(),
+  equipment: text("equipment").notNull().default("barbell"),
+  cadenceAnimationUrl: text("cadenceAnimationUrl"),
+  cuesJson: text("cuesJson").notNull().default("[]"),
+  defaultSets: integer("defaultSets").notNull().default(3),
+  defaultReps: integer("defaultReps").notNull().default(10),
+  repetitionUnit: text("repetitionUnit", { enum: ["reps", "seconds", "minutes"] })
+    .notNull()
+    .default("reps"),
 });
 
-export const workoutSessions = sqliteTable('workout_sessions', {
-  id: text('id').primaryKey().$defaultFn(() => generateId()),
-  userId: text('userId').notNull().references(() => user.id, { onDelete: 'cascade' }),
-  sessionTitle: text('sessionTitle').notNull(),
-  workoutSplit: text('workoutSplit').notNull(),
-  avgHeartRateBpm: integer('avgHeartRateBpm'),
-  maxHeartRateBpm: integer('maxHeartRateBpm'),
-  startedAt: integer('startedAt', { mode: 'timestamp' }).notNull(),
-  completedAt: integer('completedAt', { mode: 'timestamp' }),
-  createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-}, (table) => [
-  index('workout_sessions_userId_startedAt_idx').on(table.userId, table.startedAt),
-]);
+export const workoutSessions = sqliteTable(
+  "workout_sessions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    userId: text("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    sessionTitle: text("sessionTitle").notNull(),
+    workoutSplit: text("workoutSplit").notNull(),
+    avgHeartRateBpm: integer("avgHeartRateBpm"),
+    maxHeartRateBpm: integer("maxHeartRateBpm"),
+    startedAt: integer("startedAt", { mode: "timestamp" }).notNull(),
+    completedAt: integer("completedAt", { mode: "timestamp" }),
+    createdAt: integer("createdAt", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [index("workout_sessions_userId_startedAt_idx").on(table.userId, table.startedAt)],
+);
 
-export const workoutSets = sqliteTable('workout_sets', {
-  id: text('id').primaryKey().$defaultFn(() => generateId()),
-  workoutSessionId: text('workoutSessionId').notNull().references(() => workoutSessions.id, { onDelete: 'cascade' }),
-  exerciseId: text('exerciseId').notNull().references(() => exercises.id),
-  setIndex: integer('setIndex').notNull(),
-  weightKg: real('weightKg').notNull(),
-  targetReps: integer('targetReps').notNull().default(10),
-  detectedReps: integer('detectedReps'),
-  userConfirmedReps: integer('userConfirmedReps').notNull(),
-  restDurationSeconds: integer('restDurationSeconds'),
-  avgHrBpm: integer('avgHrBpm'),
-  createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-}, (table) => [
-  uniqueIndex('workout_sets_session_setIndex_unique').on(table.workoutSessionId, table.setIndex),
-  index('workout_sets_workoutSessionId_idx').on(table.workoutSessionId),
-]);
+export const workoutSets = sqliteTable(
+  "workout_sets",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    workoutSessionId: text("workoutSessionId")
+      .notNull()
+      .references(() => workoutSessions.id, { onDelete: "cascade" }),
+    exerciseId: text("exerciseId")
+      .notNull()
+      .references(() => exercises.id),
+    setIndex: integer("setIndex").notNull(),
+    weightKg: real("weightKg").notNull(),
+    targetReps: integer("targetReps").notNull().default(10),
+    detectedReps: integer("detectedReps"),
+    userConfirmedReps: integer("userConfirmedReps").notNull(),
+    restDurationSeconds: integer("restDurationSeconds"),
+    avgHrBpm: integer("avgHrBpm"),
+    createdAt: integer("createdAt", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("workout_sets_session_setIndex_unique").on(table.workoutSessionId, table.setIndex),
+    index("workout_sets_workoutSessionId_idx").on(table.workoutSessionId),
+  ],
+);
 
 export const userRelations = relations(user, ({ many, one }) => ({
   sessions: many(session),

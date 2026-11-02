@@ -1,6 +1,6 @@
-import { Elysia, t, type Static } from 'elysia';
-import { authGuard } from '../auth/service';
-import { Exercises } from './service';
+import { Elysia, t, type Static } from "elysia";
+import { authGuard } from "../auth/service";
+import { Exercises } from "./service";
 
 const ExerciseListQuerySchema = t.Object({
   muscleGroup: t.Optional(t.String()),
@@ -13,24 +13,24 @@ const ExerciseListQuerySchema = t.Object({
 export type ExerciseListQuery = Static<typeof ExerciseListQuerySchema>;
 
 const exerciseModels = new Elysia().model({
-  'exercises.listQuery': ExerciseListQuerySchema,
+  "exercises.listQuery": ExerciseListQuerySchema,
 });
 
 export const exercises = new Elysia({
-  prefix: '/exercises',
-  detail: { tags: ['Exercises'] },
+  prefix: "/exercises",
+  detail: { tags: ["Exercises"] },
 })
   .use(exerciseModels)
   .use(authGuard)
-  .get('/', ({ query }) => Exercises.list(query), {
+  .get("/", ({ query }) => Exercises.list(query), {
     auth: true,
-    query: 'exercises.listQuery',
+    query: "exercises.listQuery",
     detail: {
-      summary: 'List the exercise catalogue',
-      description: 'Filter by muscle group, equipment or a name substring.',
+      summary: "List the exercise catalogue",
+      description: "Filter by muscle group, equipment or a name substring.",
     },
   })
-  .get('/:exerciseId', ({ params }) => Exercises.byId(params.exerciseId), {
+  .get("/:exerciseId", ({ params }) => Exercises.byId(params.exerciseId), {
     auth: true,
-    detail: { summary: 'Get a single exercise with its cadence animation' },
+    detail: { summary: "Get a single exercise with its cadence animation" },
   });

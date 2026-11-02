@@ -1,13 +1,13 @@
 export type ActivityLevel =
-  | 'sedentary'
-  | 'lightly_active'
-  | 'moderately_active'
-  | 'very_active'
-  | 'extra_active';
+  | "sedentary"
+  | "lightly_active"
+  | "moderately_active"
+  | "very_active"
+  | "extra_active";
 
-export type FitnessGoal = 'weight_loss' | 'maintenance' | 'muscle_gain';
+export type FitnessGoal = "weight_loss" | "maintenance" | "muscle_gain";
 
-export type Gender = 'male' | 'female' | 'other';
+export type Gender = "male" | "female" | "other";
 
 export type MacroTargets = {
   calorieTargetKcal: number;
@@ -77,22 +77,30 @@ export function basalMetabolicRate(input: {
   gender: Gender;
 }): number {
   const base = 10 * input.weightKg + 6.25 * input.heightCm - 5 * input.ageYears;
-  if (input.gender === 'male') return base + 5;
-  if (input.gender === 'female') return base - 161;
+  if (input.gender === "male") return base + 5;
+  if (input.gender === "female") return base - 161;
   return base - 78;
 }
 
 export function activityMultiplier(activityLevel: string | null): number {
-  return ACTIVITY_MULTIPLIERS[(activityLevel ?? '') as ActivityLevel] ?? ACTIVITY_MULTIPLIERS.moderately_active;
+  return (
+    ACTIVITY_MULTIPLIERS[(activityLevel ?? "") as ActivityLevel] ??
+    ACTIVITY_MULTIPLIERS.moderately_active
+  );
 }
 
 export function deriveDailyTargets(profile: BiometricProfile, now = new Date()): MacroTargets {
-  const weightKg = profile.currentWeightKg && profile.currentWeightKg > 0 ? profile.currentWeightKg : FALLBACK_WEIGHT_KG;
+  const weightKg =
+    profile.currentWeightKg && profile.currentWeightKg > 0
+      ? profile.currentWeightKg
+      : FALLBACK_WEIGHT_KG;
   const heightCm = profile.heightCm && profile.heightCm > 0 ? profile.heightCm : FALLBACK_HEIGHT_CM;
-  const gender = (profile.gender ?? 'other') as Gender;
-  const goal = (GOAL_CALORIE_FACTORS[(profile.fitnessGoal ?? '') as FitnessGoal] !== undefined
-    ? profile.fitnessGoal
-    : 'maintenance') as FitnessGoal;
+  const gender = (profile.gender ?? "other") as Gender;
+  const goal = (
+    GOAL_CALORIE_FACTORS[(profile.fitnessGoal ?? "") as FitnessGoal] !== undefined
+      ? profile.fitnessGoal
+      : "maintenance"
+  ) as FitnessGoal;
 
   const bmr = basalMetabolicRate({
     weightKg,
@@ -101,7 +109,9 @@ export function deriveDailyTargets(profile: BiometricProfile, now = new Date()):
     gender,
   });
 
-  const calorieTargetKcal = Math.round(bmr * activityMultiplier(profile.activityLevel) * GOAL_CALORIE_FACTORS[goal]);
+  const calorieTargetKcal = Math.round(
+    bmr * activityMultiplier(profile.activityLevel) * GOAL_CALORIE_FACTORS[goal],
+  );
   const proteinTargetG = round1(weightKg * GOAL_PROTEIN_PER_KG[goal]);
   const fatTargetG = round1((calorieTargetKcal * GOAL_FAT_CALORIE_SHARE[goal]) / 9);
   const carbsKcal = calorieTargetKcal - proteinTargetG * 4 - fatTargetG * 9;
@@ -127,13 +137,18 @@ export function sumNutrition(items: NutritionTotals[]): NutritionTotals {
       carbsG: round1(acc.carbsG + item.carbsG),
       fatG: round1(acc.fatG + item.fatG),
     }),
-    EMPTY_TOTALS
+    EMPTY_TOTALS,
   );
 }
 
 export function scalePer100(
-  per100: { caloriesPer100: number; proteinPer100G: number; carbsPer100G: number; fatPer100G: number },
-  weightG: number
+  per100: {
+    caloriesPer100: number;
+    proteinPer100G: number;
+    carbsPer100G: number;
+    fatPer100G: number;
+  },
+  weightG: number,
 ): NutritionTotals {
   const factor = weightG / 100;
   return {

@@ -9,7 +9,7 @@ export type TokenBucketOptions = {
 };
 
 function parseBucketState(raw: unknown, capacity: number, now: number): TokenBucketState {
-  if (raw && typeof raw === 'object' && 'tokens' in raw && 'updatedAt' in raw) {
+  if (raw && typeof raw === "object" && "tokens" in raw && "updatedAt" in raw) {
     const candidate = raw as TokenBucketState;
     if (Number.isFinite(candidate.tokens) && Number.isFinite(candidate.updatedAt)) {
       return candidate;
@@ -30,10 +30,10 @@ function bucketTtlSec(options: TokenBucketOptions): number {
 export async function consumeTokenBucket(
   kv: KVNamespace,
   key: string,
-  options: TokenBucketOptions
+  options: TokenBucketOptions,
 ): Promise<{ allowed: boolean; retryAfterSec: number }> {
   const now = Date.now();
-  const raw = await kv.get(key, 'json');
+  const raw = await kv.get(key, "json");
   const state = parseBucketState(raw, options.capacity, now);
 
   const elapsedSec = Math.max(0, (now - state.updatedAt) / 1000);
@@ -55,6 +55,8 @@ export async function consumeTokenBucket(
   }
 
   const tokensAfter = refilled - 1;
-  await kv.put(key, JSON.stringify({ tokens: tokensAfter, updatedAt: now }), { expirationTtl: ttl });
+  await kv.put(key, JSON.stringify({ tokens: tokensAfter, updatedAt: now }), {
+    expirationTtl: ttl,
+  });
   return { allowed: true, retryAfterSec: 0 };
 }

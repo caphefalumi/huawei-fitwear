@@ -1,15 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from "react";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 
-import { RadioList } from '@/components/radio-list';
-import { Sheet, SheetActions, SheetField } from '@/components/sheet';
-import { WheelPicker } from '@/components/wheel-picker';
-import { Palette as C } from '@/constants/palette';
-import { ACTIVITIES, GOALS, useHealth, type Sex } from '@/features/health/health-store';
+import { RadioList } from "@/components/radio-list";
+import { Sheet, SheetActions, SheetField } from "@/components/sheet";
+import { WheelPicker } from "@/components/wheel-picker";
+import { Palette as C } from "@/constants/palette";
+import { ACTIVITIES, GOALS, useHealth, type Sex } from "@/features/health/health-store";
 
 const ACTIVITY_OPTIONS = Object.values(ACTIVITIES);
 const GOAL_OPTIONS = Object.values(GOALS);
-const SEX_OPTIONS: readonly Sex[] = ['Male', 'Female', 'Rather not say'];
+const SEX_OPTIONS: readonly Sex[] = ["Male", "Female", "Rather not say"];
 const SESSION_VALUES = [1, 2, 3, 4, 5, 6, 7];
 type SheetProps = { visible: boolean; onClose: () => void };
 
@@ -18,7 +18,12 @@ function useSave(onClose: () => void) {
   const [pending, setPending] = useState(false);
   const active = useRef(true);
   const busy = useRef(false);
-  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
   const save = async (mutation: () => Promise<void>) => {
     if (busy.current) return;
     busy.current = true;
@@ -28,62 +33,109 @@ function useSave(onClose: () => void) {
       await mutation();
       if (active.current) onClose();
     } catch (cause) {
-      if (active.current) setError(`${cause instanceof Error ? cause.message : 'Could not save.'} Please try again.`);
+      if (active.current)
+        setError(`${cause instanceof Error ? cause.message : "Could not save."} Please try again.`);
     } finally {
       busy.current = false;
       if (active.current) setPending(false);
     }
   };
-  return { error, pending, save, close: () => { if (!busy.current) onClose(); } };
+  return {
+    error,
+    pending,
+    save,
+    close: () => {
+      if (!busy.current) onClose();
+    },
+  };
 }
 
-function NumberField({ value, onChange, unit }: { value: string; onChange: (next: string) => void; unit: string }) {
+function NumberField({
+  value,
+  onChange,
+  unit,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  unit: string;
+}) {
   return (
     <View style={styles.inputRow}>
-      <TextInput accessibilityLabel={unit === 'cm' ? 'Height in centimeters' : 'Weight in kilograms'} style={styles.input} value={value} onChangeText={onChange} keyboardType="decimal-pad" selectTextOnFocus />
+      <TextInput
+        accessibilityLabel={unit === "cm" ? "Height in centimeters" : "Weight in kilograms"}
+        style={styles.input}
+        value={value}
+        onChangeText={onChange}
+        keyboardType="decimal-pad"
+        selectTextOnFocus
+      />
       <Text style={styles.unit}>{unit}</Text>
     </View>
   );
 }
 
 function positiveNumber(value: string, maximum: number, minimum = 0) {
-  const number = Number(value.trim().replace(',', '.'));
+  const number = Number(value.trim().replace(",", "."));
   if (!Number.isFinite(number) || number <= 0 || number < minimum || number > maximum) {
-    throw new Error(minimum > 0 ? `Enter a number from ${minimum} to ${maximum}.` : `Enter a number greater than 0 and no more than ${maximum}.`);
+    throw new Error(
+      minimum > 0
+        ? `Enter a number from ${minimum} to ${maximum}.`
+        : `Enter a number greater than 0 and no more than ${maximum}.`,
+    );
   }
   return number;
 }
 
 export function HeightSheet({ visible, onClose }: SheetProps) {
   const { heightCm, saveHeight } = useHealth();
-  const [draft, setDraft] = useState(heightCm?.toString() ?? '');
+  const [draft, setDraft] = useState(heightCm?.toString() ?? "");
   const action = useSave(onClose);
   return (
     <Sheet visible={visible} title="Height" onClose={action.close}>
       <NumberField value={draft} onChange={setDraft} unit="cm" />
       <Text style={styles.body}>Height contributes to your initial energy estimate.</Text>
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
-      <SheetActions primaryLabel={action.pending ? 'Saving…' : 'OK'} secondaryLabel="Cancel"
-        onPrimary={() => { void action.save(async () => saveHeight(positiveNumber(draft, 300))); }} onSecondary={action.close} />
+      <SheetActions
+        primaryLabel={action.pending ? "Saving…" : "OK"}
+        secondaryLabel="Cancel"
+        onPrimary={() => {
+          void action.save(async () => saveHeight(positiveNumber(draft, 300)));
+        }}
+        onSecondary={action.close}
+      />
     </Sheet>
   );
 }
 
 export function WeightSheet({ visible, onClose }: SheetProps) {
   const { weightKg, weights, saveWeight } = useHealth();
-  const [draft, setDraft] = useState(weightKg?.toFixed(1) ?? '');
+  const [draft, setDraft] = useState(weightKg?.toFixed(1) ?? "");
   const action = useSave(onClose);
   return (
     <Sheet visible={visible} title="Update weight" onClose={action.close}>
       <Text style={styles.body}>Log your weight to keep your nutrition guidance current.</Text>
-      <SheetField label={weights.at(-1) ? `Current · ${weights.at(-1)!.loggedDate}` : 'Current profile weight'}>
-        <Text style={styles.current}>{weightKg === null ? 'Not set' : `${weightKg.toFixed(1)} kg`}</Text>
+      <SheetField
+        label={
+          weights.at(-1) ? `Current · ${weights.at(-1)!.loggedDate}` : "Current profile weight"
+        }
+      >
+        <Text style={styles.current}>
+          {weightKg === null ? "Not set" : `${weightKg.toFixed(1)} kg`}
+        </Text>
       </SheetField>
-      <SheetField label="New weight · today"><NumberField value={draft} onChange={setDraft} unit="kg" /></SheetField>
+      <SheetField label="New weight · today">
+        <NumberField value={draft} onChange={setDraft} unit="kg" />
+      </SheetField>
       <Text style={styles.note}>Nutrition targets use your latest profile information.</Text>
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
-      <SheetActions primaryLabel={action.pending ? 'Saving…' : 'Save update'} secondaryLabel="Cancel"
-        onPrimary={() => { void action.save(async () => saveWeight(positiveNumber(draft, 500, 20))); }} onSecondary={action.close} />
+      <SheetActions
+        primaryLabel={action.pending ? "Saving…" : "Save update"}
+        secondaryLabel="Cancel"
+        onPrimary={() => {
+          void action.save(async () => saveWeight(positiveNumber(draft, 500, 20)));
+        }}
+        onSecondary={action.close}
+      />
     </Sheet>
   );
 }
@@ -93,7 +145,13 @@ export function SexSheet({ visible, onClose }: SheetProps) {
   const action = useSave(onClose);
   return (
     <Sheet visible={visible} title="Sex" onClose={action.close}>
-      <RadioList options={SEX_OPTIONS} value={sex ?? ('' as Sex)} onChange={(next) => { void action.save(() => saveSex(next)); }} />
+      <RadioList
+        options={SEX_OPTIONS}
+        value={sex ?? ("" as Sex)}
+        onChange={(next) => {
+          void action.save(() => saveSex(next));
+        }}
+      />
       {action.pending ? <Text style={styles.body}>Saving…</Text> : null}
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
     </Sheet>
@@ -105,8 +163,13 @@ export function GoalSheet({ visible, onClose }: SheetProps) {
   const action = useSave(onClose);
   return (
     <Sheet visible={visible} title="Goal / target" onClose={action.close}>
-      <RadioList options={GOAL_OPTIONS} value={plan.goal as (typeof GOAL_OPTIONS)[number]}
-        onChange={(goal) => { void action.save(() => savePlan({ ...plan, goal })); }} />
+      <RadioList
+        options={GOAL_OPTIONS}
+        value={plan.goal as (typeof GOAL_OPTIONS)[number]}
+        onChange={(goal) => {
+          void action.save(() => savePlan({ ...plan, goal }));
+        }}
+      />
       {action.pending ? <Text style={styles.body}>Saving…</Text> : null}
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
     </Sheet>
@@ -118,8 +181,13 @@ export function ActivitySheet({ visible, onClose }: SheetProps) {
   const action = useSave(onClose);
   return (
     <Sheet visible={visible} title="Daily activity" onClose={action.close}>
-      <RadioList options={ACTIVITY_OPTIONS} value={plan.activity as (typeof ACTIVITY_OPTIONS)[number]}
-        onChange={(activity) => { void action.save(() => savePlan({ ...plan, activity })); }} />
+      <RadioList
+        options={ACTIVITY_OPTIONS}
+        value={plan.activity as (typeof ACTIVITY_OPTIONS)[number]}
+        onChange={(activity) => {
+          void action.save(() => savePlan({ ...plan, activity }));
+        }}
+      />
       {action.pending ? <Text style={styles.body}>Saving…</Text> : null}
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
     </Sheet>
@@ -132,25 +200,45 @@ export function FrequencySheet({ visible, onClose }: SheetProps) {
   const action = useSave(onClose);
   return (
     <Sheet visible={visible} title="Workout frequency" onClose={action.close}>
-      <WheelPicker values={SESSION_VALUES} value={draft} onChange={setDraft}
-        format={(value) => `${value} ${value === 1 ? 'session' : 'sessions'}/week`} />
+      <WheelPicker
+        values={SESSION_VALUES}
+        value={draft}
+        onChange={setDraft}
+        format={(value) => `${value} ${value === 1 ? "session" : "sessions"}/week`}
+      />
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
-      <SheetActions primaryLabel={action.pending ? 'Saving…' : 'OK'} secondaryLabel="Cancel"
-        onPrimary={() => { void action.save(() => savePlan({ ...plan, sessions: draft })); }} onSecondary={action.close} />
+      <SheetActions
+        primaryLabel={action.pending ? "Saving…" : "OK"}
+        secondaryLabel="Cancel"
+        onPrimary={() => {
+          void action.save(() => savePlan({ ...plan, sessions: draft }));
+        }}
+        onSecondary={action.close}
+      />
     </Sheet>
   );
 }
 
 export function TargetWeightSheet({ visible, onClose }: SheetProps) {
   const { plan, savePlan } = useHealth();
-  const [draft, setDraft] = useState(plan.targetWeightKg?.toFixed(1) ?? '');
+  const [draft, setDraft] = useState(plan.targetWeightKg?.toFixed(1) ?? "");
   const action = useSave(onClose);
   return (
     <Sheet visible={visible} title="Target weight" onClose={action.close}>
-      <SheetField label="Target weight"><NumberField value={draft} onChange={setDraft} unit="kg" /></SheetField>
+      <SheetField label="Target weight">
+        <NumberField value={draft} onChange={setDraft} unit="kg" />
+      </SheetField>
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
-      <SheetActions primaryLabel={action.pending ? 'Saving…' : 'Save'} secondaryLabel="Cancel"
-        onPrimary={() => { void action.save(async () => savePlan({ ...plan, targetWeightKg: positiveNumber(draft, 1000) })); }} onSecondary={action.close} />
+      <SheetActions
+        primaryLabel={action.pending ? "Saving…" : "Save"}
+        secondaryLabel="Cancel"
+        onPrimary={() => {
+          void action.save(async () =>
+            savePlan({ ...plan, targetWeightKg: positiveNumber(draft, 1000) }),
+          );
+        }}
+        onSecondary={action.close}
+      />
     </Sheet>
   );
 }
@@ -166,18 +254,18 @@ const styles = StyleSheet.create({
   },
   current: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   inputRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
     gap: 6,
   },
   input: {
     flex: 1,
     fontSize: 22,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
     padding: 0,
   },

@@ -12,18 +12,8 @@
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "types": [
-      "@types/node",
-      "@types/bun"
-    ]
+    "types": ["@types/node", "@types/bun"]
   },
-  "include": [
-    "src/**/*",
-    "worker-configuration.d.ts",
-    "drizzle.config.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["src/**/*", "worker-configuration.d.ts", "drizzle.config.ts"],
+  "exclude": ["node_modules", "dist"]
 }

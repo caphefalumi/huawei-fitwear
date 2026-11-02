@@ -7,6 +7,7 @@ on:
   merge_group:
     types:
       - checks_requested
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -21,8 +22,8 @@ jobs:
     name: Detect changed applications
     runs-on: ubuntu-latest
     outputs:
-      backend: ${{ steps.merge_scope.outputs.backend || steps.filter.outputs.backend }}
-      mobile: ${{ steps.merge_scope.outputs.mobile || steps.filter.outputs.mobile }}
+      backend: ${{ steps.manual_scope.outputs.backend || steps.merge_scope.outputs.backend || steps.filter.outputs.backend }}
+      mobile: ${{ steps.manual_scope.outputs.mobile || steps.merge_scope.outputs.mobile || steps.filter.outputs.mobile }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -46,6 +47,13 @@ jobs:
               - 'package.json'
               - 'bun.lock'
               - '.github/workflows/**'
+      - name: Run all lint checks when manually dispatched
+        id: manual_scope
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "backend=true" >> "$GITHUB_OUTPUT"
+          echo "mobile=true" >> "$GITHUB_OUTPUT"
+
       - name: Run all lint checks for merge group
         id: merge_scope
         if: github.event_name == 'merge_group'

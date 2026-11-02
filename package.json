@@ -16,6 +16,7 @@
     "lint:backend": "bun run --cwd apps/backend lint",
     "lint": "bun run lint:mobile && bun run lint:backend",
     "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
     "backend:dev": "bun run --cwd apps/backend dev",
     "backend:build": "bun run --cwd apps/backend build",
     "backend:deploy": "bun run --cwd apps/backend deploy",

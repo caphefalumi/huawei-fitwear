@@ -1,54 +1,109 @@
-import { Image } from 'expo-image';
-import { router, useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from "expo-image";
+import { router, useLocalSearchParams } from "expo-router";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Pressable } from '@/components/pressable';
-import { Palette as C } from '@/constants/palette';
-import { useHealth } from '@/features/health/health-store';
-import { BackHeader, Card } from '@/features/home/ui';
-import { WorkoutSessionPanel } from '@/features/workout/workout-session-panel';
-import { useWorkouts } from '@/features/workout/workout-store';
+import { Pressable } from "@/components/pressable";
+import { Palette as C } from "@/constants/palette";
+import { useHealth } from "@/features/health/health-store";
+import { BackHeader, Card } from "@/features/home/ui";
+import { WorkoutSessionPanel } from "@/features/workout/workout-session-panel";
+import { useWorkouts } from "@/features/workout/workout-store";
 
 export function ExerciseGuideScreen() {
   const insets = useSafeAreaInsets();
-  const { name, group, sessionId } = useLocalSearchParams<{ name?: string; group?: string; sessionId?: string }>();
+  const { name, group, sessionId } = useLocalSearchParams<{
+    name?: string;
+    group?: string;
+    sessionId?: string;
+  }>();
   const { recovery } = useHealth();
   const { exercises, loading, error, refresh } = useWorkouts();
   const guide = exercises.find((exercise) => exercise.id === name);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom }]}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
+      ]}
+    >
       <BackHeader label="Workout plan" onPress={() => router.back()} />
-      {!guide ? <>
-        <Text style={styles.title}>{loading ? 'Loading exercise…' : 'Exercise unavailable'}</Text>
-        <Text accessibilityRole={error ? 'alert' : undefined} style={styles.subtitle}>{error ?? (loading ? 'Loading the exercise catalog.' : 'Return to the workout plan and choose an available exercise.')}</Text>
-        <Pressable onPress={() => void refresh()}><Text style={styles.cueTitle}>Retry loading exercises</Text></Pressable>
-      </> : <>
-        <View style={styles.heading}>
-          <Text style={styles.title}>{guide.name}</Text>
-          <Text style={styles.subtitle}>{guide.muscleGroup} · {guide.equipment} · Technique guide</Text>
-        </View>
-        {guide.cadenceAnimationUrl ? <View style={styles.demoWrap}><Image source={{ uri: guide.cadenceAnimationUrl }} style={styles.demo} contentFit="contain" /></View> : null}
-        <Card style={styles.prescriptionCard}>
-          <View style={styles.prescriptionRow}>
-            <View style={styles.prescription}><Text style={styles.prescriptionValue}>{guide.defaultSets}</Text><Text style={styles.prescriptionLabel}>planned sets</Text></View>
-            <View style={styles.prescription}><Text style={styles.prescriptionValue}>{guide.defaultReps}</Text><Text style={styles.prescriptionLabel}>target {guide.repetitionUnit}</Text></View>
+      {!guide ? (
+        <>
+          <Text style={styles.title}>{loading ? "Loading exercise…" : "Exercise unavailable"}</Text>
+          <Text accessibilityRole={error ? "alert" : undefined} style={styles.subtitle}>
+            {error ??
+              (loading
+                ? "Loading the exercise catalog."
+                : "Return to the workout plan and choose an available exercise.")}
+          </Text>
+          <Pressable onPress={() => void refresh()}>
+            <Text style={styles.cueTitle}>Retry loading exercises</Text>
+          </Pressable>
+        </>
+      ) : (
+        <>
+          <View style={styles.heading}>
+            <Text style={styles.title}>{guide.name}</Text>
+            <Text style={styles.subtitle}>
+              {guide.muscleGroup} · {guide.equipment} · Technique guide
+            </Text>
           </View>
-          <Text style={styles.subtitle}>General exercise guidance, not a saved personal load.</Text>
-        </Card>
-        <View style={styles.cues}>
-          <Text style={styles.sectionTitle}>Technique cues</Text>
-          {guide.cues.map((cue, index) => (
-            <View key={cue.title} style={styles.cue}>
-              <View style={styles.cueMarker}><Text style={styles.cueMarkerLabel}>{index + 1}</Text></View>
-              <View style={styles.cueCopy}><Text style={styles.cueTitle}>{cue.title}</Text><Text style={styles.cueDetail}>{cue.detail}</Text></View>
+          {guide.cadenceAnimationUrl ? (
+            <View style={styles.demoWrap}>
+              <Image
+                source={{ uri: guide.cadenceAnimationUrl }}
+                style={styles.demo}
+                contentFit="contain"
+              />
             </View>
-          ))}
-          {!guide.cues.length ? <Text style={styles.subtitle}>No technique cues are available for this exercise.</Text> : null}
-        </View>
-        <WorkoutSessionPanel key={`${name}-${sessionId ?? ''}`} title={group ?? guide.muscleGroup} split={group ?? guide.muscleGroup} exercises={[guide]} sessionId={sessionId} recovery={Boolean(recovery)} />
-      </>}
+          ) : null}
+          <Card style={styles.prescriptionCard}>
+            <View style={styles.prescriptionRow}>
+              <View style={styles.prescription}>
+                <Text style={styles.prescriptionValue}>{guide.defaultSets}</Text>
+                <Text style={styles.prescriptionLabel}>planned sets</Text>
+              </View>
+              <View style={styles.prescription}>
+                <Text style={styles.prescriptionValue}>{guide.defaultReps}</Text>
+                <Text style={styles.prescriptionLabel}>target {guide.repetitionUnit}</Text>
+              </View>
+            </View>
+            <Text style={styles.subtitle}>
+              General exercise guidance, not a saved personal load.
+            </Text>
+          </Card>
+          <View style={styles.cues}>
+            <Text style={styles.sectionTitle}>Technique cues</Text>
+            {guide.cues.map((cue, index) => (
+              <View key={cue.title} style={styles.cue}>
+                <View style={styles.cueMarker}>
+                  <Text style={styles.cueMarkerLabel}>{index + 1}</Text>
+                </View>
+                <View style={styles.cueCopy}>
+                  <Text style={styles.cueTitle}>{cue.title}</Text>
+                  <Text style={styles.cueDetail}>{cue.detail}</Text>
+                </View>
+              </View>
+            ))}
+            {!guide.cues.length ? (
+              <Text style={styles.subtitle}>
+                No technique cues are available for this exercise.
+              </Text>
+            ) : null}
+          </View>
+          <WorkoutSessionPanel
+            key={`${name}-${sessionId ?? ""}`}
+            title={group ?? guide.muscleGroup}
+            split={group ?? guide.muscleGroup}
+            exercises={[guide]}
+            sessionId={sessionId}
+            recovery={Boolean(recovery)}
+          />
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -67,7 +122,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '400',
+    fontWeight: "400",
     color: C.text,
   },
   subtitle: {
@@ -76,11 +131,11 @@ const styles = StyleSheet.create({
   },
   demoWrap: {
     borderRadius: 18,
-    overflow: 'hidden',
+    overflow: "hidden",
     backgroundColor: C.card,
   },
   demo: {
-    width: '100%',
+    width: "100%",
     aspectRatio: 354 / 160,
   },
   prescriptionCard: {
@@ -88,13 +143,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   prescriptionRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   prescription: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
     gap: 5,
   },
   prescriptionValue: {
@@ -110,11 +165,11 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 17,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   cue: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
   },
   cueMarker: {
@@ -122,12 +177,12 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 100,
     backgroundColor: C.card,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   cueMarkerLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   cueCopy: {
@@ -136,7 +191,7 @@ const styles = StyleSheet.create({
   },
   cueTitle: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   cueDetail: {

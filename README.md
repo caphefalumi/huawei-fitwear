@@ -42,11 +42,11 @@ huawei-fitwear/
 
 ## Prerequisites
 
-| Tool | Purpose | Requirement |
-| :--- | :--- | :--- |
-| **Bun** | Root package manager & scripts | v1.1+ |
-| **Node.js** | Mobile runtime environment | v18+ |
-| **Huawei DevEco Studio** | Watch IDE & SDK manager | 5.0+ (API 11+ / `6.1.1(24)`) |
+| Tool                     | Purpose                        | Requirement                  |
+| :----------------------- | :----------------------------- | :--------------------------- |
+| **Bun**                  | Root package manager & scripts | v1.1+                        |
+| **Node.js**              | Mobile runtime environment     | v18+                         |
+| **Huawei DevEco Studio** | Watch IDE & SDK manager        | 5.0+ (API 11+ / `6.1.1(24)`) |
 
 ---
 
@@ -128,20 +128,20 @@ For watch details, see [`apps/watch/README.md`](apps/watch/README.md).
 
 Available from the root directory:
 
-| Command | Action |
-| :--- | :--- |
-| `bun start` | Starts the Expo dev server for `apps/mobile` |
-| `bun android` | Launches the mobile app on an Android device/emulator |
-| `bun ios` | Launches the mobile app on an iOS simulator |
-| `bun run build:ios` | Compiles and runs the native iOS build locally |
-| `bun run build:android` | Compiles and runs the native Android build locally |
-| `bun web` | Launches the mobile web app in your browser |
-| `bun lint` | Runs mobile code linter |
-| `bun run test` | Runs backend unit/integration and mobile Expo Jest tests |
-| `bun run test:e2e` | Runs backend HTTP and mobile browser Playwright suites |
-| `bun run backend:typecheck` | Checks backend types against generated Worker bindings |
-| `bun run mobile:typecheck` | Checks mobile application and test types |
-| `bun run backend:deploy` | Deploys the backend Worker |
+| Command                     | Action                                                   |
+| :-------------------------- | :------------------------------------------------------- |
+| `bun start`                 | Starts the Expo dev server for `apps/mobile`             |
+| `bun android`               | Launches the mobile app on an Android device/emulator    |
+| `bun ios`                   | Launches the mobile app on an iOS simulator              |
+| `bun run build:ios`         | Compiles and runs the native iOS build locally           |
+| `bun run build:android`     | Compiles and runs the native Android build locally       |
+| `bun web`                   | Launches the mobile web app in your browser              |
+| `bun lint`                  | Runs mobile code linter                                  |
+| `bun run test`              | Runs backend unit/integration and mobile Expo Jest tests |
+| `bun run test:e2e`          | Runs backend HTTP and mobile browser Playwright suites   |
+| `bun run backend:typecheck` | Checks backend types against generated Worker bindings   |
+| `bun run mobile:typecheck`  | Checks mobile application and test types                 |
+| `bun run backend:deploy`    | Deploys the backend Worker                               |
 
 ---
 

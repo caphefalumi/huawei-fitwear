@@ -1,8 +1,8 @@
-import type { FoodSearchQuery } from './index';
-import { asc, eq, like } from 'drizzle-orm';
-import { status } from 'elysia';
-import { getDb, foods as foodsTable } from '../../db';
-import { scalePer100 } from '../../lib/nutrition';
+import type { FoodSearchQuery } from "./index";
+import { asc, eq, like } from "drizzle-orm";
+import { status } from "elysia";
+import { getDb, foods as foodsTable } from "../../db";
+import { scalePer100 } from "../../lib/nutrition";
 
 const DEFAULT_LIMIT = 25;
 
@@ -33,7 +33,7 @@ export abstract class Foods {
     const db = getDb(d1);
     const food = await db.select().from(foodsTable).where(eq(foodsTable.id, foodId)).get();
     if (!food) {
-      throw status(404, { success: false, message: 'Food not found' });
+      throw status(404, { success: false, message: "Food not found" });
     }
     return food;
   }

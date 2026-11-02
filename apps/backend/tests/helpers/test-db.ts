@@ -1,12 +1,12 @@
-import { Database, type SQLQueryBindings } from 'bun:sqlite';
-import { readFileSync, readdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { drizzle } from 'drizzle-orm/d1';
-import * as schema from '../../src/db/schema';
+import { Database, type SQLQueryBindings } from "bun:sqlite";
+import { readFileSync, readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { drizzle } from "drizzle-orm/d1";
+import * as schema from "../../src/db/schema";
 
 export function createTestDatabase(): { d1: D1Database; db: ReturnType<typeof drizzle> } {
-  const sqlite = new Database(':memory:');
-  sqlite.exec('PRAGMA foreign_keys = ON;');
+  const sqlite = new Database(":memory:");
+  sqlite.exec("PRAGMA foreign_keys = ON;");
 
   const d1 = {
     prepare(query: string) {
@@ -17,16 +17,25 @@ export function createTestDatabase(): { d1: D1Database; db: ReturnType<typeof dr
             if (p instanceof Date) {
               return Math.floor(p.getTime() / 1000);
             }
-            if (typeof p === 'boolean') {
+            if (typeof p === "boolean") {
               return p ? 1 : 0;
             }
-            if (p === null || typeof p === 'string' || typeof p === 'number' || typeof p === 'bigint' || p instanceof Uint8Array) return p;
-            throw new TypeError('Unsupported SQLite parameter');
+            if (
+              p === null ||
+              typeof p === "string" ||
+              typeof p === "number" ||
+              typeof p === "bigint" ||
+              p instanceof Uint8Array
+            )
+              return p;
+            throw new TypeError("Unsupported SQLite parameter");
           });
           return stmt;
         },
         async first(colName?: string) {
-          const res = sqlite.prepare<Record<string, unknown>, SQLQueryBindings[]>(query).get(...boundParams);
+          const res = sqlite
+            .prepare<Record<string, unknown>, SQLQueryBindings[]>(query)
+            .get(...boundParams);
           if (colName && res) return res[colName];
           return res;
         },
@@ -52,14 +61,14 @@ export function createTestDatabase(): { d1: D1Database; db: ReturnType<typeof dr
       return { count: 1, duration: 0 };
     },
     async batch(stmts: { run: () => Promise<unknown> }[]) {
-      sqlite.exec('BEGIN TRANSACTION;');
+      sqlite.exec("BEGIN TRANSACTION;");
       try {
         const results = [];
         for (const statement of stmts) results.push(await statement.run());
-        sqlite.exec('COMMIT;');
+        sqlite.exec("COMMIT;");
         return results;
       } catch (err) {
-        sqlite.exec('ROLLBACK;');
+        sqlite.exec("ROLLBACK;");
         throw err;
       }
     },
@@ -68,9 +77,11 @@ export function createTestDatabase(): { d1: D1Database; db: ReturnType<typeof dr
     },
   } as unknown as D1Database;
 
-  const migrationsPath = fileURLToPath(new URL('../../migrations/', import.meta.url));
-  for (const filename of readdirSync(migrationsPath).filter((name) => name.endsWith('.sql')).sort()) {
-    sqlite.exec(readFileSync(`${migrationsPath}/${filename}`, 'utf8'));
+  const migrationsPath = fileURLToPath(new URL("../../migrations/", import.meta.url));
+  for (const filename of readdirSync(migrationsPath)
+    .filter((name) => name.endsWith(".sql"))
+    .sort()) {
+    sqlite.exec(readFileSync(`${migrationsPath}/${filename}`, "utf8"));
   }
 
   const db = drizzle(d1, { schema });
