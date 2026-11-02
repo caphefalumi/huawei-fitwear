@@ -1,6 +1,6 @@
 # Fitwear Monorepo Agent Guide
 
-This repository contains two independent sibling applications for a dual-device fitness ecosystem. They do not share JS dependencies, node_modules, or build pipelines.
+This repository contains two Bun workspaces for a dual-device fitness ecosystem plus an independent HarmonyOS watch app. Mobile and backend share the root dependency installation and lint/format tooling; each keeps its own application dependencies, tests, and build pipeline. The watch app remains independent.
 
 ---
 
@@ -19,9 +19,9 @@ This repository contains two independent sibling applications for a dual-device 
    - Never run `bun`, `npm`, or node tools inside `apps/watch`.
    - Code location: `apps/watch/entry/src/main/ets/` (feature-based: `ets/features/<feature>/`, hub in `ets/pages/`).
 
-3. **`apps/backend`**: ElysiaJS on Cloudflare Workers (Bun runtime, Drizzle ORM, Better Auth, D1 SQLite).
+3. **`apps/backend`**: ElysiaJS on Cloudflare Workers (Bun runtime, custom auth, Drizzle ORM, D1 SQLite).
    - Package manager: **Bun**.
-   - Role: Edge API gateway, Better Auth (Email & Password), Cloudflare D1 data layer via Drizzle ORM.
+   - Role: Edge API gateway with application-managed email/password authentication and Cloudflare D1 data layer via Drizzle ORM.
    - Code location: `apps/backend/src/` (Drizzle schema in `apps/backend/src/db/schema.ts`).
 
 ---
@@ -38,7 +38,7 @@ bun start                    # Start Expo dev server (apps/mobile)
 bun android                  # Run mobile on Android emulator/device
 bun ios                      # Run mobile on iOS simulator (macOS)
 bun web                      # Run mobile in browser
-bun lint                     # Lint mobile workspace
+bun lint                     # Lint mobile and backend workspaces
 ```
 
 ### Mobile Development Rules (`apps/mobile`)

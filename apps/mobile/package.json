@@ -1,7 +1,24 @@
 {
   "name": "mobile",
-  "main": "expo-router/entry",
   "version": "1.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "reset-project": "node ./scripts/reset-project.js",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "build:ios": "expo run:ios",
+    "build:android": "expo run:android",
+    "web": "expo start --web",
+    "lint": "oxlint",
+    "lint:expo": "expo lint",
+    "fmt": "oxfmt",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "test:e2e": "playwright test"
+  },
   "dependencies": {
     "@expo/ui": "~58.0.25",
     "expo": "~58.0.21",
@@ -40,23 +57,5 @@
     "jest": "~30.5.2",
     "jest-expo": "~58.0.13",
     "typescript": "~6.0.3"
-  },
-  "scripts": {
-    "start": "expo start",
-    "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "build:ios": "expo run:ios",
-    "build:android": "expo run:android",
-    "web": "expo start --web",
-    "lint": "expo lint",
-    "typecheck": "tsc --noEmit",
-    "test": "jest --runInBand",
-    "test:watch": "jest --watch",
-    "test:e2e": "playwright test"
-  },
-  "overrides": {
-    "flow-parser": "0.338.0"
-  },
-  "private": true
+  }
 }

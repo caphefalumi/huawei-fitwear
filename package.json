@@ -1,15 +1,21 @@
 {
   "name": "fitwear",
   "private": true,
+  "workspaces": [
+    "apps/mobile",
+    "apps/backend"
+  ],
   "scripts": {
-    "postinstall": "bun install --cwd apps/mobile && bun install --cwd apps/backend",
     "start": "bun run --cwd apps/mobile start",
     "android": "bun run --cwd apps/mobile android",
     "ios": "bun run --cwd apps/mobile ios",
     "build:ios": "bun run --cwd apps/mobile build:ios",
     "build:android": "bun run --cwd apps/mobile build:android",
     "web": "bun run --cwd apps/mobile web",
-    "lint": "bun run --cwd apps/mobile lint",
+    "lint:mobile": "bun run --cwd apps/mobile lint",
+    "lint:backend": "bun run --cwd apps/backend lint",
+    "lint": "bun run lint:mobile && bun run lint:backend",
+    "fmt": "oxfmt",
     "backend:dev": "bun run --cwd apps/backend dev",
     "backend:build": "bun run --cwd apps/backend build",
     "backend:deploy": "bun run --cwd apps/backend deploy",
@@ -26,5 +32,13 @@
     "mobile:test:e2e": "bun run --cwd apps/mobile test:e2e",
     "test": "bun run backend:test && bun run mobile:test",
     "test:e2e": "bun run backend:test:e2e && bun run mobile:test:e2e"
-  }
+  },
+  "devDependencies": {
+    "oxfmt": "^0.75.0",
+    "oxlint": "^1.90.0"
+  },
+  "overrides": {
+    "flow-parser": "0.338.0"
+  },
+  "packageManager": "bun@1.4.4"
 }

@@ -10,6 +10,8 @@
     "db:migrate:local": "wrangler d1 migrations apply fitwear-d1 --local",
     "db:migrate:remote": "wrangler d1 migrations apply fitwear-d1 --remote",
     "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "fmt": "oxfmt",
     "test": "bun test tests/unit tests/integration",
     "test:unit": "bun test tests/unit",
     "test:integration": "bun test tests/integration",

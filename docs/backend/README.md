@@ -182,11 +182,11 @@ flowchart LR
 
 ### Remote Migrations via GitHub Actions (CI/CD)
 
-The remote Cloudflare D1 database is automatically migrated via [`.github/workflows/d1-migrate.yml`](file:///C:/Users/Toan/huawei-fitwear/.github/workflows/d1-migrate.yml).
+The remote Cloudflare D1 database is automatically migrated via `.github/workflows/release.yml`.
 
 - **Triggers**:
-  - `push` to `main` when `apps/backend/migrations/**`, `apps/backend/src/db/**`, or the workflow file changes.
-  - `workflow_dispatch` for on-demand manual triggers from GitHub Actions UI or `gh workflow run`.
+  - Every `push` to `main` (no path filter).
+  - `workflow_dispatch` for manual checks; the remote migration job runs only when the selected ref is `main`.
 - **Pipeline Jobs**:
   1. `typecheck` (Job 1): Executes static TypeScript verification in parallel.
   2. `test` (Job 2): Executes unit and integration test suites in parallel.
