@@ -26,7 +26,9 @@ export function NutritionScreen() {
       <BackHeader label="Today" onPress={() => router.back()} />
 
       <View style={styles.heading}>
-        <Text style={styles.title}>Nutrition</Text>
+        <Text accessibilityRole="header" style={styles.title}>
+          Nutrition
+        </Text>
         <Text style={styles.subtitle}>
           {new Date().toLocaleDateString(undefined, {
             weekday: "long",
@@ -74,12 +76,16 @@ export function NutritionScreen() {
           </Card>
 
           <Card>
-            <Text style={styles.cardTitle}>Remaining today</Text>
+            <Text accessibilityRole="header" style={styles.cardTitle}>
+              Remaining today
+            </Text>
             <Text style={styles.remaining}>{left} kcal</Text>
           </Card>
 
           <Card>
-            <Text style={styles.cardTitle}>Macronutrients</Text>
+            <Text accessibilityRole="header" style={styles.cardTitle}>
+              Macronutrients
+            </Text>
             <View style={styles.macros}>
               <MacroBar
                 label="Protein"
@@ -108,7 +114,9 @@ export function NutritionScreen() {
       ) : null}
 
       <View style={styles.note}>
-        <Text style={styles.noteTitle}>About these numbers</Text>
+        <Text accessibilityRole="header" style={styles.noteTitle}>
+          About these numbers
+        </Text>
         <Text style={styles.noteBody}>
           Food values and personal targets are estimates, not medical guidance.
         </Text>
@@ -147,6 +155,8 @@ const styles = StyleSheet.create({
   },
   statRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
     justifyContent: "space-between",
   },
   statLabel: {

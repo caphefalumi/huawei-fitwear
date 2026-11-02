@@ -1,5 +1,8 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
+  Animated,
+  Easing,
+  Keyboard,
   Modal,
   Pressable as ScrimPressable,
   ScrollView,
@@ -7,7 +10,9 @@ import {
   Text,
   View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useReducedMotion } from "react-native-reanimated";
 
 import { Pressable } from "@/components/pressable";
 import { Palette as C } from "@/constants/palette";
@@ -16,27 +21,110 @@ type SheetProps = {
   visible: boolean;
   title: string;
   onClose: () => void;
+  onDismiss?: () => void;
   children: ReactNode;
 };
 
 /** Bottom overlay matching the Figma "Input sheet" frames (scrim + white card). */
-export function Sheet({ visible, title, onClose, children }: SheetProps) {
+export function Sheet({ visible, title, onClose, onDismiss, children }: SheetProps) {
   const insets = useSafeAreaInsets();
+  const reducedMotion = useReducedMotion();
+  const [appearance] = useState(() => new Animated.Value(reducedMotion ? 1 : 0));
+  const [presented, setPresented] = useState(visible);
+  const dismissCallback = useRef(onDismiss);
+  const content = useRef({ title, children });
+  useEffect(() => {
+    dismissCallback.current = onDismiss;
+    if (visible) content.current = { title, children };
+  }, [onDismiss, visible, title, children]);
+
+  useEffect(() => {
+    if (visible) setPresented(true);
+    const animation = Animated.timing(appearance, {
+      toValue: visible ? 1 : 0,
+      duration: reducedMotion ? 0 : visible ? 220 : 160,
+      easing: visible ? Easing.out(Easing.cubic) : Easing.in(Easing.quad),
+      useNativeDriver: true,
+    });
+    animation.start(({ finished }) => {
+      if (finished && !visible) {
+        setPresented(false);
+        dismissCallback.current?.();
+      }
+    });
+    return () => animation.stop();
+  }, [appearance, reducedMotion, visible]);
+
+  const displayed = visible ? { title, children } : content.current;
+
+  useEffect(() => {
+    if (!visible) return;
+    if (Keyboard.isVisible()) Keyboard.dismiss();
+    return () => Keyboard.dismiss();
+  }, [visible]);
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <ScrimPressable style={styles.backdropFill} onPress={onClose} />
-        <View style={[styles.sheet, { paddingBottom: 20 + insets.bottom }]}>
-          <Text style={styles.title}>{title}</Text>
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
+    <Modal
+      visible={visible || presented}
+      transparent
+      animationType="none"
+      onRequestClose={() => {
+        if (visible) onClose();
+      }}
+    >
+      <View style={styles.backdrop} pointerEvents={visible ? "auto" : "none"}>
+        <Animated.View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, styles.scrim, { opacity: appearance }]}
+        />
+        <KeyboardAvoidingView behavior="padding" automaticOffset style={styles.keyboardArea}>
+          <ScrimPressable
+            accessible={false}
+            importantForAccessibility="no"
+            style={styles.backdropFill}
+            onPress={onClose}
+          />
+          <Animated.View
+            accessibilityViewIsModal
+            onAccessibilityEscape={onClose}
+            style={[
+              styles.sheet,
+              {
+                paddingBottom: 20 + insets.bottom,
+                opacity: appearance,
+                transform: [
+                  {
+                    translateY: appearance.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [24, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
           >
-            {children}
-          </ScrollView>
-        </View>
+            <View style={styles.header}>
+              <Text accessibilityRole="header" style={styles.title}>
+                {displayed.title}
+              </Text>
+              <Pressable
+                accessibilityLabel={`Close ${displayed.title}`}
+                onPress={onClose}
+                style={styles.close}
+              >
+                <Text style={styles.secondaryLabel}>Close</Text>
+              </Pressable>
+            </View>
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
+              {displayed.children}
+            </ScrollView>
+          </Animated.View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -56,18 +144,29 @@ export function SheetActions({
   secondaryLabel,
   onPrimary,
   onSecondary,
+  primaryDisabled = false,
+  secondaryDisabled = false,
+  busy = false,
 }: {
   primaryLabel: string;
   secondaryLabel: string;
   onPrimary: () => void;
   onSecondary: () => void;
+  primaryDisabled?: boolean;
+  secondaryDisabled?: boolean;
+  busy?: boolean;
 }) {
   return (
     <View style={styles.actions}>
-      <Pressable style={styles.primaryButton} onPress={onPrimary}>
+      <Pressable
+        style={styles.primaryButton}
+        disabled={primaryDisabled}
+        accessibilityState={{ busy }}
+        onPress={onPrimary}
+      >
         <Text style={styles.primaryLabel}>{primaryLabel}</Text>
       </Pressable>
-      <Pressable style={styles.secondaryButton} onPress={onSecondary}>
+      <Pressable style={styles.secondaryButton} disabled={secondaryDisabled} onPress={onSecondary}>
         <Text style={styles.secondaryLabel}>{secondaryLabel}</Text>
       </Pressable>
     </View>
@@ -77,8 +176,13 @@ export function SheetActions({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    justifyContent: "flex-end",
+  },
+  scrim: {
     backgroundColor: "rgba(37, 35, 33, 0.4)",
+  },
+  keyboardArea: {
+    flex: 1,
+    justifyContent: "flex-end",
   },
   backdropFill: {
     flex: 1,
@@ -92,13 +196,24 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     gap: 14,
   },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  close: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
   title: {
+    flex: 1,
     fontSize: 22,
     fontWeight: "600",
     color: C.text,
   },
   scroll: {
     flexGrow: 0,
+    flexShrink: 1,
   },
   scrollContent: {
     gap: 14,
@@ -122,7 +237,8 @@ const styles = StyleSheet.create({
     paddingTop: 6,
   },
   primaryButton: {
-    height: 52,
+    minHeight: 52,
+    padding: 12,
     borderRadius: 16,
     backgroundColor: C.accent,
     alignItems: "center",
@@ -134,7 +250,8 @@ const styles = StyleSheet.create({
     color: C.onAccent,
   },
   secondaryButton: {
-    height: 48,
+    minHeight: 48,
+    padding: 12,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: C.border,

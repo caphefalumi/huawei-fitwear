@@ -4,18 +4,31 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-nat
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Pressable } from "@/components/pressable";
+import { WheelPicker } from "@/components/wheel-picker";
+import { resolveBirthdaySelection } from "@/features/auth/birth-date";
 import { AuthField } from "./auth-field";
-import { useAuth } from "./auth-store";
+import { useAuth } from "@/features/auth/auth-store";
 import { AuthColors } from "./tokens";
 
 const icons = {
   chevronLeft: require("@/assets/images/auth/chevron-left.svg"),
   user: require("@/assets/images/auth/user-round.svg"),
   eyeOff: require("@/assets/images/auth/eye-off.svg"),
-  calendar: require("@/assets/images/auth/calendar-days.svg"),
   check: require("@/assets/images/auth/check.svg"),
   lock: require("@/assets/images/auth/lock-keyhole.svg"),
 };
+
+const DATE_COLUMN_ORDER = new Intl.DateTimeFormat(undefined, {
+  day: "numeric",
+  month: "numeric",
+  year: "numeric",
+})
+  .formatToParts(new Date())
+  .flatMap(({ type }) => (type === "day" || type === "month" || type === "year" ? [type] : []));
+
+const MONTH_NAMES = Array.from({ length: 12 }, (_, index) =>
+  new Intl.DateTimeFormat(undefined, { month: "short" }).format(new Date(2000, index, 1)),
+);
 
 export function SignUpScreen({ onSignIn }: { onSignIn: () => void }) {
   const insets = useSafeAreaInsets();
@@ -23,9 +36,26 @@ export function SignUpScreen({ onSignIn }: { onSignIn: () => void }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [birthDate, setBirthDate] = useState("");
+  const today = new Date();
+  const initialBirthDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+  const [birthYear, setBirthYear] = useState(initialBirthDate.getFullYear());
+  const [birthMonth, setBirthMonth] = useState(initialBirthDate.getMonth() + 1);
+  const [birthDay, setBirthDay] = useState(initialBirthDate.getDate());
+  const birthDate = `${birthYear}-${String(birthMonth).padStart(2, "0")}-${String(birthDay).padStart(2, "0")}`;
   const [agreed, setAgreed] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const yearValues = Array.from({ length: 201 }, (_, index) => today.getFullYear() - 100 + index);
+
+  function selectBirthday(year: number, month: number, day: number) {
+    const { date } = resolveBirthdaySelection(year, month, day);
+    setBirthYear(date.getFullYear());
+    setBirthMonth(date.getMonth() + 1);
+    setBirthDay(date.getDate());
+  }
+
+  function isFutureDate(year: number, month: number, day: number) {
+    return resolveBirthdaySelection(year, month, day).isFuture;
+  }
 
   async function submit() {
     const date = new Date(`${birthDate}T00:00:00Z`);
@@ -48,7 +78,7 @@ export function SignUpScreen({ onSignIn }: { onSignIn: () => void }) {
       date.toISOString().slice(0, 10) !== birthDate ||
       date > new Date()
     ) {
-      setValidationError("Enter a valid date of birth in YYYY-MM-DD format, not in the future.");
+      setValidationError("Select a valid date of birth, not in the future.");
       return;
     }
     if (!agreed) {
@@ -62,6 +92,52 @@ export function SignUpScreen({ onSignIn }: { onSignIn: () => void }) {
       // Keep input values and display the server error from the auth store.
     }
   }
+  const dateWheels = {
+    month: (
+      <WheelPicker
+        label="Birth month"
+        values={Array.from({ length: 12 }, (_, index) => index + 1)}
+        value={birthMonth}
+        onChange={(month) => selectBirthday(birthYear, month, birthDay)}
+        format={(month) => MONTH_NAMES[month - 1]}
+        isUnavailable={(month) => isFutureDate(birthYear, month, birthDay)}
+        showActions={false}
+        style={styles.monthColumn}
+      />
+    ),
+    day: (
+      <WheelPicker
+        label="Birth day"
+        values={Array.from(
+          { length: new Date(birthYear, birthMonth, 0).getDate() },
+          (_, index) => index + 1,
+        )}
+        value={birthDay}
+        onChange={(day) => selectBirthday(birthYear, birthMonth, day)}
+        format={(day) => String(day)}
+        isUnavailable={(day) => isFutureDate(birthYear, birthMonth, day)}
+        showActions={false}
+        style={styles.dayColumn}
+      />
+    ),
+    year: (
+      <WheelPicker
+        label="Birth year"
+        values={yearValues}
+        value={birthYear}
+        onChange={(year) => selectBirthday(year, birthMonth, birthDay)}
+        format={(year) => String(year)}
+        isUnavailable={(year) => isFutureDate(year, birthMonth, birthDay)}
+        showActions={false}
+        style={styles.yearColumn}
+      />
+    ),
+  };
+  const dateColumnStyles = {
+    day: styles.dayColumn,
+    month: styles.monthColumn,
+    year: styles.yearColumn,
+  };
 
   return (
     <ScrollView
@@ -80,11 +156,18 @@ export function SignUpScreen({ onSignIn }: { onSignIn: () => void }) {
         onPress={onSignIn}
         hitSlop={8}
       >
-        <Image source={icons.chevronLeft} style={styles.backIcon} contentFit="contain" />
+        <Image
+          accessible={false}
+          source={icons.chevronLeft}
+          style={styles.backIcon}
+          contentFit="contain"
+        />
         <Text style={styles.backLabel}>Sign in</Text>
       </Pressable>
 
-      <Text style={styles.title}>Start your journey.</Text>
+      <Text accessibilityRole="header" style={styles.title}>
+        Start your journey.
+      </Text>
 
       <View style={styles.form}>
         <AuthField
@@ -121,18 +204,19 @@ export function SignUpScreen({ onSignIn }: { onSignIn: () => void }) {
           autoComplete="new-password"
           editable={!pending}
         />
-        <AuthField
-          label="Date of birth"
-          icon={icons.calendar}
-          helper="YYYY-MM-DD"
-          placeholder="YYYY-MM-DD"
-          value={birthDate}
-          onChangeText={setBirthDate}
-          autoCapitalize="none"
-          autoCorrect={false}
-          maxLength={10}
-          editable={!pending}
-        />
+        <View style={styles.dateField}>
+          <Text style={styles.dateLabel}>Date of birth</Text>
+          <View style={styles.dateColumns}>
+            {DATE_COLUMN_ORDER.map((column) => (
+              <View key={column} style={dateColumnStyles[column]}>
+                {dateWheels[column]}
+              </View>
+            ))}
+          </View>
+          <Text style={styles.dateHelper}>
+            Future dates appear dimmed and snap back to today when released.
+          </Text>
+        </View>
       </View>
 
       <Pressable
@@ -232,6 +316,38 @@ const styles = StyleSheet.create({
     gap: 18,
     paddingTop: 18,
   },
+  dateField: {
+    gap: 8,
+  },
+  dateLabel: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: AuthColors.text,
+  },
+  dateColumns: {
+    flexDirection: "row",
+    gap: 4,
+    overflow: "hidden",
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: AuthColors.border,
+    borderRadius: 14,
+    backgroundColor: AuthColors.surface,
+  },
+  monthColumn: {
+    flex: 1.1,
+  },
+  dayColumn: {
+    flex: 0.7,
+  },
+  yearColumn: {
+    flex: 1.2,
+  },
+  dateHelper: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: AuthColors.textMuted,
+  },
   consent: {
     flexDirection: "row",
     alignItems: "center",
@@ -265,7 +381,8 @@ const styles = StyleSheet.create({
     color: AuthColors.accent,
   },
   primaryButton: {
-    height: 52,
+    minHeight: 52,
+    padding: 12,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: AuthColors.accent,

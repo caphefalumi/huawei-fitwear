@@ -9,49 +9,25 @@ import {
 } from "react";
 import { AppState } from "react-native";
 
-import { ApiError, apiRequest, onSessionExpired, setApiToken } from "@/lib/api";
-import { sessionStorage } from "./session-storage";
+import { ApiError, onSessionExpired, setApiToken } from "@/lib/api";
+import { isLoggedIn } from "./helpers/is-logged-in";
+import type {
+  AuthUser,
+  AuthenticationSession,
+  AuthenticationSessionResponse,
+  SignUpBody,
+  UpdateUserBody,
+} from "./models/authentication";
+import {
+  requestPasswordReset as sendPasswordReset,
+  signIn as sendSignIn,
+  signOut as sendSignOut,
+  signUp as sendSignUp,
+  updateUser as sendUpdateUser,
+} from "./services/api";
+import { getSession } from "./services/queries";
+import { sessionStorage } from "./services/session-storage";
 
-export type AuthUser = {
-  id: string;
-  email: string;
-  name: string | null;
-  emailVerified: boolean;
-  image?: string | null;
-  gender: "male" | "female" | "other" | null;
-  birthDate: string | null;
-  heightCm: number | null;
-  currentWeightKg: number | null;
-  targetWeightKg: number | null;
-  activityLevel:
-    | "sedentary"
-    | "lightly_active"
-    | "moderately_active"
-    | "very_active"
-    | "extra_active"
-    | null;
-  fitnessGoal: "weight_loss" | "maintenance" | "muscle_gain" | null;
-  weeklySessions: number;
-  createdAt: string;
-  updatedAt: string;
-};
-export type UpdateUserBody = Partial<
-  Pick<
-    AuthUser,
-    | "name"
-    | "gender"
-    | "birthDate"
-    | "heightCm"
-    | "currentWeightKg"
-    | "targetWeightKg"
-    | "activityLevel"
-    | "fitnessGoal"
-    | "weeklySessions"
-  >
->;
-export type SignUpBody = { name: string; email: string; password: string; birthDate: string };
-type AuthSession = { token: string; expiresAt: string; userId: string; id: string };
-type SessionResponse = { user: AuthUser; session: AuthSession };
 type AuthContextValue = {
   user: AuthUser | null;
   loading: boolean;
@@ -67,7 +43,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [session, setSession] = useState<AuthSession | null>(null);
+  const [session, setSession] = useState<AuthenticationSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,12 +66,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const token = await sessionStorage.getToken();
         if (!active || revision.current !== hydrateRevision || !token) return;
         setApiToken(token);
-        const result = await apiRequest<SessionResponse>("/auth/session");
+        const result = await getSession();
         if (!active || revision.current !== hydrateRevision) return;
-        if (
-          !Number.isFinite(Date.parse(result.session.expiresAt)) ||
-          Date.parse(result.session.expiresAt) <= Date.now()
-        ) {
+        if (!isLoggedIn(result.session)) {
           await clearSession();
           setError("Your session expired. Please sign in again.");
           return;
@@ -156,58 +129,51 @@ export function AuthProvider({ children }: PropsWithChildren) {
     };
   }, [session, clearSession]);
 
-  const authenticate = useCallback(async (path: string, body: unknown) => {
-    if (busy.current) throw new Error("An authentication request is already running.");
-    busy.current = true;
-    setPending(true);
-    setError(null);
-    const currentRevision = ++revision.current;
-    try {
-      const result = await apiRequest<SessionResponse>(path, { method: "POST", body });
-      if (
-        !result.session?.token ||
-        !Number.isFinite(Date.parse(result.session.expiresAt)) ||
-        Date.parse(result.session.expiresAt) <= Date.now()
-      ) {
-        throw new ApiError("The server returned an invalid session.", 0, "INVALID_SESSION");
+  const authenticate = useCallback(
+    async (sendRequest: () => Promise<AuthenticationSessionResponse>) => {
+      if (busy.current) throw new Error("An authentication request is already running.");
+      busy.current = true;
+      setPending(true);
+      setError(null);
+      const currentRevision = ++revision.current;
+      try {
+        const result = await sendRequest();
+        if (!isLoggedIn(result.session)) {
+          throw new ApiError("The server returned an invalid session.", 0, "INVALID_SESSION");
+        }
+        await sessionStorage.setToken(result.session.token);
+        if (currentRevision !== revision.current) return;
+        setApiToken(result.session.token);
+        setSession(result.session);
+        setUser(result.user);
+      } catch (cause) {
+        setError(
+          cause instanceof Error ? cause.message : "Authentication failed. Please try again.",
+        );
+        throw cause;
+      } finally {
+        busy.current = false;
+        setPending(false);
       }
-      await sessionStorage.setToken(result.session.token);
-      if (currentRevision !== revision.current) return;
-      setApiToken(result.session.token);
-      setSession(result.session);
-      setUser(result.user);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Authentication failed. Please try again.");
-      throw cause;
-    } finally {
-      busy.current = false;
-      setPending(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   const signIn = useCallback(
-    (email: string, password: string) =>
-      authenticate("/auth/sign-in", { email: email.trim(), password }),
+    (email: string, password: string) => authenticate(() => sendSignIn({ email, password })),
     [authenticate],
   );
   const signUp = useCallback(
-    (body: SignUpBody) =>
-      authenticate("/auth/sign-up", { ...body, name: body.name.trim(), email: body.email.trim() }),
+    (body: SignUpBody) => authenticate(() => sendSignUp(body)),
     [authenticate],
   );
 
-  const requestPasswordReset = useCallback(async (email: string) => {
-    const result = await apiRequest<{ message: string }>("/auth/password-reset", {
-      method: "POST",
-      body: { email: email.trim() },
-    });
-    return result.message;
-  }, []);
+  const requestPasswordReset = useCallback((email: string) => sendPasswordReset(email), []);
 
   const signOut = useCallback(async () => {
     setError(null);
     try {
-      await apiRequest("/auth/sign-out", { method: "POST" });
+      await sendSignOut();
     } catch (cause) {
       if (!(cause instanceof ApiError && cause.status === 401)) {
         setError(
@@ -223,7 +189,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const updateUser = useCallback(async (body: UpdateUserBody) => {
     const currentRevision = revision.current;
     try {
-      const result = await apiRequest<AuthUser>("/auth/update-user", { method: "PUT", body });
+      const result = await sendUpdateUser(body);
       if (currentRevision === revision.current) setUser(result);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to update your profile.");

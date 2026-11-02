@@ -42,6 +42,7 @@ export function HomeScreen() {
   } = useWorkouts();
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [recoveryClosing, setRecoveryClosing] = useState(false);
   useEffect(() => setBannerDismissed(false), [weightKg]);
   const latest = weights.at(-1);
   const previous = weights.at(-2);
@@ -64,7 +65,9 @@ export function HomeScreen() {
         <Text style={styles.name}>{user?.name}</Text>
       </View>
 
-      <Text style={styles.title}>Today</Text>
+      <Text accessibilityRole="header" style={styles.title}>
+        Today
+      </Text>
       {healthLoading || mealsLoading ? (
         <Text style={styles.weightSub}>Loading today’s data…</Text>
       ) : null}
@@ -89,15 +92,32 @@ export function HomeScreen() {
 
       {weightUpdated && !bannerDismissed ? (
         <View style={styles.banner}>
-          <Image source={icons.check} style={styles.bannerIcon} contentFit="contain" />
+          <Image
+            accessible={false}
+            source={icons.check}
+            style={styles.bannerIcon}
+            contentFit="contain"
+          />
           <Text style={styles.bannerText}>Weight saved</Text>
-          <Pressable onPress={() => setBannerDismissed(true)} hitSlop={10}>
+          <Pressable
+            accessibilityLabel="Dismiss weight saved notification"
+            onPress={() => setBannerDismissed(true)}
+            hitSlop={10}
+          >
             <Text style={styles.bannerClose}>✕</Text>
           </Pressable>
         </View>
       ) : null}
 
-      <Pressable onPress={() => router.push("/nutrition")}>
+      <Pressable
+        accessibilityLabel={
+          summary
+            ? `Nutrition. ${summary.consumed.caloriesKcal} kilocalories consumed, ${summary.remaining.caloriesKcal} remaining of ${summary.targets.calorieTargetKcal}. Protein ${summary.consumed.proteinG} of ${summary.targets.proteinTargetG} grams. Carbs ${summary.consumed.carbsG} of ${summary.targets.carbsTargetG} grams. Fat ${summary.consumed.fatG} of ${summary.targets.fatTargetG} grams.`
+            : "Nutrition. Summary is not available."
+        }
+        accessibilityHint="Opens your nutrition details"
+        onPress={() => router.push("/nutrition")}
+      >
         <Card>
           <Text style={styles.cardHeaderText}>Nutrition</Text>
 
@@ -144,7 +164,11 @@ export function HomeScreen() {
 
       <View style={styles.section}>
         <SectionHeading title="Progress" />
-        <Pressable onPress={() => router.push("/progress")}>
+        <Pressable
+          accessibilityLabel={`Progress. ${latest ? `Latest weight ${latest.weightKg.toFixed(1)} kilograms, logged ${dateLabel(latest.loggedDate)}.` : "No weight logs yet."}${previous ? ` Previous weight ${previous.weightKg.toFixed(1)} kilograms, logged ${dateLabel(previous.loggedDate)}.` : ""}`}
+          accessibilityHint="Opens weight and training progress"
+          onPress={() => router.push("/progress")}
+        >
           <Card>
             <View style={styles.weightRow}>
               <View style={styles.weightText}>
@@ -157,7 +181,7 @@ export function HomeScreen() {
                   {latest ? `Logged ${dateLabel(latest.loggedDate)}` : "No weight logs yet"}
                 </Text>
               </View>
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1, minWidth: 120 }}>
                 <WeightChart weights={weights.slice(-14).map((row) => row.weightKg)} />
               </View>
             </View>
@@ -205,19 +229,43 @@ export function HomeScreen() {
       </View>
 
       {recovery ? (
-        <Pressable style={styles.recovery} onPress={() => setRecoveryOpen(true)}>
-          <Image source={icons.shieldCheck} style={styles.recoveryIcon} contentFit="contain" />
+        <Pressable
+          accessibilityLabel={`Recovery. ${recoveryTitle(recovery)}. ${recovery.restDays} rest days, ${recovery.lightDays} light days.`}
+          accessibilityHint="Opens recovery details"
+          style={styles.recovery}
+          onPress={() => setRecoveryOpen(true)}
+        >
+          <Image
+            accessible={false}
+            source={icons.shieldCheck}
+            style={styles.recoveryIcon}
+            contentFit="contain"
+          />
           <View style={styles.recoveryText}>
             <Text style={styles.recoveryTitle}>{recoveryTitle(recovery)}</Text>
             <Text style={styles.recoverySub}>
               {recovery.restDays} rest days · {recovery.lightDays} light days
             </Text>
           </View>
-          <Image source={icons.chevronRight} style={styles.recoveryChevron} contentFit="contain" />
+          <Image
+            accessible={false}
+            source={icons.chevronRight}
+            style={styles.recoveryChevron}
+            contentFit="contain"
+          />
         </Pressable>
       ) : null}
 
-      {recoveryOpen ? <RecoverySheet visible onClose={() => setRecoveryOpen(false)} /> : null}
+      {recoveryOpen || recoveryClosing ? (
+        <RecoverySheet
+          visible={recoveryOpen}
+          onClose={() => {
+            setRecoveryClosing(true);
+            setRecoveryOpen(false);
+          }}
+          onDismiss={() => setRecoveryClosing(false)}
+        />
+      ) : null}
 
       <Text style={styles.footnote}>Personal targets are estimates, not medical advice.</Text>
     </ScrollView>
@@ -235,6 +283,8 @@ const styles = StyleSheet.create({
   },
   topRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     alignItems: "center",
     justifyContent: "space-between",
   },
@@ -244,6 +294,7 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 13,
+    flexShrink: 1,
     fontWeight: "600",
     color: C.accent,
   },
@@ -284,11 +335,13 @@ const styles = StyleSheet.create({
   },
   nutritionBody: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 20,
   },
   macros: {
     flex: 1,
+    minWidth: 120,
     gap: 10,
   },
   consumedLine: {
@@ -300,12 +353,14 @@ const styles = StyleSheet.create({
   },
   weightRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
   },
   weightText: {
     gap: 2,
+    flexShrink: 1,
   },
   weightLabel: {
     fontSize: 12,
@@ -331,6 +386,7 @@ const styles = StyleSheet.create({
   },
   previousRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 8,
   },

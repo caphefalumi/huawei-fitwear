@@ -1,11 +1,11 @@
-/** Colors lifted from the Figma file (auth 4:3751, home 4:3836, profile 4:4020). */
+/** Figma palette; muted text darkened for readable contrast on all app surfaces. */
 export const Palette = {
   background: "#FAF9F6",
   surface: "#FFFFFF",
   card: "#EFEBE5",
   border: "#E7E2DC",
   text: "#252321",
-  textMuted: "#77716B",
+  textMuted: "#68625C",
   accent: "#9D2332",
   accentBorder: "#9D2232",
   accentTint: "#F5E8E8",

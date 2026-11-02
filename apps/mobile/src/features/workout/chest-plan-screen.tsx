@@ -48,13 +48,16 @@ export function ChestPlanScreen() {
     >
       <BackHeader label="Workouts" onPress={() => router.back()} />
       <View style={styles.heading}>
-        <Text style={styles.title}>{savedSession?.sessionTitle ?? routine?.name ?? group}</Text>
+        <Text accessibilityRole="header" style={styles.title}>
+          {savedSession?.sessionTitle ?? routine?.name ?? group}
+        </Text>
         <Text style={styles.subtitle}>
           {params.sessionId ? "Saved workout" : "Exercise plan · choose your own working weight"}
         </Text>
       </View>
       {group.toLowerCase() === "chest" ? (
         <Image
+          accessible={false}
           source={require("@/assets/images/workout/chest-hero.png")}
           style={styles.hero}
           contentFit="cover"
@@ -69,7 +72,11 @@ export function ChestPlanScreen() {
       {!routine && !loading ? (
         <Text style={styles.subtitle}>No exercises are available for this group.</Text>
       ) : null}
-      <Pressable onPress={() => void refresh()}>
+      <Pressable
+        disabled={loading}
+        accessibilityState={{ busy: loading }}
+        onPress={() => void refresh()}
+      >
         <Text style={styles.footnote}>Refresh workout data</Text>
       </Pressable>
       {routine ? (
@@ -85,12 +92,15 @@ export function ChestPlanScreen() {
           ))}
         </View>
       ) : null}
-      <Text style={styles.sectionTitle}>Exercises</Text>
+      <Text accessibilityRole="header" style={styles.sectionTitle}>
+        Exercises
+      </Text>
       {availableExercises.map((exercise, index) => (
         <Card key={exercise.id} style={styles.exerciseCard}>
           <View style={styles.exerciseHeader}>
             <Text style={styles.exerciseIndex}>{String(index + 1).padStart(2, "0")}</Text>
             <Pressable
+              accessibilityLabel={`View ${exercise.name} technique`}
               style={styles.exerciseIdentity}
               onPress={() =>
                 router.push({
@@ -119,7 +129,12 @@ export function ChestPlanScreen() {
                 })
               }
             >
-              <Image source={icons.play} style={styles.playIcon} contentFit="contain" />
+              <Image
+                accessible={false}
+                source={icons.play}
+                style={styles.playIcon}
+                contentFit="contain"
+              />
             </Pressable>
           </View>
           <View style={styles.prescriptionRow}>
@@ -221,8 +236,8 @@ const styles = StyleSheet.create({
     color: C.text,
   },
   playButton: {
-    width: 32,
-    height: 32,
+    width: 48,
+    height: 48,
     borderRadius: 100,
     backgroundColor: C.accentTint,
     alignItems: "center",

@@ -1,9 +1,10 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import * as ImagePicker from "expo-image-picker";
+import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { pickImage } from "@/features/camera/image-picker";
 
 import { Pressable } from "@/components/pressable";
 import { Sheet } from "@/components/sheet";
@@ -42,44 +43,17 @@ export function MealCaptureScreen() {
     };
   }, []);
 
-  async function pickImage(camera: boolean) {
+  async function selectImage(camera: boolean) {
     if (busy) return;
     setError(null);
     try {
-      if (camera && Platform.OS !== "web") {
-        const permission = await ImagePicker.requestCameraPermissionsAsync();
-        if (!permission.granted)
-          throw new Error(
-            "Camera permission was denied. Allow camera access in settings or choose a library image.",
-          );
-      }
-      const options: ImagePicker.ImagePickerOptions = {
-        mediaTypes: ["images"],
-        base64: true,
-        quality: 0.7,
-        allowsEditing: true,
-      };
-      const result = camera
-        ? await ImagePicker.launchCameraAsync(options)
-        : await ImagePicker.launchImageLibraryAsync(options);
-      if (result.canceled || !active.current) return;
-      const asset = result.assets[0];
-      if (!asset.base64) throw new Error("Could not read this image. Choose another JPEG or PNG.");
-      const mimeType = asset.base64.startsWith("/9j/")
-        ? "image/jpeg"
-        : asset.base64.startsWith("iVBOR")
-          ? "image/png"
-          : null;
-      if (!mimeType) throw new Error("Choose a JPEG or PNG image.");
-      if (asset.base64.length > 7_000_000)
-        throw new Error("This image is too large. Crop it or choose a smaller photo (under 5 MB).");
-      setImage({ uri: asset.uri, base64: asset.base64, mimeType });
+      const image = await pickImage(camera);
+      if (image && active.current) setImage(image);
     } catch (cause) {
       if (active.current)
         setError(cause instanceof Error ? cause.message : "Could not open image picker.");
     }
   }
-
   async function analyze() {
     if (!image || busy) return;
     if (items.length) {
@@ -121,6 +95,7 @@ export function MealCaptureScreen() {
     <>
       <ScrollView
         style={styles.screen}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.content,
           { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
@@ -129,12 +104,20 @@ export function MealCaptureScreen() {
         <Header label="Meals" onBack={() => router.back()} />
 
         <View style={styles.heading}>
-          <Text style={styles.title}>Capture Meal</Text>
+          <Text accessibilityRole="header" style={styles.title}>
+            Capture Meal
+          </Text>
           <Text style={styles.subtitle}>Capture food or drinks.</Text>
         </View>
 
         {image ? (
-          <Image source={{ uri: image.uri }} style={styles.preview} contentFit="contain" />
+          <Image
+            accessible
+            accessibilityLabel="Selected meal photo"
+            source={{ uri: image.uri }}
+            style={styles.preview}
+            contentFit="contain"
+          />
         ) : (
           <View style={styles.preview}>
             <Text style={styles.previewLabel}>• GUIDELINES · NO IMAGE</Text>
@@ -145,13 +128,23 @@ export function MealCaptureScreen() {
             <View style={[styles.corner, styles.cornerBottomRight]} />
 
             <View style={styles.circle}>
-              <Image source={icons.utensils} style={styles.circleIcon} contentFit="contain" />
+              <Image
+                accessible={false}
+                source={icons.utensils}
+                style={styles.circleIcon}
+                contentFit="contain"
+              />
               <Text style={styles.circleTitle}>Place food or drink here</Text>
               <Text style={styles.circleNote}>Top-down shot · keep steady</Text>
             </View>
 
             <View style={styles.rulerChip}>
-              <Image source={icons.ruler} style={styles.rulerIcon} contentFit="contain" />
+              <Image
+                accessible={false}
+                source={icons.ruler}
+                style={styles.rulerIcon}
+                contentFit="contain"
+              />
               <Text style={styles.rulerText}>Place 15 cm ruler beside plate or cup</Text>
             </View>
           </View>
@@ -160,6 +153,7 @@ export function MealCaptureScreen() {
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Optional description</Text>
           <TextInput
+            accessibilityLabel="Optional meal description"
             value={description}
             onChangeText={setDescription}
             placeholder="Add ingredients, preparation, or drink details (e.g. sugar, milk, size)."
@@ -181,6 +175,7 @@ export function MealCaptureScreen() {
         <PrimaryButton
           label={busy ? "Analyzing photo…" : "Analyze photo"}
           disabled={!image || busy}
+          busy={busy}
           onPress={analyze}
         />
         <SecondaryButton
@@ -197,14 +192,19 @@ export function MealCaptureScreen() {
             accessibilityLabel="Take meal photo"
             disabled={busy}
             style={styles.shutterRing}
-            onPress={() => pickImage(true)}
+            onPress={() => selectImage(true)}
           >
             <View style={styles.shutter} />
           </Pressable>
         </View>
 
-        <Pressable disabled={busy} style={styles.libraryButton} onPress={() => pickImage(false)}>
-          <Image source={icons.images} style={styles.libraryIcon} contentFit="contain" />
+        <Pressable disabled={busy} style={styles.libraryButton} onPress={() => selectImage(false)}>
+          <Image
+            accessible={false}
+            source={icons.images}
+            style={styles.libraryIcon}
+            contentFit="contain"
+          />
           <Text style={styles.libraryLabel}>Upload from library</Text>
         </Pressable>
       </ScrollView>
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   preview: {
-    height: 370,
+    minHeight: 370,
     borderRadius: 18,
     backgroundColor: "#2B2724",
     paddingVertical: 44,
@@ -303,8 +303,9 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
   },
   circle: {
-    width: 192,
-    height: 192,
+    minWidth: 192,
+    minHeight: 192,
+    padding: 16,
     borderRadius: 96,
     borderWidth: 1,
     borderStyle: "dashed",
@@ -319,11 +320,13 @@ const styles = StyleSheet.create({
   },
   circleTitle: {
     fontSize: 12,
+    textAlign: "center",
     fontWeight: "500",
     color: "rgba(255,255,255,0.92)",
   },
   circleNote: {
     fontSize: 10,
+    textAlign: "center",
     color: "rgba(255,255,255,0.45)",
   },
   rulerChip: {
@@ -342,6 +345,7 @@ const styles = StyleSheet.create({
     height: 20,
   },
   rulerText: {
+    flex: 1,
     fontSize: 11,
     color: "rgba(255,255,255,0.8)",
   },
@@ -402,7 +406,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    height: 52,
+    minHeight: 52,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: C.border,
@@ -414,6 +420,7 @@ const styles = StyleSheet.create({
   },
   libraryLabel: {
     fontSize: 14,
+    flexShrink: 1,
     fontWeight: "600",
     color: C.text,
   },
@@ -429,8 +436,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   tutorialMarker: {
-    width: 24,
-    height: 24,
+    minWidth: 24,
+    minHeight: 24,
+    padding: 4,
     borderRadius: 100,
     backgroundColor: C.accentTint,
     alignItems: "center",
@@ -456,7 +464,9 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   primary: {
-    height: 52,
+    minHeight: 52,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderRadius: 14,
     backgroundColor: C.accent,
     alignItems: "center",

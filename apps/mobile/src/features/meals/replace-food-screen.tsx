@@ -65,6 +65,7 @@ export function ReplaceFoodScreen() {
   return (
     <ScrollView
       style={styles.screen}
+      keyboardShouldPersistTaps="handled"
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
@@ -78,7 +79,9 @@ export function ReplaceFoodScreen() {
       />
 
       <View style={styles.heading}>
-        <Text style={styles.title}>Search food</Text>
+        <Text accessibilityRole="header" style={styles.title}>
+          Search food
+        </Text>
         <Text style={styles.subtitle}>Select a replacement from the database.</Text>
       </View>
       {error || searchError ? (
@@ -115,7 +118,13 @@ export function ReplaceFoodScreen() {
             <View key={food.id} style={styles.resultCard}>
               <View style={styles.resultTop}>
                 <Text style={styles.resultName}>{food.name}</Text>
-                <Pressable disabled={saving} onPress={() => replace(food)} hitSlop={8}>
+                <Pressable
+                  accessibilityLabel={`Replace ${current?.name ?? "item"} with ${food.name}`}
+                  accessibilityState={{ busy: saving }}
+                  disabled={saving}
+                  onPress={() => replace(food)}
+                  hitSlop={8}
+                >
                   <Text style={styles.resultSelect}>Select</Text>
                 </Pressable>
               </View>

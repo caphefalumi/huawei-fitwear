@@ -1,24 +1,17 @@
 import { act, renderHook, waitFor } from "@testing-library/react-native";
 import { AuthProvider, useAuth } from "@/features/auth/auth-store";
-import { sessionStorage } from "@/features/auth/session-storage";
+import { sessionStorage } from "@/features/auth/services/session-storage";
 import { setApiToken } from "@/lib/api";
+import { mockAuthenticationSession, mockAuthenticationUser } from "@/features/auth/mocks/api";
 
-jest.mock("@/features/auth/session-storage", () => ({
+jest.mock("@/features/auth/services/session-storage", () => ({
   sessionStorage: { getToken: jest.fn(), setToken: jest.fn(), clearToken: jest.fn() },
 }));
 
 const fetchMock = jest.fn() as jest.MockedFunction<typeof fetch>;
 const saved = jest.mocked(sessionStorage);
-const user = { id: "member-a", email: "member@example.com", name: "Member", weeklySessions: 3 };
-const authenticated = () => ({
-  user,
-  session: {
-    id: "session-a",
-    token: "secret-a",
-    userId: user.id,
-    expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
-  },
-});
+const user = mockAuthenticationUser;
+const authenticated = () => mockAuthenticationSession();
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
 
 beforeEach(() => {
@@ -60,6 +53,11 @@ test("failed login stays signed out and surfaces server error", async () => {
     await expect(result.current.signIn("member@example.com", "wrong")).rejects.toMatchObject({
       status: 401,
     });
+  });
+  expect(String(fetchMock.mock.calls[0][0])).toMatch(/\/auth\/sign-in$/);
+  expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
+    email: "member@example.com",
+    password: "wrong",
   });
   expect(result.current.user).toBeNull();
   expect(result.current.error).toBe("Invalid email or password");

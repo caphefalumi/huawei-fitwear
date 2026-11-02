@@ -37,7 +37,12 @@ function TabButton({
   isFocused?: boolean;
 }) {
   return (
-    <Pressable {...props} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+    <Pressable
+      {...props}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: isFocused }}
+      style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+    >
       <Text style={[styles.label, isFocused && styles.labelActive]}>{children}</Text>
     </Pressable>
   );
@@ -66,6 +71,8 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
+    minHeight: 48,
+    justifyContent: "center",
     alignItems: "center",
     paddingVertical: 6,
   },
