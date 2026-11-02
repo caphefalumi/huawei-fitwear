@@ -68,6 +68,10 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      - name: Setup Node.js for Jest ESM
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
 
       - name: Install workspace dependencies
         run: bun install --frozen-lockfile
