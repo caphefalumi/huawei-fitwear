@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   format:
-    name: Format check
+    name: Format
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

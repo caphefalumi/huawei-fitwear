@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   lint:
-    name: Lint checks
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
