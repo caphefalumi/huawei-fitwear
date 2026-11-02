@@ -32,7 +32,7 @@ Logging into the same Expo account on both CLI and the Expo Go app automatically
 - **Web**: Register at [expo.dev/signup](https://expo.dev/signup).
 - **CLI**:
   ```bash
-  bunx eas-cli register
+  bunx expo register
   ```
 - **Mobile (iOS/Android)**: Open **Expo Go** and tap **Sign Up**.
 
