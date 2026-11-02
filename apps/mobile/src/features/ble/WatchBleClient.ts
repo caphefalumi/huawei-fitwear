@@ -179,13 +179,9 @@ export class WatchBleClient {
             await this.safeCancel(connected);
             return;
           }
-          await connected.discoverAllServicesAndCharacteristics();
-          if (session !== this.session) {
-            await this.safeCancel(connected);
-            return;
-          }
           this.connectedDevice = connected;
 
+          // Register disconnect listener immediately so drops during discovery are caught
           this.disconnectSub = connected.onDisconnected((_error, device) => {
             if (session !== this.session) return;
             this.cleanupSubscriptions({ keepStateListener: true });
@@ -195,6 +191,20 @@ export class WatchBleClient {
             this.listener.onDeviceName("None");
             this.setStatus("disconnected");
           });
+
+          // Verify negotiated ATT MTU
+          const mtu = connected.mtu;
+          if (mtu && mtu < 120) {
+            this.listener.onError(
+              `Warning: Negotiated MTU is only ${mtu}B (< 120B). Notifications may truncate.`,
+            );
+          }
+
+          await connected.discoverAllServicesAndCharacteristics();
+          if (session !== this.session) {
+            await this.safeCancel(connected);
+            return;
+          }
 
           this.monitorSub = connected.monitorCharacteristicForService(
             FITWEAR_SERVICE_UUID,

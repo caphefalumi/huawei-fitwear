@@ -26,3 +26,4 @@ export {
   type BleSyncMessage,
   type UseWatchBleOptions,
 } from "./use-watch-ble";
+export { BleSyncScreen } from "./BleSyncScreen";

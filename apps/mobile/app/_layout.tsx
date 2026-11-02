@@ -62,6 +62,7 @@ function RootNavigator() {
           <Stack.Screen name="add-item" />
           <Stack.Screen name="review-item" />
           <Stack.Screen name="replace-food" />
+          <Stack.Screen name="ble-sync" />
         </Stack.Protected>
         <Stack.Protected guard={!user} redirectTo={APP_ROUTES.home}>
           <Stack.Screen name="(auth)" />
