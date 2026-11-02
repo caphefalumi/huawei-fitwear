@@ -9,24 +9,101 @@ import {
 } from "react";
 import { AppState } from "react-native";
 
-import { ApiError, onSessionExpired, setApiToken } from "@/lib/api";
-import { isLoggedIn } from "./helpers/is-logged-in";
-import type {
-  AuthUser,
-  AuthenticationSession,
-  AuthenticationSessionResponse,
-  SignUpBody,
-  UpdateUserBody,
-} from "./models/authentication";
-import {
-  requestPasswordReset as sendPasswordReset,
-  signIn as sendSignIn,
-  signOut as sendSignOut,
-  signUp as sendSignUp,
-  updateUser as sendUpdateUser,
-} from "./services/api";
-import { getSession } from "./services/queries";
-import { sessionStorage } from "./services/session-storage";
+import { ApiError, apiRequest, onSessionExpired, setApiToken } from "@/lib/api";
+import { isLoggedIn } from "./is-logged-in";
+import { sessionStorage } from "./session-storage";
+
+export type AuthUser = {
+  id: string;
+  email: string;
+  name: string | null;
+  emailVerified: boolean;
+  image?: string | null;
+  gender: "male" | "female" | "other" | null;
+  birthDate: string | null;
+  heightCm: number | null;
+  currentWeightKg: number | null;
+  targetWeightKg: number | null;
+  activityLevel:
+    | "sedentary"
+    | "lightly_active"
+    | "moderately_active"
+    | "very_active"
+    | "extra_active"
+    | null;
+  fitnessGoal: "weight_loss" | "maintenance" | "muscle_gain" | null;
+  weeklySessions: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type UpdateUserBody = Partial<
+  Pick<
+    AuthUser,
+    | "name"
+    | "gender"
+    | "birthDate"
+    | "heightCm"
+    | "currentWeightKg"
+    | "targetWeightKg"
+    | "activityLevel"
+    | "fitnessGoal"
+    | "weeklySessions"
+  >
+>;
+
+export type SignInBody = { email: string; password: string };
+export type SignUpBody = { name: string; email: string; password: string; birthDate: string };
+export type AuthenticationSession = {
+  token: string;
+  expiresAt: string;
+  userId: string;
+  id: string;
+};
+export type AuthenticationSessionResponse = {
+  user: AuthUser;
+  session: AuthenticationSession;
+};
+
+export const APP_ROUTES = {
+  login: "/",
+  signUp: "/sign-up",
+  home: "/home",
+} as const;
+
+function getSession(): Promise<AuthenticationSessionResponse> {
+  return apiRequest("/auth/session");
+}
+
+function sendSignIn(body: SignInBody): Promise<AuthenticationSessionResponse> {
+  return apiRequest("/auth/sign-in", {
+    method: "POST",
+    body: { ...body, email: body.email.trim() },
+  });
+}
+
+function sendSignUp(body: SignUpBody): Promise<AuthenticationSessionResponse> {
+  return apiRequest("/auth/sign-up", {
+    method: "POST",
+    body: { ...body, name: body.name.trim(), email: body.email.trim() },
+  });
+}
+
+async function sendPasswordReset(email: string): Promise<string> {
+  const result = await apiRequest<{ message: string }>("/auth/password-reset", {
+    method: "POST",
+    body: { email: email.trim() },
+  });
+  return result.message;
+}
+
+function sendSignOut(): Promise<unknown> {
+  return apiRequest("/auth/sign-out", { method: "POST" });
+}
+
+function sendUpdateUser(body: UpdateUserBody): Promise<AuthUser> {
+  return apiRequest("/auth/update-user", { method: "PUT", body });
+}
 
 type AuthContextValue = {
   user: AuthUser | null;

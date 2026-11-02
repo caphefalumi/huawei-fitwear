@@ -3,7 +3,7 @@ import { useState } from "react";
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 
 import { Pressable } from "@/components/pressable";
-import { AuthColors } from "./tokens";
+import { Palette as AuthColors } from "@/constants/palette";
 
 type AuthFieldProps = {
   label: string;

@@ -1,4 +1,4 @@
-import type { AuthenticationSession } from "../models/authentication";
+import type { AuthenticationSession } from "./auth-store";
 
 export function isLoggedIn(
   session: AuthenticationSession | null | undefined,
