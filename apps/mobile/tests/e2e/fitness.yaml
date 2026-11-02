@@ -5,6 +5,8 @@ env:
 - evalScript: ${output.email = 'maestro_' + Date.now() + '_' + Math.floor(Math.random() * 1000000) + '@fitwear.dev'}
 - launchApp:
     clearState: true
+
+# 1. Register a new user
 - tapOn: "Create account"
 - tapOn: "Name"
 - inputText: "Maestro E2E"
@@ -15,10 +17,28 @@ env:
 - assertVisible: "Birth month"
 - assertVisible: "Birth day"
 - assertVisible: "Birth year"
+- tapOn: "Agree to Terms of Service and User Agreement"
 - tapOn: "Create account"
 - assertVisible: "Today"
+
+# 2. Verify Session Persistence Across App Restart
 - stopApp
 - launchApp
 - assertVisible: "Today"
+
+# 3. Sign Out
+- tapOn: "Profile"
+- tapOn: "Sign out"
+- assertVisible: "Welcome back."
+
+# 4. Login with Registered Credentials
+- tapOn: "Email"
+- inputText: ${output.email}
+- tapOn: "Password"
+- inputText: ${PASSWORD}
+- tapOn: "Log in"
+- assertVisible: "Today"
+
+# 5. Verify App Content Access
 - tapOn: "Meals"
 - assertVisible: "No meals logged yet. Add your first meal above."
