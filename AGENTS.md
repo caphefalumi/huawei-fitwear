@@ -53,7 +53,7 @@ bun lint                     # Lint mobile and backend workspaces
 ### Mobile Development Rules (`apps/mobile`)
 
 - **Installing packages**: ALWAYS use `npx expo install <package>` or `bunx expo install <package>` instead of direct package manager add. This resolves Expo SDK-compatible versions.
-- **Routing**: Use **Expo Router**. Route screens live in `apps/mobile/src/app/`. Keep feature logic in `src/features/<feature>/`, not in `src/app/`.
+- **Routing**: Use **Expo Router**. Route screens live in `apps/mobile/app/` as thin route files. Keep feature logic in `src/features/<feature>/`, not in route files.
 - **Navigation hooks**: Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
 - **Pre-commit verification**:
   ```bash
