@@ -4,6 +4,11 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - "apps/backend/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/backend-ci.yml"
   merge_group:
     types:
       - checks_requested
@@ -18,43 +23,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  changes:
-    name: Detect backend changes
-    runs-on: ubuntu-latest
-    outputs:
-      backend: ${{ steps.manual_scope.outputs.backend || steps.merge_scope.outputs.backend || steps.filter.outputs.backend }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - name: Detect changed paths
-        id: filter
-        if: github.event_name == 'pull_request'
-        uses: dorny/paths-filter@v3
-        with:
-          token: ${{ github.token }}
-          filters: |
-            backend:
-              - 'apps/backend/**'
-              - 'package.json'
-              - 'bun.lock'
-              - '.github/workflows/**'
-      - name: Run backend suite when manually dispatched
-        id: manual_scope
-        if: github.event_name == 'workflow_dispatch'
-        run: echo "backend=true" >> "$GITHUB_OUTPUT"
-
-      - name: Run backend suite for merge group
-        id: merge_scope
-        if: github.event_name == 'merge_group'
-        run: echo "backend=true" >> "$GITHUB_OUTPUT"
-
   backend:
-    name: Backend tests
-    needs: changes
-    if: needs.changes.outputs.backend == 'true'
+    name: Backend checks
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -85,24 +55,3 @@ jobs:
 
       - name: Run backend unit and integration tests
         run: bun run --cwd apps/backend test:all
-
-  required:
-    name: Backend checks
-    if: always()
-    needs: [changes, backend]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Fail if backend checks failed
-        if: >-
-          ${{
-            needs.changes.result != 'success' ||
-            (needs.backend.result != 'success' && needs.backend.result != 'skipped')
-          }}
-        run: exit 1
-      - name: Pass when backend checks succeed or are unaffected
-        if: >-
-          ${{
-            needs.changes.result == 'success' &&
-            (needs.backend.result == 'success' || needs.backend.result == 'skipped')
-          }}
-        run: echo "Backend checks passed or were not affected."
