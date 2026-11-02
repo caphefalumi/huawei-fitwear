@@ -186,7 +186,7 @@ Profile editing follows the grouped field/value pattern documented by [Apple Hea
 
 The keyboard controller contains native code: rebuild the development app after installing dependencies (`bun run build:android`, or `bun run build:ios` on macOS); restarting Metro or applying an OTA update alone is insufficient. It is not available in Expo Go. On a device, verify the sheet follows the keyboard during both opening and closing, confirm/cancel remain reachable, and opening sex selection after a height edit leaves no keyboard visible. Check Reduce Motion and the first keyboard appearance as well as repeated edits.
 
-Guidance used: [Expo native UI](https://github.com/expo/skills), [Emil Kowalski's Expo motion/accessibility](https://github.com/emilkowalski/skills), [Appllama native design](https://github.com/Appllama/appllama-skills), and [Hallmark's accessibility floor](https://github.com/Nutlope/hallmark). Web-only CSS rules are not applied to native screens.
+Guidance used: [Expo skills](https://github.com/expo/skills), [Emil Kowalski's motion/accessibility](https://github.com/emilkowalski/skills), and [Appllama native design](https://github.com/Appllama/appllama-skills). Web-only CSS rules are not applied to native screens.
 
 Before release, check an installed development build with TalkBack and VoiceOver: traverse each tab, change profile choices/frequency, dismiss sheets, search/select/edit/delete meal items, and edit/delete workout sets. Repeat at the largest system text size on a small phone and with Reduce Motion enabled. Component tests cannot establish native focus order, spoken output, or visual clipping.
 
