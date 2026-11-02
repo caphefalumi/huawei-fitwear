@@ -118,23 +118,28 @@ bun run web
 
 ```text
 apps/mobile/
+├── app/                     # Expo Router route files (thin re-exports only)
+│   ├── (auth)/              # Authentication routes (/ and /sign-up)
+│   ├── (tabs)/              # Primary bottom tabs (home, meals, workout, profile)
+│   ├── _layout.tsx          # Root layout and global providers
+│   └── *.tsx                # Modal and standalone screen routes
 ├── src/
-│   ├── app/                 # Expo Router route files
-│   ├── components/          # Reusable UI elements and themed components
-│   ├── constants/           # Theme palettes and style tokens
-│   ├── features/             # Domain features; screens and state stay together
-│   │   ├── auth/              # Authentication UI, API, session state, models and helpers
-│   │   ├── ble/               # Watch BLE integration
-│   │   ├── camera/            # Camera and library image selection
-│   │   ├── health/            # Health and recovery state
-│   │   ├── home/              # Home, nutrition and progress UI
-│   │   ├── meals/             # Meal logging, history and detail UI
-│   │   ├── profile/           # Profile UI and settings
-│   │   ├── recovery/          # Recovery UI
-│   │   └── workout/           # Workout plans and sessions
-│   ├── hooks/                 # Custom hooks (color scheme, responsive state)
-│   ├── lib/                   # Shared API client
-│   └── types/                 # Shared TypeScript declarations
+│   ├── components/          # Shared, feature-agnostic UI (ui/ primitives, layout)
+│   ├── constants/           # Palettes and compatibility aliases
+│   ├── features/            # Vertical slices (domain UI, API, store, utils)
+│   │   ├── auth/            # Authentication UI, API, session store, types, utils
+│   │   ├── ble/             # Watch BLE integration
+│   │   ├── camera/          # Camera and library image selection
+│   │   ├── health/          # Health and recovery state
+│   │   ├── home/            # Home, nutrition and progress UI
+│   │   ├── meals/           # Meal logging, history and detail UI
+│   │   ├── profile/         # Profile UI and sheets
+│   │   ├── recovery/        # Recovery UI
+│   │   └── workout/         # Workout plans and sessions
+│   ├── hooks/               # Custom shared hooks
+│   ├── lib/                 # Shared API client and storage wrappers
+│   ├── theme/               # Design tokens (colors, spacing, radii)
+│   └── types/               # Shared TypeScript declarations
 ├── assets/                  # App icons, splash screens, and images
 ├── app.json                 # Expo configuration & plugins
 ├── package.json             # Dependencies and scripts
