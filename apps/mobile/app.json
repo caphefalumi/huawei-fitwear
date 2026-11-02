@@ -31,8 +31,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Fitwear to choose meal photos for nutrition analysis.",
-          "cameraPermission": "Allow Fitwear to photograph meals for nutrition analysis.",
+          "photosPermission": "Allow $(PRODUCT_NAME) to choose meal photos for nutrition analysis.",
+          "cameraPermission": "Allow $(PRODUCT_NAME) to photograph meals for nutrition analysis.",
           "microphonePermission": false
         }
       ],

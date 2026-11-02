@@ -16,19 +16,11 @@ Testing uses the `jest-expo` preset. `flow-parser` is pinned through an override
 
 ---
 
-## Download & Install Expo Go
+## Run on a Device
 
-Test and run the application on your physical device without installing Android Studio or Xcode:
+This app requires a custom development build: `react-native-ble-plx` and `react-native-keyboard-controller` use native code that Expo Go does not include. Expo Go cannot load the full app. Rebuild and reinstall the development app whenever native dependencies or plugins change.
 
-The BLE integration requires a development build rather than Expo Go. Use the native build commands below for the full application, including its configured native plugins.
-
-1. **Install Expo Go on your phone**:
-   - **Android**: Download [Expo Go on Google Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent) (or get the APK directly from [expo.dev/tools#client](https://expo.dev/tools#client)).
-   - **iOS**: Download [Expo Go on Apple App Store](https://apps.apple.com/app/expo-go/id982107779).
-
-2. **Network Requirement**:
-   - Connect your phone and development computer to the **same Wi-Fi network** (or log in to the same Expo account on CLI and mobile to sync automatically).
-
+Connect the phone and development computer to the same Wi-Fi network. If the network blocks device-to-computer connections, use Expo's tunnel mode instead.
 ---
 
 ## Expo Account & Authentication
@@ -80,21 +72,13 @@ bun install
 
 ### 2. Start the Development Server
 
+From the repository root, start Metro for the installed custom development build:
+
 ```bash
-cd apps/mobile
 bun start
 ```
 
-### 3. Open in Expo Go
-
-- **Android**: Open the **Expo Go** app, tap **Scan QR code**, and scan the QR code displayed in your terminal.
-- **iOS**: Open the native **Camera** app, point it at the terminal QR code, and tap the prompt to open in **Expo Go**.
-
-> **Note**: If your phone cannot reach your computer over local Wi-Fi, run Metro in tunnel mode:
->
-> ```bash
-> bunx expo start --tunnel
-> ```
+Open the project from the development build, not Expo Go. If the phone cannot reach Metro over the local network, run `bun run start:tunnel` instead. Do not leave `CI=true` set for interactive development; it disables Metro's file watching and Fast Refresh.
 
 ---
 
