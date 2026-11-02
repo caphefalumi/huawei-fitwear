@@ -24,9 +24,11 @@ export function SectionHeading({
 }) {
   return (
     <View style={styles.headingRow}>
-      <Text style={styles.headingText}>{title}</Text>
+      <Text accessibilityRole="header" style={styles.headingText}>
+        {title}
+      </Text>
       {actionLabel && onPress ? (
-        <Pressable onPress={onPress} hitSlop={10}>
+        <Pressable accessibilityLabel={`${actionLabel}, ${title}`} onPress={onPress} hitSlop={10}>
           <Text style={styles.headingAction}>{actionLabel}</Text>
         </Pressable>
       ) : null}
@@ -36,8 +38,13 @@ export function SectionHeading({
 
 export function BackHeader({ label, onPress }: { label: string; onPress: () => void }) {
   return (
-    <Pressable style={styles.back} onPress={onPress} hitSlop={10}>
-      <Image source={icons.back} style={styles.backIcon} contentFit="contain" />
+    <Pressable
+      accessibilityLabel={`Back to ${label}`}
+      style={styles.back}
+      onPress={onPress}
+      hitSlop={10}
+    >
+      <Image accessible={false} source={icons.back} style={styles.backIcon} contentFit="contain" />
       <Text style={styles.backLabel}>{label}</Text>
     </Pressable>
   );
@@ -58,7 +65,11 @@ export function MacroBar({
 }) {
   const fill = target > 0 ? Math.max(0, Math.min(1, value / target)) : 0;
   return (
-    <View style={styles.macro}>
+    <View
+      accessible
+      accessibilityLabel={`${label}: ${value} of ${target} ${unit === "g" ? "grams" : unit}${note ? `. ${note}` : ""}`}
+      style={styles.macro}
+    >
       <View style={styles.macroRow}>
         <Text style={styles.macroLabel}>{label}</Text>
         <Text style={styles.macroValue}>
@@ -84,11 +95,14 @@ const styles = StyleSheet.create({
   },
   headingRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     alignItems: "center",
     justifyContent: "space-between",
   },
   headingText: {
     fontSize: 17,
+    flexShrink: 1,
     fontWeight: "600",
     color: C.text,
   },
@@ -108,6 +122,7 @@ const styles = StyleSheet.create({
   },
   backLabel: {
     fontSize: 13,
+    flexShrink: 1,
     color: C.accent,
   },
   macro: {
@@ -115,6 +130,8 @@ const styles = StyleSheet.create({
   },
   macroRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
     justifyContent: "space-between",
   },
   macroLabel: {

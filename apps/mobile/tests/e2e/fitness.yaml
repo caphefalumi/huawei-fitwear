@@ -12,10 +12,9 @@ env:
 - inputText: ${output.email}
 - tapOn: "Password"
 - inputText: ${PASSWORD}
-- tapOn: "Date of birth"
-- inputText: "1994-04-12"
-- hideKeyboard
-- tapOn: "Agree to Terms of Service and User Agreement"
+- assertVisible: "Birth month"
+- assertVisible: "Birth day"
+- assertVisible: "Birth year"
 - tapOn: "Create account"
 - assertVisible: "Today"
 - stopApp

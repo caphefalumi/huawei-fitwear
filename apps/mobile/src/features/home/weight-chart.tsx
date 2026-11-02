@@ -14,8 +14,10 @@ export function WeightChart({ weights }: { weights: number[] }) {
   const [width, setWidth] = useState(0);
   if (!weights.length) return <Text style={styles.axisLabel}>No weight logs in this period.</Text>;
 
-  const top = Math.ceil(Math.max(...weights));
-  const bottom = Math.min(Math.floor(Math.min(...weights)), top - 1);
+  const maximum = Math.max(...weights);
+  const minimum = Math.min(...weights);
+  const top = Math.ceil(maximum);
+  const bottom = Math.min(Math.floor(minimum), top - 1);
   const axis = [top, (top + bottom) / 2, bottom];
 
   const points = weights.map((weight, index) => ({
@@ -25,8 +27,15 @@ export function WeightChart({ weights }: { weights: number[] }) {
   const last = points[points.length - 1];
 
   return (
-    <View style={styles.row}>
+    <View
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={`Weight chart, ${weights.length} ${weights.length === 1 ? "log" : "logs"} in chronological order. First ${weights[0].toFixed(1)} kilograms, latest ${weights[weights.length - 1].toFixed(1)} kilograms. Lowest ${minimum.toFixed(1)}, highest ${maximum.toFixed(1)} kilograms.`}
+      style={styles.row}
+    >
       <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
         style={styles.chart}
         onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)}
       >
@@ -60,7 +69,11 @@ export function WeightChart({ weights }: { weights: number[] }) {
         ) : null}
       </View>
 
-      <View style={styles.axis}>
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={styles.axis}
+      >
         {axis.map((value) => (
           <Text key={value} style={styles.axisLabel}>
             {value.toFixed(1)}
@@ -94,8 +107,8 @@ const styles = StyleSheet.create({
     backgroundColor: C.border,
   },
   axis: {
-    width: 30,
-    height: CHART_HEIGHT,
+    minWidth: 30,
+    minHeight: CHART_HEIGHT,
     justifyContent: "space-between",
     alignItems: "flex-end",
     paddingVertical: GRID_INSET - 6,

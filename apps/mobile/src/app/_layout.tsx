@@ -3,12 +3,14 @@ import * as SplashScreen from "expo-splash-screen";
 import { type PropsWithChildren } from "react";
 import { ActivityIndicator, useColorScheme, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import { AuthProvider, useAuth } from "@/features/auth/auth-store";
 import { HealthProvider } from "@/features/health/health-store";
 import { MealsProvider } from "@/features/meals/meals-store";
 import { WorkoutProvider } from "@/features/workout/workout-store";
+import { APP_ROUTES } from "@/features/auth/constants/routes";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -18,7 +20,9 @@ export default function RootLayout() {
     <AuthProvider>
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
         <GestureHandlerRootView style={{ flex: 1 }}>
-          <RootNavigator />
+          <KeyboardProvider>
+            <RootNavigator />
+          </KeyboardProvider>
         </GestureHandlerRootView>
       </ThemeProvider>
     </AuthProvider>
@@ -48,7 +52,7 @@ function RootNavigator() {
     <>
       <AnimatedSplashOverlay />
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Protected guard={!!user} redirectTo="/">
+        <Stack.Protected guard={!!user} redirectTo={APP_ROUTES.login}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="nutrition" />
           <Stack.Screen name="progress" />
@@ -60,7 +64,7 @@ function RootNavigator() {
           <Stack.Screen name="review-item" />
           <Stack.Screen name="replace-food" />
         </Stack.Protected>
-        <Stack.Protected guard={!user} redirectTo="/home">
+        <Stack.Protected guard={!user} redirectTo={APP_ROUTES.home}>
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
       </Stack>

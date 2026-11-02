@@ -33,7 +33,12 @@ const glyphIcons: Record<MealGlyph, number> = {
 
 export function Glyph({ glyph, size = 19 }: { glyph: MealGlyph; size?: number }) {
   return (
-    <Image source={glyphIcons[glyph]} style={{ width: size, height: size }} contentFit="contain" />
+    <Image
+      accessible={false}
+      source={glyphIcons[glyph]}
+      style={{ width: size, height: size }}
+      contentFit="contain"
+    />
   );
 }
 
@@ -65,6 +70,7 @@ export function ValueInput({
   placeholder,
   keyboardType = "numeric",
   autoFocus,
+  label,
 }: {
   value: string;
   onChangeText: (text: string) => void;
@@ -72,10 +78,12 @@ export function ValueInput({
   placeholder?: string;
   keyboardType?: "numeric" | "default";
   autoFocus?: boolean;
+  label: string;
 }) {
   return (
     <View style={styles.inputRow}>
       <TextInput
+        accessibilityLabel={unit ? `${label}, ${unit}` : label}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -105,11 +113,13 @@ export function SearchInput({
   return (
     <Box style={styles.searchBox}>
       <Image
+        accessible={false}
         source={size > 20 ? icons.searchMd : icons.search}
         style={{ width: size, height: size }}
         contentFit="contain"
       />
       <TextInput
+        accessibilityLabel="Search food"
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -118,8 +128,13 @@ export function SearchInput({
         autoCapitalize="none"
       />
       {value.length > 0 ? (
-        <Pressable onPress={onClear} hitSlop={10}>
-          <Image source={icons.close} style={{ width: 18, height: 18 }} contentFit="contain" />
+        <Pressable accessibilityLabel="Clear food search" onPress={onClear} hitSlop={10}>
+          <Image
+            accessible={false}
+            source={icons.close}
+            style={{ width: 18, height: 18 }}
+            contentFit="contain"
+          />
         </Pressable>
       ) : null}
     </Box>
@@ -130,16 +145,19 @@ export function PrimaryButton({
   label,
   onPress,
   disabled,
+  busy,
 }: {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  busy?: boolean;
 }) {
   return (
     <Pressable
       style={[styles.primary, disabled && styles.primaryDisabled]}
       onPress={onPress}
       disabled={disabled}
+      accessibilityState={{ busy }}
     >
       <Text style={styles.primaryLabel}>{label}</Text>
     </Pressable>
@@ -165,7 +183,9 @@ export function SectionTitle({
 }) {
   return (
     <View style={styles.sectionRow}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text accessibilityRole="header" style={styles.sectionTitle}>
+        {title}
+      </Text>
       {action ? (
         onPress ? (
           <Pressable onPress={onPress} hitSlop={10}>
@@ -195,6 +215,7 @@ export function NutrientGrid({
         <Text style={styles.gridLabel}>Energy</Text>
         <Box>
           <ValueInput
+            label="Energy"
             value={values.energy}
             onChangeText={(text) => onChange("energy", text)}
             unit={units.energy}
@@ -205,6 +226,7 @@ export function NutrientGrid({
         <Text style={styles.gridLabel}>Protein</Text>
         <Box>
           <ValueInput
+            label="Protein"
             value={values.protein}
             onChangeText={(text) => onChange("protein", text)}
             unit={units.protein}
@@ -215,6 +237,7 @@ export function NutrientGrid({
         <Text style={styles.gridLabel}>Carbs</Text>
         <Box>
           <ValueInput
+            label="Carbs"
             value={values.carbs}
             onChangeText={(text) => onChange("carbs", text)}
             unit={units.carbs}
@@ -225,6 +248,7 @@ export function NutrientGrid({
         <Text style={styles.gridLabel}>Fat</Text>
         <Box>
           <ValueInput
+            label="Fat"
             value={values.fat}
             onChangeText={(text) => onChange("fat", text)}
             unit={units.fat}
@@ -248,8 +272,18 @@ export function Header({
 }) {
   return (
     <View style={styles.headerRow}>
-      <Pressable style={styles.headerBack} onPress={onBack} hitSlop={10}>
-        <Image source={icons.back} style={styles.headerBackIcon} contentFit="contain" />
+      <Pressable
+        accessibilityLabel={`Back to ${label}`}
+        style={styles.headerBack}
+        onPress={onBack}
+        hitSlop={10}
+      >
+        <Image
+          accessible={false}
+          source={icons.back}
+          style={styles.headerBackIcon}
+          contentFit="contain"
+        />
         <Text style={styles.headerLabel}>{label}</Text>
       </Pressable>
       {action && onAction ? (
@@ -307,7 +341,9 @@ const styles = StyleSheet.create({
     color: C.text,
   },
   primary: {
-    height: 52,
+    minHeight: 52,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderRadius: 14,
     backgroundColor: C.accent,
     alignItems: "center",
@@ -317,12 +353,15 @@ const styles = StyleSheet.create({
     backgroundColor: C.card,
   },
   primaryLabel: {
+    textAlign: "center",
     fontSize: 14,
     fontWeight: "600",
     color: C.onAccent,
   },
   secondary: {
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: C.border,
@@ -331,12 +370,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   secondaryLabel: {
+    textAlign: "center",
     fontSize: 14,
     fontWeight: "600",
     color: C.accent,
   },
   sectionRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     alignItems: "center",
     justifyContent: "space-between",
   },
@@ -356,7 +398,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   gridCell: {
-    width: "48%",
+    flexGrow: 1,
+    flexBasis: "45%",
+    minWidth: 130,
     gap: 6,
   },
   gridLabel: {
@@ -366,11 +410,14 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     alignItems: "center",
     justifyContent: "space-between",
   },
   headerBack: {
     flexDirection: "row",
+    flexShrink: 1,
     alignItems: "center",
     gap: 6,
   },
@@ -379,6 +426,7 @@ const styles = StyleSheet.create({
     height: 18,
   },
   headerLabel: {
+    flexShrink: 1,
     fontSize: 13,
     color: C.accent,
   },

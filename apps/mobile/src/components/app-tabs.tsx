@@ -34,8 +34,21 @@ function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
     }
 
     return (
-      <Pressable key={tab.name} style={styles.tab} onPress={handlePress}>
-        <Image source={tab.icon} style={styles.icon} contentFit="contain" tintColor={color} />
+      <Pressable
+        key={tab.name}
+        accessibilityRole="tab"
+        accessibilityLabel={tab.label}
+        accessibilityState={{ selected: active }}
+        style={styles.tab}
+        onPress={handlePress}
+      >
+        <Image
+          accessible={false}
+          source={tab.icon}
+          style={styles.icon}
+          contentFit="contain"
+          tintColor={color}
+        />
         <Text style={[styles.label, { color }]}>{tab.label}</Text>
       </Pressable>
     );
@@ -80,7 +93,8 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    height: 58,
+    minHeight: 58,
+    paddingVertical: 8,
     alignItems: "center",
     justifyContent: "center",
     gap: 4,

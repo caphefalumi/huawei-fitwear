@@ -18,6 +18,9 @@ export function RadioList<T extends string>({ options, value, onChange }: RadioL
         return (
           <Pressable
             key={option}
+            accessibilityRole="radio"
+            accessibilityLabel={option}
+            accessibilityState={{ checked: active }}
             style={[styles.row, index < options.length - 1 && styles.rowDivider]}
             onPress={() => onChange(option)}
           >
@@ -34,7 +37,8 @@ export function RadioList<T extends string>({ options, value, onChange }: RadioL
 
 const styles = StyleSheet.create({
   row: {
-    height: 52,
+    minHeight: 52,
+    paddingVertical: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -45,6 +49,7 @@ const styles = StyleSheet.create({
     borderBottomColor: C.border,
   },
   label: {
+    flexShrink: 1,
     fontSize: 15,
     color: C.text,
   },

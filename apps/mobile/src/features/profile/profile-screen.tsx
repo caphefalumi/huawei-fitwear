@@ -30,11 +30,23 @@ type RowProps = {
 
 function ProfileRow({ label, value, onPress }: RowProps) {
   return (
-    <Pressable style={styles.row} onPress={onPress} disabled={!onPress}>
+    <Pressable
+      style={styles.row}
+      accessibilityRole={onPress ? "button" : "text"}
+      accessibilityLabel={`${label}, ${value}`}
+      onPress={onPress}
+    >
       <Text style={styles.rowLabel}>{label}</Text>
       <View style={styles.rowRight}>
         <Text style={styles.rowValue}>{value}</Text>
-        <Image source={icons.chevronRight} style={styles.chevron} contentFit="contain" />
+        {onPress ? (
+          <Image
+            accessible={false}
+            source={icons.chevronRight}
+            style={styles.chevron}
+            contentFit="contain"
+          />
+        ) : null}
       </View>
     </Pressable>
   );
@@ -68,6 +80,9 @@ export function ProfileScreen() {
   } = useHealth();
   const inPeriod = recovery?.area === PERIOD_AREA;
   const [openSheet, setOpenSheet] = useState<OpenSheet>(null);
+  const [closingSheet, setClosingSheet] = useState<OpenSheet>(null);
+  const mountedSheet = openSheet ?? closingSheet;
+  const didDismiss = () => setClosingSheet(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const active = useRef(true);
@@ -78,7 +93,10 @@ export function ProfileScreen() {
       active.current = false;
     };
   }, []);
-  const close = () => setOpenSheet(null);
+  const close = () => {
+    setClosingSheet(openSheet);
+    setOpenSheet(null);
+  };
   const mutate = async (action: () => Promise<void>) => {
     if (busy.current) return;
     busy.current = true;
@@ -104,10 +122,16 @@ export function ProfileScreen() {
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
       ]}
     >
-      <Text style={styles.title}>Profile</Text>
+      <Text accessibilityRole="header" style={styles.title}>
+        Profile
+      </Text>
 
       <View style={styles.identity}>
-        <View style={styles.avatar}>
+        <View
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={styles.avatar}
+        >
           <Text style={styles.avatarText}>
             {user?.name
               ?.trim()
@@ -136,7 +160,9 @@ export function ProfileScreen() {
       {error ? <Text accessibilityRole="alert">{error}</Text> : null}
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Profile overview</Text>
+        <Text accessibilityRole="header" style={styles.sectionTitle}>
+          Profile overview
+        </Text>
         <ProfileRow
           label="Birthdate"
           value={
@@ -167,7 +193,9 @@ export function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Refine your plan</Text>
+        <Text accessibilityRole="header" style={styles.sectionTitle}>
+          Refine your plan
+        </Text>
         <ProfileRow label="Goal / target" value={plan.goal} onPress={() => setOpenSheet("goal")} />
         <ProfileRow
           label="Workout frequency"
@@ -195,6 +223,7 @@ export function ProfileScreen() {
         <Pressable
           style={[styles.periodButton, inPeriod && styles.periodButtonActive]}
           disabled={pending || loading}
+          accessibilityState={{ busy: pending }}
           onPress={() => {
             if (!inPeriod) setOpenSheet("period");
             else void mutate(() => saveRecovery(null));
@@ -208,24 +237,55 @@ export function ProfileScreen() {
       <Pressable
         style={styles.periodButton}
         disabled={pending}
+        accessibilityLabel="Sign out"
+        accessibilityState={{ busy: pending }}
         onPress={() => {
           void mutate(signOut);
         }}
       >
         <Text style={styles.periodLabel}>{pending ? "Please wait…" : "Sign out"}</Text>
       </Pressable>
-      {openSheet === "period" ? (
-        <RecoverySheet visible initialArea={PERIOD_AREA} onClose={close} />
+      {mountedSheet === "period" ? (
+        <RecoverySheet
+          visible={openSheet === "period"}
+          initialArea={PERIOD_AREA}
+          onClose={close}
+          onDismiss={didDismiss}
+        />
       ) : null}
 
-      {openSheet === "height" ? <HeightSheet visible onClose={close} /> : null}
-      {openSheet === "weight" ? <WeightSheet visible onClose={close} /> : null}
-      {openSheet === "sex" ? <SexSheet visible onClose={close} /> : null}
-      {openSheet === "goal" ? <GoalSheet visible onClose={close} /> : null}
-      {openSheet === "frequency" ? <FrequencySheet visible onClose={close} /> : null}
-      {openSheet === "activity" ? <ActivitySheet visible onClose={close} /> : null}
-      {openSheet === "target" ? <TargetWeightSheet visible onClose={close} /> : null}
-      {openSheet === "recovery" ? <RecoverySheet visible onClose={close} /> : null}
+      {mountedSheet === "height" ? (
+        <HeightSheet visible={openSheet === "height"} onClose={close} onDismiss={didDismiss} />
+      ) : null}
+      {mountedSheet === "weight" ? (
+        <WeightSheet visible={openSheet === "weight"} onClose={close} onDismiss={didDismiss} />
+      ) : null}
+      {mountedSheet === "sex" ? (
+        <SexSheet visible={openSheet === "sex"} onClose={close} onDismiss={didDismiss} />
+      ) : null}
+      {mountedSheet === "goal" ? (
+        <GoalSheet visible={openSheet === "goal"} onClose={close} onDismiss={didDismiss} />
+      ) : null}
+      {mountedSheet === "frequency" ? (
+        <FrequencySheet
+          visible={openSheet === "frequency"}
+          onClose={close}
+          onDismiss={didDismiss}
+        />
+      ) : null}
+      {mountedSheet === "activity" ? (
+        <ActivitySheet visible={openSheet === "activity"} onClose={close} onDismiss={didDismiss} />
+      ) : null}
+      {mountedSheet === "target" ? (
+        <TargetWeightSheet
+          visible={openSheet === "target"}
+          onClose={close}
+          onDismiss={didDismiss}
+        />
+      ) : null}
+      {mountedSheet === "recovery" ? (
+        <RecoverySheet visible={openSheet === "recovery"} onClose={close} onDismiss={didDismiss} />
+      ) : null}
     </ScrollView>
   );
 }
@@ -285,7 +345,9 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   row: {
-    height: 50,
+    minHeight: 50,
+    paddingVertical: 12,
+    flexWrap: "wrap",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -295,16 +357,19 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     fontSize: 13,
+    flexShrink: 1,
     fontWeight: "600",
     color: C.text,
   },
   rowRight: {
     flexDirection: "row",
+    flexShrink: 1,
     alignItems: "center",
     gap: 8,
   },
   rowValue: {
     fontSize: 14,
+    flexShrink: 1,
     fontWeight: "600",
     color: C.text,
   },
@@ -313,7 +378,8 @@ const styles = StyleSheet.create({
     height: 16,
   },
   periodButton: {
-    height: 52,
+    minHeight: 52,
+    padding: 12,
     borderRadius: 16,
     backgroundColor: C.accent,
     alignItems: "center",

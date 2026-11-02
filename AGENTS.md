@@ -41,6 +41,15 @@ bun web                      # Run mobile in browser
 bun lint                     # Lint mobile and backend workspaces
 ```
 
+### Git Workflow (Required)
+
+- **Branch automatically**: Before implementation, create a descriptive task branch such as `fix/profile-keyboard-motion`, `feat/<feature>`, or `chore/<task>`. Reuse an existing branch only when it belongs to the same task. Never implement directly on `main` or `master`.
+- **Commit and push frequently**: At each small, coherent milestone, run the relevant checks, commit the verified changes, and push immediately. Do not wait until the entire task is finished or batch all work into one final commit/push.
+- **No routine confirmation**: Creating task branches, making task-scoped commits, and pushing them are authorized by default. Use `git push -u origin HEAD` for the first push and `git push` afterward.
+- **Preserve unrelated work**: Stage only changes belonging to the current task. Never discard or include unrelated user changes in a commit.
+- **Report blockers honestly**: If verification, authentication, or pushing fails, resolve what is actionable and report the remaining blocker; never claim a commit or push succeeded without confirmation.
+- **No destructive Git operations**: Do not force-push or merge into the default branch unless explicitly requested.
+
 ### Mobile Development Rules (`apps/mobile`)
 
 - **Installing packages**: ALWAYS use `npx expo install <package>` or `bunx expo install <package>` instead of direct package manager add. This resolves Expo SDK-compatible versions.

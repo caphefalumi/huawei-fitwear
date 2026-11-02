@@ -128,8 +128,14 @@ export function WorkoutSessionPanel({
 
   return (
     <View style={styles.section}>
-      <Text style={styles.title}>{session ? session.sessionTitle : "Workout session"}</Text>
-      {loading ? <Text style={styles.muted}>Loading saved sets…</Text> : null}
+      <Text accessibilityRole="header" style={styles.title}>
+        {session ? session.sessionTitle : "Workout session"}
+      </Text>
+      {loading ? (
+        <Text accessibilityState={{ busy: true }} style={styles.muted}>
+          Loading saved sets…
+        </Text>
+      ) : null}
       {session ? (
         <Text style={styles.muted}>
           Started {new Date(session.startedAt).toLocaleString()}
@@ -147,6 +153,7 @@ export function WorkoutSessionPanel({
         <Pressable
           style={styles.secondary}
           disabled={busy}
+          accessibilityState={{ busy }}
           onPress={() =>
             void perform(async () => {
               await loadSession(id);
@@ -158,7 +165,7 @@ export function WorkoutSessionPanel({
       ) : null}
       {visibleSets.map((set) => (
         <Card key={set.id}>
-          <Text style={styles.text}>
+          <Text accessibilityRole="header" style={styles.text}>
             {set.exercise.name} · Set {set.setIndex}
           </Text>
           <Text style={styles.muted}>
@@ -167,10 +174,16 @@ export function WorkoutSessionPanel({
           </Text>
           {!session?.completedAt ? (
             <View style={styles.row}>
-              <Pressable disabled={busy} onPress={() => openEditor(set.exercise, set)}>
+              <Pressable
+                accessibilityLabel={`Edit ${set.exercise.name}, set ${set.setIndex}`}
+                disabled={busy}
+                onPress={() => openEditor(set.exercise, set)}
+              >
                 <Text style={styles.text}>Edit set</Text>
               </Pressable>
               <Pressable
+                accessibilityLabel={`Delete ${set.exercise.name}, set ${set.setIndex}`}
+                accessibilityState={{ busy }}
                 disabled={busy}
                 onPress={() =>
                   void perform(async () => {
@@ -200,6 +213,7 @@ export function WorkoutSessionPanel({
         <Pressable
           style={styles.primary}
           disabled={busy || exercises.length === 0}
+          accessibilityState={{ busy }}
           onPress={() =>
             void perform(async () => {
               const started = await startSession(title, split);
@@ -221,13 +235,14 @@ export function WorkoutSessionPanel({
           <Pressable
             style={styles.primary}
             disabled={busy || loading}
+            accessibilityState={{ busy }}
             onPress={() =>
               void perform(async () => {
                 await finishSession(session.id);
               })
             }
           >
-            <Text style={styles.primaryText}>{busy ? "Saving…" : "Finish workout"}</Text>
+            <Text style={styles.primaryText}>Finish workout</Text>
           </Pressable>
           <Pressable
             style={styles.secondary}
@@ -271,6 +286,7 @@ export function WorkoutSessionPanel({
               value={weight}
               onChangeText={setWeight}
               editable={!busy}
+              accessibilityState={{ disabled: busy }}
             />
           </SheetField>
         ) : null}
@@ -282,6 +298,7 @@ export function WorkoutSessionPanel({
             value={reps}
             onChangeText={setReps}
             editable={!busy}
+            accessibilityState={{ disabled: busy }}
           />
         </SheetField>
         {error ? (
@@ -289,8 +306,13 @@ export function WorkoutSessionPanel({
             {error}
           </Text>
         ) : null}
-        <Pressable style={styles.primary} disabled={busy} onPress={() => void submitSet()}>
-          <Text style={styles.primaryText}>{busy ? "Saving…" : "Save set"}</Text>
+        <Pressable
+          style={styles.primary}
+          disabled={busy}
+          accessibilityState={{ busy }}
+          onPress={() => void submitSet()}
+        >
+          <Text style={styles.primaryText}>Save set</Text>
         </Pressable>
         <Pressable style={styles.secondary} disabled={busy} onPress={() => setEditor(null)}>
           <Text style={styles.text}>Keep workout, discard edits</Text>
@@ -314,6 +336,7 @@ export function WorkoutSessionPanel({
         <Pressable
           style={styles.primary}
           disabled={busy}
+          accessibilityState={{ busy }}
           onPress={() =>
             void perform(async () => {
               if (!id) return;
@@ -323,7 +346,7 @@ export function WorkoutSessionPanel({
             })
           }
         >
-          <Text style={styles.primaryText}>{busy ? "Deleting…" : "Delete workout"}</Text>
+          <Text style={styles.primaryText}>Delete workout</Text>
         </Pressable>
         <Pressable style={styles.secondary} disabled={busy} onPress={() => setConfirmCancel(false)}>
           <Text style={styles.text}>Keep workout</Text>
@@ -335,12 +358,12 @@ export function WorkoutSessionPanel({
 
 const styles = StyleSheet.create({
   section: { gap: 12 },
-  row: { flexDirection: "row", gap: 24, paddingTop: 12 },
+  row: { flexDirection: "row", flexWrap: "wrap", gap: 24, paddingTop: 12 },
   title: { fontSize: 18, fontWeight: "600", color: C.text },
   text: { fontSize: 14, color: C.text },
   muted: { fontSize: 12, lineHeight: 18, color: C.textMuted },
   error: { fontSize: 13, color: C.accent },
-  input: { fontSize: 18, color: C.text, minHeight: 44 },
+  input: { fontSize: 18, color: C.text, minHeight: 48, paddingVertical: 8 },
   primary: {
     minHeight: 52,
     padding: 14,
@@ -351,7 +374,7 @@ const styles = StyleSheet.create({
   },
   primaryText: { fontSize: 15, fontWeight: "600", color: C.onAccent },
   secondary: {
-    minHeight: 44,
+    minHeight: 48,
     padding: 12,
     borderRadius: 14,
     borderWidth: 1,

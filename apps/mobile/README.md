@@ -16,19 +16,11 @@ Testing uses the `jest-expo` preset. `flow-parser` is pinned through an override
 
 ---
 
-## Download & Install Expo Go
+## Run on a Device
 
-Test and run the application on your physical device without installing Android Studio or Xcode:
+This app requires a custom development build: `react-native-ble-plx` and `react-native-keyboard-controller` use native code that Expo Go does not include. Expo Go cannot load the full app. Rebuild and reinstall the development app whenever native dependencies or plugins change.
 
-The BLE integration requires a development build rather than Expo Go. Use the native build commands below for the full application, including its configured native plugins.
-
-1. **Install Expo Go on your phone**:
-   - **Android**: Download [Expo Go on Google Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent) (or get the APK directly from [expo.dev/tools#client](https://expo.dev/tools#client)).
-   - **iOS**: Download [Expo Go on Apple App Store](https://apps.apple.com/app/expo-go/id982107779).
-
-2. **Network Requirement**:
-   - Connect your phone and development computer to the **same Wi-Fi network** (or log in to the same Expo account on CLI and mobile to sync automatically).
-
+Connect the phone and development computer to the same Wi-Fi network. If the network blocks device-to-computer connections, use Expo's tunnel mode instead.
 ---
 
 ## Expo Account & Authentication
@@ -80,21 +72,13 @@ bun install
 
 ### 2. Start the Development Server
 
+From the repository root, start Metro for the installed custom development build:
+
 ```bash
-cd apps/mobile
 bun start
 ```
 
-### 3. Open in Expo Go
-
-- **Android**: Open the **Expo Go** app, tap **Scan QR code**, and scan the QR code displayed in your terminal.
-- **iOS**: Open the native **Camera** app, point it at the terminal QR code, and tap the prompt to open in **Expo Go**.
-
-> **Note**: If your phone cannot reach your computer over local Wi-Fi, run Metro in tunnel mode:
->
-> ```bash
-> bunx expo start --tunnel
-> ```
+Open the project from the development build, not Expo Go. If the phone cannot reach Metro over the local network, run `bun run start:tunnel` instead. Do not leave `CI=true` set for interactive development; it disables Metro's file watching and Fast Refresh.
 
 ---
 
@@ -135,11 +119,22 @@ bun run web
 ```text
 apps/mobile/
 ├── src/
-│   ├── app/                 # Expo Router auth, protected tabs and detail routes
+│   ├── app/                 # Expo Router route files
 │   ├── components/          # Reusable UI elements and themed components
 │   ├── constants/           # Theme palettes and style tokens
-│   ├── hooks/               # Custom hooks (color scheme, responsive state)
-│   └── features/            # Auth, meals, health, home, profile, recovery, workouts and BLE
+│   ├── features/             # Domain features; screens and state stay together
+│   │   ├── auth/              # Authentication UI, API, session state, models and helpers
+│   │   ├── ble/               # Watch BLE integration
+│   │   ├── camera/            # Camera and library image selection
+│   │   ├── health/            # Health and recovery state
+│   │   ├── home/              # Home, nutrition and progress UI
+│   │   ├── meals/             # Meal logging, history and detail UI
+│   │   ├── profile/           # Profile UI and settings
+│   │   ├── recovery/          # Recovery UI
+│   │   └── workout/           # Workout plans and sessions
+│   ├── hooks/                 # Custom hooks (color scheme, responsive state)
+│   ├── lib/                   # Shared API client
+│   └── types/                 # Shared TypeScript declarations
 ├── assets/                  # App icons, splash screens, and images
 ├── app.json                 # Expo configuration & plugins
 ├── package.json             # Dependencies and scripts
@@ -165,3 +160,29 @@ bun run lint
 The single Maestro flow in `tests/e2e/fitness.yaml` runs nightly at 02:00 UTC and on manual workflow dispatch; pull-request mobile checks run Jest unit tests without the emulator build. It signs up, restarts the app, verifies the session is restored, and checks the backend-backed empty meals state. It requires Maestro CLI 2.12.0, Java 17+, an Android emulator, and a local Wrangler backend with D1 migrations applied. CI provisions the backend, native build, emulator, and Maestro CLI.
 
 Android E2E on the Ubuntu CI runner requires KVM hardware acceleration. The workflow grants access to `/dev/kvm` before building the APK and requires `-accel on`, so unavailable acceleration fails the job instead of silently falling back to slow software emulation.
+
+### Web development
+
+Auth routes use `Slot` on web so inactive forms are unmounted rather than hidden with retained focus. Native auth navigation keeps its stack.
+
+If Metro reports `Requiring unknown module` from a server-render bundle, stop the existing server and run `bun run web --clear` from `apps/mobile`, then reload the browser. When `CI=true`, Metro disables file watching; unset it for normal interactive development.
+
+Password fields on login and sign-up have accessible Show/Hide controls; toggling visibility preserves the entered value and respects disabled fields. The nutrition ring uses an explicit SVG rotation around its center instead of the library's web `origin` attribute conversion.
+
+Save, add, and delete actions keep their labels unchanged while pending. Pending guards still prevent duplicate submissions, and failures remain visible; initial data-loading indicators are unchanged.
+
+### Accessibility
+
+Shared pressables expose button semantics and disabled state, default to a 48×48 minimum target, and use opacity-only feedback. Native and web tabs expose their selected state. Text-bearing controls use minimum heights and padding so system font scaling can expand them; the frequency wheel scales its row height and offers Increase/Decrease buttons plus screen-reader adjustment actions.
+
+Sheets expose a named Close button, a heading, modal accessibility scope, and the VoiceOver escape gesture; sheet transitions respect Reduce Motion. Meal type and profile choices announce checked state. Food and workout actions include item/set context, and charts provide spoken summaries instead of relying on shapes or colors. Muted text uses `#68625C` for at least 5:1 contrast against the app's light surfaces.
+
+Profile editing follows the grouped field/value pattern documented by [Apple Health Details](https://support.apple.com/en-us/105002) and the field-specific edit/save flow documented by [MyFitnessPal](https://support.myfitnesspal.com/hc/en-us/articles/360032272452-How-to-change-your-original-profile-information). Height uses a decimal keyboard; sex uses choices without text entry. Shared sheets use `react-native-keyboard-controller`'s `KeyboardAvoidingView` with `padding` and automatic modal offsets, driven by keyboard animation progress rather than Android's late `keyboardDidShow` event. The root `KeyboardProvider` supplies native frame updates and preloads the keyboard. Overflowing content remains scrollable, idle keyboards are not dismissed when opening a sheet, and keyboard focus is cleared when the sheet closes.
+
+The keyboard controller contains native code: rebuild the development app after installing dependencies (`bun run build:android`, or `bun run build:ios` on macOS); restarting Metro or applying an OTA update alone is insufficient. It is not available in Expo Go. On a device, verify the sheet follows the keyboard during both opening and closing, confirm/cancel remain reachable, and opening sex selection after a height edit leaves no keyboard visible. Check Reduce Motion and the first keyboard appearance as well as repeated edits.
+
+Guidance used: [Expo native UI](https://github.com/expo/skills), [Emil Kowalski's Expo motion/accessibility](https://github.com/emilkowalski/skills), [Appllama native design](https://github.com/Appllama/appllama-skills), and [Hallmark's accessibility floor](https://github.com/Nutlope/hallmark). Web-only CSS rules are not applied to native screens.
+
+Before release, check an installed development build with TalkBack and VoiceOver: traverse each tab, change profile choices/frequency, dismiss sheets, search/select/edit/delete meal items, and edit/delete workout sets. Repeat at the largest system text size on a small phone and with Reduce Motion enabled. Component tests cannot establish native focus order, spoken output, or visual clipping.
+
+Shared sheets use a coordinated 220 ms ease-out opening (a short 24-point rise plus fade) and a faster 160 ms closing transition. The scrim fades with the card and the modal unmounts only when the exit completes, so there is no trailing backdrop. Reduce Motion skips both transitions. Profile and recovery callers retain their draft only through the exit, then unmount so reopening starts fresh. Saving still waits for success before dismissing, so failures remain visible.

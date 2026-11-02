@@ -63,7 +63,9 @@ export function ProgressScreen() {
     >
       <BackHeader label="Overview" onPress={() => router.back()} />
 
-      <Text style={styles.title}>Your progress.</Text>
+      <Text accessibilityRole="header" style={styles.title}>
+        Your progress.
+      </Text>
       {loading ? <Text style={styles.cardNote}>Loading weight logs…</Text> : null}
       {error ? (
         <Pressable
@@ -81,6 +83,8 @@ export function ProgressScreen() {
           return (
             <Pressable
               key={item}
+              accessibilityLabel={item === "3 mo" ? "Last 3 months" : `Last ${item.toLowerCase()}`}
+              accessibilityState={{ selected: active }}
               style={[styles.segment, active && styles.segmentActive]}
               onPress={() => setRange(item)}
             >
@@ -92,7 +96,9 @@ export function ProgressScreen() {
 
       <Card>
         <View style={styles.weightHeader}>
-          <Text style={styles.cardTitle}>Weight</Text>
+          <Text accessibilityRole="header" style={styles.cardTitle}>
+            Weight
+          </Text>
           <View style={styles.pill}>
             <Text style={styles.pillText}>{data.delta}</Text>
           </View>
@@ -121,7 +127,9 @@ export function ProgressScreen() {
 
       <Card>
         <View style={styles.weightHeader}>
-          <Text style={styles.cardTitle}>Training activity</Text>
+          <Text accessibilityRole="header" style={styles.cardTitle}>
+            Training activity
+          </Text>
           <Text style={styles.cardNote}>{statsLoading ? "Loading…" : data.sessionsNote}</Text>
         </View>
         {statsLoading ? <Text style={styles.cardNote}>Loading training activity…</Text> : null}
@@ -134,14 +142,21 @@ export function ProgressScreen() {
         {stats ? (
           <View style={styles.bars}>
             {data.bars.map((week) => (
-              <View key={week.label} style={styles.barColumn}>
+              <View
+                accessible
+                accessibilityLabel={`Period starting ${week.label}: ${week.sessions} completed sessions`}
+                key={week.label}
+                style={styles.barColumn}
+              >
                 <View
                   style={[
                     styles.bar,
                     { height: week.sessions ? 12 + (week.sessions / maxSessions) * 48 : 2 },
                   ]}
                 />
-                <Text style={styles.dateLabel}>{week.label}</Text>
+                <Text accessible={false} style={styles.dateLabel}>
+                  {week.label}
+                </Text>
               </View>
             ))}
           </View>
@@ -159,7 +174,9 @@ export function ProgressScreen() {
       </Card>
 
       <Card>
-        <Text style={styles.cardTitle}>Body composition</Text>
+        <Text accessibilityRole="header" style={styles.cardTitle}>
+          Body composition
+        </Text>
         <Text style={styles.cardNote}>
           No body-composition measurements are available. Weight logs do not measure body fat or
           muscle mass.
@@ -167,7 +184,9 @@ export function ProgressScreen() {
       </Card>
 
       <Card>
-        <Text style={styles.cardTitle}>Accuracy &amp; personalization</Text>
+        <Text accessibilityRole="header" style={styles.cardTitle}>
+          Accuracy &amp; personalization
+        </Text>
         <Text style={styles.cardNote}>
           Basic body info gives you a starting nutrition estimate. Adding daily activity and goals
           helps personalize your plan. More details live in Profile.
@@ -196,14 +215,18 @@ const styles = StyleSheet.create({
   },
   segments: {
     flexDirection: "row",
+    flexWrap: "wrap",
     backgroundColor: C.card,
     borderRadius: 12,
     padding: 4,
     gap: 4,
   },
   segment: {
-    flex: 1,
-    height: 32,
+    flexGrow: 1,
+    flexBasis: 60,
+    minHeight: 48,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
     borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
@@ -213,6 +236,7 @@ const styles = StyleSheet.create({
   },
   segmentLabel: {
     fontSize: 12,
+    textAlign: "center",
     color: C.textMuted,
   },
   segmentLabelActive: {
@@ -221,12 +245,14 @@ const styles = StyleSheet.create({
   },
   weightHeader: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
   },
   cardTitle: {
     fontSize: 15,
+    flexShrink: 1,
     fontWeight: "600",
     color: C.text,
   },
@@ -248,6 +274,8 @@ const styles = StyleSheet.create({
   },
   dates: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     justifyContent: "space-between",
   },
   dateLabel: {
@@ -280,6 +308,7 @@ const styles = StyleSheet.create({
   durationRow: {
     flexDirection: "row",
     alignItems: "baseline",
+    flexWrap: "wrap",
     gap: 8,
   },
   link: {
