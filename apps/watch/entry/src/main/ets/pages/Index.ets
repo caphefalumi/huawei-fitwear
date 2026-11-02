@@ -15,6 +15,17 @@ struct Index {
         .fontSize(12)
         .fontColor('#94A3B8')
 
+      // ── BLE IMU Sync Demo (combined) ────────────────────────────────────────
+      Button('BLE Sync Demo')
+        .width('70%')
+        .height(36)
+        .fontSize(14)
+        .fontColor('#FFFFFF')
+        .backgroundColor('#7C3AED')
+        .onClick(() => {
+          router.pushUrl({ url: 'features/sync/BleSyncDemoPage' });
+        })
+
       Button('Bluetooth')
         .width('70%')
         .height(36)

@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -216,6 +217,15 @@ export function ProfileScreen() {
           label="Recovery plan"
           value={recovery?.area ?? "None"}
           onPress={() => setOpenSheet("recovery")}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Connected devices</Text>
+        <ProfileRow
+          label="Huawei Watch (BLE Sync)"
+          value="Telemetry & Sync"
+          onPress={() => router.push("/ble-sync" as never)}
         />
       </View>
 
