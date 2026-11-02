@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 
-import { MealDetailScreen } from "@/features/meals/meal-detail-screen";
+import { MealDetailScreen } from "@/features/meals";
 
 export default function MealRoute() {
   const { log } = useLocalSearchParams<{ log?: string }>();

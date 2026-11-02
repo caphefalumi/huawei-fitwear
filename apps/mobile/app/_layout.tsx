@@ -6,10 +6,10 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
-import { APP_ROUTES, AuthProvider, useAuth } from "@/features/auth/auth-store";
-import { HealthProvider } from "@/features/health/health-store";
-import { MealsProvider } from "@/features/meals/meals-store";
-import { WorkoutProvider } from "@/features/workout/workout-store";
+import { APP_ROUTES, AuthProvider, useAuth } from "@/features/auth";
+import { HealthProvider } from "@/features/health";
+import { MealsProvider } from "@/features/meals";
+import { WorkoutProvider } from "@/features/workout";
 
 SplashScreen.preventAutoHideAsync();
 
