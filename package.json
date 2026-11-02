@@ -5,6 +5,7 @@
     "apps/mobile",
     "apps/backend"
   ],
+  "main": "expo-router/entry",
   "scripts": {
     "start": "bun run --cwd apps/mobile start",
     "start:tunnel": "bun run --cwd apps/mobile start:tunnel",

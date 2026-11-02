@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -219,6 +220,17 @@ export function ProfileScreen() {
         />
       </View>
 
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Connected devices</Text>
+        <Pressable
+          style={styles.syncTestButton}
+          accessibilityLabel="BLE Sync Test"
+          onPress={() => router.push("/ble-sync" as never)}
+        >
+          <Text style={styles.syncTestButtonLabel}>BLE Sync Test</Text>
+        </Pressable>
+      </View>
+
       {sex === "Female" ? (
         <Pressable
           style={[styles.periodButton, inPeriod && styles.periodButtonActive]}
@@ -376,6 +388,21 @@ const styles = StyleSheet.create({
   chevron: {
     width: 16,
     height: 16,
+  },
+  syncTestButton: {
+    minHeight: 50,
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: C.card,
+    borderWidth: 1,
+    borderColor: C.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  syncTestButtonLabel: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: C.text,
   },
   periodButton: {
     minHeight: 52,

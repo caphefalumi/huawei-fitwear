@@ -61,7 +61,7 @@ export function useWatchBle(options: UseWatchBleOptions = {}) {
         byteLength,
         timestamp: nowTimeLabel(),
       },
-      ...prev,
+      ...prev.slice(0, 49),
     ]);
   }, []);
 
@@ -149,10 +149,21 @@ export function useWatchBle(options: UseWatchBleOptions = {}) {
   );
 
   const simulateWatchNotification = useCallback(
-    (rawText: string) => {
+    (rawText?: string) => {
       if (!enableSimulator) return;
-      const clean = rawText.trim();
-      if (!clean) return;
+      const clean =
+        (rawText ?? "").trim() ||
+        JSON.stringify({
+          type: "imu",
+          ax: Math.round((Math.random() * 0.4 - 0.2) * 100) / 100,
+          ay: Math.round((-9.8 + (Math.random() * 0.4 - 0.2)) * 100) / 100,
+          az: Math.round((Math.random() * 0.4 - 0.2) * 100) / 100,
+          mag: 9.81,
+          gx: 0.01,
+          gy: -0.02,
+          gz: 0.0,
+          ts: Date.now(),
+        });
       if (mode === "disconnected") {
         simModeRef.current = true;
         setDeviceName("Fitwear Watch (Simulator)");
