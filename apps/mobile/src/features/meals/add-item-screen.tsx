@@ -269,11 +269,7 @@ export function AddItemScreen() {
             needed.
           </Text>
 
-          <PrimaryButton
-            label={saving ? "Adding…" : "Add Item"}
-            disabled={saving}
-            onPress={handleAdd}
-          />
+          <PrimaryButton label="Add Item" disabled={saving} onPress={handleAdd} />
         </>
       ) : null}
     </ScrollView>

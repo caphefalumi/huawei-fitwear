@@ -204,7 +204,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
 
         {log ? null : (
           <PrimaryButton
-            label={pending ? "Logging…" : "Log Meal"}
+            label="Log Meal"
             disabled={items.length === 0 || pending || meals.busy}
             onPress={() => {
               void perform(logMeal, () => router.replace("/home"));
@@ -344,11 +344,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           </View>
         ) : null}
 
-        <PrimaryButton
-          label={pending ? "Saving…" : "Save amount"}
-          disabled={pending}
-          onPress={saveAmount}
-        />
+        <PrimaryButton label="Save amount" disabled={pending} onPress={saveAmount} />
         <Pressable style={styles.sheetCancel} onPress={() => setAmountFor(null)}>
           <Text style={styles.sheetCancelLabel}>Cancel</Text>
         </Pressable>

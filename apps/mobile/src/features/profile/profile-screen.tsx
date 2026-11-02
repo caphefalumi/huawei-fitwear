@@ -30,11 +30,16 @@ type RowProps = {
 
 function ProfileRow({ label, value, onPress }: RowProps) {
   return (
-    <Pressable style={styles.row} onPress={onPress} disabled={!onPress}>
+    <Pressable
+      style={styles.row}
+      accessibilityRole={onPress ? "button" : "text"}
+      accessibilityLabel={`${label}, ${value}`}
+      onPress={onPress}
+    >
       <Text style={styles.rowLabel}>{label}</Text>
       <View style={styles.rowRight}>
         <Text style={styles.rowValue}>{value}</Text>
-        <Image source={icons.chevronRight} style={styles.chevron} contentFit="contain" />
+        {onPress ? <Image accessible={false} source={icons.chevronRight} style={styles.chevron} contentFit="contain" /> : null}
       </View>
     </Pressable>
   );
@@ -104,10 +109,10 @@ export function ProfileScreen() {
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
       ]}
     >
-      <Text style={styles.title}>Profile</Text>
+      <Text accessibilityRole="header" style={styles.title}>Profile</Text>
 
       <View style={styles.identity}>
-        <View style={styles.avatar}>
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.avatar}>
           <Text style={styles.avatarText}>
             {user?.name
               ?.trim()
@@ -136,7 +141,7 @@ export function ProfileScreen() {
       {error ? <Text accessibilityRole="alert">{error}</Text> : null}
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Profile overview</Text>
+        <Text accessibilityRole="header" style={styles.sectionTitle}>Profile overview</Text>
         <ProfileRow
           label="Birthdate"
           value={
@@ -167,7 +172,7 @@ export function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Refine your plan</Text>
+        <Text accessibilityRole="header" style={styles.sectionTitle}>Refine your plan</Text>
         <ProfileRow label="Goal / target" value={plan.goal} onPress={() => setOpenSheet("goal")} />
         <ProfileRow
           label="Workout frequency"
@@ -195,6 +200,7 @@ export function ProfileScreen() {
         <Pressable
           style={[styles.periodButton, inPeriod && styles.periodButtonActive]}
           disabled={pending || loading}
+          accessibilityState={{ busy: pending }}
           onPress={() => {
             if (!inPeriod) setOpenSheet("period");
             else void mutate(() => saveRecovery(null));
@@ -208,6 +214,8 @@ export function ProfileScreen() {
       <Pressable
         style={styles.periodButton}
         disabled={pending}
+        accessibilityLabel="Sign out"
+        accessibilityState={{ busy: pending }}
         onPress={() => {
           void mutate(signOut);
         }}
@@ -285,7 +293,9 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   row: {
-    height: 50,
+    minHeight: 50,
+    paddingVertical: 12,
+    flexWrap: "wrap",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -295,16 +305,19 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     fontSize: 13,
+    flexShrink: 1,
     fontWeight: "600",
     color: C.text,
   },
   rowRight: {
     flexDirection: "row",
+    flexShrink: 1,
     alignItems: "center",
     gap: 8,
   },
   rowValue: {
     fontSize: 14,
+    flexShrink: 1,
     fontWeight: "600",
     color: C.text,
   },
@@ -313,7 +326,8 @@ const styles = StyleSheet.create({
     height: 16,
   },
   periodButton: {
-    height: 52,
+    minHeight: 52,
+    padding: 12,
     borderRadius: 16,
     backgroundColor: C.accent,
     alignItems: "center",

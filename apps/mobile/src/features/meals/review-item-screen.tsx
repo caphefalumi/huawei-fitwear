@@ -171,7 +171,7 @@ export function ReviewItemScreen() {
       <Text style={styles.centerNote}>Review the name, amount, and nutrients above.</Text>
 
       <PrimaryButton
-        label={saving ? "Saving…" : existing ? "Save item" : "Add item"}
+        label={existing ? "Save item" : "Add item"}
         disabled={saving}
         onPress={handleAdd}
       />

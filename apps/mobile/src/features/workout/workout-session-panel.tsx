@@ -227,7 +227,7 @@ export function WorkoutSessionPanel({
               })
             }
           >
-            <Text style={styles.primaryText}>{busy ? "Saving…" : "Finish workout"}</Text>
+            <Text style={styles.primaryText}>Finish workout</Text>
           </Pressable>
           <Pressable
             style={styles.secondary}
@@ -290,7 +290,7 @@ export function WorkoutSessionPanel({
           </Text>
         ) : null}
         <Pressable style={styles.primary} disabled={busy} onPress={() => void submitSet()}>
-          <Text style={styles.primaryText}>{busy ? "Saving…" : "Save set"}</Text>
+          <Text style={styles.primaryText}>Save set</Text>
         </Pressable>
         <Pressable style={styles.secondary} disabled={busy} onPress={() => setEditor(null)}>
           <Text style={styles.text}>Keep workout, discard edits</Text>
@@ -323,7 +323,7 @@ export function WorkoutSessionPanel({
             })
           }
         >
-          <Text style={styles.primaryText}>{busy ? "Deleting…" : "Delete workout"}</Text>
+          <Text style={styles.primaryText}>Delete workout</Text>
         </Pressable>
         <Pressable style={styles.secondary} disabled={busy} onPress={() => setConfirmCancel(false)}>
           <Text style={styles.text}>Keep workout</Text>

@@ -165,3 +165,13 @@ bun run lint
 The single Maestro flow in `tests/e2e/fitness.yaml` runs nightly at 02:00 UTC and on manual workflow dispatch; pull-request mobile checks run Jest unit tests without the emulator build. It signs up, restarts the app, verifies the session is restored, and checks the backend-backed empty meals state. It requires Maestro CLI 2.12.0, Java 17+, an Android emulator, and a local Wrangler backend with D1 migrations applied. CI provisions the backend, native build, emulator, and Maestro CLI.
 
 Android E2E on the Ubuntu CI runner requires KVM hardware acceleration. The workflow grants access to `/dev/kvm` before building the APK and requires `-accel on`, so unavailable acceleration fails the job instead of silently falling back to slow software emulation.
+
+### Web development
+
+Auth routes use `Slot` on web so inactive forms are unmounted rather than hidden with retained focus. Native auth navigation keeps its stack.
+
+If Metro reports `Requiring unknown module` from a server-render bundle, stop the existing server and run `bun run web --clear` from `apps/mobile`, then reload the browser. When `CI=true`, Metro disables file watching; unset it for normal interactive development.
+
+Password fields on login and sign-up have accessible Show/Hide controls; toggling visibility preserves the entered value and respects disabled fields. The nutrition ring uses an explicit SVG rotation around its center instead of the library's web `origin` attribute conversion.
+
+Save, add, and delete actions keep their labels unchanged while pending. Pending guards still prevent duplicate submissions, and failures remain visible; initial data-loading indicators are unchanged.

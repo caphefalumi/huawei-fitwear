@@ -138,7 +138,7 @@ export function RecoverySheet({
       {error ? <Text accessibilityRole="alert">{error}</Text> : null}
 
       <SheetActions
-        primaryLabel={pending ? "Saving…" : "Save recovery plan"}
+        primaryLabel="Save recovery plan"
         secondaryLabel="Cancel"
         onPrimary={handleSave}
         onSecondary={close}

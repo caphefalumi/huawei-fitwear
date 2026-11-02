@@ -96,7 +96,7 @@ export function HeightSheet({ visible, onClose }: SheetProps) {
       <Text style={styles.body}>Height contributes to your initial energy estimate.</Text>
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
       <SheetActions
-        primaryLabel={action.pending ? "Saving…" : "OK"}
+        primaryLabel="OK"
         secondaryLabel="Cancel"
         onPrimary={() => {
           void action.save(async () => saveHeight(positiveNumber(draft, 300)));
@@ -129,7 +129,7 @@ export function WeightSheet({ visible, onClose }: SheetProps) {
       <Text style={styles.note}>Nutrition targets use your latest profile information.</Text>
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
       <SheetActions
-        primaryLabel={action.pending ? "Saving…" : "Save update"}
+        primaryLabel="Save update"
         secondaryLabel="Cancel"
         onPrimary={() => {
           void action.save(async () => saveWeight(positiveNumber(draft, 500, 20)));
@@ -152,7 +152,6 @@ export function SexSheet({ visible, onClose }: SheetProps) {
           void action.save(() => saveSex(next));
         }}
       />
-      {action.pending ? <Text style={styles.body}>Saving…</Text> : null}
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
     </Sheet>
   );
@@ -170,7 +169,6 @@ export function GoalSheet({ visible, onClose }: SheetProps) {
           void action.save(() => savePlan({ ...plan, goal }));
         }}
       />
-      {action.pending ? <Text style={styles.body}>Saving…</Text> : null}
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
     </Sheet>
   );
@@ -188,7 +186,6 @@ export function ActivitySheet({ visible, onClose }: SheetProps) {
           void action.save(() => savePlan({ ...plan, activity }));
         }}
       />
-      {action.pending ? <Text style={styles.body}>Saving…</Text> : null}
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
     </Sheet>
   );
@@ -208,7 +205,7 @@ export function FrequencySheet({ visible, onClose }: SheetProps) {
       />
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
       <SheetActions
-        primaryLabel={action.pending ? "Saving…" : "OK"}
+        primaryLabel="OK"
         secondaryLabel="Cancel"
         onPrimary={() => {
           void action.save(() => savePlan({ ...plan, sessions: draft }));
@@ -230,7 +227,7 @@ export function TargetWeightSheet({ visible, onClose }: SheetProps) {
       </SheetField>
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
       <SheetActions
-        primaryLabel={action.pending ? "Saving…" : "Save"}
+        primaryLabel="Save"
         secondaryLabel="Cancel"
         onPrimary={() => {
           void action.save(async () =>

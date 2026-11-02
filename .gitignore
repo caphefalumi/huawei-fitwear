@@ -1,7 +1,8 @@
 # Dependencies
 node_modules/
 oh_modules/
-
+.codegraph/
+.cursor/
 # Expo & React Native
 .expo/
 dist/

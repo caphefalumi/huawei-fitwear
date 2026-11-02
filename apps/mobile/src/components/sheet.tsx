@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useReducedMotion } from "react-native-reanimated";
 
 import { Pressable } from "@/components/pressable";
 import { Palette as C } from "@/constants/palette";
@@ -22,13 +23,33 @@ type SheetProps = {
 /** Bottom overlay matching the Figma "Input sheet" frames (scrim + white card). */
 export function Sheet({ visible, title, onClose, children }: SheetProps) {
   const insets = useSafeAreaInsets();
+  const reducedMotion = useReducedMotion();
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType={reducedMotion ? "none" : "slide"}
+      onRequestClose={onClose}
+    >
       <View style={styles.backdrop}>
-        <ScrimPressable style={styles.backdropFill} onPress={onClose} />
-        <View style={[styles.sheet, { paddingBottom: 20 + insets.bottom }]}>
-          <Text style={styles.title}>{title}</Text>
+        <ScrimPressable
+          accessible={false}
+          importantForAccessibility="no"
+          style={styles.backdropFill}
+          onPress={onClose}
+        />
+        <View
+          accessibilityViewIsModal
+          onAccessibilityEscape={onClose}
+          style={[styles.sheet, { paddingBottom: 20 + insets.bottom }]}
+        >
+          <View style={styles.header}>
+            <Text accessibilityRole="header" style={styles.title}>{title}</Text>
+            <Pressable accessibilityLabel={`Close ${title}`} onPress={onClose} style={styles.close}>
+              <Text style={styles.secondaryLabel}>Close</Text>
+            </Pressable>
+          </View>
           <ScrollView
             style={styles.scroll}
             contentContainerStyle={styles.scrollContent}
@@ -92,7 +113,17 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     gap: 14,
   },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  close: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
   title: {
+    flex: 1,
     fontSize: 22,
     fontWeight: "600",
     color: C.text,
@@ -122,7 +153,8 @@ const styles = StyleSheet.create({
     paddingTop: 6,
   },
   primaryButton: {
-    height: 52,
+    minHeight: 52,
+    padding: 12,
     borderRadius: 16,
     backgroundColor: C.accent,
     alignItems: "center",
@@ -134,7 +166,8 @@ const styles = StyleSheet.create({
     color: C.onAccent,
   },
   secondaryButton: {
-    height: 48,
+    minHeight: 48,
+    padding: 12,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: C.border,

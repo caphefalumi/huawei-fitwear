@@ -37,8 +37,7 @@ export function NutritionRing({
           strokeWidth={10}
           strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
           strokeDashoffset={CIRCUMFERENCE * (1 - progress)}
-          rotation={-90}
-          origin={`${SIZE / 2}, ${SIZE / 2}`}
+          transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
           strokeLinecap="round"
         />
       </Svg>
