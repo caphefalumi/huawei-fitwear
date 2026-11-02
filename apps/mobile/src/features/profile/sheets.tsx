@@ -96,6 +96,9 @@ export function HeightSheet({ visible, onClose }: SheetProps) {
       <Text style={styles.body}>Height contributes to your initial energy estimate.</Text>
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
       <SheetActions
+        primaryDisabled={action.pending}
+        secondaryDisabled={action.pending}
+        busy={action.pending}
         primaryLabel="OK"
         secondaryLabel="Cancel"
         onPrimary={() => {
@@ -129,6 +132,9 @@ export function WeightSheet({ visible, onClose }: SheetProps) {
       <Text style={styles.note}>Nutrition targets use your latest profile information.</Text>
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
       <SheetActions
+        primaryDisabled={action.pending}
+        secondaryDisabled={action.pending}
+        busy={action.pending}
         primaryLabel="Save update"
         secondaryLabel="Cancel"
         onPrimary={() => {
@@ -198,6 +204,7 @@ export function FrequencySheet({ visible, onClose }: SheetProps) {
   return (
     <Sheet visible={visible} title="Workout frequency" onClose={action.close}>
       <WheelPicker
+        label="Workout frequency"
         values={SESSION_VALUES}
         value={draft}
         onChange={setDraft}
@@ -205,6 +212,9 @@ export function FrequencySheet({ visible, onClose }: SheetProps) {
       />
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
       <SheetActions
+        primaryDisabled={action.pending}
+        secondaryDisabled={action.pending}
+        busy={action.pending}
         primaryLabel="OK"
         secondaryLabel="Cancel"
         onPrimary={() => {
@@ -227,6 +237,9 @@ export function TargetWeightSheet({ visible, onClose }: SheetProps) {
       </SheetField>
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
       <SheetActions
+        primaryDisabled={action.pending}
+        secondaryDisabled={action.pending}
+        busy={action.pending}
         primaryLabel="Save"
         secondaryLabel="Cancel"
         onPrimary={() => {

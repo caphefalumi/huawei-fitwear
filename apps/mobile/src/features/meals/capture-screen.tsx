@@ -121,6 +121,7 @@ export function MealCaptureScreen() {
     <>
       <ScrollView
         style={styles.screen}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.content,
           { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
@@ -129,12 +130,20 @@ export function MealCaptureScreen() {
         <Header label="Meals" onBack={() => router.back()} />
 
         <View style={styles.heading}>
-          <Text style={styles.title}>Capture Meal</Text>
+          <Text accessibilityRole="header" style={styles.title}>
+            Capture Meal
+          </Text>
           <Text style={styles.subtitle}>Capture food or drinks.</Text>
         </View>
 
         {image ? (
-          <Image source={{ uri: image.uri }} style={styles.preview} contentFit="contain" />
+          <Image
+            accessible
+            accessibilityLabel="Selected meal photo"
+            source={{ uri: image.uri }}
+            style={styles.preview}
+            contentFit="contain"
+          />
         ) : (
           <View style={styles.preview}>
             <Text style={styles.previewLabel}>• GUIDELINES · NO IMAGE</Text>
@@ -145,13 +154,23 @@ export function MealCaptureScreen() {
             <View style={[styles.corner, styles.cornerBottomRight]} />
 
             <View style={styles.circle}>
-              <Image source={icons.utensils} style={styles.circleIcon} contentFit="contain" />
+              <Image
+                accessible={false}
+                source={icons.utensils}
+                style={styles.circleIcon}
+                contentFit="contain"
+              />
               <Text style={styles.circleTitle}>Place food or drink here</Text>
               <Text style={styles.circleNote}>Top-down shot · keep steady</Text>
             </View>
 
             <View style={styles.rulerChip}>
-              <Image source={icons.ruler} style={styles.rulerIcon} contentFit="contain" />
+              <Image
+                accessible={false}
+                source={icons.ruler}
+                style={styles.rulerIcon}
+                contentFit="contain"
+              />
               <Text style={styles.rulerText}>Place 15 cm ruler beside plate or cup</Text>
             </View>
           </View>
@@ -160,6 +179,7 @@ export function MealCaptureScreen() {
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Optional description</Text>
           <TextInput
+            accessibilityLabel="Optional meal description"
             value={description}
             onChangeText={setDescription}
             placeholder="Add ingredients, preparation, or drink details (e.g. sugar, milk, size)."
@@ -181,6 +201,7 @@ export function MealCaptureScreen() {
         <PrimaryButton
           label={busy ? "Analyzing photo…" : "Analyze photo"}
           disabled={!image || busy}
+          busy={busy}
           onPress={analyze}
         />
         <SecondaryButton
@@ -204,7 +225,12 @@ export function MealCaptureScreen() {
         </View>
 
         <Pressable disabled={busy} style={styles.libraryButton} onPress={() => pickImage(false)}>
-          <Image source={icons.images} style={styles.libraryIcon} contentFit="contain" />
+          <Image
+            accessible={false}
+            source={icons.images}
+            style={styles.libraryIcon}
+            contentFit="contain"
+          />
           <Text style={styles.libraryLabel}>Upload from library</Text>
         </Pressable>
       </ScrollView>
@@ -255,7 +281,7 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   preview: {
-    height: 370,
+    minHeight: 370,
     borderRadius: 18,
     backgroundColor: "#2B2724",
     paddingVertical: 44,
@@ -303,8 +329,9 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
   },
   circle: {
-    width: 192,
-    height: 192,
+    minWidth: 192,
+    minHeight: 192,
+    padding: 16,
     borderRadius: 96,
     borderWidth: 1,
     borderStyle: "dashed",
@@ -319,11 +346,13 @@ const styles = StyleSheet.create({
   },
   circleTitle: {
     fontSize: 12,
+    textAlign: "center",
     fontWeight: "500",
     color: "rgba(255,255,255,0.92)",
   },
   circleNote: {
     fontSize: 10,
+    textAlign: "center",
     color: "rgba(255,255,255,0.45)",
   },
   rulerChip: {
@@ -342,6 +371,7 @@ const styles = StyleSheet.create({
     height: 20,
   },
   rulerText: {
+    flex: 1,
     fontSize: 11,
     color: "rgba(255,255,255,0.8)",
   },
@@ -402,7 +432,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    height: 52,
+    minHeight: 52,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: C.border,
@@ -414,6 +446,7 @@ const styles = StyleSheet.create({
   },
   libraryLabel: {
     fontSize: 14,
+    flexShrink: 1,
     fontWeight: "600",
     color: C.text,
   },
@@ -429,8 +462,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   tutorialMarker: {
-    width: 24,
-    height: 24,
+    minWidth: 24,
+    minHeight: 24,
+    padding: 4,
     borderRadius: 100,
     backgroundColor: C.accentTint,
     alignItems: "center",
@@ -456,7 +490,9 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   primary: {
-    height: 52,
+    minHeight: 52,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderRadius: 14,
     backgroundColor: C.accent,
     alignItems: "center",

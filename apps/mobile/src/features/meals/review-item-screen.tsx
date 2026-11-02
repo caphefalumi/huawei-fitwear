@@ -94,6 +94,7 @@ export function ReviewItemScreen() {
   return (
     <ScrollView
       style={styles.screen}
+      keyboardShouldPersistTaps="handled"
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
@@ -107,7 +108,9 @@ export function ReviewItemScreen() {
       />
 
       <View style={styles.heading}>
-        <Text style={styles.title}>{existing ? "Review item" : "Manual item"}</Text>
+        <Text accessibilityRole="header" style={styles.title}>
+          {existing ? "Review item" : "Manual item"}
+        </Text>
         <Text style={styles.subtitle}>
           {existing
             ? "Review and correct the portion and nutrition before logging."
@@ -124,21 +127,31 @@ export function ReviewItemScreen() {
 
       <Field label="Food or drink name">
         <Box>
-          <ValueInput value={name} onChangeText={setName} keyboardType="default" />
+          <ValueInput
+            label="Food or drink name"
+            value={name}
+            onChangeText={setName}
+            keyboardType="default"
+          />
         </Box>
       </Field>
 
       <Field label="Amount">
         <Box>
-          <ValueInput value={amount} onChangeText={setAmount} unit={unit} />
+          <ValueInput label="Amount" value={amount} onChangeText={setAmount} unit={unit} />
         </Box>
       </Field>
-      <View style={{ flexDirection: "row", gap: 16 }}>
+      <View
+        accessibilityRole="radiogroup"
+        accessibilityLabel="Portion unit"
+        style={{ flexDirection: "row", flexWrap: "wrap", gap: 16 }}
+      >
         {(["g", "ml"] as const).map((value) => (
           <Pressable
             key={value}
             accessibilityRole="radio"
-            accessibilityState={{ selected: unit === value }}
+            accessibilityLabel={value === "g" ? "Grams" : "Milliliters"}
+            accessibilityState={{ checked: unit === value }}
             onPress={() => setUnit(value)}
             style={{ padding: 12 }}
           >
@@ -153,7 +166,9 @@ export function ReviewItemScreen() {
       ) : null}
 
       <View style={styles.nutrientHeader}>
-        <Text style={styles.nutrientTitle}>Nutrition for the full portion</Text>
+        <Text accessibilityRole="header" style={styles.nutrientTitle}>
+          Nutrition for the full portion
+        </Text>
         <Text style={styles.nutrientAction}>Editable</Text>
       </View>
 
@@ -173,6 +188,7 @@ export function ReviewItemScreen() {
       <PrimaryButton
         label={existing ? "Save item" : "Add item"}
         disabled={saving}
+        busy={saving}
         onPress={handleAdd}
       />
     </ScrollView>
@@ -203,6 +219,8 @@ const styles = StyleSheet.create({
   },
   estimateBar: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: C.accentTint,
@@ -221,6 +239,8 @@ const styles = StyleSheet.create({
   },
   nutrientHeader: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     alignItems: "center",
     justifyContent: "space-between",
   },

@@ -175,3 +175,17 @@ If Metro reports `Requiring unknown module` from a server-render bundle, stop th
 Password fields on login and sign-up have accessible Show/Hide controls; toggling visibility preserves the entered value and respects disabled fields. The nutrition ring uses an explicit SVG rotation around its center instead of the library's web `origin` attribute conversion.
 
 Save, add, and delete actions keep their labels unchanged while pending. Pending guards still prevent duplicate submissions, and failures remain visible; initial data-loading indicators are unchanged.
+
+### Accessibility
+
+Shared pressables expose button semantics and disabled state, default to a 48×48 minimum target, and use opacity-only feedback. Native and web tabs expose their selected state. Text-bearing controls use minimum heights and padding so system font scaling can expand them; the frequency wheel scales its row height and offers Increase/Decrease buttons plus screen-reader adjustment actions.
+
+Sheets expose a named Close button, a heading, modal accessibility scope, and the VoiceOver escape gesture; sheet transitions respect Reduce Motion. Meal type and profile choices announce checked state. Food and workout actions include item/set context, and charts provide spoken summaries instead of relying on shapes or colors. Muted text uses `#68625C` for at least 5:1 contrast against the app's light surfaces.
+
+Profile editing follows the grouped field/value pattern documented by [Apple Health Details](https://support.apple.com/en-us/105002) and the field-specific edit/save flow documented by [MyFitnessPal](https://support.myfitnesspal.com/hc/en-us/articles/360032272452-How-to-change-your-original-profile-information). Height uses a decimal keyboard; sex uses choices without text entry. Shared sheets use `react-native-keyboard-controller`'s `KeyboardAvoidingView` with `padding` and automatic modal offsets, driven by keyboard animation progress rather than Android's late `keyboardDidShow` event. The root `KeyboardProvider` supplies native frame updates and preloads the keyboard. Overflowing content remains scrollable, idle keyboards are not dismissed when opening a sheet, and keyboard focus is cleared when the sheet closes.
+
+The keyboard controller contains native code: rebuild the development app after installing dependencies (`bun run build:android`, or `bun run build:ios` on macOS); restarting Metro or applying an OTA update alone is insufficient. It is not available in Expo Go. On a device, verify the sheet follows the keyboard during both opening and closing, confirm/cancel remain reachable, and opening sex selection after a height edit leaves no keyboard visible. Check Reduce Motion and the first keyboard appearance as well as repeated edits.
+
+Guidance used: [Expo native UI](https://github.com/expo/skills), [Emil Kowalski's Expo motion/accessibility](https://github.com/emilkowalski/skills), [Appllama native design](https://github.com/Appllama/appllama-skills), and [Hallmark's accessibility floor](https://github.com/Nutlope/hallmark). Web-only CSS rules are not applied to native screens.
+
+Before release, check an installed development build with TalkBack and VoiceOver: traverse each tab, change profile choices/frequency, dismiss sheets, search/select/edit/delete meal items, and edit/delete workout sets. Repeat at the largest system text size on a small phone and with Reduce Motion enabled. Component tests cannot establish native focus order, spoken output, or visual clipping.

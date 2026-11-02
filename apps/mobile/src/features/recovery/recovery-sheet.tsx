@@ -109,6 +109,9 @@ export function RecoverySheet({
           return (
             <Pressable
               key={area}
+              accessibilityRole="radio"
+              accessibilityLabel={area === NONE ? "No recovery plan" : `${area} recovery`}
+              accessibilityState={{ checked: active }}
               style={[styles.chip, active && styles.chipActive]}
               disabled={pending || loading || !!loadError}
               onPress={() => {
@@ -142,6 +145,9 @@ export function RecoverySheet({
         secondaryLabel="Cancel"
         onPrimary={handleSave}
         onSecondary={close}
+        primaryDisabled={pending || loading || !!loadError}
+        secondaryDisabled={pending}
+        busy={pending}
       />
     </Sheet>
   );
@@ -160,9 +166,13 @@ function RecoveryDetails({
     <>
       <View style={styles.selectedArea}>
         <View style={styles.selectedCopy}>
-          <Text style={styles.selectedTitle}>{draft.area}</Text>
+          <Text accessibilityRole="header" style={styles.selectedTitle}>
+            {draft.area}
+          </Text>
           <TextInput
-            style={styles.selectedNote}
+            accessibilityLabel="Optional recovery note"
+            accessibilityState={{ disabled }}
+            style={[styles.selectedNote, styles.noteInput]}
             value={draft.note}
             placeholder="Optional recovery note"
             maxLength={2000}
@@ -177,6 +187,7 @@ function RecoveryDetails({
           <SheetField label="Rest days">
             <TextInput
               accessibilityLabel="Rest days"
+              accessibilityState={{ disabled }}
               style={styles.value}
               value={String(draft.restDays)}
               keyboardType="number-pad"
@@ -189,6 +200,7 @@ function RecoveryDetails({
           <SheetField label="Light days">
             <TextInput
               accessibilityLabel="Light days"
+              accessibilityState={{ disabled }}
               style={styles.value}
               value={String(draft.lightDays)}
               keyboardType="number-pad"
@@ -202,6 +214,8 @@ function RecoveryDetails({
       <SheetField label="Start date · YYYY-MM-DD">
         <TextInput
           accessibilityLabel="Recovery start date"
+          accessibilityHint="Enter the date as year, month, and day: YYYY-MM-DD."
+          accessibilityState={{ disabled }}
           style={styles.value}
           value={draft.startDate}
           editable={!disabled}
@@ -217,7 +231,12 @@ function RecoveryDetails({
       </View>
 
       <View style={styles.warning}>
-        <Image source={icons.shieldCheck} style={styles.warningIcon} contentFit="contain" />
+        <Image
+          accessible={false}
+          source={icons.shieldCheck}
+          style={styles.warningIcon}
+          contentFit="contain"
+        />
         <Text style={styles.warningText}>
           Your recovery schedule adjusts workout suggestions. If pain persists or worsens, seek
           medical advice.
@@ -254,12 +273,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: C.textMuted,
   },
+  noteInput: {
+    minHeight: 48,
+    paddingVertical: 8,
+  },
   chips: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
   },
   chip: {
+    maxWidth: "100%",
+    minHeight: 48,
+    justifyContent: "center",
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 100,
@@ -280,14 +306,18 @@ const styles = StyleSheet.create({
   },
   pair: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   pairItem: {
+    minWidth: 120,
     flex: 1,
   },
   value: {
     fontSize: 15,
     color: C.text,
+    minHeight: 48,
+    paddingVertical: 8,
   },
   unit: {
     fontSize: 13,
@@ -295,6 +325,8 @@ const styles = StyleSheet.create({
   },
   summaryRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     justifyContent: "space-between",
     alignItems: "center",
   },

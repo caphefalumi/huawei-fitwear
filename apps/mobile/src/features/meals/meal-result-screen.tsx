@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useReducedMotion } from "react-native-reanimated";
 
 import { Pressable } from "@/components/pressable";
 import { Sheet } from "@/components/sheet";
@@ -89,6 +90,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
     <>
       <ScrollView
         style={styles.screen}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.content,
           { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
@@ -112,7 +114,9 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
         />
 
         <View style={styles.heading}>
-          <Text style={styles.title}>{mealName}</Text>
+          <Text accessibilityRole="header" style={styles.title}>
+            {mealName}
+          </Text>
           <Text style={styles.subtitle}>
             {log ? `${log.date} · ${log.time}` : new Date().toLocaleString()} · {items.length} items
           </Text>
@@ -124,13 +128,17 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           </Text>
         ) : null}
         <MealPhoto mealId={log?.id} imageUrl={photo} style={styles.photo} />
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        <View
+          accessibilityRole="radiogroup"
+          accessibilityLabel="Meal type"
+          style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}
+        >
           {(["breakfast", "lunch", "dinner", "snack"] as MealType[]).map((type) => (
             <Pressable
               key={type}
               disabled={pending || meals.busy}
               accessibilityRole="radio"
-              accessibilityState={{ selected: (log?.mealType ?? meals.mealType) === type }}
+              accessibilityState={{ checked: (log?.mealType ?? meals.mealType) === type }}
               style={{ padding: 12 }}
               onPress={() => {
                 if (log) void perform(() => meals.updateMealType(log.id, type));
@@ -206,6 +214,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           <PrimaryButton
             label="Log Meal"
             disabled={items.length === 0 || pending || meals.busy}
+            busy={pending || meals.busy}
             onPress={() => {
               void perform(logMeal, () => router.replace("/home"));
             }}
@@ -249,21 +258,41 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
             router.push(`/replace-food?id=${optionsFor?.id ?? ""}${log ? `&log=${log.id}` : ""}`);
           }}
         >
-          <Image source={icons.search} style={styles.optionIcon} contentFit="contain" />
+          <Image
+            accessible={false}
+            source={icons.search}
+            style={styles.optionIcon}
+            contentFit="contain"
+          />
           <View style={styles.optionText}>
             <Text style={styles.optionTitle}>Search food</Text>
             <Text style={styles.optionNote}>Select a replacement from the database</Text>
           </View>
-          <Image source={icons.chevronRight} style={styles.optionChevron} contentFit="contain" />
+          <Image
+            accessible={false}
+            source={icons.chevronRight}
+            style={styles.optionChevron}
+            contentFit="contain"
+          />
         </Pressable>
 
         <Pressable style={styles.optionRow} onPress={() => optionsFor && openAmount(optionsFor)}>
-          <Image source={icons.weight} style={styles.optionIcon} contentFit="contain" />
+          <Image
+            accessible={false}
+            source={icons.weight}
+            style={styles.optionIcon}
+            contentFit="contain"
+          />
           <View style={styles.optionText}>
             <Text style={styles.optionTitle}>Change amount</Text>
             <Text style={styles.optionNote}>Update the portion weight</Text>
           </View>
-          <Image source={icons.chevronRight} style={styles.optionChevron} contentFit="contain" />
+          <Image
+            accessible={false}
+            source={icons.chevronRight}
+            style={styles.optionChevron}
+            contentFit="contain"
+          />
         </Pressable>
 
         <Pressable
@@ -280,12 +309,22 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
               );
           }}
         >
-          <Image source={icons.close} style={styles.optionIcon} contentFit="contain" />
+          <Image
+            accessible={false}
+            source={icons.close}
+            style={styles.optionIcon}
+            contentFit="contain"
+          />
           <View style={styles.optionText}>
             <Text style={[styles.optionTitle, styles.optionDanger]}>Delete item</Text>
             <Text style={styles.optionNote}>Remove this food from the meal</Text>
           </View>
-          <Image source={icons.chevronRight} style={styles.optionChevron} contentFit="contain" />
+          <Image
+            accessible={false}
+            source={icons.chevronRight}
+            style={styles.optionChevron}
+            contentFit="contain"
+          />
         </Pressable>
 
         <Pressable style={styles.sheetCancel} onPress={() => setOptionsFor(null)}>
@@ -317,6 +356,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
         <Text style={styles.fieldLabel}>New amount</Text>
         <View style={styles.amountBox}>
           <TextInput
+            accessibilityLabel={`New amount for ${amountFor?.name ?? "item"}, ${amountFor ? splitDetail(amountFor.detail).unit : "g"}`}
             value={amountDraft}
             onChangeText={setAmountDraft}
             keyboardType="numeric"
@@ -344,7 +384,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           </View>
         ) : null}
 
-        <PrimaryButton label="Save amount" disabled={pending} onPress={saveAmount} />
+        <PrimaryButton label="Save amount" disabled={pending} busy={pending} onPress={saveAmount} />
         <Pressable style={styles.sheetCancel} onPress={() => setAmountFor(null)}>
           <Text style={styles.sheetCancelLabel}>Cancel</Text>
         </Pressable>
@@ -368,9 +408,14 @@ function MealRow({
 }) {
   const [state, setState] = useState<SwipeState>(null);
   const translateX = useRef(new Animated.Value(0)).current;
+  const reducedMotion = useReducedMotion();
 
   const settle = (next: SwipeState) => {
     setState(next);
+    if (reducedMotion) {
+      translateX.setValue(next === "edit" ? -ACTION_WIDTH : next === "delete" ? ACTION_WIDTH : 0);
+      return;
+    }
     Animated.timing(translateX, {
       toValue: next === "edit" ? -ACTION_WIDTH : next === "delete" ? ACTION_WIDTH : 0,
       duration: 160,
@@ -418,7 +463,11 @@ function MealRow({
 
   return (
     <View style={[styles.rowWrap, !last && styles.rowDivider]}>
-      <View style={styles.rowActions}>
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={styles.rowActions}
+      >
         <Pressable
           style={styles.deleteAction}
           onPress={() => {
@@ -445,6 +494,16 @@ function MealRow({
       >
         <Pressable
           style={styles.row}
+          accessibilityLabel={`${item.name}, ${item.detail}, ${item.kcal} kilocalories, protein ${item.macros.protein} grams, carbs ${item.macros.carbs} grams, fat ${item.macros.fat} grams`}
+          accessibilityHint="Opens food options"
+          accessibilityActions={[
+            { name: "edit", label: `Edit ${item.name}` },
+            { name: "delete", label: `Delete ${item.name}` },
+          ]}
+          onAccessibilityAction={({ nativeEvent }) => {
+            if (nativeEvent.actionName === "edit") onEdit();
+            if (nativeEvent.actionName === "delete") onDelete();
+          }}
           onPress={() => {
             if (state) settle(null);
             else onPress();
@@ -494,6 +553,8 @@ const styles = StyleSheet.create({
   },
   totalsTop: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     alignItems: "flex-start",
     justifyContent: "space-between",
   },
@@ -518,9 +579,12 @@ const styles = StyleSheet.create({
   },
   macroRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
   },
   macroCell: {
     flex: 1,
+    minWidth: 80,
     gap: 2,
   },
   macroValue: {
@@ -598,11 +662,14 @@ const styles = StyleSheet.create({
   },
   rowTop: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     alignItems: "center",
     justifyContent: "space-between",
   },
   itemName: {
     fontSize: 13,
+    flexShrink: 1,
     fontWeight: "600",
     color: C.text,
   },
@@ -674,6 +741,8 @@ const styles = StyleSheet.create({
   previousRow: {
     flexDirection: "row",
     alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
     justifyContent: "space-between",
   },
   previousLabel: {
@@ -718,6 +787,8 @@ const styles = StyleSheet.create({
   },
   estimateTop: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     alignItems: "center",
     justifyContent: "space-between",
   },

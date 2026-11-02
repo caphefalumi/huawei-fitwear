@@ -15,7 +15,10 @@ export function Pressable({
     <RNPressable
       {...props}
       accessibilityRole={accessibilityRole}
-      accessibilityState={{ ...accessibilityState, disabled: disabled ?? accessibilityState?.disabled }}
+      accessibilityState={{
+        ...accessibilityState,
+        disabled: disabled ?? accessibilityState?.disabled,
+      }}
       disabled={disabled}
       onPress={onPress}
       style={(state) => [

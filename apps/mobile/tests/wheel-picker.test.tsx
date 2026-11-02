@@ -7,7 +7,12 @@ function Frequency() {
   const [value, setValue] = useState(2);
   return (
     <>
-      <WheelPicker values={[1, 2, 3]} value={value} onChange={setValue} format={(item) => `${item} sessions/week`} />
+      <WheelPicker
+        values={[1, 2, 3]}
+        value={value}
+        onChange={setValue}
+        format={(item) => `${item} sessions/week`}
+      />
       <Text testID="saved-value">{value}</Text>
     </>
   );
@@ -16,7 +21,9 @@ function Frequency() {
 test("assistive adjustment changes frequency and stops at both bounds", async () => {
   const screen = await render(<Frequency />);
   const adjust = async (actionName: string) => {
-    await fireEvent(screen.getByRole("adjustable"), "accessibilityAction", { nativeEvent: { actionName } });
+    await fireEvent(screen.getByRole("adjustable"), "accessibilityAction", {
+      nativeEvent: { actionName },
+    });
   };
   await adjust("increment");
   expect(screen.getByTestId("saved-value")).toHaveTextContent("3");

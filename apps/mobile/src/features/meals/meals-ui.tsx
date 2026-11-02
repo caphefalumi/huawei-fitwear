@@ -33,7 +33,12 @@ const glyphIcons: Record<MealGlyph, number> = {
 
 export function Glyph({ glyph, size = 19 }: { glyph: MealGlyph; size?: number }) {
   return (
-    <Image accessible={false} source={glyphIcons[glyph]} style={{ width: size, height: size }} contentFit="contain" />
+    <Image
+      accessible={false}
+      source={glyphIcons[glyph]}
+      style={{ width: size, height: size }}
+      contentFit="contain"
+    />
   );
 }
 
@@ -124,7 +129,12 @@ export function SearchInput({
       />
       {value.length > 0 ? (
         <Pressable accessibilityLabel="Clear food search" onPress={onClear} hitSlop={10}>
-          <Image accessible={false} source={icons.close} style={{ width: 18, height: 18 }} contentFit="contain" />
+          <Image
+            accessible={false}
+            source={icons.close}
+            style={{ width: 18, height: 18 }}
+            contentFit="contain"
+          />
         </Pressable>
       ) : null}
     </Box>
@@ -173,7 +183,9 @@ export function SectionTitle({
 }) {
   return (
     <View style={styles.sectionRow}>
-      <Text accessibilityRole="header" style={styles.sectionTitle}>{title}</Text>
+      <Text accessibilityRole="header" style={styles.sectionTitle}>
+        {title}
+      </Text>
       {action ? (
         onPress ? (
           <Pressable onPress={onPress} hitSlop={10}>
@@ -260,8 +272,18 @@ export function Header({
 }) {
   return (
     <View style={styles.headerRow}>
-      <Pressable accessibilityLabel={`Back to ${label}`} style={styles.headerBack} onPress={onBack} hitSlop={10}>
-        <Image accessible={false} source={icons.back} style={styles.headerBackIcon} contentFit="contain" />
+      <Pressable
+        accessibilityLabel={`Back to ${label}`}
+        style={styles.headerBack}
+        onPress={onBack}
+        hitSlop={10}
+      >
+        <Image
+          accessible={false}
+          source={icons.back}
+          style={styles.headerBackIcon}
+          contentFit="contain"
+        />
         <Text style={styles.headerLabel}>{label}</Text>
       </Pressable>
       {action && onAction ? (
@@ -331,6 +353,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.card,
   },
   primaryLabel: {
+    textAlign: "center",
     fontSize: 14,
     fontWeight: "600",
     color: C.onAccent,
@@ -347,12 +370,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   secondaryLabel: {
+    textAlign: "center",
     fontSize: 14,
     fontWeight: "600",
     color: C.accent,
   },
   sectionRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     alignItems: "center",
     justifyContent: "space-between",
   },
@@ -372,7 +398,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   gridCell: {
-    width: "48%",
+    flexGrow: 1,
+    flexBasis: "45%",
+    minWidth: 130,
     gap: 6,
   },
   gridLabel: {
@@ -382,11 +410,14 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     alignItems: "center",
     justifyContent: "space-between",
   },
   headerBack: {
     flexDirection: "row",
+    flexShrink: 1,
     alignItems: "center",
     gap: 6,
   },
@@ -395,6 +426,7 @@ const styles = StyleSheet.create({
     height: 18,
   },
   headerLabel: {
+    flexShrink: 1,
     fontSize: 13,
     color: C.accent,
   },

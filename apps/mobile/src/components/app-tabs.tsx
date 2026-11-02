@@ -42,7 +42,13 @@ function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
         style={styles.tab}
         onPress={handlePress}
       >
-        <Image accessible={false} source={tab.icon} style={styles.icon} contentFit="contain" tintColor={color} />
+        <Image
+          accessible={false}
+          source={tab.icon}
+          style={styles.icon}
+          contentFit="contain"
+          tintColor={color}
+        />
         <Text style={[styles.label, { color }]}>{tab.label}</Text>
       </Pressable>
     );

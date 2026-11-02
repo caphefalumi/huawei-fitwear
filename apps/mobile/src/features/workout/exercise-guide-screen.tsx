@@ -2,6 +2,7 @@ import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useReducedMotion } from "react-native-reanimated";
 
 import { Pressable } from "@/components/pressable";
 import { Palette as C } from "@/constants/palette";
@@ -12,6 +13,7 @@ import { useWorkouts } from "@/features/workout/workout-store";
 
 export function ExerciseGuideScreen() {
   const insets = useSafeAreaInsets();
+  const reducedMotion = useReducedMotion();
   const { name, group, sessionId } = useLocalSearchParams<{
     name?: string;
     group?: string;
@@ -32,21 +34,29 @@ export function ExerciseGuideScreen() {
       <BackHeader label="Workout plan" onPress={() => router.back()} />
       {!guide ? (
         <>
-          <Text style={styles.title}>{loading ? "Loading exercise…" : "Exercise unavailable"}</Text>
+          <Text accessibilityRole="header" style={styles.title}>
+            {loading ? "Loading exercise…" : "Exercise unavailable"}
+          </Text>
           <Text accessibilityRole={error ? "alert" : undefined} style={styles.subtitle}>
             {error ??
               (loading
                 ? "Loading the exercise catalog."
                 : "Return to the workout plan and choose an available exercise.")}
           </Text>
-          <Pressable onPress={() => void refresh()}>
+          <Pressable
+            disabled={loading}
+            accessibilityState={{ busy: loading }}
+            onPress={() => void refresh()}
+          >
             <Text style={styles.cueTitle}>Retry loading exercises</Text>
           </Pressable>
         </>
       ) : (
         <>
           <View style={styles.heading}>
-            <Text style={styles.title}>{guide.name}</Text>
+            <Text accessibilityRole="header" style={styles.title}>
+              {guide.name}
+            </Text>
             <Text style={styles.subtitle}>
               {guide.muscleGroup} · {guide.equipment} · Technique guide
             </Text>
@@ -54,6 +64,9 @@ export function ExerciseGuideScreen() {
           {guide.cadenceAnimationUrl ? (
             <View style={styles.demoWrap}>
               <Image
+                accessible
+                accessibilityLabel={`${guide.name} technique demonstration`}
+                autoplay={!reducedMotion}
                 source={{ uri: guide.cadenceAnimationUrl }}
                 style={styles.demo}
                 contentFit="contain"
@@ -76,14 +89,18 @@ export function ExerciseGuideScreen() {
             </Text>
           </Card>
           <View style={styles.cues}>
-            <Text style={styles.sectionTitle}>Technique cues</Text>
+            <Text accessibilityRole="header" style={styles.sectionTitle}>
+              Technique cues
+            </Text>
             {guide.cues.map((cue, index) => (
               <View key={cue.title} style={styles.cue}>
                 <View style={styles.cueMarker}>
                   <Text style={styles.cueMarkerLabel}>{index + 1}</Text>
                 </View>
                 <View style={styles.cueCopy}>
-                  <Text style={styles.cueTitle}>{cue.title}</Text>
+                  <Text accessibilityRole="header" style={styles.cueTitle}>
+                    {cue.title}
+                  </Text>
                   <Text style={styles.cueDetail}>{cue.detail}</Text>
                 </View>
               </View>
@@ -145,10 +162,13 @@ const styles = StyleSheet.create({
   prescriptionRow: {
     flexDirection: "row",
     gap: 12,
+    flexWrap: "wrap",
   },
   prescription: {
     flex: 1,
+    minWidth: 120,
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "baseline",
     gap: 5,
   },
@@ -173,8 +193,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   cueMarker: {
-    width: 24,
-    height: 24,
+    minWidth: 24,
+    minHeight: 24,
+    padding: 4,
+    alignSelf: "flex-start",
     borderRadius: 100,
     backgroundColor: C.card,
     alignItems: "center",

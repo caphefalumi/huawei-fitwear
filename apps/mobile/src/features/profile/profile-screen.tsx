@@ -39,7 +39,14 @@ function ProfileRow({ label, value, onPress }: RowProps) {
       <Text style={styles.rowLabel}>{label}</Text>
       <View style={styles.rowRight}>
         <Text style={styles.rowValue}>{value}</Text>
-        {onPress ? <Image accessible={false} source={icons.chevronRight} style={styles.chevron} contentFit="contain" /> : null}
+        {onPress ? (
+          <Image
+            accessible={false}
+            source={icons.chevronRight}
+            style={styles.chevron}
+            contentFit="contain"
+          />
+        ) : null}
       </View>
     </Pressable>
   );
@@ -109,10 +116,16 @@ export function ProfileScreen() {
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
       ]}
     >
-      <Text accessibilityRole="header" style={styles.title}>Profile</Text>
+      <Text accessibilityRole="header" style={styles.title}>
+        Profile
+      </Text>
 
       <View style={styles.identity}>
-        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.avatar}>
+        <View
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={styles.avatar}
+        >
           <Text style={styles.avatarText}>
             {user?.name
               ?.trim()
@@ -141,7 +154,9 @@ export function ProfileScreen() {
       {error ? <Text accessibilityRole="alert">{error}</Text> : null}
 
       <View style={styles.section}>
-        <Text accessibilityRole="header" style={styles.sectionTitle}>Profile overview</Text>
+        <Text accessibilityRole="header" style={styles.sectionTitle}>
+          Profile overview
+        </Text>
         <ProfileRow
           label="Birthdate"
           value={
@@ -172,7 +187,9 @@ export function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text accessibilityRole="header" style={styles.sectionTitle}>Refine your plan</Text>
+        <Text accessibilityRole="header" style={styles.sectionTitle}>
+          Refine your plan
+        </Text>
         <ProfileRow label="Goal / target" value={plan.goal} onPress={() => setOpenSheet("goal")} />
         <ProfileRow
           label="Workout frequency"

@@ -117,6 +117,7 @@ export function AddItemScreen() {
   return (
     <ScrollView
       style={styles.screen}
+      keyboardShouldPersistTaps="handled"
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
@@ -130,7 +131,9 @@ export function AddItemScreen() {
       />
 
       <View style={styles.heading}>
-        <Text style={styles.title}>{noMatch ? "Add Item" : "Add Item · Database"}</Text>
+        <Text accessibilityRole="header" style={styles.title}>
+          {noMatch ? "Add Item" : "Add Item · Database"}
+        </Text>
         <Text style={styles.subtitle}>
           {noMatch
             ? "Search the food and drinks database."
@@ -159,7 +162,12 @@ export function AddItemScreen() {
         <Field label="Search food">
           <Box>
             <Text style={styles.selectedName}>{selected.name}</Text>
-            <Image source={icons.check} style={styles.checkIcon} contentFit="contain" />
+            <Image
+              accessible={false}
+              source={icons.check}
+              style={styles.checkIcon}
+              contentFit="contain"
+            />
           </Box>
         </Field>
       ) : (
@@ -179,7 +187,11 @@ export function AddItemScreen() {
             <View key={food.id} style={styles.resultCard}>
               <View style={styles.resultTop}>
                 <Text style={styles.resultName}>{food.name}</Text>
-                <Pressable onPress={() => selectFood(food)} hitSlop={8}>
+                <Pressable
+                  accessibilityLabel={`Select ${food.name}`}
+                  onPress={() => selectFood(food)}
+                  hitSlop={8}
+                >
                   <Text style={styles.resultSelect}>Select</Text>
                 </Pressable>
               </View>
@@ -212,7 +224,12 @@ export function AddItemScreen() {
       {noMatch ? (
         <>
           <View style={[styles.hintCard, styles.noMatchCard]}>
-            <Image source={icons.searchLg} style={styles.noMatchIcon} contentFit="contain" />
+            <Image
+              accessible={false}
+              source={icons.searchLg}
+              style={styles.noMatchIcon}
+              contentFit="contain"
+            />
             <Text style={styles.noMatchTitle}>No database match</Text>
             <Text style={styles.hintNote}>
               Try a different name, or enter nutrition from the label.
@@ -222,6 +239,7 @@ export function AddItemScreen() {
           <Field label="Description · optional">
             <Box style={styles.descriptionBox}>
               <ValueInput
+                label="Description, optional"
                 value={description}
                 onChangeText={setDescription}
                 placeholder="250 ml oat milk latte, no added sugar"
@@ -251,7 +269,12 @@ export function AddItemScreen() {
         <>
           <Field label="Portion weight">
             <Box>
-              <ValueInput value={amount} onChangeText={handleAmount} unit={selected.unit} />
+              <ValueInput
+                label="Portion weight"
+                value={amount}
+                onChangeText={handleAmount}
+                unit={selected.unit}
+              />
             </Box>
           </Field>
 
@@ -269,7 +292,7 @@ export function AddItemScreen() {
             needed.
           </Text>
 
-          <PrimaryButton label="Add Item" disabled={saving} onPress={handleAdd} />
+          <PrimaryButton label="Add Item" disabled={saving} busy={saving} onPress={handleAdd} />
         </>
       ) : null}
     </ScrollView>

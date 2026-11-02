@@ -56,7 +56,9 @@ export function MealsHistoryScreen() {
       ]}
     >
       <View style={styles.heading}>
-        <Text style={styles.title}>Meals</Text>
+        <Text accessibilityRole="header" style={styles.title}>
+          Meals
+        </Text>
         <Text style={styles.subtitle}>Your logged meals</Text>
       </View>
       <Pressable
@@ -84,8 +86,14 @@ export function MealsHistoryScreen() {
       ) : null}
 
       <View style={styles.search}>
-        <Image source={icons.searchMd} style={styles.searchIcon} contentFit="contain" />
+        <Image
+          accessible={false}
+          source={icons.searchMd}
+          style={styles.searchIcon}
+          contentFit="contain"
+        />
         <TextInput
+          accessibilityLabel="Search logged meals"
           value={query}
           onChangeText={setQuery}
           placeholder="Search meals"
@@ -106,6 +114,11 @@ export function MealsHistoryScreen() {
           return (
             <Pressable
               key={option.key}
+              accessibilityLabel={`Sort by ${option.label}${active ? `, ${descending ? "descending" : "ascending"}` : ""}`}
+              accessibilityHint={
+                active ? "Double tap to reverse sort order" : "Double tap to sort meals"
+              }
+              accessibilityState={{ selected: active }}
               style={[styles.sortChip, active && styles.sortChipActive]}
               onPress={() => handleSort(option.key)}
             >
@@ -135,9 +148,7 @@ export function MealsHistoryScreen() {
           >
             <MealPhoto mealId={item.id} imageUrl={item.imageUrl} style={styles.photo} compact />
             <View style={styles.copy}>
-              <Text style={styles.name} numberOfLines={1}>
-                {item.name}
-              </Text>
+              <Text style={styles.name}>{item.name}</Text>
               <Text style={styles.date}>
                 {item.date}
                 {sort === "newest" ? ` · ${item.time}` : ""}
@@ -177,7 +188,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    height: 44,
+    minHeight: 48,
+    paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: 14,
     borderWidth: 1,
@@ -195,7 +207,6 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   sortsScroll: {
-    // Chips scale on press; the extra padding keeps that from being clipped at the edges.
     marginHorizontal: -24,
     marginVertical: -6,
   },
@@ -206,7 +217,8 @@ const styles = StyleSheet.create({
   },
   sortChip: {
     paddingHorizontal: 14,
-    height: 34,
+    minHeight: 48,
+    paddingVertical: 10,
     borderRadius: 100,
     borderWidth: 1,
     borderColor: C.border,
@@ -234,6 +246,7 @@ const styles = StyleSheet.create({
   },
   card: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 12,
     padding: 10,

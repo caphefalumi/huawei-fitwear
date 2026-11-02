@@ -64,11 +64,18 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount: () => void }
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.brand}>
-        <Image source={icons.logo} style={styles.brandMark} contentFit="contain" />
+        <Image
+          accessible={false}
+          source={icons.logo}
+          style={styles.brandMark}
+          contentFit="contain"
+        />
         <Text style={styles.brandName}>VoocHealth</Text>
       </View>
 
-      <Text style={styles.welcome}>{resetMode ? "Reset your password." : "Welcome back."}</Text>
+      <Text accessibilityRole="header" style={styles.welcome}>
+        {resetMode ? "Reset your password." : "Welcome back."}
+      </Text>
 
       <View style={styles.credentials}>
         <AuthField
@@ -234,7 +241,8 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   primaryButton: {
-    height: 52,
+    minHeight: 52,
+    padding: 12,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: AuthColors.accent,

@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import {
+  Keyboard,
   Modal,
   Pressable as ScrimPressable,
   ScrollView,
@@ -7,6 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useReducedMotion } from "react-native-reanimated";
 
@@ -25,6 +27,12 @@ export function Sheet({ visible, title, onClose, children }: SheetProps) {
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
 
+  useEffect(() => {
+    if (!visible) return;
+    if (Keyboard.isVisible()) Keyboard.dismiss();
+    return () => Keyboard.dismiss();
+  }, [visible]);
+
   return (
     <Modal
       visible={visible}
@@ -33,31 +41,40 @@ export function Sheet({ visible, title, onClose, children }: SheetProps) {
       onRequestClose={onClose}
     >
       <View style={styles.backdrop}>
-        <ScrimPressable
-          accessible={false}
-          importantForAccessibility="no"
-          style={styles.backdropFill}
-          onPress={onClose}
-        />
-        <View
-          accessibilityViewIsModal
-          onAccessibilityEscape={onClose}
-          style={[styles.sheet, { paddingBottom: 20 + insets.bottom }]}
-        >
-          <View style={styles.header}>
-            <Text accessibilityRole="header" style={styles.title}>{title}</Text>
-            <Pressable accessibilityLabel={`Close ${title}`} onPress={onClose} style={styles.close}>
-              <Text style={styles.secondaryLabel}>Close</Text>
-            </Pressable>
-          </View>
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
+        <KeyboardAvoidingView behavior="padding" automaticOffset style={styles.keyboardArea}>
+          <ScrimPressable
+            accessible={false}
+            importantForAccessibility="no"
+            style={styles.backdropFill}
+            onPress={onClose}
+          />
+          <View
+            accessibilityViewIsModal
+            onAccessibilityEscape={onClose}
+            style={[styles.sheet, { paddingBottom: 20 + insets.bottom }]}
           >
-            {children}
-          </ScrollView>
-        </View>
+            <View style={styles.header}>
+              <Text accessibilityRole="header" style={styles.title}>
+                {title}
+              </Text>
+              <Pressable
+                accessibilityLabel={`Close ${title}`}
+                onPress={onClose}
+                style={styles.close}
+              >
+                <Text style={styles.secondaryLabel}>Close</Text>
+              </Pressable>
+            </View>
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
+              {children}
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -77,18 +94,29 @@ export function SheetActions({
   secondaryLabel,
   onPrimary,
   onSecondary,
+  primaryDisabled = false,
+  secondaryDisabled = false,
+  busy = false,
 }: {
   primaryLabel: string;
   secondaryLabel: string;
   onPrimary: () => void;
   onSecondary: () => void;
+  primaryDisabled?: boolean;
+  secondaryDisabled?: boolean;
+  busy?: boolean;
 }) {
   return (
     <View style={styles.actions}>
-      <Pressable style={styles.primaryButton} onPress={onPrimary}>
+      <Pressable
+        style={styles.primaryButton}
+        disabled={primaryDisabled}
+        accessibilityState={{ busy }}
+        onPress={onPrimary}
+      >
         <Text style={styles.primaryLabel}>{primaryLabel}</Text>
       </Pressable>
-      <Pressable style={styles.secondaryButton} onPress={onSecondary}>
+      <Pressable style={styles.secondaryButton} disabled={secondaryDisabled} onPress={onSecondary}>
         <Text style={styles.secondaryLabel}>{secondaryLabel}</Text>
       </Pressable>
     </View>
@@ -98,8 +126,11 @@ export function SheetActions({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    justifyContent: "flex-end",
     backgroundColor: "rgba(37, 35, 33, 0.4)",
+  },
+  keyboardArea: {
+    flex: 1,
+    justifyContent: "flex-end",
   },
   backdropFill: {
     flex: 1,
@@ -130,6 +161,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flexGrow: 0,
+    flexShrink: 1,
   },
   scrollContent: {
     gap: 14,

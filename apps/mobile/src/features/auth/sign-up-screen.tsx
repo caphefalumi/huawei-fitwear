@@ -80,11 +80,18 @@ export function SignUpScreen({ onSignIn }: { onSignIn: () => void }) {
         onPress={onSignIn}
         hitSlop={8}
       >
-        <Image source={icons.chevronLeft} style={styles.backIcon} contentFit="contain" />
+        <Image
+          accessible={false}
+          source={icons.chevronLeft}
+          style={styles.backIcon}
+          contentFit="contain"
+        />
         <Text style={styles.backLabel}>Sign in</Text>
       </Pressable>
 
-      <Text style={styles.title}>Start your journey.</Text>
+      <Text accessibilityRole="header" style={styles.title}>
+        Start your journey.
+      </Text>
 
       <View style={styles.form}>
         <AuthField
@@ -265,7 +272,8 @@ const styles = StyleSheet.create({
     color: AuthColors.accent,
   },
   primaryButton: {
-    height: 52,
+    minHeight: 52,
+    padding: 12,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: AuthColors.accent,

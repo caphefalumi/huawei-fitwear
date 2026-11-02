@@ -49,7 +49,9 @@ export function WorkoutPlanScreen() {
         <Card style={styles.todayCard}>
           <View style={styles.todayRow}>
             <View style={styles.todayCopy}>
-              <Text style={styles.todayTitle}>{routine.name}</Text>
+              <Text accessibilityRole="header" style={styles.todayTitle}>
+                {routine.name}
+              </Text>
               <Text style={styles.cardSub}>
                 {routine.exercises.length} exercises · {routine.sets} planned sets
               </Text>
@@ -67,6 +69,7 @@ export function WorkoutPlanScreen() {
             ))}
           </View>
           <Pressable
+            accessibilityLabel={`View ${routine.name} workout plan`}
             onPress={() =>
               router.push({ pathname: "/chest-plan", params: { group: routine.name } })
             }
@@ -88,7 +91,9 @@ export function WorkoutPlanScreen() {
     >
       <View style={styles.heading}>
         <Text style={styles.eyebrow}>My plan</Text>
-        <Text style={styles.title}>Workout plan</Text>
+        <Text accessibilityRole="header" style={styles.title}>
+          Workout plan
+        </Text>
         <Text style={styles.subtitle}>
           {plan.sessions != null
             ? `${plan.sessions} sessions/week`
@@ -100,7 +105,12 @@ export function WorkoutPlanScreen() {
         {week.map((date) => {
           const active = date.toDateString() === now.toDateString();
           return (
-            <View key={date.toISOString()} style={[styles.day, active && styles.dayActive]}>
+            <View
+              key={date.toISOString()}
+              accessible
+              accessibilityLabel={`${date.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}${active ? ", today" : ""}`}
+              style={[styles.day, active && styles.dayActive]}
+            >
               <Text style={[styles.dayLabel, active && styles.dayLabelActive]}>
                 {date.toLocaleDateString(undefined, { weekday: "short" })}
               </Text>
@@ -115,12 +125,25 @@ export function WorkoutPlanScreen() {
           {error}
         </Text>
       ) : null}
-      <Pressable disabled={loading} onPress={() => void refresh()}>
+      <Pressable
+        disabled={loading}
+        accessibilityState={{ busy: loading }}
+        onPress={() => void refresh()}
+      >
         <Text style={styles.footnote}>Refresh workouts</Text>
       </Pressable>
       {recovery && ranges ? (
-        <Pressable style={styles.recoveryCard} onPress={() => setRecoveryOpen(true)}>
-          <Image source={icons.shieldCheck} style={styles.recoveryIcon} contentFit="contain" />
+        <Pressable
+          accessibilityLabel={`Edit recovery plan. Rest ${ranges.rest}, light ${ranges.light}. Return ${recovery.returnDate}, if ready`}
+          style={styles.recoveryCard}
+          onPress={() => setRecoveryOpen(true)}
+        >
+          <Image
+            accessible={false}
+            source={icons.shieldCheck}
+            style={styles.recoveryIcon}
+            contentFit="contain"
+          />
           <View style={styles.recoveryCopy}>
             <Text style={styles.recoveryTitle}>Recovery</Text>
             <Text style={styles.recoverySub}>
@@ -141,10 +164,12 @@ export function WorkoutPlanScreen() {
           {groups.map((group) => (
             <Pressable
               key={group}
+              accessibilityLabel={`View ${group} workout plan`}
               style={styles.group}
               onPress={() => router.push({ pathname: "/chest-plan", params: { group } })}
             >
               <Image
+                accessible={false}
                 source={icons[group.toLowerCase() as keyof typeof icons] ?? icons.shieldCheck}
                 style={styles.groupImage}
                 contentFit="contain"
@@ -192,7 +217,11 @@ export function WorkoutPlanScreen() {
           </Pressable>
         ))}
         {hasMore ? (
-          <Pressable disabled={loading} onPress={() => void loadMore()}>
+          <Pressable
+            disabled={loading}
+            accessibilityState={{ busy: loading }}
+            onPress={() => void loadMore()}
+          >
             <Text style={styles.footnote}>Load older workouts</Text>
           </Pressable>
         ) : null}
@@ -231,11 +260,14 @@ const styles = StyleSheet.create({
   week: {
     flexDirection: "row",
     justifyContent: "space-between",
+    flexWrap: "wrap",
     gap: 6,
   },
   day: {
     flex: 1,
-    height: 58,
+    minWidth: 36,
+    minHeight: 58,
+    paddingVertical: 8,
     borderRadius: 14,
     backgroundColor: C.surface,
     alignItems: "center",
@@ -333,14 +365,18 @@ const styles = StyleSheet.create({
   },
   exerciseRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     justifyContent: "space-between",
   },
   exerciseName: {
     fontSize: 12,
+    flexShrink: 1,
     color: C.text,
   },
   exercisePrescription: {
     fontSize: 12,
+    flexShrink: 1,
     color: C.textMuted,
   },
   footnote: {
