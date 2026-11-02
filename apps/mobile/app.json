@@ -58,10 +58,7 @@
       "reactCompiler": true
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "7db03bfd-3c6f-4b96-ab9a-f99315236743"
-      }
+      "router": {}
     },
     "owner": "caphefalumis-organization"
   }
