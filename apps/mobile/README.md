@@ -151,18 +151,15 @@ apps/mobile/
 ## Verification
 
 ```bash
-# Run TypeScript type check
-bunx tsc --noEmit
-
-# Expo Jest unit and provider regressions
+# TypeScript check and Expo Jest unit tests
+bun run typecheck
 bun run test
 
-# Browser lifecycle against the local Wrangler/D1/R2 backend
-bunx playwright install chromium
+# Native end-to-end flow (requires an Android emulator and installed app)
 bun run test:e2e
 
 # Run linter
 bun run lint
 ```
 
-Playwright starts its own backend on port 8787 and Expo web on 8085. CI uses isolated processes; stop unrelated servers on those ports first. Traces and screenshots are retained for failures under ignored test-output directories.
+The single Maestro flow in `.maestro/fitness.yaml` signs up, logs a meal, restarts the app, and verifies both session and meal persistence. It requires Maestro CLI 2.12.0, Java 17+, an Android emulator, and a local Wrangler backend with D1 migrations applied. Build the app with `EXPO_PUBLIC_API_URL=http://10.0.2.2:8787`; CI provisions the backend, native build, emulator, and Maestro CLI.

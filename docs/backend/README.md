@@ -27,8 +27,7 @@ apps/backend/
 ├── migrations/             # Additive SQL migrations and matching Drizzle snapshots
 ├── scripts/smoke.ts        # Actual Worker/D1/R2 lifecycle smoke; optional Workers AI call
 ├── tests/unit/             # Validation, nutrition, dates, credentials, binding isolation
-├── tests/integration/      # Routes against migrated SQLite with foreign keys enabled
-└── tests/e2e/              # Playwright HTTP lifecycle and authorization checks
+└── tests/integration/      # Routes against migrated SQLite with foreign keys enabled
 ```
 
 Each feature owns its Elysia `.model()` registry beside its routes. Route body/query schemas are referenced by name, and services import inferred types from their route module; there are no parallel `model.ts` schema files.
@@ -105,27 +104,26 @@ await db.batch([
 
 ---
 
-## 3. Test Suites (Unit, Integration & E2E)
+## 3. Test Suites (Unit, Integration & Native E2E)
 
 ### Commands
 
 From repository root:
 ```bash
 bun run test                     # Backend Bun tests + mobile Expo Jest tests
-bun run backend:test:unit         # Run unit tests only
-bun run backend:test:integration  # Run integration tests only
-bun run test:e2e                 # Backend API + mobile browser Playwright suites
+bun run backend:test:unit        # Run unit tests only
+bun run backend:test:integration # Run integration tests only
+bun run test:e2e                 # Run the single Maestro native mobile flow
 ```
 
 From `apps/backend/`:
 ```bash
 bun run test                     # Unit & integration tests (Bun test)
-bun run test:unit                 # Unit tests (tests/unit)
-bun run test:integration          # Integration tests (tests/integration)
-bun run test:e2e                  # Playwright E2E tests (tests/e2e)
+bun run test:unit                # Unit tests (tests/unit)
+bun run test:integration         # Integration tests (tests/integration)
 ```
 
-The mobile browser suite starts a real local Wrangler/D1/R2 backend and Expo web server. Run it from `apps/mobile` with `bun run test:e2e`; install Chromium once with `bunx playwright install chromium`. Use `bun run mobile:typecheck` and `bun run mobile:test` from the root for the mobile gates.
+The only E2E test is the native Maestro flow in `apps/mobile/.maestro/fitness.yaml`. It runs on an Android emulator against a local Wrangler backend with D1 migrations applied. Mobile CI builds and installs the app, starts the local backend, and runs this flow.
 
 For runtime proof, first apply local migrations and run Wrangler on port 8788, then run `bun scripts/smoke.ts` from `apps/backend`. Set `SMOKE_API_URL` to the deployed Worker to exercise production D1/R2. Set `SMOKE_ANALYZE=1` to include a real Workers AI call (billable provider usage). The smoke deletes its meals/workouts/recovery/targets and revokes both sessions; its uniquely named test accounts and weight logs remain for inspection.
 

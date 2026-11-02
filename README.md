@@ -104,8 +104,7 @@ bunx tsc --noEmit
 # Expo Jest regressions
 bun run test
 
-# Full browser lifecycle (starts Wrangler/D1/R2 + Expo web)
-bunx playwright install chromium
+# Native Android Maestro flow (emulator, installed app, and local backend required)
 bun run test:e2e
 ```
 
@@ -138,7 +137,7 @@ Available from the root directory:
 | `bun web`                   | Launches the mobile web app in your browser              |
 | `bun lint`                  | Runs mobile code linter                                  |
 | `bun run test`              | Runs backend unit/integration and mobile Expo Jest tests |
-| `bun run test:e2e`          | Runs backend HTTP and mobile browser Playwright suites   |
+| `bun run test:e2e`          | Runs the single native Maestro mobile flow               |
 | `bun run backend:typecheck` | Checks backend types against generated Worker bindings   |
 | `bun run mobile:typecheck`  | Checks mobile application and test types                 |
 | `bun run backend:deploy`    | Deploys the backend Worker                               |

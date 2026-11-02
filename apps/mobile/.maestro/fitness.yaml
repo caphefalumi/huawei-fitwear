@@ -1,0 +1,47 @@
+appId: com.fitwear.mobile
+env:
+  PASSWORD: "FitnessTest123!"
+---
+- evalScript: ${output.email = 'maestro_' + Date.now() + '_' + Math.floor(Math.random() * 1000000) + '@fitwear.dev'}
+- launchApp:
+    clearState: true
+- tapOn: "Create account"
+- tapOn: "Name"
+- inputText: "Maestro E2E"
+- tapOn: "Email"
+- inputText: ${output.email}
+- tapOn: "Password"
+- inputText: ${PASSWORD}
+- tapOn: "Date of birth"
+- inputText: "1994-04-12"
+- hideKeyboard
+- tapOn: "Agree to Terms of Service and User Agreement"
+- tapOn: "Create account"
+- assertVisible: "Today"
+- tapOn: "Meals"
+- tapOn: "Add meal"
+- tapOn: "Got it"
+- scrollUntilVisible:
+    element: "Enter meal manually"
+- tapOn: "Enter meal manually"
+- scrollUntilVisible:
+    element: "+ Add item"
+- tapOn: "+ Add item"
+- tapOn: "Search food"
+- inputText: "White rice, cooked"
+- assertVisible: "White rice, cooked"
+- tapOn: "Select"
+- scrollUntilVisible:
+    element: "Add Item"
+- tapOn: "Add Item"
+- assertVisible: "White rice, cooked"
+- scrollUntilVisible:
+    element: "Log Meal"
+- tapOn: "Log Meal"
+- stopApp
+- launchApp
+- assertVisible: "Today"
+- tapOn: "Meals"
+- assertVisible: "Lunch"
+- tapOn: "Lunch"
+- assertVisible: "White rice, cooked"

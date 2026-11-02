@@ -24,7 +24,6 @@
     "backend:test": "bun run --cwd apps/backend test",
     "backend:test:unit": "bun run --cwd apps/backend test:unit",
     "backend:test:integration": "bun run --cwd apps/backend test:integration",
-    "backend:test:e2e": "bun run --cwd apps/backend test:e2e",
     "db:generate": "bun run --cwd apps/backend db:generate",
     "db:migrate:local": "bun run --cwd apps/backend db:migrate:local",
     "db:migrate:remote": "bun run --cwd apps/backend db:migrate:remote",
@@ -32,7 +31,7 @@
     "mobile:test": "bun run --cwd apps/mobile test",
     "mobile:test:e2e": "bun run --cwd apps/mobile test:e2e",
     "test": "bun run backend:test && bun run mobile:test",
-    "test:e2e": "bun run backend:test:e2e && bun run mobile:test:e2e"
+    "test:e2e": "bun run mobile:test:e2e"
   },
   "devDependencies": {
     "oxfmt": "^0.75.0",

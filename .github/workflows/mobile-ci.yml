@@ -78,13 +78,60 @@ jobs:
 
       - name: Typecheck mobile
         run: bun run --cwd apps/mobile typecheck
+      - name: Run mobile Jest unit tests
+        run: bun run --cwd apps/mobile test
 
-      - name: Install Playwright browser
+      - name: Setup Java for Android E2E
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Maestro CLI
+        run: |
+          export MAESTRO_VERSION=2.12.0
+          curl -fsSL https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+          "$HOME/.maestro/bin/maestro" --version
+
+      - name: Apply local D1 migrations
+        run: bun run --cwd apps/backend db:migrate:local
+
+      - name: Start local backend
+        run: |
+          bun run --cwd apps/backend dev --ip 0.0.0.0 --port 8787 > "$RUNNER_TEMP/wrangler.log" 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8787/ > /dev/null; then
+              echo "Local backend is ready."
+              exit 0
+            fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/wrangler.log"
+          exit 1
+
+      - name: Generate Android project
         working-directory: apps/mobile
-        run: bunx playwright install --with-deps chromium
+        env:
+          EXPO_PUBLIC_API_URL: http://10.0.2.2:8787
+        run: bunx expo prebuild --platform android --no-install
 
-      - name: Run mobile unit and end-to-end tests
-        run: bun run --cwd apps/mobile test && bun run --cwd apps/mobile test:e2e
+      - name: Build Android debug APK
+        working-directory: apps/mobile/android
+        env:
+          EXPO_PUBLIC_API_URL: http://10.0.2.2:8787
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Run the single Maestro end-to-end flow
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: |
+            adb install apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            maestro test apps/mobile/.maestro/fitness.yaml
 
   required:
     name: Mobile checks
