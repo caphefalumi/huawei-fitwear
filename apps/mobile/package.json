@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand",
     "test:watch": "jest --watchAll",
-    "test:e2e": "maestro test .maestro/fitness.yaml"
+    "test:e2e": "maestro test tests/e2e/fitness.yaml"
   },
   "dependencies": {
     "@babel/runtime": "^7.29.10",

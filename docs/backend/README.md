@@ -123,7 +123,7 @@ bun run test:unit                # Unit tests (tests/unit)
 bun run test:integration         # Integration tests (tests/integration)
 ```
 
-The only E2E test is the native Maestro flow in `apps/mobile/.maestro/fitness.yaml`. It runs on an Android emulator against a local Wrangler backend with D1 migrations applied. Mobile CI builds and installs the app, starts the local backend, and runs this flow.
+The only E2E test is the native Maestro flow in `apps/mobile/tests/e2e/fitness.yaml`. Mobile CI runs it nightly at 02:00 UTC and on manual workflow dispatch, using an Android emulator and local Wrangler backend with D1 migrations applied. The workflow provisions the backend, native build, emulator, and Maestro CLI.
 
 For runtime proof, first apply local migrations and run Wrangler on port 8788, then run `bun scripts/smoke.ts` from `apps/backend`. Set `SMOKE_API_URL` to the deployed Worker to exercise production D1/R2. Set `SMOKE_ANALYZE=1` to include a real Workers AI call (billable provider usage). The smoke deletes its meals/workouts/recovery/targets and revokes both sessions; its uniquely named test accounts and weight logs remain for inspection.
 

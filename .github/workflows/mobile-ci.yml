@@ -8,6 +8,8 @@ on:
     types:
       - checks_requested
   workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * *"
 
 permissions:
   contents: read
@@ -22,7 +24,8 @@ jobs:
     name: Detect mobile changes
     runs-on: ubuntu-latest
     outputs:
-      mobile: ${{ steps.manual_scope.outputs.mobile || steps.merge_scope.outputs.mobile || steps.filter.outputs.mobile }}
+      mobile: ${{ steps.manual_scope.outputs.mobile || steps.schedule_scope.outputs.mobile || steps.merge_scope.outputs.mobile || steps.filter.outputs.mobile }}
+      suites: ${{ steps.suite_matrix.outputs.suites }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -46,13 +49,27 @@ jobs:
         id: manual_scope
         if: github.event_name == 'workflow_dispatch'
         run: echo "mobile=true" >> "$GITHUB_OUTPUT"
+      - name: Run mobile suite on the nightly schedule
+        id: schedule_scope
+        if: github.event_name == 'schedule'
+        run: echo "mobile=true" >> "$GITHUB_OUTPUT"
       - name: Run mobile suite for merge group
         id: merge_scope
         if: github.event_name == 'merge_group'
         run: echo "mobile=true" >> "$GITHUB_OUTPUT"
+      - name: Select mobile test suites
+        id: suite_matrix
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          case "$EVENT_NAME" in
+            schedule) echo 'suites=["E2E"]' >> "$GITHUB_OUTPUT" ;;
+            workflow_dispatch) echo 'suites=["Unit","E2E"]' >> "$GITHUB_OUTPUT" ;;
+            *) echo 'suites=["Unit"]' >> "$GITHUB_OUTPUT" ;;
+          esac
 
   mobile:
-    name: Mobile ${{ matrix.suite }} tests
+    name: ${{ matrix.suite }} tests
     needs: changes
     if: needs.changes.outputs.mobile == 'true'
     runs-on: ubuntu-latest
@@ -60,7 +77,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [unit, e2e]
+        suite: ${{ fromJSON(needs.changes.outputs.suites) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -73,6 +90,14 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Cache Bun packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -82,22 +107,30 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Typecheck mobile
-        if: matrix.suite == 'unit'
+        if: matrix.suite == 'Unit'
         run: bun run --cwd apps/mobile typecheck
 
       - name: Run mobile Jest unit tests
-        if: matrix.suite == 'unit'
+        if: matrix.suite == 'Unit'
         run: bun run --cwd apps/mobile test
 
+      - name: Enable KVM acceleration for Android E2E
+        if: matrix.suite == 'E2E'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          test -r /dev/kvm && test -w /dev/kvm
+
       - name: Setup Java for Android E2E
-        if: matrix.suite == 'e2e'
+        if: matrix.suite == 'E2E'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Install Maestro CLI
-        if: matrix.suite == 'e2e'
+        if: matrix.suite == 'E2E'
         run: |
           export MAESTRO_VERSION=2.12.0
           curl -fsSL https://get.maestro.mobile.dev | bash
@@ -105,11 +138,11 @@ jobs:
           "$HOME/.maestro/bin/maestro" --version
 
       - name: Apply local D1 migrations
-        if: matrix.suite == 'e2e'
+        if: matrix.suite == 'E2E'
         run: bun run --cwd apps/backend db:migrate:local
 
       - name: Start local backend
-        if: matrix.suite == 'e2e'
+        if: matrix.suite == 'E2E'
         run: |
           bun run --cwd apps/backend dev --local --ip 0.0.0.0 --port 8787 > "$RUNNER_TEMP/wrangler.log" 2>&1 &
           for attempt in $(seq 1 60); do
@@ -123,30 +156,42 @@ jobs:
           exit 1
 
       - name: Generate Android project
-        if: matrix.suite == 'e2e'
+        if: matrix.suite == 'E2E'
         working-directory: apps/mobile
         env:
           EXPO_PUBLIC_API_URL: http://10.0.2.2:8787
         run: bunx expo prebuild --platform android --no-install
+      - name: Cache Gradle packages
+        if: matrix.suite == 'E2E'
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('apps/mobile/android/**/*.gradle*', 'apps/mobile/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
       - name: Build Android debug APK
-        if: matrix.suite == 'e2e'
+        if: matrix.suite == 'E2E'
         working-directory: apps/mobile/android
         env:
           EXPO_PUBLIC_API_URL: http://10.0.2.2:8787
         run: ./gradlew assembleDebug --no-daemon
 
       - name: Run the single Maestro end-to-end flow
-        if: matrix.suite == 'e2e'
+        if: matrix.suite == 'E2E'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
           target: google_apis
           arch: x86_64
           disable-animations: true
+          disable-linux-hw-accel: false
+          emulator-options: -accel on -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
             adb install apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
-            maestro test apps/mobile/.maestro/fitness.yaml
+            maestro test apps/mobile/tests/e2e/fitness.yaml
   required:
     name: Mobile checks
     if: always()
