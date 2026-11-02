@@ -8,7 +8,7 @@ import { WheelPicker } from "@/components/wheel-picker";
 import { resolveBirthdaySelection } from "@/features/auth/birth-date";
 import { AuthField } from "./auth-field";
 import { useAuth } from "@/features/auth/auth-store";
-import { AuthColors } from "./tokens";
+import { Palette as AuthColors } from "@/constants/palette";
 
 const icons = {
   chevronLeft: require("@/assets/images/auth/chevron-left.svg"),
