@@ -44,5 +44,5 @@ so "X% of cuts are on the beat" means nothing without the chance rate. Measured:
   voice-over is a few frames (see `typography appear - same spoken word`).
 
 Practical rule for Remotion: build the beat grid (`beat.ts`) for music-only pieces and put cuts on
-beats there; for VO pieces, cut on phrase boundaries and snap only the *big* moments (title card,
+beats there; for VO pieces, cut on phrase boundaries and snap only the _big_ moments (title card,
 final logo) to a downbeat.

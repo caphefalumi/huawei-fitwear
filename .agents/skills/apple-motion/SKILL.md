@@ -13,12 +13,14 @@ Not affiliated with Apple.
 ## The style in numbers
 
 <!-- numbers:start -->
+
 - **Pace.** Median shot 56.5 frames (1.9 s); p10 13.0, p90 173.5 frames; 3.24 cuts per 10 s (median video). Transitions: cut 92%, whip 5%, scale through 1%, dissolve 1%.
 - **Typography is an accent, not the bed.** Designer-set type appears 0.78 times per 10 s (median video); most on-screen text is UI inside product shots. Hold 33.0 frames median (p10 10.0, p90 80.6).
 - **Size.** Cap height median 6.67% of frame height (p10 3.25%, p90 20.23%). Lines: 1 84%, 2 10%, 4 4%. Alignment: center 60%, right 19%, left 15%.
 - **Entries.** cut on 25%, slide 21%, fade 18%, scale down from large 9%, per-letter 7%. Animated entries are visibly done in 8.0 frames (median). Spring (calibrated): damping 15.35, stiffness 115.0, mass 1 - use it without durationInFrames.
 - **Exits.** cut off 59%, slide out 13%, fade out 10%, blur out 7%; median 0.0 frames.
 - **Sound.** 118.8 BPM median (p10 91.9, p90 131.3); -17.4 LUFS integrated, -2.0 dBTP true peak; voice-over at 3.04 words/s. Cuts are not locked to the beat: 134/400 within +-2 frames vs 124.8 expected by chance (p=0.1586) - the edit follows the voice and picture.
+
 <!-- numbers:end -->
 
 ## How to build one
@@ -67,24 +69,72 @@ Not affiliated with Apple.
 
 ```tsx
 // src/Root.tsx
-import {Composition} from 'remotion';
-import {Recap, recapDuration, type Card, type RecapProps} from './apple-motion';
+import { Composition } from "remotion";
+import { Recap, recapDuration, type Card, type RecapProps } from "./apple-motion";
 
-const cards: Card[] = [          // 120 BPM: 64 beats of cards (bed: --bars 16), logo on beat 64 = 37.5 s
-  {beats: 8, bg: 'offWhite', device: {cards: [{title: 'Northwind 3.0', subtitle: "What's new", icon: '📝'}]}},
-  {beats: 4, bg: 'white', icon: {glyph: '↻', from: '#64d2ff', to: '#0a84ff'}, lines: ['Offline sync'], entry: 'fade', size: 'title'},
-  {beats: 8, bg: 'black', device: {tone: 'dark', cards: [{title: 'Offline', subtitle: '3 edits saved'}, {title: 'Synced', subtitle: 'just now'}]}},
-  {beats: 4, bg: 'white', icon: {glyph: '⌕', from: '#ff9f0a', to: '#ff375f'}, lines: ['Smart search'], entry: 'fade', size: 'title', transition: 'whip'},
-  {beats: 8, bg: 'black', media: {src: 'search.mp4', type: 'video'}},
-  {beats: 4, bg: 'white', spec: {value: '2x', label: 'faster to open', gradient: ['#b150e2', '#e0417b']}},
-  {beats: 12, bg: 'black', grid: {icons: [{glyph: '✦', from: '#5e5ce6', to: '#bf5af2'}]}},
-  {beats: 16, bg: 'gradient', gradient: ['#0a84ff', '#5e5ce6'], lines: ['Your notes.', 'Everywhere.'], entry: 'slideUpMask', size: 'headline'},
-  {beats: 8, bg: 'black', lines: ['Northwind'], entry: 'scaleDown', size: 'display'}, // starts on beat 64 = the bed's final hit
+const cards: Card[] = [
+  // 120 BPM: 64 beats of cards (bed: --bars 16), logo on beat 64 = 37.5 s
+  {
+    beats: 8,
+    bg: "offWhite",
+    device: { cards: [{ title: "Northwind 3.0", subtitle: "What's new", icon: "📝" }] },
+  },
+  {
+    beats: 4,
+    bg: "white",
+    icon: { glyph: "↻", from: "#64d2ff", to: "#0a84ff" },
+    lines: ["Offline sync"],
+    entry: "fade",
+    size: "title",
+  },
+  {
+    beats: 8,
+    bg: "black",
+    device: {
+      tone: "dark",
+      cards: [
+        { title: "Offline", subtitle: "3 edits saved" },
+        { title: "Synced", subtitle: "just now" },
+      ],
+    },
+  },
+  {
+    beats: 4,
+    bg: "white",
+    icon: { glyph: "⌕", from: "#ff9f0a", to: "#ff375f" },
+    lines: ["Smart search"],
+    entry: "fade",
+    size: "title",
+    transition: "whip",
+  },
+  { beats: 8, bg: "black", media: { src: "search.mp4", type: "video" } },
+  {
+    beats: 4,
+    bg: "white",
+    spec: { value: "2x", label: "faster to open", gradient: ["#b150e2", "#e0417b"] },
+  },
+  { beats: 12, bg: "black", grid: { icons: [{ glyph: "✦", from: "#5e5ce6", to: "#bf5af2" }] } },
+  {
+    beats: 16,
+    bg: "gradient",
+    gradient: ["#0a84ff", "#5e5ce6"],
+    lines: ["Your notes.", "Everywhere."],
+    entry: "slideUpMask",
+    size: "headline",
+  },
+  { beats: 8, bg: "black", lines: ["Northwind"], entry: "scaleDown", size: "display" }, // starts on beat 64 = the bed's final hit
 ];
-const props: RecapProps = {bpm: 120, cards, music: 'music.wav'};
+const props: RecapProps = { bpm: 120, cards, music: "music.wav" };
 export const Root = () => (
-  <Composition id="Recap" component={Recap} defaultProps={props} fps={30} width={1920} height={1080}
-    durationInFrames={recapDuration(props, 30)} />
+  <Composition
+    id="Recap"
+    component={Recap}
+    defaultProps={props}
+    fps={30}
+    width={1920}
+    height={1080}
+    durationInFrames={recapDuration(props, 30)}
+  />
 );
 ```
 
@@ -152,25 +202,25 @@ corpus is ~8% pure black and ~21% pure white frames.
   bounce). Remotion detail: `spring({durationInFrames})` stretches the spring and the visible move
   ends ~3x earlier than `durationInFrames`; the components therefore use `SPRING.textIn` unstretched,
   which reproduces Apple's visible entry length. Most type cuts on with its shot; most exits are cuts.
-- **Sync:** in Apple's voice-over recaps cuts are *not* locked to the beat (numbers block); the edit
+- **Sync:** in Apple's voice-over recaps cuts are _not_ locked to the beat (numbers block); the edit
   follows the voice and picture, and type lands on the spoken word. For music-only pieces the card
   engine keeps cuts on beats - a deliberate choice, not a measured Apple trait.
 - **Loudness:** `AUDIO.lufs` integrated, `AUDIO.truePeakDb` true peak (median of the six videos).
 
 ## Library (templates/remotion)
 
-| file | what |
-|---|---|
-| `tokens.ts` | measured defaults, generated from `references/fingerprint.json` |
-| `Recap.tsx` | card engine (`Card`, `Recap`, `recapDuration`, `cardStarts`) |
-| `KineticText.tsx` | `lines`, `entry` (cut, fade, blurIn, scaleDown, scaleUp, slideUp, slideUpMask, perWord, perLetter), `exit` (cut, fade, blurOut, scaleUp, scaleDown, slideOut), `size`, `gradient`, `maxWidthPct` |
-| `Counter.tsx` | number roll with tabular figures and a caption line |
-| `DeviceFrame.tsx`, `UICard.tsx` | phone mock-up and notification/widget card (max 3 per phone; titles up to ~17 characters at the default size) |
-| `AppIcon.tsx`, `IconGrid.tsx`, `Scrubber.tsx`, `Backdrop.tsx` | feature-title icon, icon wall, player chrome, flat/gradient backgrounds |
-| `TypeDevices.tsx` | `LowerThird`, `Pill`, `WordSwap`, `Typing` - the small type devices seen in the corpus |
-| `Move.tsx` | measured camera moves (`Move`, `autoMove`) |
-| `transitions.tsx` | `appleTransition('whip' / 'dissolve' / 'maskWipe' / 'scaleThrough', key)` |
-| `beat.ts`, `Sfx.tsx` | beat grid helpers, pre-rolled SFX |
+| file                                                          | what                                                                                                                                                                                             |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tokens.ts`                                                   | measured defaults, generated from `references/fingerprint.json`                                                                                                                                  |
+| `Recap.tsx`                                                   | card engine (`Card`, `Recap`, `recapDuration`, `cardStarts`)                                                                                                                                     |
+| `KineticText.tsx`                                             | `lines`, `entry` (cut, fade, blurIn, scaleDown, scaleUp, slideUp, slideUpMask, perWord, perLetter), `exit` (cut, fade, blurOut, scaleUp, scaleDown, slideOut), `size`, `gradient`, `maxWidthPct` |
+| `Counter.tsx`                                                 | number roll with tabular figures and a caption line                                                                                                                                              |
+| `DeviceFrame.tsx`, `UICard.tsx`                               | phone mock-up and notification/widget card (max 3 per phone; titles up to ~17 characters at the default size)                                                                                    |
+| `AppIcon.tsx`, `IconGrid.tsx`, `Scrubber.tsx`, `Backdrop.tsx` | feature-title icon, icon wall, player chrome, flat/gradient backgrounds                                                                                                                          |
+| `TypeDevices.tsx`                                             | `LowerThird`, `Pill`, `WordSwap`, `Typing` - the small type devices seen in the corpus                                                                                                           |
+| `Move.tsx`                                                    | measured camera moves (`Move`, `autoMove`)                                                                                                                                                       |
+| `transitions.tsx`                                             | `appleTransition('whip' / 'dissolve' / 'maskWipe' / 'scaleThrough', key)`                                                                                                                        |
+| `beat.ts`, `Sfx.tsx`                                          | beat grid helpers, pre-rolled SFX                                                                                                                                                                |
 
 ## References
 

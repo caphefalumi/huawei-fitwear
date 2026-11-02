@@ -315,7 +315,7 @@ export function Button({
 
 ### Composition over configuration
 
-When a component's props start describing *content* (`leftIcon`, `subtitle`, `footerText`, `badgeCount`), stop adding props and accept `children` instead. A `Card` that renders `children` with token padding outlives any `Card` with twelve content props. Reserve props for the contract above: variant, size, state, style.
+When a component's props start describing _content_ (`leftIcon`, `subtitle`, `footerText`, `badgeCount`), stop adding props and accept `children` instead. A `Card` that renders `children` with token padding outlives any `Card` with twelve content props. Reserve props for the contract above: variant, size, state, style.
 
 ### When to extract - and when not to
 
@@ -327,17 +327,17 @@ Promote a view into `src/components/` when **all** of these hold:
 
 Promotion path: inline JSX → component in `screens/<name>/` → `src/components/`. Move one step at a time, when the trigger fires - never speculatively. Wrong abstractions cost more than duplication; a second copy of a view is cheaper than a primitive with a bad API.
 
-Do **not** wrap platform components that already carry the design language (`Switch`, `DateTimePicker`, stack headers, `@expo/ui` views) just to route them through the system. Native styling *is* the design system for those.
+Do **not** wrap platform components that already carry the design language (`Switch`, `DateTimePicker`, stack headers, `@expo/ui` views) just to route them through the system. Native styling _is_ the design system for those.
 
 ## Where Decisions Live
 
-| Decision | Lives in | Example |
-|---|---|---|
-| A visual value used anywhere twice | `src/theme/` | brand accent, spacing step |
-| Structure + variants of a reused element | `src/components/` | Button, Card, EmptyState |
-| One screen's private composition | `screens/<name>/` | profile header layout |
-| One-off local adjustment | inline, with a comment | optical nudge on an icon |
-| Screen titles, top-level chrome | navigation stack options | header title, large title |
+| Decision                                 | Lives in                 | Example                    |
+| ---------------------------------------- | ------------------------ | -------------------------- |
+| A visual value used anywhere twice       | `src/theme/`             | brand accent, spacing step |
+| Structure + variants of a reused element | `src/components/`        | Button, Card, EmptyState   |
+| One screen's private composition         | `screens/<name>/`        | profile header layout      |
+| One-off local adjustment                 | inline, with a comment   | optical nudge on an icon   |
+| Screen titles, top-level chrome          | navigation stack options | header title, large title  |
 
 ## Self-Critique Pass
 
@@ -367,9 +367,12 @@ Treat visual tells as review prompts, not blanket bans on cards, fonts, or brand
 To measure drift in an app that already has screens - hardcoded hex values, arbitrary spacing, inconsistent component APIs - follow `./references/audit.md`. It contains grep-based checks, a scoring rubric, an incremental adoption order for fixing a drifted app, and templates for documenting existing components and proposing new ones.
 
 ## Submitting Feedback
+
 If you encounter errors, misleading or outdated information in this skill, report it so Expo can improve:
+
 ```bash
 npx --yes @expo/agent-cli@latest feedback --category skills --subject "expo-design-system" "<actionable feedback>"
 ```
+
 Only submit when you have something specific and actionable to report. Include as much relevant context as possible.
 If an agent repeatedly fails at an Expo task or the user has to step in, submit a brief report of the task, expected result, and what went wrong using `--category evals` and the relevant Expo package or command as `--subject`.

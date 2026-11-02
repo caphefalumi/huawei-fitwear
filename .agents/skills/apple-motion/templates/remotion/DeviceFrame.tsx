@@ -1,6 +1,6 @@
-import React from 'react';
-import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
-import {SPRING} from './tokens';
+import React from "react";
+import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { SPRING } from "./tokens";
 
 export type DeviceFrameProps = {
   children: React.ReactNode;
@@ -9,7 +9,7 @@ export type DeviceFrameProps = {
   x?: number;
   y?: number;
   /** entry: rise from below and settle, or none */
-  entry?: 'rise' | 'none';
+  entry?: "rise" | "none";
   /** slow push during the hold, % scale per second (measured holds drift slightly) */
   pushPctPerSec?: number;
   tiltDeg?: number;
@@ -27,17 +27,17 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({
   heightPct = 78,
   x = 50,
   y = 50,
-  entry = 'rise',
+  entry = "rise",
   pushPctPerSec = 1.5,
   tiltDeg = 0,
-  screenColor = '#000000',
+  screenColor = "#000000",
   wallpaper = null,
 }) => {
   const frame = useCurrentFrame();
-  const {fps, height} = useVideoConfig();
+  const { fps, height } = useVideoConfig();
   const h = (heightPct / 100) * height;
   const w = h * 0.4615; // 19.5:9 screen + bezel
-  const p = entry === 'rise' ? spring({frame, fps, config: SPRING.camera}) : 1;
+  const p = entry === "rise" ? spring({ frame, fps, config: SPRING.camera }) : 1;
   const ty = interpolate(p, [0, 1], [0.35 * height, 0]);
   const push = 1 + (pushPctPerSec / 100) * (frame / fps);
   const r = w * 0.17;
@@ -46,32 +46,42 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({
     <AbsoluteFill>
       <div
         style={{
-          position: 'absolute',
+          position: "absolute",
           left: `${x}%`,
           top: `${y}%`,
           width: w,
           height: h,
           transform: `translate(-50%, -50%) translateY(${ty}px) scale(${push}) rotate(${tiltDeg}deg)`,
           borderRadius: r,
-          background: 'linear-gradient(145deg, #3a3a3c, #1c1c1e 40%, #2c2c2e)',
+          background: "linear-gradient(145deg, #3a3a3c, #1c1c1e 40%, #2c2c2e)",
           padding: bezel,
-          boxSizing: 'border-box',
-          opacity: interpolate(p, [0, 0.3], [0, 1], {extrapolateRight: 'clamp'}),
+          boxSizing: "border-box",
+          opacity: interpolate(p, [0, 0.3], [0, 1], { extrapolateRight: "clamp" }),
         }}
       >
-        <div style={{position: 'relative', width: '100%', height: '100%', borderRadius: r - bezel, overflow: 'hidden',
-          background: wallpaper ? `linear-gradient(160deg, ${wallpaper[0]}, ${wallpaper[1]})` : screenColor}}>
+        <div
+          style={{
+            position: "relative",
+            width: "100%",
+            height: "100%",
+            borderRadius: r - bezel,
+            overflow: "hidden",
+            background: wallpaper
+              ? `linear-gradient(160deg, ${wallpaper[0]}, ${wallpaper[1]})`
+              : screenColor,
+          }}
+        >
           {children}
           <div
             style={{
-              position: 'absolute',
+              position: "absolute",
               top: w * 0.03,
-              left: '50%',
-              transform: 'translateX(-50%)',
+              left: "50%",
+              transform: "translateX(-50%)",
               width: w * 0.3,
               height: w * 0.085,
               borderRadius: w,
-              background: '#000',
+              background: "#000",
             }}
           />
         </div>

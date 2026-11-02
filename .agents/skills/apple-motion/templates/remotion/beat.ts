@@ -15,7 +15,7 @@ export type BeatGrid = {
 
 export const beatGrid = (bpm: number, fps: number, offset = 0): BeatGrid => {
   const beat = (60 / bpm) * fps;
-  return {bpm, fps, offset, beat, bar: beat * 4};
+  return { bpm, fps, offset, beat, bar: beat * 4 };
 };
 
 /** Frame of beat n (0-based), rounded to the nearest frame. Fractions allowed: onBeat(g, 2.5). */

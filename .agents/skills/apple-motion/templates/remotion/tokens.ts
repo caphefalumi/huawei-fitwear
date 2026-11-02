@@ -3,15 +3,15 @@
 
 export const FPS = 30;
 
-export type SpringCfg = {damping: number; stiffness: number; mass: number};
+export type SpringCfg = { damping: number; stiffness: number; mass: number };
 export type Bezier = readonly [number, number, number, number];
 
 export const SPRING = {
   /** median fitted entry spring of designer typography (n=41), corrected by the pipeline
    *  calibration (time scale 1.19). Use WITHOUT durationInFrames to reproduce the curve. */
-  textIn: {damping: 15.3, stiffness: 115.0, mass: 1},
-  textOut: {damping: 15.3, stiffness: 172.5, mass: 1},
-  camera: {damping: 30, stiffness: 60, mass: 1},
+  textIn: { damping: 15.3, stiffness: 115.0, mass: 1 },
+  textOut: { damping: 15.3, stiffness: 172.5, mass: 1 },
+  camera: { damping: 30, stiffness: 60, mass: 1 },
 } satisfies Record<string, SpringCfg>;
 
 export const EASE = {
@@ -45,23 +45,24 @@ export const START = {
 };
 
 export const TYPE = {
-  family: '"SF Pro Display", "SF Pro", -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif',
+  family:
+    '"SF Pro Display", "SF Pro", -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif',
   /** cap height in % of frame height over all reviewed Apple typography: hero = p90 (event wordmarks),
    *  display = p75, headline = p50, title = p25, caption = p10 */
-  capHeightPct: {hero: 20.23, display: 11.89, headline: 6.67, title: 5.43, caption: 3.25},
+  capHeightPct: { hero: 20.23, display: 11.89, headline: 6.67, title: 5.43, caption: 3.25 },
   /** SF Pro weight from measured stroke/cap, calibrated on renders at known weights (median 600.0) */
-  weight: {hero: 600, display: 600, headline: 600, title: 600, caption: 500},
+  weight: { hero: 600, display: 600, headline: 600, title: 600, caption: 500 },
   /** line pitch / cap height 1.53 -> line-height in em for SF Pro Display */
   lineHeight: 1.079,
   letterSpacingEm: -0.015,
 };
 
 export const COLOR = {
-  black: '#000000',
-  white: '#ffffff',
-  offWhite: '#f5f5f7',
-  graphite: '#1d1d1f',
-  gray: '#86868b',
+  black: "#000000",
+  white: "#ffffff",
+  offWhite: "#f5f5f7",
+  graphite: "#1d1d1f",
+  gray: "#86868b",
   /** most frequent measured typography colours */
   measured: ["#080808", "#0b0b0b", "#0e0e0e", "#1a1a1a", "#0f0f0f", "#0c0c0d"],
 };
@@ -69,11 +70,18 @@ export const COLOR = {
 /** Per-entry spring time scale, trained: calibration renders at several speeds were measured with the
  *  extraction pipeline and each entry type was set to the speed whose measured entry length matches
  *  Apple's median for that type (scripts/train_entries.py, reports/eval/entry-training.md). */
-export const ENTRY_TIME = {fade: 1.07, slideUp: 1.63, slideUpMask: 1.67, scaleDown: 2.0, scaleUp: 2.0, blurIn: 2.0} as const;
+export const ENTRY_TIME = {
+  fade: 1.07,
+  slideUp: 1.63,
+  slideUpMask: 1.67,
+  scaleDown: 2.0,
+  scaleUp: 2.0,
+  blurIn: 2.0,
+} as const;
 
 export const MOTION = {
   /** share of Apple shots by dominant global move (the rest: local-only motion, whips) */
-  mix: {static: 0.384, push: 0.155, pull: 0.197, pan: 0.091, tilt: 0.096},
+  mix: { static: 0.384, push: 0.155, pull: 0.197, pan: 0.091, tilt: 0.096 },
   /** median |zoom| rate of push/pull shots, % scale per second (p25..p75 1.82..10.24) */
   zoomPctPerSec: 4.54,
   /** median translation rate of pan/tilt shots, % of frame per second (p25..p75 1.18..6.73) */

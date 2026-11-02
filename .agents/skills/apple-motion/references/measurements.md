@@ -4,45 +4,45 @@ Pooled over 6 videos, 1107.1 s, 33187 frames. Generated from fingerprint.json - 
 
 ## Distributions (pooled)
 
-| metric | p10 | p25 | p50 | p75 | p90 |
-|---|---|---|---|---|---|
-| shot length (frames) | 13.0 | 32.2 | 56.5 | 106.0 | 173.5 (n=406) |
-| cuts per 10 s (per video) | 2.24 | 2.47 | 3.24 | 5.13 | 7.44 (n=6) |
-| typography events per 10 s (per video) | 0.23 | 0.51 | 0.78 | 0.81 | 0.94 (n=6) |
-| cap height (% of frame height) | 3.25 | 5.43 | 6.67 | 11.89 | 20.23 (n=68) |
-| stroke / cap height (weight proxy) | 0.137 | 0.149 | 0.161 | 0.171 | 0.191 (n=68) |
-| estimated SF Pro weight (calibrated) | 500.0 | 550.0 | 600.0 | 650.0 | 765.0 (n=68) |
-| x-height / cap height | 0.738 | 0.754 | 0.784 | 0.96 | 0.989 (n=68) |
-| line pitch / cap height | 1.24 | 1.46 | 1.53 | 2.34 | 2.41 (n=11) |
-| typography hold (frames) | 10.0 | 16.0 | 33.0 | 57.5 | 80.6 (n=68) |
-| typography on screen (frames) | 24.0 | 33.8 | 45.5 | 67.2 | 90.3 (n=68) |
-| entry duration, all (frames) | 0.0 | 2.5 | 7.0 | 12.0 | 20.3 (n=68) |
-| entry duration, animated only (frames) | 5.0 | 6.0 | 8.0 | 15.5 | 24.0 (n=51) |
-| exit duration (frames) | 0.0 | 0.0 | 0.0 | 7.0 | 17.0 (n=68) |
-| entry start scale | 0.78 | 0.82 | 0.93 | 1.1 | 1.21 (n=13) |
-| entry start y offset (% of height) | -3.93 | 0.51 | 1.95 | 2.96 | 5.47 (n=25) |
-| entry start blur (px @1080p) | 4.49 | 6.0 | 10.28 | 41.36 | 49.71 (n=20) |
-| hold drift, scale (%/s) | -6.53 | -0.18 | 0.0 | 0.14 | 0.86 (n=66) |
-| entry spring damping (good fits) | 4.49 | 10.09 | 18.27 | 37.77 | 97.66 (n=41) |
-| entry spring stiffness (good fits) | 14.7 | 77.0 | 162.9 | 406.0 | 2329.3 (n=41) |
-| entry spring durationInFrames | 5.0 | 12.0 | 17.0 | 35.0 | 72.0 (n=41) |
-| music BPM (per video) | 91.9 | 103.9 | 118.8 | 125.3 | 131.3 (n=6) |
-| integrated loudness LUFS (per video) | -20.4 | -18.8 | -17.4 | -16.8 | -16.6 (n=6) |
-| true peak dBTP (per video) | -3.9 | -3.4 | -2.0 | -1.5 | -1.0 (n=6) |
-| loudness range LU (per video) | 2.8 | 3.2 | 3.4 | 3.9 | 4.2 (n=6) |
-| VO words/s while speaking (per video) | 2.67 | 2.81 | 3.04 | 3.28 | 3.43 (n=6) |
-| SFX candidates per 10 s (per video) | 1.78 | 2.77 | 4.41 | 6.77 | 8.25 (n=6) |
-| cuts on beat +-2 fr (per video) | 0.28 | 0.299 | 0.352 | 0.371 | 0.378 (n=6) |
-| chance of on-beat (per video) | 0.256 | 0.289 | 0.33 | 0.348 | 0.365 (n=6) |
-| cuts near a word onset +-2 fr | 0.236 | 0.257 | 0.319 | 0.38 | 0.441 (n=6) |
-| chance near a word onset | 0.348 | 0.367 | 0.393 | 0.433 | 0.455 (n=6) |
-| typography appear - same spoken word (frames) | -16.2 | -10.0 | -2.0 | 13.0 | 27.2 (n=45) |
-| UI/graphic element entries per s | 2.3 | 3.36 | 3.54 | 3.84 | 4.75 (n=6) |
-| camera zoom rate, push/pull shots (%/s) | 1.1 | 1.82 | 4.54 | 10.24 | 18.29 (n=140) |
-| camera pan/tilt rate (% of frame/s) | 0.62 | 1.18 | 2.61 | 6.73 | 12.41 (n=76) |
-| first shot (frames) | 53.0 | 83.0 | 130.0 | 202.0 | 232.0 (n=6) |
-| last shot (frames) | 12.0 | 27.0 | 94.0 | 195.0 | 280.0 (n=6) |
-| montage runs (>=4 shots of <=10 fr) per minute | 0.0 | 0.0 | 0.0 | 0.0 | 0.63 (n=6) |
+| metric                                         | p10   | p25   | p50   | p75   | p90           |
+| ---------------------------------------------- | ----- | ----- | ----- | ----- | ------------- |
+| shot length (frames)                           | 13.0  | 32.2  | 56.5  | 106.0 | 173.5 (n=406) |
+| cuts per 10 s (per video)                      | 2.24  | 2.47  | 3.24  | 5.13  | 7.44 (n=6)    |
+| typography events per 10 s (per video)         | 0.23  | 0.51  | 0.78  | 0.81  | 0.94 (n=6)    |
+| cap height (% of frame height)                 | 3.25  | 5.43  | 6.67  | 11.89 | 20.23 (n=68)  |
+| stroke / cap height (weight proxy)             | 0.137 | 0.149 | 0.161 | 0.171 | 0.191 (n=68)  |
+| estimated SF Pro weight (calibrated)           | 500.0 | 550.0 | 600.0 | 650.0 | 765.0 (n=68)  |
+| x-height / cap height                          | 0.738 | 0.754 | 0.784 | 0.96  | 0.989 (n=68)  |
+| line pitch / cap height                        | 1.24  | 1.46  | 1.53  | 2.34  | 2.41 (n=11)   |
+| typography hold (frames)                       | 10.0  | 16.0  | 33.0  | 57.5  | 80.6 (n=68)   |
+| typography on screen (frames)                  | 24.0  | 33.8  | 45.5  | 67.2  | 90.3 (n=68)   |
+| entry duration, all (frames)                   | 0.0   | 2.5   | 7.0   | 12.0  | 20.3 (n=68)   |
+| entry duration, animated only (frames)         | 5.0   | 6.0   | 8.0   | 15.5  | 24.0 (n=51)   |
+| exit duration (frames)                         | 0.0   | 0.0   | 0.0   | 7.0   | 17.0 (n=68)   |
+| entry start scale                              | 0.78  | 0.82  | 0.93  | 1.1   | 1.21 (n=13)   |
+| entry start y offset (% of height)             | -3.93 | 0.51  | 1.95  | 2.96  | 5.47 (n=25)   |
+| entry start blur (px @1080p)                   | 4.49  | 6.0   | 10.28 | 41.36 | 49.71 (n=20)  |
+| hold drift, scale (%/s)                        | -6.53 | -0.18 | 0.0   | 0.14  | 0.86 (n=66)   |
+| entry spring damping (good fits)               | 4.49  | 10.09 | 18.27 | 37.77 | 97.66 (n=41)  |
+| entry spring stiffness (good fits)             | 14.7  | 77.0  | 162.9 | 406.0 | 2329.3 (n=41) |
+| entry spring durationInFrames                  | 5.0   | 12.0  | 17.0  | 35.0  | 72.0 (n=41)   |
+| music BPM (per video)                          | 91.9  | 103.9 | 118.8 | 125.3 | 131.3 (n=6)   |
+| integrated loudness LUFS (per video)           | -20.4 | -18.8 | -17.4 | -16.8 | -16.6 (n=6)   |
+| true peak dBTP (per video)                     | -3.9  | -3.4  | -2.0  | -1.5  | -1.0 (n=6)    |
+| loudness range LU (per video)                  | 2.8   | 3.2   | 3.4   | 3.9   | 4.2 (n=6)     |
+| VO words/s while speaking (per video)          | 2.67  | 2.81  | 3.04  | 3.28  | 3.43 (n=6)    |
+| SFX candidates per 10 s (per video)            | 1.78  | 2.77  | 4.41  | 6.77  | 8.25 (n=6)    |
+| cuts on beat +-2 fr (per video)                | 0.28  | 0.299 | 0.352 | 0.371 | 0.378 (n=6)   |
+| chance of on-beat (per video)                  | 0.256 | 0.289 | 0.33  | 0.348 | 0.365 (n=6)   |
+| cuts near a word onset +-2 fr                  | 0.236 | 0.257 | 0.319 | 0.38  | 0.441 (n=6)   |
+| chance near a word onset                       | 0.348 | 0.367 | 0.393 | 0.433 | 0.455 (n=6)   |
+| typography appear - same spoken word (frames)  | -16.2 | -10.0 | -2.0  | 13.0  | 27.2 (n=45)   |
+| UI/graphic element entries per s               | 2.3   | 3.36  | 3.54  | 3.84  | 4.75 (n=6)    |
+| camera zoom rate, push/pull shots (%/s)        | 1.1   | 1.82  | 4.54  | 10.24 | 18.29 (n=140) |
+| camera pan/tilt rate (% of frame/s)            | 0.62  | 1.18  | 2.61  | 6.73  | 12.41 (n=76)  |
+| first shot (frames)                            | 53.0  | 83.0  | 130.0 | 202.0 | 232.0 (n=6)   |
+| last shot (frames)                             | 12.0  | 27.0  | 94.0  | 195.0 | 280.0 (n=6)   |
+| montage runs (>=4 shots of <=10 fr) per minute | 0.0   | 0.0   | 0.0   | 0.0   | 0.63 (n=6)    |
 
 ## Shares (pooled)
 
@@ -67,14 +67,14 @@ Pooled over 6 videos, 1107.1 s, 33187 frames. Generated from fingerprint.json - 
 
 ## Per video
 
-| video | dur s | shots | median shot fr | cuts/10s | typo/10s | median hold fr | top entry | BPM | LUFS | cuts on beat (chance) |
-|---|---|---|---|---|---|---|---|---|---|---|
-| ios26-liquid-glass | 273.77 | 68 | 99.5 | 2.45 | 0.04 | 25.0 | blur in | 118.05 | -19.2 | 0.277 (0.328) |
-| sept26-event-recap | 95.09 | 90 | 22.5 | 9.36 | 0.42 | 28.0 | cut on | 127.2 | -17.0 | 0.38 (0.354) |
-| wwdc22-day1-recap | 179.51 | 72 | 66.0 | 3.96 | 1.06 | 34.0 | cut on | 99.18 | -16.5 | 0.343 (0.276) |
-| wwdc23-17things | 135.1 | 35 | 66.0 | 2.52 | 0.81 | 21.0 | cut on | 119.57 | -16.7 | 0.375 (0.332) |
-| wwdc25-welcome | 152.09 | 85 | 41.0 | 5.52 | 0.79 | 13.0 | slide | 84.65 | -21.6 | 0.284 (0.235) |
-| wwdc26-sotu-recap | 271.5 | 56 | 118.0 | 2.03 | 0.77 | 75.0 | fade | 135.42 | -17.7 | 0.36 (0.376) |
+| video              | dur s  | shots | median shot fr | cuts/10s | typo/10s | median hold fr | top entry | BPM    | LUFS  | cuts on beat (chance) |
+| ------------------ | ------ | ----- | -------------- | -------- | -------- | -------------- | --------- | ------ | ----- | --------------------- |
+| ios26-liquid-glass | 273.77 | 68    | 99.5           | 2.45     | 0.04     | 25.0           | blur in   | 118.05 | -19.2 | 0.277 (0.328)         |
+| sept26-event-recap | 95.09  | 90    | 22.5           | 9.36     | 0.42     | 28.0           | cut on    | 127.2  | -17.0 | 0.38 (0.354)          |
+| wwdc22-day1-recap  | 179.51 | 72    | 66.0           | 3.96     | 1.06     | 34.0           | cut on    | 99.18  | -16.5 | 0.343 (0.276)         |
+| wwdc23-17things    | 135.1  | 35    | 66.0           | 2.52     | 0.81     | 21.0           | cut on    | 119.57 | -16.7 | 0.375 (0.332)         |
+| wwdc25-welcome     | 152.09 | 85    | 41.0           | 5.52     | 0.79     | 13.0           | slide     | 84.65  | -21.6 | 0.284 (0.235)         |
+| wwdc26-sotu-recap  | 271.5  | 56    | 118.0          | 2.03     | 0.77     | 75.0           | fade      | 135.42 | -17.7 | 0.36 (0.376)          |
 
 ## Typography examples (reviewed)
 

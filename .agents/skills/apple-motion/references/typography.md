@@ -1,12 +1,12 @@
 # Typography
 
 Numbers: `measurements.md` (cap height, weight proxy, leading, hold, entry/exit, springs). This file
-is the catalogue of *how* type is used, from reviewing every tracked text event of the six videos.
+is the catalogue of _how_ type is used, from reviewing every tracked text event of the six videos.
 
 ## What counts as "typography" here
 
 Out of ~1,600 tracked text blocks only a small share is designer-set type laid over the picture.
-The rest is text *inside* the picture: app UI on devices, product engravings, player timecodes,
+The rest is text _inside_ the picture: app UI on devices, product engravings, player timecodes,
 legal lines. When you write an Apple-style recap, most of your frames should be product / UI / people,
 and type is the punctuation: a feature name, a claim, a number.
 
@@ -21,7 +21,7 @@ and type is the punctuation: a feature name, a claim, a number.
    "Most accurate heart rate / sensing in a wearable". Usually cuts on with the shot.
 3. **Single word on black.** Big, centred, alone: "Siri". Cut on, short hold, cut off.
 4. **Spec numerals.** Huge numerals with a small label: "Up to / 10-core", "18% / Faster CPU",
-   "35% / Faster GPU". Here Apple *does* fill the numerals with a vertical gradient (M2: purple to
+   "35% / Faster GPU". Here Apple _does_ fill the numerals with a vertical gradient (M2: purple to
    magenta) - the only place type is not flat. Use `<Counter/>` for the roll-up.
 5. **Wordmark stack.** Event wordmark lines stacked and swapped ("17 things / big & little / WWDC23"),
    lines slide in and out under a mask, with stretched / smeared frames between states.
@@ -52,7 +52,7 @@ and type is the punctuation: a feature name, a claim, a number.
 
 ## Spring vs. visible duration (important when you write Remotion code)
 
-A Remotion `spring({durationInFrames: 12})` *looks* finished after ~4 frames: the remaining frames
+A Remotion `spring({durationInFrames: 12})` _looks_ finished after ~4 frames: the remaining frames
 are sub-pixel settling. Our pipeline measures the visible duration; `tokens.ts` gives you the fitted
 spring config that reproduces the measured curve directly (use it without `durationInFrames`), and
 the "Idiomatic form" line in measurements.md gives an equivalent `{damping, durationInFrames}` form

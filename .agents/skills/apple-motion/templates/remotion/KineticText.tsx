@@ -1,18 +1,25 @@
-import React, {useMemo} from 'react';
-import {AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
-import {COLOR, DURATION, EASE, ENTRY_TIME, SPRING, START, TYPE} from './tokens';
+import React, { useMemo } from "react";
+import {
+  AbsoluteFill,
+  Easing,
+  interpolate,
+  spring,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
+import { COLOR, DURATION, EASE, ENTRY_TIME, SPRING, START, TYPE } from "./tokens";
 
 export type Entry =
-  | 'cut'
-  | 'fade'
-  | 'blurIn'
-  | 'scaleDown'
-  | 'scaleUp'
-  | 'slideUp'
-  | 'slideUpMask'
-  | 'perWord'
-  | 'perLetter';
-export type Exit = 'cut' | 'fade' | 'blurOut' | 'scaleUp' | 'scaleDown' | 'slideOut';
+  | "cut"
+  | "fade"
+  | "blurIn"
+  | "scaleDown"
+  | "scaleUp"
+  | "slideUp"
+  | "slideUpMask"
+  | "perWord"
+  | "perLetter";
+export type Exit = "cut" | "fade" | "blurOut" | "scaleUp" | "scaleDown" | "slideOut";
 export type Size = keyof typeof TYPE.capHeightPct;
 
 export type KineticTextProps = {
@@ -27,7 +34,7 @@ export type KineticTextProps = {
   capHeightPct?: number;
   weight?: number;
   color?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
   /** Block anchor in % of frame (centre of the text block). */
   x?: number;
   y?: number;
@@ -53,11 +60,11 @@ const useCapToEm = (family: string, weight: number): number =>
     const hit = capToEmCache.get(key);
     if (hit) return hit;
     let v = 0.705; // SF Pro Display
-    if (typeof document !== 'undefined') {
-      const ctx = document.createElement('canvas').getContext('2d');
+    if (typeof document !== "undefined") {
+      const ctx = document.createElement("canvas").getContext("2d");
       if (ctx) {
         ctx.font = `${weight} 200px ${family}`;
-        const m = ctx.measureText('H');
+        const m = ctx.measureText("H");
         if (m.actualBoundingBoxAscent > 0) v = m.actualBoundingBoxAscent / 200;
       }
     }
@@ -65,7 +72,8 @@ const useCapToEm = (family: string, weight: number): number =>
     return v;
   }, [family, weight]);
 
-const ease = (b: readonly [number, number, number, number]) => Easing.bezier(b[0], b[1], b[2], b[3]);
+const ease = (b: readonly [number, number, number, number]) =>
+  Easing.bezier(b[0], b[1], b[2], b[3]);
 
 /**
  * 0 -> 1 entry progress. Default: the measured spring UNSTRETCHED - its visible move lasts about
@@ -74,10 +82,10 @@ const ease = (b: readonly [number, number, number, number]) => Easing.bezier(b[0
  */
 const entryProgress = (frame: number, fps: number, frames?: number) =>
   frames === undefined
-    ? spring({frame, fps, config: SPRING.textIn})
+    ? spring({ frame, fps, config: SPRING.textIn })
     : frames <= 0
       ? 1
-      : spring({frame, fps, config: SPRING.textIn, durationInFrames: frames});
+      : spring({ frame, fps, config: SPRING.textIn, durationInFrames: frames });
 
 /** 0 -> 1 exit progress (bezier; Apple exits are short and front-loaded). */
 const exitProgress = (frame: number, total: number, frames: number) =>
@@ -86,21 +94,21 @@ const exitProgress = (frame: number, total: number, frames: number) =>
       ? 1
       : 0
     : interpolate(frame, [total - frames, total], [0, 1], {
-        extrapolateLeft: 'clamp',
-        extrapolateRight: 'clamp',
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
         easing: ease(EASE.textOut),
       });
 
 export const KineticText: React.FC<KineticTextProps> = ({
   lines,
   durationInFrames,
-  entry = 'scaleDown',
-  exit = 'cut',
-  size = 'headline',
+  entry = "scaleDown",
+  exit = "cut",
+  size = "headline",
   capHeightPct,
   weight,
   color = COLOR.white,
-  align = 'center',
+  align = "center",
   x = 50,
   y = 50,
   entryFrames,
@@ -112,28 +120,30 @@ export const KineticText: React.FC<KineticTextProps> = ({
   style,
 }) => {
   const frame = useCurrentFrame();
-  const {fps, height} = useVideoConfig();
+  const { fps, height } = useVideoConfig();
   const w = weight ?? TYPE.weight[size];
   const capToEm = useCapToEm(TYPE.family, w);
-  const {width} = useVideoConfig();
+  const { width } = useVideoConfig();
   const wanted = (((capHeightPct ?? TYPE.capHeightPct[size]) / 100) * height) / capToEm;
   const widest = useMemo(() => {
-    if (typeof document === 'undefined') return 0;
-    const ctx = document.createElement('canvas').getContext('2d');
+    if (typeof document === "undefined") return 0;
+    const ctx = document.createElement("canvas").getContext("2d");
     if (!ctx) return 0;
     ctx.font = `${w} 100px ${TYPE.family}`;
-    return Math.max(...lines.map((l) => ctx.measureText(l).width / 100 + TYPE.letterSpacingEm * l.length));
+    return Math.max(
+      ...lines.map((l) => ctx.measureText(l).width / 100 + TYPE.letterSpacingEm * l.length),
+    );
   }, [lines, w]);
   // room available from the anchor: left-aligned text at x=58 may use at most 96-58 = 38% of the width
-  const room = align === 'left' ? 96 - x : align === 'right' ? x - 4 : 2 * Math.min(x, 100 - x) - 8;
+  const room = align === "left" ? 96 - x : align === "right" ? x - 4 : 2 * Math.min(x, 100 - x) - 8;
   const fitPct = Math.max(10, Math.min(maxWidthPct, room));
   const fontSize = widest > 0 ? Math.min(wanted, ((fitPct / 100) * width) / widest) : wanted;
-  const outFrames = exit === 'cut' ? 0 : exitFrames ?? DURATION.textOutFrames;
+  const outFrames = exit === "cut" ? 0 : (exitFrames ?? DURATION.textOutFrames);
   if (frame >= durationInFrames) return null;
 
   const ts = timeScale ?? (ENTRY_TIME as Record<string, number>)[entry] ?? 1;
   const f = frame / ts; // time-scaled spring: same shape, slower
-  const p = entry === 'cut' ? 1 : entryProgress(f, fps, entryFrames);
+  const p = entry === "cut" ? 1 : entryProgress(f, fps, entryFrames);
   const q = exitProgress(frame, durationInFrames, outFrames);
 
   // block-level transform for entry + exit
@@ -142,46 +152,46 @@ export const KineticText: React.FC<KineticTextProps> = ({
   let ty = 0; // px
   let blur = 0; // px
   switch (entry) {
-    case 'fade':
+    case "fade":
       opacity = interpolate(p, [0, 1], [0, 1]);
       break;
-    case 'blurIn':
-      opacity = interpolate(p, [0, 0.6], [0, 1], {extrapolateRight: 'clamp'});
+    case "blurIn":
+      opacity = interpolate(p, [0, 0.6], [0, 1], { extrapolateRight: "clamp" });
       blur = interpolate(p, [0, 1], [START.blurPx, 0]);
       break;
-    case 'scaleDown':
+    case "scaleDown":
       scale = interpolate(p, [0, 1], [START.scaleDown, 1]);
-      opacity = interpolate(p, [0, 0.5], [0, 1], {extrapolateRight: 'clamp'});
+      opacity = interpolate(p, [0, 0.5], [0, 1], { extrapolateRight: "clamp" });
       blur = interpolate(p, [0, 1], [START.blurPx * 0.5, 0]);
       break;
-    case 'scaleUp':
+    case "scaleUp":
       scale = interpolate(p, [0, 1], [START.scaleUp, 1]);
-      opacity = interpolate(p, [0, 0.5], [0, 1], {extrapolateRight: 'clamp'});
+      opacity = interpolate(p, [0, 0.5], [0, 1], { extrapolateRight: "clamp" });
       break;
-    case 'slideUp':
+    case "slideUp":
       ty = interpolate(p, [0, 1], [(START.slideYPctH / 100) * height, 0]);
-      opacity = interpolate(p, [0, 0.6], [0, 1], {extrapolateRight: 'clamp'});
+      opacity = interpolate(p, [0, 0.6], [0, 1], { extrapolateRight: "clamp" });
       break;
     default:
       break;
   }
   switch (exit) {
-    case 'fade':
+    case "fade":
       opacity *= 1 - q;
       break;
-    case 'blurOut':
+    case "blurOut":
       opacity *= 1 - q;
       blur += q * START.blurPx;
       break;
-    case 'scaleUp':
+    case "scaleUp":
       scale *= 1 + q * (START.scaleDown - 1);
       opacity *= 1 - q;
       break;
-    case 'scaleDown':
+    case "scaleDown":
       scale *= 1 - q * (1 - START.scaleUp);
       opacity *= 1 - q;
       break;
-    case 'slideOut':
+    case "slideOut":
       ty -= q * (START.slideYPctH / 100) * height;
       opacity *= 1 - q;
       break;
@@ -189,41 +199,60 @@ export const KineticText: React.FC<KineticTextProps> = ({
       break;
   }
 
-  const stagger = staggerFrames ?? (entry === 'perLetter' ? DURATION.letterStaggerFrames : DURATION.wordStaggerFrames);
+  const stagger =
+    staggerFrames ??
+    (entry === "perLetter" ? DURATION.letterStaggerFrames : DURATION.wordStaggerFrames);
   const lineStyle: React.CSSProperties = {
-    display: 'block',
-    whiteSpace: 'pre',
+    display: "block",
+    whiteSpace: "pre",
     textAlign: align,
   };
 
   let unitIndex = 0;
   const renderLine = (line: string, li: number) => {
-    if (entry === 'slideUpMask') {
+    if (entry === "slideUpMask") {
       const lp = entryProgress(f - (li * stagger) / ts, fps, entryFrames);
       return (
-        <span key={li} style={{...lineStyle, overflow: 'hidden', paddingBottom: '0.12em', marginBottom: '-0.12em'}}>
-          <span style={{display: 'inline-block', transform: `translateY(${interpolate(lp, [0, 1], [105, 0])}%)`}}>
+        <span
+          key={li}
+          style={{
+            ...lineStyle,
+            overflow: "hidden",
+            paddingBottom: "0.12em",
+            marginBottom: "-0.12em",
+          }}
+        >
+          <span
+            style={{
+              display: "inline-block",
+              transform: `translateY(${interpolate(lp, [0, 1], [105, 0])}%)`,
+            }}
+          >
             {line}
           </span>
         </span>
       );
     }
-    if (entry === 'perWord' || entry === 'perLetter') {
-      const parts = entry === 'perWord' ? line.split(/(\s+)/) : Array.from(line);
+    if (entry === "perWord" || entry === "perLetter") {
+      const parts = entry === "perWord" ? line.split(/(\s+)/) : Array.from(line);
       return (
         <span key={li} style={lineStyle}>
           {parts.map((part, pi) => {
             if (/^\s+$/.test(part)) return <span key={pi}>{part}</span>;
             const i = unitIndex++;
-            const up = entryProgress(f - (i * stagger) / ts, fps, entry === 'perLetter' ? 2 : entryFrames);
+            const up = entryProgress(
+              f - (i * stagger) / ts,
+              fps,
+              entry === "perLetter" ? 2 : entryFrames,
+            );
             const st: React.CSSProperties =
-              entry === 'perWord'
+              entry === "perWord"
                 ? {
-                    display: 'inline-block',
-                    opacity: interpolate(up, [0, 0.5], [0, 1], {extrapolateRight: 'clamp'}),
+                    display: "inline-block",
+                    opacity: interpolate(up, [0, 0.5], [0, 1], { extrapolateRight: "clamp" }),
                     transform: `translateY(${interpolate(up, [0, 1], [0.35, 0])}em) scale(${interpolate(up, [0, 1], [0.92, 1])})`,
                   }
-                : {opacity: up > 0.01 ? 1 : 0};
+                : { opacity: up > 0.01 ? 1 : 0 };
             return (
               <span key={pi} style={st}>
                 {part}
@@ -240,16 +269,16 @@ export const KineticText: React.FC<KineticTextProps> = ({
     );
   };
 
-  const anchorX = align === 'left' ? '0%' : align === 'right' ? '-100%' : '-50%';
+  const anchorX = align === "left" ? "0%" : align === "right" ? "-100%" : "-50%";
   return (
-    <AbsoluteFill style={{pointerEvents: 'none'}}>
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
       <div
         style={{
-          position: 'absolute',
+          position: "absolute",
           left: `${x}%`,
           top: `${y}%`,
           transform: `translate(${anchorX}, -50%) translateY(${ty}px) scale(${scale})`,
-          transformOrigin: align === 'left' ? '0% 50%' : align === 'right' ? '100% 50%' : '50% 50%',
+          transformOrigin: align === "left" ? "0% 50%" : align === "right" ? "100% 50%" : "50% 50%",
           fontFamily: TYPE.family,
           fontWeight: w,
           fontSize,
@@ -259,9 +288,14 @@ export const KineticText: React.FC<KineticTextProps> = ({
           opacity,
           filter: blur > 0.05 ? `blur(${blur}px)` : undefined,
           fontFeatureSettings: '"kern" 1',
-          WebkitFontSmoothing: 'antialiased',
+          WebkitFontSmoothing: "antialiased",
           ...(gradient
-            ? {backgroundImage: `linear-gradient(180deg, ${gradient[0]}, ${gradient[1]})`, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent'}
+            ? {
+                backgroundImage: `linear-gradient(180deg, ${gradient[0]}, ${gradient[1]})`,
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+              }
             : {}),
           ...style,
         }}
