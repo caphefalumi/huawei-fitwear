@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Pressable } from "@/components/pressable";
 import { AuthField } from "./auth-field";
-import { useAuth } from "./auth-store";
+import { useAuth } from "@/features/auth/auth-store";
 import { AuthColors } from "./tokens";
 
 const icons = {

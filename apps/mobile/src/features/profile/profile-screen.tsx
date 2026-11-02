@@ -80,6 +80,9 @@ export function ProfileScreen() {
   } = useHealth();
   const inPeriod = recovery?.area === PERIOD_AREA;
   const [openSheet, setOpenSheet] = useState<OpenSheet>(null);
+  const [closingSheet, setClosingSheet] = useState<OpenSheet>(null);
+  const mountedSheet = openSheet ?? closingSheet;
+  const didDismiss = () => setClosingSheet(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const active = useRef(true);
@@ -90,7 +93,10 @@ export function ProfileScreen() {
       active.current = false;
     };
   }, []);
-  const close = () => setOpenSheet(null);
+  const close = () => {
+    setClosingSheet(openSheet);
+    setOpenSheet(null);
+  };
   const mutate = async (action: () => Promise<void>) => {
     if (busy.current) return;
     busy.current = true;
@@ -239,18 +245,47 @@ export function ProfileScreen() {
       >
         <Text style={styles.periodLabel}>{pending ? "Please wait…" : "Sign out"}</Text>
       </Pressable>
-      {openSheet === "period" ? (
-        <RecoverySheet visible initialArea={PERIOD_AREA} onClose={close} />
+      {mountedSheet === "period" ? (
+        <RecoverySheet
+          visible={openSheet === "period"}
+          initialArea={PERIOD_AREA}
+          onClose={close}
+          onDismiss={didDismiss}
+        />
       ) : null}
 
-      {openSheet === "height" ? <HeightSheet visible onClose={close} /> : null}
-      {openSheet === "weight" ? <WeightSheet visible onClose={close} /> : null}
-      {openSheet === "sex" ? <SexSheet visible onClose={close} /> : null}
-      {openSheet === "goal" ? <GoalSheet visible onClose={close} /> : null}
-      {openSheet === "frequency" ? <FrequencySheet visible onClose={close} /> : null}
-      {openSheet === "activity" ? <ActivitySheet visible onClose={close} /> : null}
-      {openSheet === "target" ? <TargetWeightSheet visible onClose={close} /> : null}
-      {openSheet === "recovery" ? <RecoverySheet visible onClose={close} /> : null}
+      {mountedSheet === "height" ? (
+        <HeightSheet visible={openSheet === "height"} onClose={close} onDismiss={didDismiss} />
+      ) : null}
+      {mountedSheet === "weight" ? (
+        <WeightSheet visible={openSheet === "weight"} onClose={close} onDismiss={didDismiss} />
+      ) : null}
+      {mountedSheet === "sex" ? (
+        <SexSheet visible={openSheet === "sex"} onClose={close} onDismiss={didDismiss} />
+      ) : null}
+      {mountedSheet === "goal" ? (
+        <GoalSheet visible={openSheet === "goal"} onClose={close} onDismiss={didDismiss} />
+      ) : null}
+      {mountedSheet === "frequency" ? (
+        <FrequencySheet
+          visible={openSheet === "frequency"}
+          onClose={close}
+          onDismiss={didDismiss}
+        />
+      ) : null}
+      {mountedSheet === "activity" ? (
+        <ActivitySheet visible={openSheet === "activity"} onClose={close} onDismiss={didDismiss} />
+      ) : null}
+      {mountedSheet === "target" ? (
+        <TargetWeightSheet
+          visible={openSheet === "target"}
+          onClose={close}
+          onDismiss={didDismiss}
+        />
+      ) : null}
+      {mountedSheet === "recovery" ? (
+        <RecoverySheet visible={openSheet === "recovery"} onClose={close} onDismiss={didDismiss} />
+      ) : null}
     </ScrollView>
   );
 }

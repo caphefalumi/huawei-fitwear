@@ -1,9 +1,10 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import * as ImagePicker from "expo-image-picker";
+import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { pickImage } from "@/features/camera/image-picker";
 
 import { Pressable } from "@/components/pressable";
 import { Sheet } from "@/components/sheet";
@@ -42,44 +43,17 @@ export function MealCaptureScreen() {
     };
   }, []);
 
-  async function pickImage(camera: boolean) {
+  async function selectImage(camera: boolean) {
     if (busy) return;
     setError(null);
     try {
-      if (camera && Platform.OS !== "web") {
-        const permission = await ImagePicker.requestCameraPermissionsAsync();
-        if (!permission.granted)
-          throw new Error(
-            "Camera permission was denied. Allow camera access in settings or choose a library image.",
-          );
-      }
-      const options: ImagePicker.ImagePickerOptions = {
-        mediaTypes: ["images"],
-        base64: true,
-        quality: 0.7,
-        allowsEditing: true,
-      };
-      const result = camera
-        ? await ImagePicker.launchCameraAsync(options)
-        : await ImagePicker.launchImageLibraryAsync(options);
-      if (result.canceled || !active.current) return;
-      const asset = result.assets[0];
-      if (!asset.base64) throw new Error("Could not read this image. Choose another JPEG or PNG.");
-      const mimeType = asset.base64.startsWith("/9j/")
-        ? "image/jpeg"
-        : asset.base64.startsWith("iVBOR")
-          ? "image/png"
-          : null;
-      if (!mimeType) throw new Error("Choose a JPEG or PNG image.");
-      if (asset.base64.length > 7_000_000)
-        throw new Error("This image is too large. Crop it or choose a smaller photo (under 5 MB).");
-      setImage({ uri: asset.uri, base64: asset.base64, mimeType });
+      const image = await pickImage(camera);
+      if (image && active.current) setImage(image);
     } catch (cause) {
       if (active.current)
         setError(cause instanceof Error ? cause.message : "Could not open image picker.");
     }
   }
-
   async function analyze() {
     if (!image || busy) return;
     if (items.length) {
@@ -218,13 +192,13 @@ export function MealCaptureScreen() {
             accessibilityLabel="Take meal photo"
             disabled={busy}
             style={styles.shutterRing}
-            onPress={() => pickImage(true)}
+            onPress={() => selectImage(true)}
           >
             <View style={styles.shutter} />
           </Pressable>
         </View>
 
-        <Pressable disabled={busy} style={styles.libraryButton} onPress={() => pickImage(false)}>
+        <Pressable disabled={busy} style={styles.libraryButton} onPress={() => selectImage(false)}>
           <Image
             accessible={false}
             source={icons.images}

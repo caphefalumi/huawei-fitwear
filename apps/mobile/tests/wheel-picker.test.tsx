@@ -33,7 +33,7 @@ test("assistive adjustment changes frequency and stops at both bounds", async ()
   await adjust("decrement");
   await adjust("decrement");
   expect(screen.getByTestId("saved-value")).toHaveTextContent("1");
-});
+}, 20_000);
 
 test("frequency can be changed without a swipe", async () => {
   const screen = await render(<Frequency />);

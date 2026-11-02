@@ -23,10 +23,12 @@ const NONE = "None";
 export function RecoverySheet({
   visible,
   onClose,
+  onDismiss,
   initialArea,
 }: {
   visible: boolean;
   onClose: () => void;
+  onDismiss?: () => void;
   initialArea?: string;
 }) {
   const { recovery, saveRecovery, sex, loading, error: loadError } = useHealth();
@@ -92,7 +94,7 @@ export function RecoverySheet({
   }
 
   return (
-    <Sheet visible={visible} title="Recovery plan" onClose={close}>
+    <Sheet visible={visible} title="Recovery plan" onClose={close} onDismiss={onDismiss}>
       <Text style={styles.body}>
         Choose your recovery schedule. Follow advice from your healthcare professional.
       </Text>

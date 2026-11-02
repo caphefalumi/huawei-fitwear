@@ -119,11 +119,22 @@ bun run web
 ```text
 apps/mobile/
 ├── src/
-│   ├── app/                 # Expo Router auth, protected tabs and detail routes
+│   ├── app/                 # Expo Router route files
 │   ├── components/          # Reusable UI elements and themed components
 │   ├── constants/           # Theme palettes and style tokens
-│   ├── hooks/               # Custom hooks (color scheme, responsive state)
-│   └── features/            # Auth, meals, health, home, profile, recovery, workouts and BLE
+│   ├── features/             # Domain features; screens and state stay together
+│   │   ├── auth/              # Authentication UI, API, session state, models and helpers
+│   │   ├── ble/               # Watch BLE integration
+│   │   ├── camera/            # Camera and library image selection
+│   │   ├── health/            # Health and recovery state
+│   │   ├── home/              # Home, nutrition and progress UI
+│   │   ├── meals/             # Meal logging, history and detail UI
+│   │   ├── profile/           # Profile UI and settings
+│   │   ├── recovery/          # Recovery UI
+│   │   └── workout/           # Workout plans and sessions
+│   ├── hooks/                 # Custom hooks (color scheme, responsive state)
+│   ├── lib/                   # Shared API client
+│   └── types/                 # Shared TypeScript declarations
 ├── assets/                  # App icons, splash screens, and images
 ├── app.json                 # Expo configuration & plugins
 ├── package.json             # Dependencies and scripts
@@ -173,3 +184,5 @@ The keyboard controller contains native code: rebuild the development app after 
 Guidance used: [Expo native UI](https://github.com/expo/skills), [Emil Kowalski's Expo motion/accessibility](https://github.com/emilkowalski/skills), [Appllama native design](https://github.com/Appllama/appllama-skills), and [Hallmark's accessibility floor](https://github.com/Nutlope/hallmark). Web-only CSS rules are not applied to native screens.
 
 Before release, check an installed development build with TalkBack and VoiceOver: traverse each tab, change profile choices/frequency, dismiss sheets, search/select/edit/delete meal items, and edit/delete workout sets. Repeat at the largest system text size on a small phone and with Reduce Motion enabled. Component tests cannot establish native focus order, spoken output, or visual clipping.
+
+Shared sheets use a coordinated 220 ms ease-out opening (a short 24-point rise plus fade) and a faster 160 ms closing transition. The scrim fades with the card and the modal unmounts only when the exit completes, so there is no trailing backdrop. Reduce Motion skips both transitions. Profile and recovery callers retain their draft only through the exit, then unmount so reopening starts fresh. Saving still waits for success before dismissing, so failures remain visible.

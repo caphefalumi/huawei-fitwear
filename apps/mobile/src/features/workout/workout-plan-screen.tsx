@@ -27,6 +27,7 @@ export function WorkoutPlanScreen() {
   const { plan, recovery } = useHealth();
   const { exercises, sessions, loading, error, refresh, hasMore, loadMore } = useWorkouts();
   const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [recoveryClosing, setRecoveryClosing] = useState(false);
   const { today, next } = routinesFor(recovery, exercises);
   const ranges = recovery ? recoveryRanges(recovery) : null;
   const now = new Date();
@@ -226,7 +227,16 @@ export function WorkoutPlanScreen() {
           </Pressable>
         ) : null}
       </View>
-      {recoveryOpen ? <RecoverySheet visible onClose={() => setRecoveryOpen(false)} /> : null}
+      {recoveryOpen || recoveryClosing ? (
+        <RecoverySheet
+          visible={recoveryOpen}
+          onClose={() => {
+            setRecoveryClosing(true);
+            setRecoveryOpen(false);
+          }}
+          onDismiss={() => setRecoveryClosing(false)}
+        />
+      ) : null}
     </ScrollView>
   );
 }

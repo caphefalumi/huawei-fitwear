@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from "@/features/auth/auth-store";
 import { HealthProvider } from "@/features/health/health-store";
 import { MealsProvider } from "@/features/meals/meals-store";
 import { WorkoutProvider } from "@/features/workout/workout-store";
+import { APP_ROUTES } from "@/features/auth/constants/routes";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -51,7 +52,7 @@ function RootNavigator() {
     <>
       <AnimatedSplashOverlay />
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Protected guard={!!user} redirectTo="/">
+        <Stack.Protected guard={!!user} redirectTo={APP_ROUTES.login}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="nutrition" />
           <Stack.Screen name="progress" />
@@ -63,7 +64,7 @@ function RootNavigator() {
           <Stack.Screen name="review-item" />
           <Stack.Screen name="replace-food" />
         </Stack.Protected>
-        <Stack.Protected guard={!user} redirectTo="/home">
+        <Stack.Protected guard={!user} redirectTo={APP_ROUTES.home}>
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
       </Stack>

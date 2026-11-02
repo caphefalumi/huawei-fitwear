@@ -42,6 +42,7 @@ export function HomeScreen() {
   } = useWorkouts();
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [recoveryClosing, setRecoveryClosing] = useState(false);
   useEffect(() => setBannerDismissed(false), [weightKg]);
   const latest = weights.at(-1);
   const previous = weights.at(-2);
@@ -255,7 +256,16 @@ export function HomeScreen() {
         </Pressable>
       ) : null}
 
-      {recoveryOpen ? <RecoverySheet visible onClose={() => setRecoveryOpen(false)} /> : null}
+      {recoveryOpen || recoveryClosing ? (
+        <RecoverySheet
+          visible={recoveryOpen}
+          onClose={() => {
+            setRecoveryClosing(true);
+            setRecoveryOpen(false);
+          }}
+          onDismiss={() => setRecoveryClosing(false)}
+        />
+      ) : null}
 
       <Text style={styles.footnote}>Personal targets are estimates, not medical advice.</Text>
     </ScrollView>

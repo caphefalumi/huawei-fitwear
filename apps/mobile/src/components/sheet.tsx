@@ -1,5 +1,7 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
+  Animated,
+  Easing,
   Keyboard,
   Modal,
   Pressable as ScrimPressable,
@@ -19,13 +21,41 @@ type SheetProps = {
   visible: boolean;
   title: string;
   onClose: () => void;
+  onDismiss?: () => void;
   children: ReactNode;
 };
 
 /** Bottom overlay matching the Figma "Input sheet" frames (scrim + white card). */
-export function Sheet({ visible, title, onClose, children }: SheetProps) {
+export function Sheet({ visible, title, onClose, onDismiss, children }: SheetProps) {
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
+  const [appearance] = useState(() => new Animated.Value(reducedMotion ? 1 : 0));
+  const [presented, setPresented] = useState(visible);
+  const dismissCallback = useRef(onDismiss);
+  const content = useRef({ title, children });
+  useEffect(() => {
+    dismissCallback.current = onDismiss;
+    if (visible) content.current = { title, children };
+  }, [onDismiss, visible, title, children]);
+
+  useEffect(() => {
+    if (visible) setPresented(true);
+    const animation = Animated.timing(appearance, {
+      toValue: visible ? 1 : 0,
+      duration: reducedMotion ? 0 : visible ? 220 : 160,
+      easing: visible ? Easing.out(Easing.cubic) : Easing.in(Easing.quad),
+      useNativeDriver: true,
+    });
+    animation.start(({ finished }) => {
+      if (finished && !visible) {
+        setPresented(false);
+        dismissCallback.current?.();
+      }
+    });
+    return () => animation.stop();
+  }, [appearance, reducedMotion, visible]);
+
+  const displayed = visible ? { title, children } : content.current;
 
   useEffect(() => {
     if (!visible) return;
@@ -35,12 +65,18 @@ export function Sheet({ visible, title, onClose, children }: SheetProps) {
 
   return (
     <Modal
-      visible={visible}
+      visible={visible || presented}
       transparent
-      animationType={reducedMotion ? "none" : "slide"}
-      onRequestClose={onClose}
+      animationType="none"
+      onRequestClose={() => {
+        if (visible) onClose();
+      }}
     >
-      <View style={styles.backdrop}>
+      <View style={styles.backdrop} pointerEvents={visible ? "auto" : "none"}>
+        <Animated.View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, styles.scrim, { opacity: appearance }]}
+        />
         <KeyboardAvoidingView behavior="padding" automaticOffset style={styles.keyboardArea}>
           <ScrimPressable
             accessible={false}
@@ -48,17 +84,31 @@ export function Sheet({ visible, title, onClose, children }: SheetProps) {
             style={styles.backdropFill}
             onPress={onClose}
           />
-          <View
+          <Animated.View
             accessibilityViewIsModal
             onAccessibilityEscape={onClose}
-            style={[styles.sheet, { paddingBottom: 20 + insets.bottom }]}
+            style={[
+              styles.sheet,
+              {
+                paddingBottom: 20 + insets.bottom,
+                opacity: appearance,
+                transform: [
+                  {
+                    translateY: appearance.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [24, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
           >
             <View style={styles.header}>
               <Text accessibilityRole="header" style={styles.title}>
-                {title}
+                {displayed.title}
               </Text>
               <Pressable
-                accessibilityLabel={`Close ${title}`}
+                accessibilityLabel={`Close ${displayed.title}`}
                 onPress={onClose}
                 style={styles.close}
               >
@@ -71,9 +121,9 @@ export function Sheet({ visible, title, onClose, children }: SheetProps) {
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
             >
-              {children}
+              {displayed.children}
             </ScrollView>
-          </View>
+          </Animated.View>
         </KeyboardAvoidingView>
       </View>
     </Modal>
@@ -126,6 +176,8 @@ export function SheetActions({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
+  },
+  scrim: {
     backgroundColor: "rgba(37, 35, 33, 0.4)",
   },
   keyboardArea: {
