@@ -178,17 +178,17 @@ flowchart LR
    bun run db:migrate:remote
    ```
 
-### Remote Migrations via GitHub Actions (CI/CD)
+### Release via GitHub Actions
 
-The remote Cloudflare D1 database is automatically migrated via `.github/workflows/release.yml`.
+`.github/workflows/release.yml` validates both applications before migrating D1 and deploying the backend.
 
-- **Triggers**:
-  - Every `push` to `main` (no path filter).
-  - `workflow_dispatch` for manual checks; the remote migration job runs only when the selected ref is `main`.
-- **Pipeline Jobs**:
-  1. `typecheck` (Job 1): Executes static TypeScript verification in parallel.
-  2. `test` (Job 2): Executes unit and integration test suites in parallel.
-  3. `migrate` (Job 3, depends on `[typecheck, test]`): Applies pending D1 migrations remotely via `bun run db:migrate:remote`.
+- **Triggers**: Every push to `main`, or manual dispatch. Migration and deployment run only on `main`.
+- **Release gates**:
+  - `ci`: Backend typecheck → mobile typecheck → backend unit/integration tests → mobile Jest tests → Wrangler dry-run build, in sequence.
+  - `checks`: Lint and formatting run in parallel. Release checks never autoformat or commit changes.
+  - Maestro E2E remains nightly/manual in Mobile CI; it is not a release gate.
+- **Deployment**: After all gates succeed, `deploy` applies remote D1 migrations, then runs `bun run backend:deploy` (`wrangler deploy`). A failed migration prevents deployment.
+- **Rollback**: Worker rollback does not reverse D1 migrations; review schema changes for compatibility with the currently deployed Worker before merging.
 - **Secrets Management**:
   Secrets are provisioned using Wrangler and GitHub CLI (`gh`):
   ```bash
