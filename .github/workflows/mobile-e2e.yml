@@ -129,10 +129,10 @@ jobs:
             sleep 5
             maestro test apps/mobile/tests/e2e/fitness.yaml
 
-      - name: Upload Maestro debug output on failure
-        if: failure()
+      - name: Upload Maestro test artifacts and recordings
+        if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: maestro-debug-output
+          name: maestro-e2e-artifacts
           path: ~/.maestro/tests/
           if-no-files-found: ignore
