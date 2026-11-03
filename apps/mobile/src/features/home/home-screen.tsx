@@ -12,6 +12,7 @@ import { useAuth } from "@/features/auth/auth-store";
 import { useWorkouts } from "@/features/workout/workout-store";
 import { WeightChart } from "@/features/home/weight-chart";
 import { RecoverySheet } from "@/features/recovery/recovery-sheet";
+import { RecoveryStages } from "@/features/recovery/recovery-stages";
 import { useMeals } from "@/features/meals/meals-store";
 import { NutritionRing } from "@/features/home/ring";
 import { Card, MacroBar, SectionHeading } from "@/features/home/ui";
@@ -257,6 +258,7 @@ export function HomeScreen() {
             <Text style={styles.recoverySub}>
               {recovery.restDays} rest days · {recovery.lightDays} light days
             </Text>
+            <RecoveryStages recovery={recovery} />
           </View>
           <Image
             accessible={false}

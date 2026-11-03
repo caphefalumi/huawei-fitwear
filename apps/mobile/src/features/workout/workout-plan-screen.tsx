@@ -11,6 +11,7 @@ import { dateLabel, recoveryRanges, useHealth } from "@/features/health/health-s
 import { RECOVERY_ROUTINE, routinesFor, type Routine } from "@/features/workout/routines";
 import { useWorkouts } from "@/features/workout/workout-store";
 import { RecoverySheet } from "@/features/recovery/recovery-sheet";
+import { RecoveryStages } from "@/features/recovery/recovery-stages";
 
 const icons = {
   shieldCheck: require("@/assets/images/home/shield-check.svg"),
@@ -156,6 +157,7 @@ export function WorkoutPlanScreen() {
               Rest {ranges.rest} · light {ranges.light}
               {"\n"}Return {recovery.returnDate}, if ready
             </Text>
+            <RecoveryStages recovery={recovery} />
           </View>
         </Pressable>
       ) : null}
