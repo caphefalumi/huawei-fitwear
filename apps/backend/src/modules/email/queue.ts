@@ -7,8 +7,11 @@ const RESEND_URL = "https://api.resend.com/emails";
 const MIN_SEND_INTERVAL_MS = 110;
 let lastRequestStartedAt = 0;
 async function waitForSendWindow(startedAt: number): Promise<void> {
-  const remainingMs = startedAt + MIN_SEND_INTERVAL_MS - Date.now();
-  if (remainingMs > 0) await new Promise((resolve) => setTimeout(resolve, remainingMs + 2));
+  while (true) {
+    const remainingMs = startedAt + MIN_SEND_INTERVAL_MS - Date.now();
+    if (remainingMs <= 0) break;
+    await new Promise((resolve) => setTimeout(resolve, remainingMs + 2));
+  }
 }
 
 function escapeHtml(value: string): string {
@@ -84,8 +87,7 @@ export async function consumeEmailBatch(batch: MessageBatch<unknown>): Promise<v
     }
 
     if (lastRequestStartedAt > 0) await waitForSendWindow(lastRequestStartedAt);
-    lastRequestStartedAt = Date.now();
-    const requestStartedAt = lastRequestStartedAt;
+    let requestStartedAt = 0;
 
     try {
       let resetLink: URL | undefined;
@@ -95,6 +97,8 @@ export async function consumeEmailBatch(batch: MessageBatch<unknown>): Promise<v
       const variables = isReset
         ? { RESET_URL: resetLink!.toString(), RESET_OTP: body.otp }
         : { NAME: escapeHtml(body.name ?? "there") };
+      lastRequestStartedAt = Date.now();
+      requestStartedAt = lastRequestStartedAt;
       const response = await fetch(RESEND_URL, {
         method: "POST",
         headers: {
@@ -116,7 +120,7 @@ export async function consumeEmailBatch(batch: MessageBatch<unknown>): Promise<v
       );
       message.ack();
     } catch {
-      await waitForSendWindow(requestStartedAt);
+      if (requestStartedAt > 0) await waitForSendWindow(requestStartedAt);
       console.error(
         JSON.stringify({
           event: "email_queue_send_failed",
