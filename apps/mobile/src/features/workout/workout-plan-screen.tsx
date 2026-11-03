@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable } from "@/components/pressable";
 import { Palette as C } from "@/constants/palette";
 import { Card, SectionHeading } from "@/features/home/ui";
-import { dateLabel, recoveryRanges, useHealth } from "@/features/health/health-store";
+import { recoveryRanges, useHealth } from "@/features/health/health-store";
 import { RECOVERY_ROUTINE, routinesFor, type Routine } from "@/features/workout/routines";
 import { useWorkouts } from "@/features/workout/workout-store";
 import { RecoverySheet } from "@/features/recovery/recovery-sheet";
@@ -146,15 +146,8 @@ export function WorkoutPlanScreen() {
           onPress={() => setRecoveryOpen(true)}
         />
       ) : null}
-      {avoid && recovery ? (
-        <Card>
-          <Text style={styles.todayTitle}>{rest ? "Rest day" : "Protecting your recovery"}</Text>
-          <Text style={styles.cardSub}>
-            {rest
-              ? `Nothing is scheduled. Rehab starts ${dateLabel(recovery.startDate, recovery.restDays)}.`
-              : `Skipping ${avoid.join(", ")} until you are back.`}
-          </Text>
-        </Card>
+      {avoid && !rest ? (
+        <Text style={styles.subtitle}>Skipping {avoid.join(", ")} until you are back.</Text>
       ) : null}
       {today
         ? routineCard(today, today.name === RECOVERY_ROUTINE ? "Rehab routine" : "Explore a routine")
