@@ -4,11 +4,6 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - "apps/mobile/**"
-      - "package.json"
-      - "bun.lock"
-      - ".github/workflows/mobile-ci.yml"
   merge_group:
     types:
       - checks_requested
@@ -34,12 +29,25 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Detect mobile changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            mobile:
+              - 'apps/mobile/**'
+              - 'package.json'
+              - 'bun.lock'
+              - '.github/workflows/mobile-ci.yml'
+
       - name: Setup Bun
+        if: steps.filter.outputs.mobile == 'true' || github.event_name != 'pull_request'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
       - name: Cache Bun packages
+        if: steps.filter.outputs.mobile == 'true' || github.event_name != 'pull_request'
         uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
@@ -48,15 +56,23 @@ jobs:
             ${{ runner.os }}-bun-
 
       - name: Setup Node.js
+        if: steps.filter.outputs.mobile == 'true' || github.event_name != 'pull_request'
         uses: actions/setup-node@v4
         with:
           node-version: 26
 
       - name: Install workspace dependencies
+        if: steps.filter.outputs.mobile == 'true' || github.event_name != 'pull_request'
         run: bun install --frozen-lockfile
 
       - name: Typecheck mobile
+        if: steps.filter.outputs.mobile == 'true' || github.event_name != 'pull_request'
         run: bun run --cwd apps/mobile typecheck
 
       - name: Run mobile Jest unit tests
+        if: steps.filter.outputs.mobile == 'true' || github.event_name != 'pull_request'
         run: bun run --cwd apps/mobile test
+
+      - name: Skip notice
+        if: steps.filter.outputs.mobile != 'true' && github.event_name == 'pull_request'
+        run: echo "No mobile changes detected. Mobile tests skipped."
