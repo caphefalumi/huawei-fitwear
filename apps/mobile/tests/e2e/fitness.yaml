@@ -18,7 +18,7 @@ env:
 - inputText: ${output.email}
 - tapOn: "Password"
 - inputText: ${PASSWORD}
-- tapOn: "Date of birth"
+- tapOn: "Start your journey."
 - scrollUntilVisible:
     element: ".*Terms of Service.*"
     direction: DOWN
@@ -57,3 +57,11 @@ env:
 # 5. Verify App Content Access
 - tapOn: "Meals"
 - assertVisible: "No meals logged yet. Add your first meal above."
+
+# 6. Delete Account to Clean Up
+- tapOn: "Profile"
+- scrollUntilVisible:
+    element: "Delete account"
+    direction: DOWN
+- tapOn: "Delete account"
+- assertVisible: "Welcome back."

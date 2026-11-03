@@ -115,3 +115,19 @@ test("sign-out clears local private state even when server revocation fails", as
   expect(result.current.user).toBeNull();
   expect(saved.clearToken).toHaveBeenCalled();
 });
+
+test("deleteAccount deletes user on server and clears local private state", async () => {
+  const { result } = await renderHook(() => useAuth(), { wrapper: AuthProvider });
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  fetchMock.mockResolvedValueOnce(json(200, authenticated()));
+  await act(async () => {
+    await result.current.signIn("member@example.com", "correct");
+  });
+  expect(result.current.user?.id).toBe(user.id);
+  fetchMock.mockResolvedValueOnce(json(200, { success: true }));
+  await act(async () => {
+    await result.current.deleteAccount();
+  });
+  expect(result.current.user).toBeNull();
+  expect(saved.clearToken).toHaveBeenCalled();
+});

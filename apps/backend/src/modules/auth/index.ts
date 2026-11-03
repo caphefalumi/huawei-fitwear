@@ -253,4 +253,19 @@ export const auth = new Elysia({
         description: "Revokes the active session token in the database and clears the cookie.",
       },
     },
+  )
+  .delete(
+    "/account",
+    async ({ user, cookie: { session_token } }) => {
+      await Auth.deleteAccount(user.id);
+      delete session_token.value;
+      return { success: true, message: "Account deleted successfully" };
+    },
+    {
+      auth: true,
+      detail: {
+        summary: "Delete authenticated user account",
+        description: "Permanently deletes the user and cascades to all related data.",
+      },
+    },
   );

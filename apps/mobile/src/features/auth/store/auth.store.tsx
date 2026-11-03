@@ -13,6 +13,7 @@ import { ApiError, onSessionExpired, setApiToken } from "@/lib/api";
 import { sessionStorage } from "../session-storage";
 import {
   getSession,
+  sendDeleteAccount,
   sendPasswordReset,
   sendSignIn,
   sendSignOut,
@@ -50,6 +51,7 @@ type AuthContextValue = {
   signUp: (body: SignUpBody) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<string>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   updateUser: (body: UpdateUserBody) => Promise<void>;
 };
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -199,6 +201,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, [clearSession]);
 
+  const deleteAccount = useCallback(async () => {
+    setError(null);
+    setPending(true);
+    try {
+      await sendDeleteAccount();
+    } catch (cause) {
+      if (!(cause instanceof ApiError && cause.status === 401)) {
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "Unable to delete your account. Please try again.",
+        );
+        throw cause;
+      }
+    } finally {
+      await clearSession();
+      setPending(false);
+    }
+  }, [clearSession]);
+
   const updateUser = useCallback(async (body: UpdateUserBody) => {
     const currentRevision = revision.current;
     try {
@@ -221,6 +243,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         signUp,
         requestPasswordReset,
         signOut,
+        deleteAccount,
         updateUser,
       }}
     >
