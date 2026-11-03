@@ -82,6 +82,7 @@ export function AccountDataScreen() {
         <SheetActions
           primaryLabel="Delete account"
           secondaryLabel="Cancel"
+          primaryAccessibilityLabel="Confirm account deletion"
           onPrimary={() => void removeAccount()}
           onSecondary={() => setConfirming(false)}
           primaryDisabled={pending}

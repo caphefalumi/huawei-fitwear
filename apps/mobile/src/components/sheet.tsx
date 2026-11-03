@@ -143,6 +143,7 @@ export function SheetActions({
   primaryDisabled = false,
   secondaryDisabled = false,
   busy = false,
+  primaryAccessibilityLabel,
 }: {
   primaryLabel: string;
   secondaryLabel: string;
@@ -151,12 +152,14 @@ export function SheetActions({
   primaryDisabled?: boolean;
   secondaryDisabled?: boolean;
   busy?: boolean;
+  primaryAccessibilityLabel?: string;
 }) {
   return (
     <View style={styles.actions}>
       <Pressable
         style={styles.primaryButton}
         disabled={primaryDisabled}
+        accessibilityLabel={primaryAccessibilityLabel}
         accessibilityState={{ busy }}
         onPress={onPrimary}
       >
