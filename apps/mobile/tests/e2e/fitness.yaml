@@ -14,13 +14,9 @@ env:
 - inputText: ${output.email}
 - tapOn: "Password"
 - inputText: ${PASSWORD}
-- tapOn: "Show password"
-- tapOn: "Hide password"
 - hideKeyboard
-- assertVisible: "Birth month"
-- assertVisible: "Birth day"
-- assertVisible: "Birth year"
-- tapOn: "Agree to Terms of Service and User Agreement"
+- assertVisible: "Date of birth"
+- tapOn: "I agree to the Terms of Service and User Agreement."
 - tapOn: "Create account"
 - assertVisible: "Today"
 
@@ -42,8 +38,6 @@ env:
 - inputText: ${output.email}
 - tapOn: "Password"
 - inputText: ${PASSWORD}
-- tapOn: "Show password"
-- tapOn: "Hide password"
 - hideKeyboard
 - tapOn: "Log in"
 - assertVisible: "Today"
