@@ -133,18 +133,20 @@ test("deleteAccount deletes user on server and clears local private state", asyn
   expect(saved.clearToken).toHaveBeenCalled();
 });
 
-test("deleteAccount deletes user on server and clears local private state", async () => {
+test("failed account deletion keeps the signed-in user and local session", async () => {
   const { result } = await renderHook(() => useAuth(), { wrapper: AuthProvider });
   await waitFor(() => expect(result.current.loading).toBe(false));
   fetchMock.mockResolvedValueOnce(json(200, authenticated()));
   await act(async () => {
     await result.current.signIn("member@example.com", "correct");
   });
-  expect(result.current.user?.id).toBe(user.id);
-  fetchMock.mockResolvedValueOnce(json(200, { success: true }));
+  fetchMock.mockResolvedValueOnce(json(500, { message: "Server unavailable" }));
+
   await act(async () => {
-    await result.current.deleteAccount();
+    await expect(result.current.deleteAccount()).rejects.toMatchObject({ status: 500 });
   });
-  expect(result.current.user).toBeNull();
-  expect(saved.clearToken).toHaveBeenCalled();
+
+  expect(result.current.user?.id).toBe(user.id);
+  expect(saved.clearToken).not.toHaveBeenCalled();
+  expect(result.current.pending).toBe(false);
 });

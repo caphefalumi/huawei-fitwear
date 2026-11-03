@@ -215,21 +215,24 @@ export function AuthProvider({ children }: PropsWithChildren) {
     });
   }, [clearSession]);
   const deleteAccount = useCallback(async () => {
+    if (busy.current) return;
+    busy.current = true;
     setError(null);
     setPending(true);
     try {
       await sendDeleteAccount();
-    } catch (cause) {
-      if (!(cause instanceof ApiError && cause.status === 401)) {
-        setError(
-          cause instanceof Error
-            ? cause.message
-            : "Unable to delete your account. Please try again.",
-        );
-        throw cause;
-      }
-    } finally {
       await clearSession();
+    } catch (cause) {
+      if (cause instanceof ApiError && cause.status === 401) {
+        await clearSession();
+        return;
+      }
+      setError(
+        cause instanceof Error ? cause.message : "Unable to delete your account. Please try again.",
+      );
+      throw cause;
+    } finally {
+      busy.current = false;
       setPending(false);
     }
   }, [clearSession]);

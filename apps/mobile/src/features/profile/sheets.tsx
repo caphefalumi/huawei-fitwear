@@ -1,11 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { RadioList } from "@/components/radio-list";
 import { Sheet, SheetActions, SheetField } from "@/components/sheet";
 import { WheelPicker } from "@/components/wheel-picker";
 import { Palette as C } from "@/constants/palette";
-import { ACTIVITIES, GOALS, useHealth, type Sex } from "@/features/health/health-store";
+import {
+  ACTIVITIES,
+  GOALS,
+  PERIOD_AREA,
+  useHealth,
+  type Sex,
+} from "@/features/health/health-store";
 
 const ACTIVITY_OPTIONS = Object.values(ACTIVITIES);
 const GOAL_OPTIONS = Object.values(GOALS);
@@ -157,15 +163,29 @@ export function WeightSheet({ visible, onClose, onDismiss }: SheetProps) {
 }
 
 export function SexSheet({ visible, onClose, onDismiss }: SheetProps) {
-  const { sex, saveSex } = useHealth();
+  const { sex, recovery, saveSex } = useHealth();
   const action = useSave(onClose);
+  const changeSex = (next: Sex) => {
+    void action.save(() => saveSex(next));
+  };
   return (
     <Sheet visible={visible} title="Sex" onClose={action.close} onDismiss={onDismiss}>
       <RadioList
         options={SEX_OPTIONS}
         value={sex ?? ("" as Sex)}
         onChange={(next) => {
-          void action.save(() => saveSex(next));
+          if (next !== "Female" && recovery?.area === PERIOD_AREA) {
+            Alert.alert(
+              "Remove period recovery data?",
+              "Changing this will remove your period recovery settings.",
+              [
+                { text: "Cancel", style: "cancel" },
+                { text: "Change and remove", onPress: () => changeSex(next) },
+              ],
+            );
+            return;
+          }
+          changeSex(next);
         }}
       />
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
