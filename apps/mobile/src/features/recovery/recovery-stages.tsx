@@ -1,51 +1,84 @@
 import { StyleSheet, Text, View } from "react-native";
 
+import { Pressable } from "@/components/pressable";
 import { Palette as C } from "@/constants/palette";
 import { recoveryProgress, type RecoveryPlan } from "@/features/health/health-store";
 
 const STAGES = ["Rest", "Rehab", "Return"];
 
-/** Three stages: white while empty, red once complete (partly filled while in progress). */
-export function RecoveryStages({ recovery }: { recovery: RecoveryPlan }) {
-  const progress = recoveryProgress(recovery);
-  const current = progress.findIndex((fill) => fill < 1);
-  const label = current === -1 ? "All stages complete" : `${STAGES[current]} stage in progress`;
+/** "Recovery" heading over three checkpoints: white while pending, primary red once reached. */
+export function RecoveryTracker({
+  recovery,
+  label,
+  onPress,
+}: {
+  recovery: RecoveryPlan;
+  label: string;
+  onPress: () => void;
+}) {
+  const reached = recoveryProgress(recovery).map((fill) => fill >= 1);
   return (
-    <View accessible accessibilityLabel={`Recovery progress. ${label}`} style={styles.row}>
-      {STAGES.map((name, index) => (
-        <View key={name} style={styles.stage}>
-          <View style={styles.track}>
-            <View style={[styles.fill, { width: `${progress[index] * 100}%` }]} />
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityHint="Opens recovery details"
+      style={styles.tracker}
+      onPress={onPress}
+    >
+      <Text style={styles.title}>Recovery</Text>
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={styles.row}
+      >
+        {STAGES.map((stage, index) => (
+          <View key={stage} style={styles.step}>
+            {index > 0 ? (
+              <View style={[styles.line, reached[index - 1] && styles.lineReached]} />
+            ) : null}
+            <View style={[styles.circle, reached[index] && styles.circleReached]} />
           </View>
-          <Text style={styles.label}>{name}</Text>
-        </View>
-      ))}
-    </View>
+        ))}
+      </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  tracker: {
+    gap: 12,
+  },
+  title: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: C.text,
+  },
   row: {
     flexDirection: "row",
-    gap: 6,
+    alignItems: "center",
   },
-  stage: {
+  step: {
     flex: 1,
-    gap: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
   },
-  track: {
-    height: 6,
-    borderRadius: 3,
+  circle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: C.accent,
     backgroundColor: C.surface,
-    overflow: "hidden",
   },
-  fill: {
-    height: 6,
-    borderRadius: 3,
+  circleReached: {
     backgroundColor: C.accent,
   },
-  label: {
-    fontSize: 10,
-    color: C.textMuted,
+  line: {
+    flex: 1,
+    height: 2,
+    backgroundColor: C.border,
+  },
+  lineReached: {
+    backgroundColor: C.accent,
   },
 });

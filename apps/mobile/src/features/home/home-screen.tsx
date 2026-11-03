@@ -12,14 +12,12 @@ import { useAuth } from "@/features/auth/auth-store";
 import { useWorkouts } from "@/features/workout/workout-store";
 import { WeightChart } from "@/features/home/weight-chart";
 import { RecoverySheet } from "@/features/recovery/recovery-sheet";
-import { RecoveryStages } from "@/features/recovery/recovery-stages";
+import { RecoveryTracker } from "@/features/recovery/recovery-stages";
 import { useMeals } from "@/features/meals/meals-store";
 import { NutritionRing } from "@/features/home/ring";
 import { Card, MacroBar, SectionHeading } from "@/features/home/ui";
 
 const icons = {
-  chevronRight: require("@/assets/images/home/chevron-right.svg"),
-  shieldCheck: require("@/assets/images/home/shield-check.svg"),
   check: require("@/assets/images/home/check.svg"),
 };
 
@@ -241,32 +239,11 @@ export function HomeScreen() {
       </View>
 
       {recovery ? (
-        <Pressable
-          accessibilityLabel={`Recovery. ${recoveryTitle(recovery)}. ${recovery.restDays} rest days, ${recovery.lightDays} light days.`}
-          accessibilityHint="Opens recovery details"
-          style={styles.recovery}
+        <RecoveryTracker
+          recovery={recovery}
+          label={`Recovery. ${recoveryTitle(recovery)}. ${recovery.restDays} rest days, ${recovery.lightDays} light days.`}
           onPress={() => setRecoveryOpen(true)}
-        >
-          <Image
-            accessible={false}
-            source={icons.shieldCheck}
-            style={styles.recoveryIcon}
-            contentFit="contain"
-          />
-          <View style={styles.recoveryText}>
-            <Text style={styles.recoveryTitle}>{recoveryTitle(recovery)}</Text>
-            <Text style={styles.recoverySub}>
-              {recovery.restDays} rest days · {recovery.lightDays} light days
-            </Text>
-            <RecoveryStages recovery={recovery} />
-          </View>
-          <Image
-            accessible={false}
-            source={icons.chevronRight}
-            style={styles.recoveryChevron}
-            contentFit="contain"
-          />
-        </Pressable>
+        />
       ) : null}
 
       {recoveryOpen || recoveryClosing ? (
@@ -427,35 +404,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     color: C.text,
-  },
-  recovery: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: C.card,
-    borderRadius: 12,
-    padding: 14,
-  },
-  recoveryIcon: {
-    width: 21,
-    height: 21,
-  },
-  recoveryText: {
-    flex: 1,
-    gap: 2,
-  },
-  recoveryTitle: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: C.text,
-  },
-  recoverySub: {
-    fontSize: 11,
-    color: C.textMuted,
-  },
-  recoveryChevron: {
-    width: 17,
-    height: 17,
   },
   footnote: {
     fontSize: 10,

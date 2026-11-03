@@ -11,7 +11,7 @@ import { dateLabel, recoveryRanges, useHealth } from "@/features/health/health-s
 import { RECOVERY_ROUTINE, routinesFor, type Routine } from "@/features/workout/routines";
 import { useWorkouts } from "@/features/workout/workout-store";
 import { RecoverySheet } from "@/features/recovery/recovery-sheet";
-import { RecoveryStages } from "@/features/recovery/recovery-stages";
+import { RecoveryTracker } from "@/features/recovery/recovery-stages";
 
 const icons = {
   shieldCheck: require("@/assets/images/home/shield-check.svg"),
@@ -140,26 +140,11 @@ export function WorkoutPlanScreen() {
         <Text style={styles.footnote}>Refresh workouts</Text>
       </Pressable>
       {recovery && ranges ? (
-        <Pressable
-          accessibilityLabel={`Edit recovery plan. Rest ${ranges.rest}, light ${ranges.light}. Return ${recovery.returnDate}, if ready`}
-          style={styles.recoveryCard}
+        <RecoveryTracker
+          recovery={recovery}
+          label={`Edit recovery plan. Rest ${ranges.rest}, light ${ranges.light}. Return ${recovery.returnDate}, if ready`}
           onPress={() => setRecoveryOpen(true)}
-        >
-          <Image
-            accessible={false}
-            source={icons.shieldCheck}
-            style={styles.recoveryIcon}
-            contentFit="contain"
-          />
-          <View style={styles.recoveryCopy}>
-            <Text style={styles.recoveryTitle}>Recovery</Text>
-            <Text style={styles.recoverySub}>
-              Rest {ranges.rest} · light {ranges.light}
-              {"\n"}Return {recovery.returnDate}, if ready
-            </Text>
-            <RecoveryStages recovery={recovery} />
-          </View>
-        </Pressable>
+        />
       ) : null}
       {avoid && recovery ? (
         <Card>
@@ -321,32 +306,6 @@ const styles = StyleSheet.create({
   },
   dayDateActive: {
     color: C.onAccent,
-  },
-  recoveryCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: C.accentTint,
-    borderRadius: 18,
-    padding: 16,
-  },
-  recoveryIcon: {
-    width: 24,
-    height: 24,
-  },
-  recoveryCopy: {
-    flex: 1,
-    gap: 4,
-  },
-  recoveryTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: C.text,
-  },
-  recoverySub: {
-    fontSize: 11,
-    lineHeight: 16,
-    color: C.textMuted,
   },
   section: {
     gap: 8,
