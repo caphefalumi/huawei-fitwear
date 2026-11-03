@@ -7,8 +7,10 @@ const RESEND_URL = "https://api.resend.com/emails";
 const MIN_SEND_INTERVAL_MS = 110;
 let lastRequestStartedAt = 0;
 async function waitForSendWindow(startedAt: number): Promise<void> {
-  while (true) {
-    const remainingMs = startedAt + MIN_SEND_INTERVAL_MS - Date.now();
+  if (!Number.isFinite(startedAt) || startedAt <= 0) return;
+  const deadline = startedAt + MIN_SEND_INTERVAL_MS;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const remainingMs = deadline - Date.now();
     if (remainingMs <= 0) break;
     await new Promise((resolve) => setTimeout(resolve, remainingMs + 2));
   }
