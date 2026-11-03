@@ -4,11 +4,6 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - "apps/**"
-      - "package.json"
-      - "bun.lock"
-      - ".github/workflows/lint.yml"
   merge_group:
     types:
       - checks_requested
@@ -32,12 +27,25 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Detect lint changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            lint:
+              - 'apps/**'
+              - 'package.json'
+              - 'bun.lock'
+              - '.github/workflows/lint.yml'
+
       - name: Setup Bun
+        if: steps.filter.outputs.lint == 'true' || github.event_name != 'pull_request'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
       - name: Cache Bun packages
+        if: steps.filter.outputs.lint == 'true' || github.event_name != 'pull_request'
         uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
@@ -46,7 +54,13 @@ jobs:
             ${{ runner.os }}-bun-
 
       - name: Install workspace dependencies
+        if: steps.filter.outputs.lint == 'true' || github.event_name != 'pull_request'
         run: bun install --frozen-lockfile
 
       - name: Lint all workspaces
+        if: steps.filter.outputs.lint == 'true' || github.event_name != 'pull_request'
         run: bun run lint
+
+      - name: Skip notice
+        if: steps.filter.outputs.lint != 'true' && github.event_name == 'pull_request'
+        run: echo "No lint changes detected. Lint skipped."
