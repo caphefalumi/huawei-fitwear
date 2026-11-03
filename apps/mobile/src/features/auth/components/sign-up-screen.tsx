@@ -269,16 +269,18 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
         <Text style={styles.privacyLabel}>Your health data is private</Text>
       </View>
 
-      <Text style={styles.footer}>
-        Already have an account?{" "}
-        <Text
-          accessibilityRole="link"
-          style={styles.footerLink}
+      <View style={styles.footerRow}>
+        <Text style={styles.footerText}>Already have an account?</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Sign in"
+          disabled={pending}
           onPress={pending ? undefined : handleSignIn}
+          hitSlop={8}
         >
-          Sign in
-        </Text>
-      </Text>
+          <Text style={styles.footerLink}>Sign in</Text>
+        </Pressable>
+      </View>
     </ScrollView>
   );
 }
@@ -414,13 +416,19 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: AuthColors.text,
   },
-  footer: {
+  footerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
     paddingTop: 4,
+  },
+  footerText: {
     fontSize: 13,
     color: AuthColors.textMuted,
-    textAlign: "center",
   },
   footerLink: {
+    fontSize: 13,
     fontWeight: "600",
     color: AuthColors.accent,
   },

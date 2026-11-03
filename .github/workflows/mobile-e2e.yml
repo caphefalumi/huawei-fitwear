@@ -38,7 +38,7 @@ jobs:
             ${{ runner.os }}-bun-
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 26
 
@@ -53,7 +53,7 @@ jobs:
           test -r /dev/kvm && test -w /dev/kvm
 
       - name: Setup Java for Android E2E
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -106,7 +106,7 @@ jobs:
 
       - name: Upload Maestro debug output on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: maestro-debug-output
           path: ~/.maestro/tests/

@@ -7,6 +7,10 @@ env:
     clearState: true
 
 # 1. Register a new user
+- assertVisible: "Welcome back."
+- scrollUntilVisible:
+    element: "Create account"
+    direction: DOWN
 - tapOn: "Create account"
 - tapOn: "Name"
 - inputText: "Maestro E2E"
@@ -16,7 +20,13 @@ env:
 - inputText: ${PASSWORD}
 - hideKeyboard
 - assertVisible: "Date of birth"
+- scrollUntilVisible:
+    element: "I agree to the Terms of Service and User Agreement."
+    direction: DOWN
 - tapOn: "I agree to the Terms of Service and User Agreement."
+- scrollUntilVisible:
+    element: "Create account"
+    direction: DOWN
 - tapOn: "Create account"
 - assertVisible: "Today"
 
