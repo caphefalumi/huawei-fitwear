@@ -11,31 +11,52 @@ env:
 
 # 1. Register a new user
 - assertVisible: "Welcome back."
-- scrollUntilVisible:
-    element: "Create account"
-    direction: DOWN
-    centerElement: true
+- repeat:
+    times: 5
+    while:
+      notVisible: "Create account"
+    commands:
+      - swipe:
+          start: 5%, 80%
+          end: 5%, 30%
 - tapOn:
     text: "Create account"
     retryTapIfNoChange: true
-- tapOn: "Name"
+- assertVisible: "Start your journey."
+- tapOn:
+    text: "Name"
+    retryTapIfNoChange: true
 - inputText: "Maestro E2E"
-- tapOn: "Email"
+- tapOn: "Start your journey."
+- tapOn:
+    text: "Email"
+    retryTapIfNoChange: true
 - inputText: ${output.email}
-- tapOn: "Password"
+- tapOn: "Start your journey."
+- tapOn:
+    text: "Password"
+    retryTapIfNoChange: true
 - inputText: ${PASSWORD}
 - tapOn: "Start your journey."
-- scrollUntilVisible:
-    element: ".*Terms of Service.*"
-    direction: DOWN
-    centerElement: true
+- repeat:
+    times: 10
+    while:
+      notVisible: ".*Terms of Service.*"
+    commands:
+      - swipe:
+          start: 5%, 80%
+          end: 5%, 30%
 - tapOn:
     text: ".*Terms of Service.*"
     retryTapIfNoChange: true
-- scrollUntilVisible:
-    element: "Create account"
-    direction: DOWN
-    centerElement: true
+- repeat:
+    times: 5
+    while:
+      notVisible: "Create account"
+    commands:
+      - swipe:
+          start: 5%, 80%
+          end: 5%, 30%
 - tapOn:
     text: "Create account"
     retryTapIfNoChange: true
@@ -52,10 +73,14 @@ env:
 
 # 3. Sign Out
 - tapOn: "Profile"
-- scrollUntilVisible:
-    element: "Sign out"
-    direction: DOWN
-    centerElement: true
+- repeat:
+    times: 8
+    while:
+      notVisible: "Sign out"
+    commands:
+      - swipe:
+          start: 5%, 80%
+          end: 5%, 30%
 - tapOn:
     text: "Sign out"
     retryTapIfNoChange: true
@@ -64,15 +89,24 @@ env:
     timeout: 30000
 
 # 4. Login with Registered Credentials
-- tapOn: "Email"
+- tapOn:
+    text: "Email"
+    retryTapIfNoChange: true
 - inputText: ${output.email}
-- tapOn: "Password"
+- tapOn: "Welcome back."
+- tapOn:
+    text: "Password"
+    retryTapIfNoChange: true
 - inputText: ${PASSWORD}
 - tapOn: "Welcome back."
-- scrollUntilVisible:
-    element: "Log in"
-    direction: DOWN
-    centerElement: true
+- repeat:
+    times: 5
+    while:
+      notVisible: "Log in"
+    commands:
+      - swipe:
+          start: 5%, 80%
+          end: 5%, 30%
 - tapOn:
     text: "Log in"
     retryTapIfNoChange: true
@@ -88,10 +122,14 @@ env:
 
 # 6. Delete Account to Clean Up
 - tapOn: "Profile"
-- scrollUntilVisible:
-    element: "Delete account"
-    direction: DOWN
-    centerElement: true
+- repeat:
+    times: 8
+    while:
+      notVisible: "Delete account"
+    commands:
+      - swipe:
+          start: 5%, 80%
+          end: 5%, 30%
 - tapOn:
     text: "Delete account"
     retryTapIfNoChange: true
