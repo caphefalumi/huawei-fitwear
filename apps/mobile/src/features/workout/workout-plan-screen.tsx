@@ -7,8 +7,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable } from "@/components/pressable";
 import { Palette as C } from "@/constants/palette";
 import { Card, SectionHeading } from "@/features/home/ui";
-import { recoveryRanges, useHealth } from "@/features/health/health-store";
-import { routinesFor, type Routine } from "@/features/workout/routines";
+import { dateLabel, recoveryRanges, useHealth } from "@/features/health/health-store";
+import { RECOVERY_ROUTINE, routinesFor, type Routine } from "@/features/workout/routines";
 import { useWorkouts } from "@/features/workout/workout-store";
 import { RecoverySheet } from "@/features/recovery/recovery-sheet";
 
@@ -28,7 +28,7 @@ export function WorkoutPlanScreen() {
   const { exercises, sessions, loading, error, refresh, hasMore, loadMore } = useWorkouts();
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [recoveryClosing, setRecoveryClosing] = useState(false);
-  const { today, next } = routinesFor(recovery, exercises);
+  const { today, next, rest } = routinesFor(recovery, exercises);
   const ranges = recovery ? recoveryRanges(recovery) : null;
   const now = new Date();
   const weekStart = new Date(
@@ -41,7 +41,13 @@ export function WorkoutPlanScreen() {
     date.setDate(date.getDate() + index);
     return date;
   });
-  const groups = [...new Set(exercises.map((exercise) => exercise.muscleGroup))];
+  const groups = [
+    ...new Set(
+      exercises
+        .map((exercise) => exercise.muscleGroup)
+        .filter((group) => group.toLowerCase() !== RECOVERY_ROUTINE.toLowerCase()),
+    ),
+  ];
 
   function routineCard(routine: Routine, label: string) {
     return (
@@ -153,7 +159,16 @@ export function WorkoutPlanScreen() {
           </View>
         </Pressable>
       ) : null}
-      {today ? routineCard(today, "Explore a routine") : null}
+      {rest && recovery ? (
+        <Card>
+          <Text style={styles.todayTitle}>Rest day</Text>
+          <Text style={styles.cardSub}>
+            Take it easy. Light training starts{" "}
+            {dateLabel(recovery.startDate, recovery.restDays)}.
+          </Text>
+        </Card>
+      ) : null}
+      {today ? routineCard(today, recovery ? "Light recovery routine" : "Explore a routine") : null}
       {next ? routineCard(next, "More routines") : null}
       <View style={styles.section}>
         <SectionHeading title="Browse muscle groups" actionLabel={`${groups.length} groups`} />

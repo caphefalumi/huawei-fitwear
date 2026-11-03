@@ -1,4 +1,4 @@
-import { routineForGroup, routinesFor } from "@/features/workout/routines";
+import { recoveryPhase, routineForGroup, routinesFor } from "@/features/workout/routines";
 import type { Exercise } from "@/features/workout/workout-store";
 import type { RecoveryPlan } from "@/features/health/health-store";
 
@@ -28,7 +28,18 @@ const catalog = [
   exercise("row", "Back"),
   exercise("plank", "Core", 3, 40, "seconds"),
   exercise("walk", "Recovery", 1, 15, "minutes"),
+  exercise("squat", "Legs"),
+  exercise("curl", "Arms", 3, 12),
 ];
+const kneeRecovery: RecoveryPlan = {
+  area: "Right knee",
+  note: "",
+  restDays: 2,
+  lightDays: 3,
+  startDate: "2026-11-01",
+  start: "Nov 1",
+  returnDate: "Nov 6",
+};
 
 test("does not create fallback exercises or plans when the catalog is missing", () => {
   expect(routineForGroup("Chest", [])).toBeNull();
@@ -49,24 +60,34 @@ test("matches catalog groups case-insensitively and totals backend prescriptions
 
 test("keeps timed exercise units instead of describing durations as reps", () => {
   expect(routineForGroup("Core", catalog)?.exercises[0].prescription).toBe("3 × 40 seconds");
-  expect(routineForGroup("Recovery", catalog)?.exercises[0].prescription).toBe("1 × 15 minutes");
 });
 
-test("uses catalog plans without inventing an account schedule or medical clearance", () => {
+test("uses normal routines without a recovery plan", () => {
   const normal = routinesFor(null, catalog);
   expect(normal.today?.name).toBe("Chest");
   expect(normal.next?.name).toBe("Back");
-  const recovery: RecoveryPlan = {
-    area: "Right knee",
-    note: "",
-    restDays: 2,
-    lightDays: 3,
-    startDate: "2026-11-01",
-    start: "Nov 1",
-    returnDate: "Nov 6",
-  };
-  const recovering = routinesFor(recovery, catalog);
-  expect(recovering.today?.name).toBe("Recovery");
-  expect(recovering.next?.name).toBe("Core");
-  expect(recovering).not.toHaveProperty("adjustedFor");
+});
+
+test("recovery phases follow rest days, light days, then normal training", () => {
+  const day = (date: number) => new Date(2026, 10, date, 9);
+  expect(recoveryPhase(kneeRecovery, day(1))).toBe("rest");
+  expect(recoveryPhase(kneeRecovery, day(3))).toBe("light");
+  expect(recoveryPhase(kneeRecovery, day(6))).toBe("normal");
+  expect(routinesFor(kneeRecovery, catalog, day(2))).toEqual({
+    today: null,
+    next: null,
+    rest: true,
+  });
+  expect(routinesFor(kneeRecovery, catalog, day(7)).today?.name).toBe("Chest");
+});
+
+test("light days reuse catalog exercises at half volume and skip the injured area", () => {
+  const { today, next } = routinesFor(kneeRecovery, catalog, new Date(2026, 10, 4));
+  expect(today?.name).toBe("Recovery");
+  expect(next).toBeNull();
+  expect(today?.exercises.map((entry) => entry.id)).toEqual(["press", "row", "curl", "plank"]);
+  expect(today?.exercises[0].prescription).toBe("2 × 10 reps · easy effort");
+  expect(today?.exercises[3].prescription).toBe("2 × 40 seconds · easy effort");
+  expect(today?.sets).toBe(8);
+  expect(routineForGroup("Recovery", catalog)).toBeNull();
 });
