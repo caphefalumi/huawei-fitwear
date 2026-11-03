@@ -68,26 +68,40 @@ test("uses normal routines without a recovery plan", () => {
   expect(normal.next?.name).toBe("Back");
 });
 
-test("recovery phases follow rest days, light days, then normal training", () => {
+test("recovery phases follow rest days, rehab days, then normal training", () => {
   const day = (date: number) => new Date(2026, 10, date, 9);
   expect(recoveryPhase(kneeRecovery, day(1))).toBe("rest");
   expect(recoveryPhase(kneeRecovery, day(3))).toBe("light");
   expect(recoveryPhase(kneeRecovery, day(6))).toBe("normal");
-  expect(routinesFor(kneeRecovery, catalog, day(2))).toEqual({
+  expect(routinesFor(kneeRecovery, catalog, day(7)).today?.name).toBe("Chest");
+});
+
+test("rest days train only unaffected groups and never the injured area", () => {
+  const { today, next, avoid, rest } = routinesFor(kneeRecovery, catalog, new Date(2026, 10, 2));
+  expect(avoid).toEqual(["Legs"]);
+  expect(today?.name).toBe("Chest");
+  expect(next?.name).toBe("Back");
+  expect(rest).toBeUndefined();
+  const shoulder = { ...kneeRecovery, area: "Right shoulder" };
+  expect(routinesFor(shoulder, catalog, new Date(2026, 10, 2)).today?.name).toBe("Legs");
+});
+
+test("period recovery has nothing safe to train on rest days", () => {
+  const period = { ...kneeRecovery, area: "In period" };
+  expect(routinesFor(period, catalog, new Date(2026, 10, 2))).toMatchObject({
     today: null,
     next: null,
     rest: true,
   });
-  expect(routinesFor(kneeRecovery, catalog, day(7)).today?.name).toBe("Chest");
 });
 
-test("light days reuse catalog exercises at half volume and skip the injured area", () => {
+test("rehab days train the affected group at a third of the sets", () => {
   const { today, next } = routinesFor(kneeRecovery, catalog, new Date(2026, 10, 4));
   expect(today?.name).toBe("Recovery");
-  expect(next).toBeNull();
-  expect(today?.exercises.map((entry) => entry.id)).toEqual(["press", "row", "curl", "plank"]);
-  expect(today?.exercises[0].prescription).toBe("2 × 10 reps · easy effort");
-  expect(today?.exercises[3].prescription).toBe("2 × 40 seconds · easy effort");
-  expect(today?.sets).toBe(8);
+  expect(today?.exercises.map((entry) => entry.id)).toEqual(["squat"]);
+  expect(today?.exercises[0].prescription).toBe("1 × 10 reps · easy effort");
+  expect(next?.name).toBe("Chest");
   expect(routineForGroup("Recovery", catalog)).toBeNull();
+  const all = routinesFor({ ...kneeRecovery, area: "In period" }, catalog, new Date(2026, 10, 4));
+  expect(all.today?.exercises.map((entry) => entry.id)).toEqual(["press", "row", "curl", "squat"]);
 });

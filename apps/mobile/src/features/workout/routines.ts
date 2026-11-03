@@ -12,8 +12,8 @@ export type Routine = {
 export const RECOVERY_ROUTINE = "Recovery";
 const GROUP_ORDER = ["Chest", "Back", "Shoulders", "Arms", "Legs", "Core"];
 const EQUIPMENT_RANK = ["bodyweight", "machine", "cable", "dumbbell", "barbell"];
-const MAX_RECOVERY_EXERCISES = 4;
-/** Muscle groups an injury area loads, so recovery routines leave them out. */
+const MAX_REHAB_EXERCISES = 4;
+/** Muscle groups each recovery area loads; period or unknown areas treat the whole body as loaded. */
 const AREA_GROUPS: Record<string, string[]> = {
   "Right shoulder": ["Shoulders", "Chest", "Back", "Arms"],
   "Left shoulder": ["Shoulders", "Chest", "Back", "Arms"],
@@ -23,10 +23,13 @@ const AREA_GROUPS: Record<string, string[]> = {
 
 export type RecoveryPhase = "rest" | "light" | "normal";
 
+const affectedGroups = (area: string) => AREA_GROUPS[area] ?? GROUP_ORDER;
+const sameGroup = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+
 const dayNumber = (date: Date) =>
   Math.round(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000);
 
-/** Rest days come first, then light days; before the start or after the return it is normal. */
+/** Rest days come first, then rehab (light) days; before the start or after the return it is normal. */
 export function recoveryPhase(recovery: RecoveryPlan, now = new Date()): RecoveryPhase {
   const [year, month, day] = recovery.startDate.split("-").map(Number);
   const elapsed = dayNumber(now) - dayNumber(new Date(year, month - 1, day));
@@ -35,18 +38,19 @@ export function recoveryPhase(recovery: RecoveryPlan, now = new Date()): Recover
   return elapsed < recovery.restDays + recovery.lightDays ? "light" : "normal";
 }
 
-/** Existing catalogue exercises at reduced volume, skipping muscle groups the injury loads. */
-function recoveryRoutine(recovery: RecoveryPlan, catalog: Exercise[]): Routine | null {
-  const skipped = (AREA_GROUPS[recovery.area] ?? []).map((group) => group.toLowerCase());
+/** Rehab: the easiest catalogue exercise per affected group at a third of its normal sets. */
+function rehabRoutine(recovery: RecoveryPlan, catalog: Exercise[]): Routine | null {
   const rank = (exercise: Exercise) =>
     Math.max(0, EQUIPMENT_RANK.indexOf(exercise.equipment.toLowerCase()));
-  const exercises = GROUP_ORDER.filter((group) => !skipped.includes(group.toLowerCase()))
+  const exercises = GROUP_ORDER.filter((group) =>
+    affectedGroups(recovery.area).some((affected) => sameGroup(affected, group)),
+  )
     .flatMap((group) => {
       const [easiest] = catalog
-        .filter((exercise) => exercise.muscleGroup.toLowerCase() === group.toLowerCase())
+        .filter((exercise) => sameGroup(exercise.muscleGroup, group))
         .sort((a, b) => rank(a) - rank(b));
       if (!easiest) return [];
-      const defaultSets = Math.max(1, Math.ceil(easiest.defaultSets / 2));
+      const defaultSets = Math.max(1, Math.round(easiest.defaultSets / 3));
       return [
         {
           ...easiest,
@@ -55,7 +59,7 @@ function recoveryRoutine(recovery: RecoveryPlan, catalog: Exercise[]): Routine |
         },
       ];
     })
-    .slice(0, MAX_RECOVERY_EXERCISES);
+    .slice(0, MAX_REHAB_EXERCISES);
   if (!exercises.length) return null;
   return {
     id: RECOVERY_ROUTINE.toLowerCase(),
@@ -72,7 +76,7 @@ export function routineForGroup(
   recovery: RecoveryPlan | null = null,
 ): Routine | null {
   if (group.toLowerCase() === RECOVERY_ROUTINE.toLowerCase())
-    return recovery ? recoveryRoutine(recovery, catalog) : null;
+    return recovery ? rehabRoutine(recovery, catalog) : null;
   const exercises = catalog
     .filter((exercise) => exercise.muscleGroup.toLowerCase() === group.toLowerCase())
     .map((exercise) => ({
@@ -88,19 +92,32 @@ export function routineForGroup(
   };
 }
 
-export type RoutinePair = { today: Routine | null; next: Routine | null; rest?: true };
+export type RoutinePair = {
+  today: Routine | null;
+  next: Routine | null;
+  /** Muscle groups kept out of the routines while a recovery plan is active. */
+  avoid?: string[];
+  /** True on a rest day with nothing left to train. */
+  rest?: true;
+};
 
+/** Normal routines come from the first unaffected groups; rehab replaces the first slot on light days. */
 export function routinesFor(
   recovery: RecoveryPlan | null,
   catalog: Exercise[],
   now = new Date(),
 ): RoutinePair {
   const phase = recovery ? recoveryPhase(recovery, now) : "normal";
-  if (recovery && phase === "rest") return { today: null, next: null, rest: true };
-  if (recovery && phase === "light")
-    return { today: recoveryRoutine(recovery, catalog), next: null };
-  return {
-    today: routineForGroup("Chest", catalog),
-    next: routineForGroup("Back", catalog),
-  };
+  if (!recovery || phase === "normal")
+    return { today: routineForGroup("Chest", catalog), next: routineForGroup("Back", catalog) };
+  const avoid = GROUP_ORDER.filter((group) =>
+    affectedGroups(recovery.area).some((affected) => sameGroup(affected, group)),
+  );
+  const safe = GROUP_ORDER.filter((group) => !avoid.includes(group))
+    .map((group) => routineForGroup(group, catalog))
+    .filter((routine): routine is Routine => routine !== null);
+  if (phase === "light")
+    return { today: rehabRoutine(recovery, catalog), next: safe[0] ?? null, avoid };
+  const [today = null, next = null] = safe;
+  return today ? { today, next, avoid } : { today, next, avoid, rest: true };
 }

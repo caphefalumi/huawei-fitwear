@@ -28,7 +28,7 @@ export function WorkoutPlanScreen() {
   const { exercises, sessions, loading, error, refresh, hasMore, loadMore } = useWorkouts();
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [recoveryClosing, setRecoveryClosing] = useState(false);
-  const { today, next, rest } = routinesFor(recovery, exercises);
+  const { today, next, avoid, rest } = routinesFor(recovery, exercises);
   const ranges = recovery ? recoveryRanges(recovery) : null;
   const now = new Date();
   const weekStart = new Date(
@@ -159,16 +159,19 @@ export function WorkoutPlanScreen() {
           </View>
         </Pressable>
       ) : null}
-      {rest && recovery ? (
+      {avoid && recovery ? (
         <Card>
-          <Text style={styles.todayTitle}>Rest day</Text>
+          <Text style={styles.todayTitle}>{rest ? "Rest day" : "Protecting your recovery"}</Text>
           <Text style={styles.cardSub}>
-            Take it easy. Light training starts{" "}
-            {dateLabel(recovery.startDate, recovery.restDays)}.
+            {rest
+              ? `Nothing is scheduled. Rehab starts ${dateLabel(recovery.startDate, recovery.restDays)}.`
+              : `Skipping ${avoid.join(", ")} until you are back.`}
           </Text>
         </Card>
       ) : null}
-      {today ? routineCard(today, recovery ? "Light recovery routine" : "Explore a routine") : null}
+      {today
+        ? routineCard(today, today.name === RECOVERY_ROUTINE ? "Rehab routine" : "Explore a routine")
+        : null}
       {next ? routineCard(next, "More routines") : null}
       <View style={styles.section}>
         <SectionHeading title="Browse muscle groups" actionLabel={`${groups.length} groups`} />
