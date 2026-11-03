@@ -24,7 +24,7 @@ export async function takePasswordResetEmailSlot(
   kv: KVNamespace,
   email: string,
   now = Date.now(),
-): Promise<boolean> {
+): Promise<{ allowed: boolean; retryAfterSeconds: number }> {
   const normalized = email.trim().toLowerCase();
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(normalized));
   const emailHash = Array.from(new Uint8Array(digest), (byte) =>
@@ -35,7 +35,9 @@ export async function takePasswordResetEmailSlot(
   const attempts =
     raw && Number.isSafeInteger(raw.attempts) && raw.attempts >= 0 ? raw.attempts : 0;
   const nextAllowedAt = raw && Number.isFinite(raw.nextAllowedAt) ? raw.nextAllowedAt : 0;
-  if (now < nextAllowedAt) return false;
+  if (now < nextAllowedAt) {
+    return { allowed: false, retryAfterSeconds: Math.ceil((nextAllowedAt - now) / 1000) };
+  }
 
   const delay = Math.min(
     RESET_RESEND_BASE_DELAY_MS * 2 ** Math.min(attempts, 12),
@@ -44,12 +46,16 @@ export async function takePasswordResetEmailSlot(
   await kv.put(key, JSON.stringify({ attempts: attempts + 1, nextAllowedAt: now + delay }), {
     expirationTtl: RESET_RESEND_TTL_SECONDS,
   });
-  return true;
+  return { allowed: true, retryAfterSeconds: Math.ceil(delay / 1000) };
 }
 
-export async function canSendPasswordResetEmail(email: string): Promise<boolean> {
+export async function canSendPasswordResetEmail(
+  email: string,
+): Promise<{ allowed: boolean; retryAfterSeconds: number }> {
   const kv = getKv();
-  return kv ? takePasswordResetEmailSlot(kv, email) : true;
+  return kv
+    ? takePasswordResetEmailSlot(kv, email)
+    : { allowed: true, retryAfterSeconds: RESET_RESEND_BASE_DELAY_MS / 1000 };
 }
 
 export function clientIpFromRequest(request: Request): string {
@@ -86,7 +92,7 @@ export async function assertAuthRateLimit(
   const key = `rl:auth:${action}:${ip}`;
   const options = AUTH_RATE_LIMITS[action];
   const result = await consumeTokenBucket(kv, key, options);
-  if (action === "sign-in" && accountIdentifier) {
+  if (accountIdentifier && (action === "sign-in" || action === "password-reset-confirm")) {
     const normalized = accountIdentifier.trim().toLowerCase();
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(normalized));
     const accountKey = Array.from(new Uint8Array(digest), (byte) =>
@@ -94,8 +100,8 @@ export async function assertAuthRateLimit(
     ).join("");
     const accountResult = await consumeTokenBucket(
       kv,
-      `rl:auth:sign-in:account:${accountKey}`,
-      SIGN_IN_ACCOUNT_LIMIT,
+      `rl:auth:${action}:account:${accountKey}`,
+      action === "sign-in" ? SIGN_IN_ACCOUNT_LIMIT : AUTH_RATE_LIMITS[action],
     );
     if (!accountResult.allowed) {
       set.headers["Retry-After"] = String(accountResult.retryAfterSec);

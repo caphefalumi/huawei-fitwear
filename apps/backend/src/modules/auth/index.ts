@@ -7,6 +7,7 @@ import {
   passwordResetMessage,
   requestPasswordReset,
   resetPassword,
+  verifyPasswordResetCode,
 } from "./password-reset";
 
 export const AuthSchemas = {
@@ -44,9 +45,12 @@ export const AuthSchemas = {
   passwordResetRequestBody: t.Object({
     email: t.String({ format: "email", error: "Valid email is required" }),
   }),
-  passwordResetBody: t.Object({
+  passwordResetVerifyBody: t.Object({
     email: t.String({ format: "email", error: "Valid email is required" }),
     code: t.String({ minLength: 4, maxLength: 4, pattern: "^[0-9]{4}$" }),
+  }),
+  passwordResetBody: t.Object({
+    resetToken: t.String({ minLength: 1 }),
     password: t.String({
       minLength: 8,
       maxLength: 72,
@@ -79,6 +83,7 @@ export const AuthSchemas = {
 export type SignUpBody = Static<typeof AuthSchemas.signUpBody>;
 export type SignInBody = Static<typeof AuthSchemas.signInBody>;
 export type PasswordResetRequestBody = Static<typeof AuthSchemas.passwordResetRequestBody>;
+export type PasswordResetVerifyBody = Static<typeof AuthSchemas.passwordResetVerifyBody>;
 export type PasswordResetBody = Static<typeof AuthSchemas.passwordResetBody>;
 export type UpdateUserBody = Static<typeof AuthSchemas.updateUserBody>;
 
@@ -86,10 +91,10 @@ const authModels = new Elysia().model({
   "auth.signUpBody": AuthSchemas.signUpBody,
   "auth.signInBody": AuthSchemas.signInBody,
   "auth.passwordResetRequestBody": AuthSchemas.passwordResetRequestBody,
+  "auth.passwordResetVerifyBody": AuthSchemas.passwordResetVerifyBody,
   "auth.passwordResetBody": AuthSchemas.passwordResetBody,
   "auth.updateUserBody": AuthSchemas.updateUserBody,
 });
-
 export const auth = new Elysia({
   prefix: "/auth",
   detail: { tags: ["Authentication"] },
@@ -145,22 +150,25 @@ export const auth = new Elysia({
   )
   .post(
     "/password-reset",
-    async ({ body, request, set }) => {
-      await assertAuthRateLimit(request, "password-reset", set);
+    async ({ body, set }) => {
       if (!isPasswordResetConfigured()) {
         set.status = 503;
         return { success: false, message: "Password reset email is not configured." };
       }
+      let resendAfterSeconds = 60;
       try {
-        if (await canSendPasswordResetEmail(body.email)) {
+        const slot = await canSendPasswordResetEmail(body.email);
+        resendAfterSeconds = slot.retryAfterSeconds;
+        if (slot.allowed) {
           await requestPasswordReset(body.email);
         }
       } catch {
         console.error("Password reset email request failed.");
       }
-      return { success: true, message: passwordResetMessage };
+      return { success: true, message: passwordResetMessage, resendAfterSeconds };
     },
     {
+      beforeHandle: ({ request, set }) => assertAuthRateLimit(request, "password-reset", set),
       body: "auth.passwordResetRequestBody",
       detail: {
         summary: "Request a password reset email",
@@ -169,9 +177,36 @@ export const auth = new Elysia({
     },
   )
   .post(
+    "/password-reset/verify",
+    async ({ body, set }) => {
+      try {
+        return await verifyPasswordResetCode(body);
+      } catch (error) {
+        set.status =
+          error instanceof InvalidPasswordResetToken
+            ? 400
+            : error instanceof RangeError
+              ? 422
+              : 500;
+        return {
+          success: false,
+          message:
+            error instanceof InvalidPasswordResetToken
+              ? "This reset code is invalid or expired."
+              : "Unable to verify the reset code. Please try again.",
+        };
+      }
+    },
+    {
+      beforeHandle: ({ request, body, set }) =>
+        assertAuthRateLimit(request, "password-reset-confirm", set, body.email),
+      body: "auth.passwordResetVerifyBody",
+      detail: { summary: "Verify a four-digit password reset code" },
+    },
+  )
+  .post(
     "/reset-password",
-    async ({ body, request, set }) => {
-      await assertAuthRateLimit(request, "password-reset-confirm", set);
+    async ({ body, set }) => {
       try {
         await resetPassword(body);
         return { success: true, message: "Password updated. You can now sign in." };
@@ -186,7 +221,7 @@ export const auth = new Elysia({
           success: false,
           message:
             error instanceof InvalidPasswordResetToken
-              ? "This reset code is invalid or expired."
+              ? "This reset token is invalid or expired."
               : error instanceof RangeError
                 ? "Password must not exceed 72 UTF-8 bytes."
                 : "Unable to update your password. Please try again.",
@@ -194,8 +229,10 @@ export const auth = new Elysia({
       }
     },
     {
+      beforeHandle: ({ request, set }) =>
+        assertAuthRateLimit(request, "password-reset-confirm", set),
       body: "auth.passwordResetBody",
-      detail: { summary: "Set a new password with a four-digit reset code" },
+      detail: { summary: "Set a new password with a short-lived reset token" },
     },
   )
   .get(

@@ -55,6 +55,9 @@ export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: ()
           gap: 16,
         }}
       >
+        <Text accessibilityRole="header" style={{ color: C.text, fontSize: 20, fontWeight: "600" }}>
+          Meal
+        </Text>
         {error ? (
           <Text style={{ color: C.text }} accessibilityRole="alert">
             {error}
