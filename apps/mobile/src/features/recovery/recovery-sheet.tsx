@@ -24,25 +24,21 @@ export function RecoverySheet({
   visible,
   onClose,
   onDismiss,
-  initialArea,
 }: {
   visible: boolean;
   onClose: () => void;
   onDismiss?: () => void;
-  initialArea?: string;
 }) {
   const { recovery, saveRecovery, sex, loading, error: loadError } = useHealth();
-  const [draft, setDraft] = useState<RecoveryPlan | null>(() =>
-    initialArea ? createRecovery(initialArea) : recovery,
-  );
+  const [draft, setDraft] = useState<RecoveryPlan | null>(recovery);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const active = useRef(true);
   const busy = useRef(false);
   const dirty = useRef(false);
   useEffect(() => {
-    if (!dirty.current && !initialArea) setDraft(recovery);
-  }, [recovery, initialArea]);
+    if (!dirty.current) setDraft(recovery);
+  }, [recovery]);
   useEffect(() => {
     active.current = true;
     return () => {
