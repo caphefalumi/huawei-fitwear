@@ -1,13 +1,19 @@
-const { withAndroidManifest, withAppBuildGradle } = require("@expo/config-plugins");
+const {
+  withAndroidManifest,
+  withAppBuildGradle,
+  withGradleProperties,
+  AndroidConfig,
+} = require("@expo/config-plugins");
 
 /**
  * Expo Config Plugin to ensure Continuous Native Generation (CNG) maintains
- * Android CI and Maestro E2E build requirements across prebuilds:
+ * Android CI and Maestro E2E build requirements across clean prebuilds:
  *
  * 1. Aligns android.permission.BLUETOOTH and android.permission.BLUETOOTH_ADMIN with
  *    android:maxSdkVersion="30" to prevent conflicts with rxandroidble.
  * 2. Injects `debuggableVariants = []` when CI=true or bundleInDebug=true so that
  *    debug APKs bundle Hermes JavaScript assets and run offline without Metro.
+ * 3. Preserves android.cmakeVersion=3.31.6 in gradle.properties for CMake/Ninja builds on Windows.
  */
 function withAndroidBluetoothMaxSdk(config) {
   return withAndroidManifest(config, (config) => {
@@ -40,8 +46,19 @@ function withAndroidCiDebugBundle(config) {
   });
 }
 
+function withAndroidCmakeVersion(config) {
+  return withGradleProperties(config, (config) => {
+    config.modResults = AndroidConfig.BuildProperties.updateAndroidBuildProperty(
+      config.modResults,
+      "android.cmakeVersion",
+      "3.31.6",
+    );
+    return config;
+  });
+}
+
 function withAndroidCiFixes(config) {
-  return withAndroidCiDebugBundle(withAndroidBluetoothMaxSdk(config));
+  return withAndroidCmakeVersion(withAndroidCiDebugBundle(withAndroidBluetoothMaxSdk(config)));
 }
 
 module.exports = withAndroidCiFixes;
