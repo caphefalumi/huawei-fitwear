@@ -25,7 +25,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
   const [newPassword, setNewPassword] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
   const [resetMode, setResetMode] = useState(false);
-  const [resetStep, setResetStep] = useState<"email" | "code" | "done">("email");
+  const [resetStep, setResetStep] = useState<"email" | "code" | "password" | "done">("email");
   const [resetPending, setResetPending] = useState(false);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
   const [resetError, setResetError] = useState<string | null>(null);
@@ -109,23 +109,34 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
       </View>
 
       <Text accessibilityRole="header" style={styles.welcome}>
-        {resetMode ? "Reset your password." : "Welcome back."}
+        {!resetMode
+          ? "Welcome back."
+          : resetStep === "email"
+            ? "Reset your password."
+            : resetStep === "code"
+              ? "Check your email."
+              : resetStep === "password"
+                ? "Choose a new password."
+                : "Password updated."}
       </Text>
 
       <View style={styles.credentials}>
-        <AuthField
-          label="Email"
-          icon={icons.user}
-          value={email}
-          onChangeText={setEmail}
-          placeholder="you@example.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          textContentType="emailAddress"
-          autoComplete="email"
-          editable={!pending && !resetPending && (!resetMode || resetStep === "email")}
-        />
+        {!resetMode || resetStep === "email" ? (
+          <AuthField
+            label="Email"
+            icon={icons.user}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="you@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            textContentType="emailAddress"
+            autoComplete="email"
+            autoFocus={resetMode && resetStep === "email"}
+            editable={!pending && !resetPending}
+          />
+        ) : null}
         {!resetMode ? (
           <AuthField
             label="Password"
@@ -147,32 +158,42 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
         ) : resetStep === "code" ? (
           <>
             <Text style={styles.terms}>
-              {resetMessage ??
-                "Enter the 4-digit code sent to your email and choose a new password."}
+              We sent a 4-digit code to {email.replace(/^(.{1,2})[^@]*/, "$1•••")}. Codes expire
+              after 30 minutes.
             </Text>
             <AuthField
-              label="4-digit code"
-              icon={icons.user}
-              value={resetCode}
+              label="4-digit reset code"
               onChangeText={(value) => setResetCode(value.replace(/\D/g, "").slice(0, 4))}
               keyboardType="number-pad"
               inputMode="numeric"
               maxLength={4}
-              textContentType="oneTimeCode"
               autoComplete="one-time-code"
+              autoFocus
+              style={styles.otpInput}
               editable={!resetPending}
             />
-            <AuthField
-              label="New password"
-              icon={icons.eyeOff}
-              value={newPassword}
-              onChangeText={setNewPassword}
-              secureTextEntry
-              textContentType="newPassword"
-              autoComplete="new-password"
-              editable={!resetPending}
-            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Change email address"
+              onPress={() => {
+                setResetStep("email");
+                setResetCode("");
+                setResetError(null);
+              }}
+            >
+              <Text style={styles.footerLink}>Change email address</Text>
+            </Pressable>
           </>
+        ) : resetStep === "password" ? (
+          <AuthField
+            label="New password"
+            icon={icons.eyeOff}
+            value={newPassword}
+            onChangeText={setNewPassword}
+            secureTextEntry
+            autoComplete="new-password"
+            editable={!resetPending}
+          />
         ) : (
           <Text style={styles.terms}>{resetMessage}</Text>
         )}
@@ -202,7 +223,21 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
         </Text>
       ) : null}
 
-      {resetStep !== "done" || !resetMode ? (
+      {resetMode && resetStep === "code" ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Continue to choose a new password"
+          accessibilityState={{ disabled: resetPending || resetCode.length !== 4 }}
+          disabled={resetPending || resetCode.length !== 4}
+          style={[styles.primaryButton, resetCode.length !== 4 && styles.disabled]}
+          onPress={() => {
+            setResetError(null);
+            setResetStep("password");
+          }}
+        >
+          <Text style={styles.primaryLabel}>Continue</Text>
+        </Pressable>
+      ) : resetStep !== "done" || !resetMode ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={
@@ -326,12 +361,19 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: AuthColors.onAccent,
   },
+  otpInput: {
+    textAlign: "center",
+    fontSize: 24,
+    fontWeight: "600",
+    letterSpacing: 10,
+  },
   terms: {
     fontSize: 11,
     lineHeight: 19,
     color: AuthColors.textMuted,
     textAlign: "center",
   },
+
   link: {
     color: AuthColors.accent,
   },

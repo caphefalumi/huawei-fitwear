@@ -43,8 +43,9 @@ test("requests a four-digit code, collects a new password, and confirms the rese
   await fireEvent.press(screen.getByLabelText("Send reset code"));
 
   await waitFor(() => expect(auth.requestPasswordReset).toHaveBeenCalledWith("member@example.com"));
-  await waitFor(() => expect(screen.getByLabelText("4-digit code")).toBeTruthy());
-  await fireEvent.changeText(screen.getByLabelText("4-digit code"), "12a34");
+  await waitFor(() => expect(screen.getByLabelText("4-digit reset code")).toBeTruthy());
+  await fireEvent.changeText(screen.getByLabelText("4-digit reset code"), "12a34");
+  await fireEvent.press(screen.getByLabelText("Continue to choose a new password"));
   await fireEvent.changeText(screen.getByLabelText("New password"), "ReplacementPassword123!");
   await fireEvent.press(screen.getByLabelText("Reset password"));
 

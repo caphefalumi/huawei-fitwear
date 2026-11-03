@@ -8,7 +8,7 @@ import { Palette as AuthColors } from "@/constants/palette";
 
 type AuthFieldProps = {
   label: string;
-  icon: number;
+  icon?: number;
   helper?: string;
   style?: TextInputProps["style"];
 } & Omit<TextInputProps, "style">;
@@ -59,7 +59,7 @@ function EyeOffIcon({
   );
 }
 
-export function AuthField({ label, icon, helper, ...inputProps }: AuthFieldProps) {
+export function AuthField({ label, icon, helper, style, ...inputProps }: AuthFieldProps) {
   const [passwordVisible, setPasswordVisible] = useState(false);
   return (
     <View style={styles.field}>
@@ -71,7 +71,7 @@ export function AuthField({ label, icon, helper, ...inputProps }: AuthFieldProps
           placeholderTextColor={AuthColors.textMuted}
           {...inputProps}
           secureTextEntry={inputProps.secureTextEntry && !passwordVisible}
-          style={styles.input}
+          style={[styles.input, style]}
         />
         {inputProps.secureTextEntry ? (
           <Pressable
@@ -96,9 +96,9 @@ export function AuthField({ label, icon, helper, ...inputProps }: AuthFieldProps
               <EyeIcon color={AuthColors.textMuted} />
             )}
           </Pressable>
-        ) : (
+        ) : icon ? (
           <Image source={icon} style={styles.icon} contentFit="contain" accessible={false} />
-        )}
+        ) : null}
       </View>
       {helper ? <Text style={styles.helper}>{helper}</Text> : null}
     </View>

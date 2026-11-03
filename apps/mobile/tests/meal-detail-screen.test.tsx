@@ -34,7 +34,8 @@ test("loads a meal by encoded route ID and retries a failed request", async () =
   const onBack = jest.fn();
   const screen = await render(<MealDetailScreen logId="meal/42" onBack={onBack} />);
 
-  expect(screen.getByText("Loading meal…")).toBeTruthy();
+  expect(screen.getByRole("header", { name: "Meal" })).toBeTruthy();
+  expect(screen.queryByText(/loading meal/i)).toBeNull();
   await act(async () => {
     initialRequest.reject(new Error("Could not reach meal service."));
   });
