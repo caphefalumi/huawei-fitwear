@@ -105,3 +105,19 @@ test("rehab days train the affected group at a third of the sets", () => {
   const all = routinesFor({ ...kneeRecovery, area: "In period" }, catalog, new Date(2026, 10, 4));
   expect(all.today?.exercises.map((entry) => entry.id)).toEqual(["press", "row", "curl", "squat"]);
 });
+
+test("an unrecognised area is treated as whole-body and rehab is capped at four exercises", () => {
+  const wide = [...catalog, exercise("shoulder-press", "Shoulders"), exercise("crunch", "Core")];
+  const unknown = { ...kneeRecovery, area: "Neck" };
+  expect(routinesFor(unknown, wide, new Date(2026, 10, 2))).toMatchObject({ rest: true });
+  const rehab = routinesFor(unknown, wide, new Date(2026, 10, 4)).today;
+  expect(rehab?.exercises).toHaveLength(4);
+});
+
+test("lower back keeps Back and Legs out of rest-day routines", () => {
+  const lowerBack = { ...kneeRecovery, area: "Lower back" };
+  const { today, next, avoid } = routinesFor(lowerBack, catalog, new Date(2026, 10, 2));
+  expect(avoid).toEqual(["Back", "Legs"]);
+  expect(today?.name).toBe("Chest");
+  expect(next?.name).toBe("Arms");
+});

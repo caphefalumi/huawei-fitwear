@@ -95,7 +95,11 @@ export function recoveryProgress(recovery: RecoveryPlan, now = new Date()) {
     Math.round(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000);
   const elapsed = dayNumber(now) - dayNumber(new Date(year, month - 1, day));
   const stage = (start: number, length: number) =>
-    length === 0 ? (elapsed >= start ? 1 : 0) : Math.max(0, Math.min(1, (elapsed - start) / length));
+    length === 0
+      ? elapsed >= start
+        ? 1
+        : 0
+      : Math.max(0, Math.min(1, (elapsed - start) / length));
   const total = recovery.restDays + recovery.lightDays;
   return [
     stage(0, recovery.restDays),

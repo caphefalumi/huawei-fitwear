@@ -45,7 +45,10 @@ export function RecoveryTracker({
               {index > 0 ? (
                 <View style={[styles.line, reached[index - 1] && styles.lineReached]} />
               ) : null}
-              <View style={[styles.circle, reached[index] && styles.circleReached]} />
+              <View
+                testID={`recovery-stage-${stage.toLowerCase()}`}
+                style={[styles.circle, reached[index] && styles.circleReached]}
+              />
             </Fragment>
           ))}
         </View>

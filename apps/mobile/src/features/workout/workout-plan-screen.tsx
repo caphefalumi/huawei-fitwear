@@ -150,7 +150,10 @@ export function WorkoutPlanScreen() {
         <Text style={styles.subtitle}>Skipping {avoid.join(", ")} until you are back.</Text>
       ) : null}
       {today
-        ? routineCard(today, today.name === RECOVERY_ROUTINE ? "Rehab routine" : "Explore a routine")
+        ? routineCard(
+            today,
+            today.name === RECOVERY_ROUTINE ? "Rehab routine" : "Explore a routine",
+          )
         : null}
       {next ? routineCard(next, "More routines") : null}
       <View style={styles.section}>

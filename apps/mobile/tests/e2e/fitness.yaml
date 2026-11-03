@@ -120,7 +120,83 @@ env:
     visible: "No meals logged yet. Add your first meal above."
     timeout: 20000
 
-# 6. Delete Account to Clean Up
+# 6. First Capture Tutorial
+- tapOn:
+    text: "Capture meal"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Capture your meal"
+    timeout: 20000
+- assertVisible: "Add a ruler"
+- assertVisible: "Shoot from above"
+- assertNotVisible: "Review & edit"
+- assertNotVisible: ".*Three quick tips.*"
+- tapOn:
+    text: "Close Capture your meal"
+    retryTapIfNoChange: true
+- assertNotVisible: "Add a ruler"
+- back
+
+# 7. Period Recovery Plan (one tap, then reflected in Workout)
+- tapOn: "Profile"
+- repeat:
+    times: 8
+    while:
+      notVisible: "Sex / gender.*"
+    commands:
+      - swipe:
+          start: 5%, 30%
+          end: 5%, 80%
+- tapOn:
+    text: "Sex / gender.*"
+    retryTapIfNoChange: true
+- tapOn:
+    text: "Female"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Sex / gender, Female"
+    timeout: 20000
+- repeat:
+    times: 8
+    while:
+      notVisible: "I am in my period"
+    commands:
+      - swipe:
+          start: 5%, 80%
+          end: 5%, 30%
+- tapOn:
+    text: "I am in my period"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "My period has ended"
+    timeout: 20000
+- tapOn: "Workout"
+- extendedWaitUntil:
+    visible: "Edit recovery plan.*"
+    timeout: 20000
+- assertVisible: "Rest"
+- assertVisible: "Rehab"
+- assertVisible: "Return"
+- repeat:
+    times: 8
+    while:
+      notVisible: "View Chest workout plan"
+    commands:
+      - swipe:
+          start: 5%, 80%
+          end: 5%, 30%
+- assertNotVisible: "View Recovery workout plan"
+- tapOn: "Profile"
+- tapOn:
+    text: "My period has ended"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "I am in my period"
+    timeout: 20000
+- tapOn: "Workout"
+- assertNotVisible: "Edit recovery plan.*"
+
+# 8. Delete Account to Clean Up
 - tapOn: "Profile"
 - repeat:
     times: 8
