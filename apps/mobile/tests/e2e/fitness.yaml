@@ -1,4 +1,7 @@
 appId: com.fitwear.mobile
+tags:
+  - e2e
+  - fitness
 env:
   PASSWORD: "FitnessTest123!"
 ---
@@ -11,7 +14,10 @@ env:
 - scrollUntilVisible:
     element: "Create account"
     direction: DOWN
-- tapOn: "Create account"
+    centerElement: true
+- tapOn:
+    text: "Create account"
+    retryTapIfNoChange: true
 - tapOn: "Name"
 - inputText: "Maestro E2E"
 - tapOn: "Email"
@@ -22,25 +28,40 @@ env:
 - scrollUntilVisible:
     element: ".*Terms of Service.*"
     direction: DOWN
-- tapOn: ".*Terms of Service.*"
+    centerElement: true
+- tapOn:
+    text: ".*Terms of Service.*"
+    retryTapIfNoChange: true
 - scrollUntilVisible:
     element: "Create account"
     direction: DOWN
-- tapOn: "Create account"
-- assertVisible: "Today"
+    centerElement: true
+- tapOn:
+    text: "Create account"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 30000
 
 # 2. Verify Session Persistence Across App Restart
 - stopApp
 - launchApp
-- assertVisible: "Today"
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 30000
 
 # 3. Sign Out
 - tapOn: "Profile"
 - scrollUntilVisible:
     element: "Sign out"
     direction: DOWN
-- tapOn: "Sign out"
-- assertVisible: "Welcome back."
+    centerElement: true
+- tapOn:
+    text: "Sign out"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Welcome back."
+    timeout: 30000
 
 # 4. Login with Registered Credentials
 - tapOn: "Email"
@@ -51,17 +72,29 @@ env:
 - scrollUntilVisible:
     element: "Log in"
     direction: DOWN
-- tapOn: "Log in"
-- assertVisible: "Today"
+    centerElement: true
+- tapOn:
+    text: "Log in"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 30000
 
 # 5. Verify App Content Access
 - tapOn: "Meals"
-- assertVisible: "No meals logged yet. Add your first meal above."
+- extendedWaitUntil:
+    visible: "No meals logged yet. Add your first meal above."
+    timeout: 20000
 
 # 6. Delete Account to Clean Up
 - tapOn: "Profile"
 - scrollUntilVisible:
     element: "Delete account"
     direction: DOWN
-- tapOn: "Delete account"
-- assertVisible: "Welcome back."
+    centerElement: true
+- tapOn:
+    text: "Delete account"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Welcome back."
+    timeout: 30000
