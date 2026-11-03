@@ -173,9 +173,8 @@ export function MealCaptureScreen() {
           </Text>
         ) : null}
         <PrimaryButton
-          label={busy ? "Analyzing photo…" : "Analyze photo"}
+          label="Analyze photo"
           disabled={!image || busy}
-          busy={busy}
           onPress={analyze}
         />
         <SecondaryButton

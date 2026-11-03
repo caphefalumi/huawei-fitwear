@@ -1,15 +1,6 @@
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Animated,
-  Easing,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  useColorScheme,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, TextInput, useColorScheme, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
@@ -56,48 +47,10 @@ function parseImuPacket(text: string): ImuPacket | null {
   }
 }
 
-// ─── Animated pulse dot ───────────────────────────────────────────────────────
-function PulseDot({ active, color }: { active: boolean; color: string }) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    let loop: Animated.CompositeAnimation | null = null;
-    if (active) {
-      loop = Animated.loop(
-        Animated.sequence([
-          Animated.parallel([
-            Animated.timing(scale, {
-              toValue: 1.5,
-              duration: 700,
-              useNativeDriver: true,
-              easing: Easing.out(Easing.ease),
-            }),
-            Animated.timing(opacity, {
-              toValue: 0,
-              duration: 700,
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.parallel([
-            Animated.timing(scale, { toValue: 1, duration: 0, useNativeDriver: true }),
-            Animated.timing(opacity, { toValue: 1, duration: 0, useNativeDriver: true }),
-          ]),
-        ]),
-      );
-      loop.start();
-    } else {
-      scale.setValue(1);
-      opacity.setValue(1);
-    }
-    return () => loop?.stop();
-  }, [active, scale, opacity]);
-
+// ─── Connection status dot ────────────────────────────────────────────────────
+function StatusDot({ color }: { color: string }) {
   return (
     <View style={styles.dotWrap}>
-      <Animated.View
-        style={[styles.dotRing, { backgroundColor: color, transform: [{ scale }], opacity }]}
-      />
       <View style={[styles.dot, { backgroundColor: color }]} />
     </View>
   );
@@ -195,25 +148,13 @@ export function BleSyncScreen() {
   const isConnected = mode === "ble-hardware" || mode === "ble-simulated";
 
   // Status banner styling
-  const statusColor =
-    mode === "ble-hardware"
-      ? "#22C55E"
-      : mode === "ble-simulated"
-        ? "#38BDF8"
-        : mode === "scanning" || mode === "connecting"
-          ? "#FACC15"
-          : "#94A3B8";
+  const statusColor = isConnected ? (mode === "ble-hardware" ? "#22C55E" : "#38BDF8") : "#94A3B8";
 
-  const statusLabel =
-    mode === "ble-hardware"
+  const statusLabel = isConnected
+    ? mode === "ble-hardware"
       ? `Connected · ${deviceName || "Huawei Watch"}`
-      : mode === "ble-simulated"
-        ? "Connected · Simulated Watch"
-        : mode === "scanning"
-          ? "Scanning for Huawei Watch…"
-          : mode === "connecting"
-            ? "Connecting & Subscribing…"
-            : "Disconnected";
+      : "Connected · Simulated Watch"
+    : "Disconnected";
 
   // Quick draft buttons
   const sendQuickText = useCallback(
@@ -278,7 +219,7 @@ export function BleSyncScreen() {
           {/* ── Status Card ── */}
           <ThemedView type="backgroundElement" style={styles.card}>
             <View style={styles.statusRow}>
-              <PulseDot active={isConnected} color={statusColor} />
+              <StatusDot color={statusColor} />
               <View style={styles.statusFlex}>
                 <ThemedText type="smallBold">{statusLabel}</ThemedText>
                 {isConnected && (
@@ -391,7 +332,7 @@ export function BleSyncScreen() {
                 ]}
                 value={phoneDraft}
                 onChangeText={setPhoneDraft}
-                placeholder="Type text for Watch..."
+                placeholder="Type text for Watch"
                 placeholderTextColor="#94A3B8"
                 returnKeyType="send"
                 onSubmitEditing={() => void handleSendCustomText()}
@@ -407,7 +348,7 @@ export function BleSyncScreen() {
                 onPress={handleSendCustomText}
               >
                 <ThemedText type="smallBold" style={styles.btnText}>
-                  {sending ? "…" : "Send"}
+                  Send
                 </ThemedText>
               </Pressable>
             </View>
@@ -480,13 +421,11 @@ export function BleSyncScreen() {
               <AxisRow axis="Z" value={imu?.gz ?? 0} max={10} color="#FBBF24" />
             </View>
 
-            {!imu && (
+            {!imu && !isConnected ? (
               <ThemedText type="small" themeColor="textSecondary" style={styles.placeholderText}>
-                {isConnected
-                  ? "Waiting for IMU stream from watch…"
-                  : "Connect to watch to see live IMU data"}
+                Connect to watch to see live IMU data
               </ThemedText>
-            )}
+            ) : null}
           </ThemedView>
 
           {/* ── Message log ── */}

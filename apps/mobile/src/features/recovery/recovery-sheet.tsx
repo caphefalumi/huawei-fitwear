@@ -98,10 +98,9 @@ export function RecoverySheet({
       <Text style={styles.body}>
         Choose your recovery schedule. Follow advice from your healthcare professional.
       </Text>
-      {loading ? <Text style={styles.body}>Loading recovery plan…</Text> : null}
       {loadError ? (
         <Text accessibilityRole="alert">
-          {loadError} Close this sheet and retry loading your health data.
+          {loadError} Close this sheet and retry your health data.
         </Text>
       ) : null}
 

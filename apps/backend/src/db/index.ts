@@ -12,7 +12,6 @@ export type WorkerBindings = Partial<
 > & {
   RESEND_API_KEY?: string;
   RESEND_FROM?: string;
-  RESET_PASSWORD_URL?: string;
   RESEND_WELCOME_TEMPLATE_ID?: string;
   RESEND_PASSWORD_RESET_TEMPLATE_ID?: string;
 };
@@ -31,7 +30,6 @@ export function getEmailConfig() {
   return {
     apiKey: bindings?.RESEND_API_KEY,
     from: bindings?.RESEND_FROM,
-    resetUrl: bindings?.RESET_PASSWORD_URL,
     welcomeTemplateId: bindings?.RESEND_WELCOME_TEMPLATE_ID,
     passwordResetTemplateId: bindings?.RESEND_PASSWORD_RESET_TEMPLATE_ID,
   };

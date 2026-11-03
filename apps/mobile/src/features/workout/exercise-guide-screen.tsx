@@ -35,20 +35,17 @@ export function ExerciseGuideScreen() {
       {!guide ? (
         <>
           <Text accessibilityRole="header" style={styles.title}>
-            {loading ? "Loading exercise…" : "Exercise unavailable"}
+            Exercise unavailable
           </Text>
           <Text accessibilityRole={error ? "alert" : undefined} style={styles.subtitle}>
-            {error ??
-              (loading
-                ? "Loading the exercise catalog."
-                : "Return to the workout plan and choose an available exercise.")}
+            {error ?? "Return to the workout plan and choose an available exercise."}
           </Text>
           <Pressable
             disabled={loading}
             accessibilityState={{ busy: loading }}
             onPress={() => void refresh()}
           >
-            <Text style={styles.cueTitle}>Retry loading exercises</Text>
+            <Text style={styles.cueTitle}>Retry</Text>
           </Pressable>
         </>
       ) : (

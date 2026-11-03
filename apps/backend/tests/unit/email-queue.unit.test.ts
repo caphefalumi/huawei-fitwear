@@ -35,10 +35,18 @@ describe("Email queue consumer", () => {
   it("validates supported message types and suppresses expired reset messages", async () => {
     expect(isEmailMessage({ type: "welcome", to: "a@example.test", name: null })).toBe(true);
     expect(isEmailMessage({ type: "unsupported", to: "a@example.test" })).toBe(false);
+    const resetMessage = {
+      type: "password-reset",
+      to: "a@example.test",
+      expiresAt: Date.now() + 30_000,
+    };
+    expect(isEmailMessage({ ...resetMessage, otp: "0123" })).toBe(true);
+    expect(isEmailMessage({ ...resetMessage, otp: "123" })).toBe(false);
+    expect(isEmailMessage({ ...resetMessage, otp: "12345" })).toBe(false);
     const expired = queueMessage("expired-reset", {
       type: "password-reset",
       to: "a@example.test",
-      otp: "12345678",
+      otp: "1234",
       expiresAt: Date.now() - 1,
     });
     let sends = 0;

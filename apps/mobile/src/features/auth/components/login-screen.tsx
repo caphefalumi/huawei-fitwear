@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Pressable } from "@/components/pressable";
@@ -17,12 +17,15 @@ const icons = {
 
 export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void } = {}) {
   const insets = useSafeAreaInsets();
-  const { signIn, requestPasswordReset, pending, error } = useAuth();
+  const { signIn, requestPasswordReset, completePasswordReset, pending, error } = useAuth();
   const handleCreateAccount = onCreateAccount ?? (() => router.push(APP_ROUTES.signUp));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
   const [resetMode, setResetMode] = useState(false);
+  const [resetStep, setResetStep] = useState<"email" | "code" | "done">("email");
   const [resetPending, setResetPending] = useState(false);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
   const [resetError, setResetError] = useState<string | null>(null);
@@ -45,13 +48,40 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
       setResetError("Enter your email address.");
       return;
     }
+    if (resetStep === "email") {
+      setResetPending(true);
+      setResetError(null);
+      setResetMessage(null);
+      try {
+        setResetMessage(await requestPasswordReset(email));
+        setResetStep("code");
+      } catch (cause) {
+        setResetError(cause instanceof Error ? cause.message : "Unable to request a password reset.");
+      } finally {
+        setResetPending(false);
+      }
+      return;
+    }
+    if (resetCode.length !== 4 || !/^\d{4}$/.test(resetCode)) {
+      setResetError("Enter the 4-digit code from your email.");
+      return;
+    }
+    if (Array.from(newPassword).length < 8) {
+      setResetError("Password must contain at least 8 characters.");
+      return;
+    }
+    const passwordBytes = encodeURIComponent(newPassword).replace(/%[0-9A-F]{2}/gi, "x").length;
+    if (passwordBytes > 72) {
+      setResetError("Password must not exceed 72 UTF-8 bytes.");
+      return;
+    }
     setResetPending(true);
     setResetError(null);
-    setResetMessage(null);
     try {
-      setResetMessage(await requestPasswordReset(email));
+      setResetMessage(await completePasswordReset(email, resetCode, newPassword));
+      setResetStep("done");
     } catch (cause) {
-      setResetError(cause instanceof Error ? cause.message : "Unable to request a password reset.");
+      setResetError(cause instanceof Error ? cause.message : "Unable to reset your password.");
     } finally {
       setResetPending(false);
     }
@@ -92,7 +122,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
           autoCorrect={false}
           textContentType="emailAddress"
           autoComplete="email"
-          editable={!pending && !resetPending}
+          editable={!pending && !resetPending && (!resetMode || resetStep === "email")}
         />
         {!resetMode ? (
           <AuthField
@@ -108,10 +138,40 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
               void submit();
             }}
           />
-        ) : (
+        ) : resetStep === "email" ? (
           <Text style={styles.terms}>
-            Enter your account email. If it matches an account, we’ll send an 8-digit reset code.
+            Enter your account email. If it matches an account, we’ll send a 4-digit reset code.
           </Text>
+        ) : resetStep === "code" ? (
+          <>
+            <Text style={styles.terms}>
+              {resetMessage ?? "Enter the 4-digit code sent to your email and choose a new password."}
+            </Text>
+            <AuthField
+              label="4-digit code"
+              icon={icons.user}
+              value={resetCode}
+              onChangeText={(value) => setResetCode(value.replace(/\D/g, "").slice(0, 4))}
+              keyboardType="number-pad"
+              inputMode="numeric"
+              maxLength={4}
+              textContentType="oneTimeCode"
+              autoComplete="one-time-code"
+              editable={!resetPending}
+            />
+            <AuthField
+              label="New password"
+              icon={icons.eyeOff}
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry
+              textContentType="newPassword"
+              autoComplete="new-password"
+              editable={!resetPending}
+            />
+          </>
+        ) : (
+          <Text style={styles.terms}>{resetMessage}</Text>
         )}
       </View>
 
@@ -121,6 +181,9 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
           disabled={pending}
           onPress={() => {
             setResetMode(true);
+            setResetStep("email");
+            setResetCode("");
+            setNewPassword("");
             setResetError(null);
             setResetMessage(null);
             setValidationError(null);
@@ -130,36 +193,40 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
         </Pressable>
       ) : null}
 
-      {resetMessage ? (
-        <Text accessibilityRole="status" accessibilityLiveRegion="polite" style={styles.terms}>
-          {resetMessage}
-        </Text>
-      ) : null}
       {resetError || (!resetMode && (validationError || error)) ? (
         <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>
           {resetMode ? resetError : (validationError ?? error)}
         </Text>
       ) : null}
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={resetMode ? "Send reset code" : "Log in"}
-        accessibilityState={{
-          disabled: resetMode ? resetPending : pending,
-          busy: resetMode ? resetPending : pending,
-        }}
-        disabled={resetMode ? resetPending : pending}
-        style={[styles.primaryButton, (resetMode ? resetPending : pending) && styles.disabled]}
-        onPress={() => {
-          void (resetMode ? submitPasswordReset() : submit());
-        }}
-      >
-        {(resetMode ? resetPending : pending) ? (
-          <ActivityIndicator color={AuthColors.onAccent} />
-        ) : (
-          <Text style={styles.primaryLabel}>{resetMode ? "Send reset code" : "Log in"}</Text>
-        )}
-      </Pressable>
+      {resetStep !== "done" || !resetMode ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            resetMode
+              ? resetStep === "email"
+                ? "Send reset code"
+                : "Reset password"
+              : "Log in"
+          }
+          accessibilityState={{
+            disabled: resetMode ? resetPending : pending,
+          }}
+          disabled={resetMode ? resetPending : pending}
+          style={[styles.primaryButton, (resetMode ? resetPending : pending) && styles.disabled]}
+          onPress={() => {
+            void (resetMode ? submitPasswordReset() : submit());
+          }}
+        >
+          <Text style={styles.primaryLabel}>
+            {resetMode
+              ? resetStep === "email"
+                ? "Send reset code"
+                : "Reset password"
+              : "Log in"}
+          </Text>
+        </Pressable>
+      ) : null}
 
       {!resetMode ? (
         <Text style={styles.terms}>
@@ -178,6 +245,9 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
               accessibilityLabel="Back to log in"
               onPress={() => {
                 setResetMode(false);
+                setResetStep("email");
+                setResetCode("");
+                setNewPassword("");
                 setResetError(null);
                 setResetMessage(null);
               }}

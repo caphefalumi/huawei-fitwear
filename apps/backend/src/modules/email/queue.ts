@@ -38,7 +38,7 @@ export function isEmailMessage(body: unknown): body is EmailMessage {
   return (
     message.type === "password-reset" &&
     typeof message.otp === "string" &&
-    /^\d{8}$/.test(message.otp) &&
+    /^\d{4}$/.test(message.otp) &&
     typeof message.expiresAt === "number" &&
     Number.isFinite(message.expiresAt)
   );
@@ -76,13 +76,13 @@ export async function consumeEmailBatch(batch: MessageBatch<unknown>): Promise<v
       message.ack();
       continue;
     }
-    const { apiKey, from, resetUrl, welcomeTemplateId, passwordResetTemplateId } = getEmailConfig();
+    const { apiKey, from, welcomeTemplateId, passwordResetTemplateId } = getEmailConfig();
 
     if (
       !apiKey ||
       !from ||
       (body.type === "welcome" && !welcomeTemplateId) ||
-      (body.type === "password-reset" && (!resetUrl || !passwordResetTemplateId))
+      (body.type === "password-reset" && !passwordResetTemplateId)
     ) {
       message.retry({ delaySeconds: 60 });
       continue;
@@ -92,12 +92,10 @@ export async function consumeEmailBatch(batch: MessageBatch<unknown>): Promise<v
     let requestStartedAt = 0;
 
     try {
-      let resetLink: URL | undefined;
-      if (body.type === "password-reset") resetLink = new URL(resetUrl!);
       const isReset = body.type === "password-reset";
       const templateId = isReset ? passwordResetTemplateId! : welcomeTemplateId!;
       const variables = isReset
-        ? { RESET_URL: resetLink!.toString(), RESET_OTP: body.otp }
+        ? { RESET_OTP: body.otp }
         : { NAME: escapeHtml(body.name ?? "there") };
       lastRequestStartedAt = Date.now();
       requestStartedAt = lastRequestStartedAt;
