@@ -172,7 +172,7 @@ Auth routes use `Slot` on web so inactive forms are unmounted rather than hidden
 
 If Metro reports `Requiring unknown module` from a server-render bundle, stop the existing server and run `bun run web --clear` from `apps/mobile`, then reload the browser. When `CI=true`, Metro disables file watching; unset it for normal interactive development.
 
-Password fields on login and sign-up have accessible Show/Hide controls; toggling visibility preserves the entered value and respects disabled fields. The nutrition ring uses an explicit SVG rotation around its center instead of the library's web `origin` attribute conversion.
+Password fields on login and sign-up have accessible Show/Hide icon controls; toggling visibility preserves the entered value and respects disabled fields. The nutrition ring uses an explicit SVG rotation around its center instead of the library's web `origin` attribute conversion.
 
 Save, add, and delete actions keep their labels unchanged while pending. Pending guards still prevent duplicate submissions, and failures remain visible; initial data-loading indicators are unchanged.
 
