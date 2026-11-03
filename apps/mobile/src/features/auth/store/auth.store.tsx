@@ -13,10 +13,11 @@ import { ApiError, onSessionExpired, setApiToken } from "@/lib/api";
 import { sessionStorage } from "../session-storage";
 import {
   getSession,
+  sendSignIn,
   sendDeleteAccount,
   sendPasswordReset,
+  sendVerifyPasswordReset,
   sendCompletePasswordReset,
-  sendSignIn,
   sendSignOut,
   sendSignUp,
   sendUpdateUser,
@@ -50,8 +51,9 @@ type AuthContextValue = {
   error: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (body: SignUpBody) => Promise<void>;
-  requestPasswordReset: (email: string) => Promise<string>;
-  completePasswordReset: (email: string, code: string, password: string) => Promise<string>;
+  requestPasswordReset: (email: string) => Promise<{ message: string; resendAfterSeconds: number }>;
+  verifyPasswordReset: (email: string, code: string) => Promise<string>;
+  completePasswordReset: (resetToken: string, password: string) => Promise<string>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   updateUser: (body: UpdateUserBody) => Promise<void>;
@@ -186,9 +188,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
   );
 
   const requestPasswordReset = useCallback((email: string) => sendPasswordReset(email), []);
+  const verifyPasswordReset = useCallback(
+    (email: string, code: string) => sendVerifyPasswordReset(email, code),
+    [],
+  );
   const completePasswordReset = useCallback(
-    (email: string, code: string, password: string) =>
-      sendCompletePasswordReset(email, code, password),
+    (resetToken: string, password: string) => sendCompletePasswordReset(resetToken, password),
     [],
   );
 
@@ -250,6 +255,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         signIn,
         signUp,
         requestPasswordReset,
+        verifyPasswordReset,
         completePasswordReset,
         signOut,
         deleteAccount,

@@ -12,6 +12,7 @@ export const AUTH_ENDPOINTS = {
   signIn: "/auth/sign-in",
   signUp: "/auth/sign-up",
   passwordReset: "/auth/password-reset",
+  passwordResetVerify: "/auth/password-reset/verify",
   passwordResetConfirm: "/auth/reset-password",
   signOut: "/auth/sign-out",
   deleteAccount: "/auth/account",
@@ -36,22 +37,30 @@ export function sendSignUp(body: SignUpBody): Promise<AuthenticationSessionRespo
   });
 }
 
-export async function sendPasswordReset(email: string): Promise<string> {
-  const result = await apiRequest<{ message: string }>(AUTH_ENDPOINTS.passwordReset, {
+export async function sendPasswordReset(
+  email: string,
+): Promise<{ message: string; resendAfterSeconds: number }> {
+  return apiRequest<{ message: string; resendAfterSeconds: number }>(AUTH_ENDPOINTS.passwordReset, {
     method: "POST",
     body: { email: email.trim() },
   });
-  return result.message;
+}
+
+export async function sendVerifyPasswordReset(email: string, code: string): Promise<string> {
+  const result = await apiRequest<{ resetToken: string }>(AUTH_ENDPOINTS.passwordResetVerify, {
+    method: "POST",
+    body: { email: email.trim(), code },
+  });
+  return result.resetToken;
 }
 
 export async function sendCompletePasswordReset(
-  email: string,
-  code: string,
+  resetToken: string,
   password: string,
 ): Promise<string> {
   const result = await apiRequest<{ message: string }>(AUTH_ENDPOINTS.passwordResetConfirm, {
     method: "POST",
-    body: { email: email.trim(), code, password },
+    body: { resetToken, password },
   });
   return result.message;
 }

@@ -22,6 +22,7 @@ const auth = {
   signIn: jest.fn(),
   signUp: jest.fn(),
   requestPasswordReset: jest.fn(),
+  verifyPasswordReset: jest.fn(),
   completePasswordReset: jest.fn(),
   signOut: jest.fn(),
   deleteAccount: jest.fn(),
@@ -30,12 +31,16 @@ const auth = {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  auth.requestPasswordReset.mockResolvedValue("If an account exists, a code is on its way.");
+  auth.requestPasswordReset.mockResolvedValue({
+    message: "If an account exists, a code is on its way.",
+    resendAfterSeconds: 60,
+  });
+  auth.verifyPasswordReset.mockResolvedValue("short-lived-reset-token");
   auth.completePasswordReset.mockResolvedValue("Password updated. You can now sign in.");
   mockUseAuth.mockReturnValue(auth);
 });
 
-test("requests a four-digit code, collects a new password, and confirms the reset", async () => {
+test("requires successful OTP verification before collecting a password and completes with the token", async () => {
   const screen = await render(<LoginScreen />);
   await fireEvent.changeText(screen.getByLabelText("Email"), "member@example.com");
   await fireEvent.press(screen.getByRole("button", { name: "Forgot password?" }));
@@ -43,15 +48,36 @@ test("requests a four-digit code, collects a new password, and confirms the rese
   await fireEvent.press(screen.getByLabelText("Send reset code"));
 
   await waitFor(() => expect(auth.requestPasswordReset).toHaveBeenCalledWith("member@example.com"));
-  await waitFor(() => expect(screen.getByLabelText("4-digit code")).toBeTruthy());
-  await fireEvent.changeText(screen.getByLabelText("4-digit code"), "12a34");
+  await waitFor(() => expect(screen.getByLabelText("4-digit reset code")).toBeTruthy());
+  expect(screen.getByText("Resend in 01:00")).toBeTruthy();
+  auth.verifyPasswordReset.mockRejectedValueOnce(
+    new Error("This reset code is invalid or expired."),
+  );
+  await fireEvent.changeText(screen.getByLabelText("4-digit reset code"), "1234");
+
+  expect(await screen.findByText("This reset code is invalid or expired.")).toBeTruthy();
+  expect(screen.getByLabelText("4-digit reset code")).toBeTruthy();
+  expect(screen.queryByLabelText("New password")).toBeNull();
+  expect(auth.completePasswordReset).not.toHaveBeenCalled();
+
+  await fireEvent.changeText(screen.getByLabelText("4-digit reset code"), "1234");
+  await waitFor(() =>
+    expect(auth.verifyPasswordReset).toHaveBeenCalledWith("member@example.com", "1234"),
+  );
+  expect(await screen.findByLabelText("New password")).toBeTruthy();
+  expect(screen.getByText("• At least 8 characters.")).toBeTruthy();
+  await fireEvent.changeText(screen.getByLabelText("New password"), "password1");
+  expect(screen.getByText("✓ Requirement met: at least 8 characters.")).toBeTruthy();
+  await fireEvent.press(screen.getByRole("button", { name: "Show password" }));
+  expect(screen.getByLabelText("New password").props.secureTextEntry).toBe(false);
+  await fireEvent.press(screen.getByLabelText("Hide password"));
+  expect(screen.getByLabelText("New password").props.secureTextEntry).toBe(true);
+
   await fireEvent.changeText(screen.getByLabelText("New password"), "ReplacementPassword123!");
   await fireEvent.press(screen.getByLabelText("Reset password"));
-
   await waitFor(() =>
     expect(auth.completePasswordReset).toHaveBeenCalledWith(
-      "member@example.com",
-      "1234",
+      "short-lived-reset-token",
       "ReplacementPassword123!",
     ),
   );
