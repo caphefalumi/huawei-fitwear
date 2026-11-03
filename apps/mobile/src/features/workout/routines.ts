@@ -65,6 +65,17 @@ const ARMS: Routine = {
   ],
 };
 
+const SHOULDERS: Routine = {
+  name: 'Shoulders',
+  sets: 9,
+  minutes: 30,
+  exercises: [
+    { name: 'Overhead press', prescription: '3x10' },
+    { name: 'Lateral raise', prescription: '3x15' },
+    { name: 'Face pull', prescription: '3x15' },
+  ],
+};
+
 const SEATED_CHEST: Routine = {
   name: 'Chest · seated & supported',
   sets: 9,
@@ -112,6 +123,15 @@ const LIGHT_FULL_BODY: Routine = {
 
 export type RoutinePair = { today: Routine; next: Routine; adjustedFor: string | null };
 
+/** Browseable plan per muscle group for the workout tab grid. */
+export const GROUP_ROUTINES: Record<string, Routine> = {
+  chest: CHEST,
+  back: BACK,
+  shoulders: SHOULDERS,
+  arms: ARMS,
+  legs: LEGS,
+  core: CORE,
+};
 /** Static routine set; swaps in routines that avoid the area recovering. */
 export function routinesFor(recovery: RecoveryPlan | null): RoutinePair {
   if (!recovery) return { today: CHEST, next: BACK, adjustedFor: null };

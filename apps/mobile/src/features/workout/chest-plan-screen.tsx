@@ -162,8 +162,8 @@ export function ChestPlanScreen() {
         </Card>
       ))}
 
-      <Pressable style={styles.disabledAction}>
-        <Text style={styles.disabledActionLabel}>Start workout</Text>
+      <Pressable style={styles.primaryButton} onPress={() => router.push('/session')}>
+        <Text style={styles.primaryLabel}>Start workout</Text>
       </Pressable>
       {recovery ? (
         <Text style={styles.footnote}>Resume your regular plan when you’re ready.</Text>
@@ -378,6 +378,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: C.textMuted,
+  },
+  primaryButton: {
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: C.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: C.onAccent,
   },
   footnote: {
     fontSize: 11,

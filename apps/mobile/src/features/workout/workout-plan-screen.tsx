@@ -31,37 +31,31 @@ const MUSCLE_GROUPS = [
     key: 'chest',
     label: 'Chest',
     icon: require('@/assets/images/recovery/body-chest.svg'),
-    designed: true,
   },
   {
     key: 'back',
     label: 'Back',
     icon: require('@/assets/images/recovery/body-back.svg'),
-    designed: false,
   },
   {
     key: 'shoulders',
     label: 'Shoulders',
     icon: require('@/assets/images/recovery/body-shoulders.svg'),
-    designed: false,
   },
   {
     key: 'arms',
     label: 'Arms',
     icon: require('@/assets/images/recovery/body-arms.svg'),
-    designed: false,
   },
   {
     key: 'legs',
     label: 'Legs',
     icon: require('@/assets/images/recovery/body-legs.svg'),
-    designed: false,
   },
   {
     key: 'core',
     label: 'Core',
     icon: require('@/assets/images/recovery/body-core.svg'),
-    designed: false,
   },
 ];
 
@@ -180,8 +174,11 @@ export function WorkoutPlanScreen() {
             <Pressable
               key={group.key}
               style={styles.group}
-              disabled={!group.designed}
-              onPress={() => router.push('/chest-plan')}>
+              onPress={() =>
+                router.push(
+                  group.key === 'chest' ? '/chest-plan' : `/plan?group=${group.key}`,
+                )
+              }>
               <Image source={group.icon} style={styles.groupImage} contentFit="contain" />
               <Text style={styles.groupLabel}>{group.label}</Text>
             </Pressable>

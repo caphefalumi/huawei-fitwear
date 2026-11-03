@@ -163,9 +163,9 @@ export function ExerciseGuideScreen() {
         </View>
       ) : null}
 
-      <Pressable style={styles.disabledAction}>
-        <Image source={icons.play} style={styles.actionIcon} contentFit="contain" />
-        <Text style={styles.disabledActionLabel}>Start workout</Text>
+      <Pressable style={styles.primaryButton} onPress={() => router.push('/session')}>
+        <Image source={icons.play} style={styles.actionIcon} contentFit="contain" tintColor={C.onAccent} />
+        <Text style={styles.primaryLabel}>Start workout</Text>
       </Pressable>
     </ScrollView>
   );
@@ -381,5 +381,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: C.textMuted,
+  },
+  primaryButton: {
+    flexDirection: 'row',
+    gap: 8,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: C.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: C.onAccent,
   },
 });
