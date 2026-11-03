@@ -66,5 +66,21 @@ for (const template of templates) {
     );
   }
 
-  console.info(`Synced ${template.name} template (${id}) from ${template.file}.`);
+  const publishResponse = await fetch(
+    `https://api.resend.com/templates/${encodeURIComponent(id)}/publish`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+  if (!publishResponse.ok) {
+    throw new Error(
+      `Failed to publish ${template.name} template: HTTP ${publishResponse.status} ${await publishResponse.text()}`,
+    );
+  }
+
+  console.info(`Synced and published ${template.name} template (${id}) from ${template.file}.`);
 }
