@@ -14,10 +14,9 @@ env:
 - inputText: ${output.email}
 - tapOn: "Password"
 - inputText: ${PASSWORD}
-- assertVisible: "Birth month"
-- assertVisible: "Birth day"
-- assertVisible: "Birth year"
-- tapOn: "Agree to Terms of Service and User Agreement"
+- hideKeyboard
+- assertVisible: "Date of birth"
+- tapOn: "I agree to the Terms of Service and User Agreement."
 - tapOn: "Create account"
 - assertVisible: "Today"
 
@@ -28,6 +27,9 @@ env:
 
 # 3. Sign Out
 - tapOn: "Profile"
+- scrollUntilVisible:
+    element: "Sign out"
+    direction: DOWN
 - tapOn: "Sign out"
 - assertVisible: "Welcome back."
 
@@ -36,6 +38,7 @@ env:
 - inputText: ${output.email}
 - tapOn: "Password"
 - inputText: ${PASSWORD}
+- hideKeyboard
 - tapOn: "Log in"
 - assertVisible: "Today"
 
