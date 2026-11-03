@@ -18,8 +18,7 @@ env:
 - inputText: ${output.email}
 - tapOn: "Password"
 - inputText: ${PASSWORD}
-- hideKeyboard
-- assertVisible: "Date of birth"
+- tapOn: "Date of birth"
 - scrollUntilVisible:
     element: ".*Terms of Service.*"
     direction: DOWN
@@ -48,7 +47,10 @@ env:
 - inputText: ${output.email}
 - tapOn: "Password"
 - inputText: ${PASSWORD}
-- hideKeyboard
+- tapOn: "Welcome back."
+- scrollUntilVisible:
+    element: "Log in"
+    direction: DOWN
 - tapOn: "Log in"
 - assertVisible: "Today"
 
