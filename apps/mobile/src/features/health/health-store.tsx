@@ -31,6 +31,8 @@ export type RecoveryPlan = {
 type RecoveryRow = Omit<RecoveryPlan, "start" | "returnDate" | "note"> & { note: string | null };
 
 export const PERIOD_AREA = "In period";
+const PERIOD_REST_DAYS = 3;
+const PERIOD_LIGHT_DAYS = 4;
 export const INJURY_AREAS = ["Right shoulder", "Left shoulder", "Lower back", "Right knee"];
 export const GOALS = {
   weight_loss: "Lose fat",
@@ -66,7 +68,14 @@ function recoveryFromRow(row: RecoveryRow): RecoveryPlan {
 }
 
 export function createRecovery(area: string): RecoveryPlan {
-  return recoveryFromRow({ area, note: "", restDays: 0, lightDays: 0, startDate: dateKey() });
+  const period = area === PERIOD_AREA;
+  return recoveryFromRow({
+    area,
+    note: "",
+    restDays: period ? PERIOD_REST_DAYS : 0,
+    lightDays: period ? PERIOD_LIGHT_DAYS : 0,
+    startDate: dateKey(),
+  });
 }
 
 export function recoveryRanges(recovery: RecoveryPlan) {
