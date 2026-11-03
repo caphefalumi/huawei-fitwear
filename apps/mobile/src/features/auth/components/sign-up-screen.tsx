@@ -223,7 +223,7 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
 
       <Pressable
         accessibilityRole="checkbox"
-        accessibilityLabel="Agree to Terms of Service and User Agreement"
+        accessibilityLabel="I agree to the Terms of Service and User Agreement."
         aria-checked={agreed}
         accessibilityState={{ checked: agreed, disabled: pending }}
         disabled={pending}
