@@ -5,7 +5,6 @@ import {
   InvalidPasswordResetToken,
   isPasswordResetConfigured,
   passwordResetMessage,
-  passwordResetPage,
   requestPasswordReset,
   resetPassword,
 } from "./password-reset";
@@ -47,7 +46,7 @@ export const AuthSchemas = {
   }),
   passwordResetBody: t.Object({
     email: t.String({ format: "email", error: "Valid email is required" }),
-    code: t.String({ minLength: 8, maxLength: 8, pattern: "^[0-9]{8}$" }),
+    code: t.String({ minLength: 4, maxLength: 4, pattern: "^[0-9]{4}$" }),
     password: t.String({
       minLength: 8,
       maxLength: 72,
@@ -169,21 +168,6 @@ export const auth = new Elysia({
       },
     },
   )
-  .get(
-    "/reset-password",
-    () =>
-      new Response(passwordResetPage, {
-        headers: {
-          "Content-Type": "text/html; charset=utf-8",
-          "Cache-Control": "no-store",
-          "Referrer-Policy": "no-referrer",
-          "Content-Security-Policy":
-            "default-src 'none'; connect-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'",
-          "X-Content-Type-Options": "nosniff",
-        },
-      }),
-    { detail: { summary: "Render the password reset form" } },
-  )
   .post(
     "/reset-password",
     async ({ body, request, set }) => {
@@ -211,7 +195,7 @@ export const auth = new Elysia({
     },
     {
       body: "auth.passwordResetBody",
-      detail: { summary: "Set a new password with an eight-digit reset code" },
+      detail: { summary: "Set a new password with a four-digit reset code" },
     },
   )
   .get(

@@ -131,11 +131,6 @@ export function WorkoutSessionPanel({
       <Text accessibilityRole="header" style={styles.title}>
         {session ? session.sessionTitle : "Workout session"}
       </Text>
-      {loading ? (
-        <Text accessibilityState={{ busy: true }} style={styles.muted}>
-          Loading saved sets…
-        </Text>
-      ) : null}
       {session ? (
         <Text style={styles.muted}>
           Started {new Date(session.startedAt).toLocaleString()}
@@ -160,7 +155,7 @@ export function WorkoutSessionPanel({
             })
           }
         >
-          <Text style={styles.text}>Retry loading workout</Text>
+          <Text style={styles.text}>Retry workout</Text>
         </Pressable>
       ) : null}
       {visibleSets.map((set) => (
@@ -221,7 +216,7 @@ export function WorkoutSessionPanel({
             })
           }
         >
-          <Text style={styles.primaryText}>{busy ? "Starting…" : "Start workout"}</Text>
+          <Text style={styles.primaryText}>Start workout</Text>
         </Pressable>
       ) : null}
       {recovery ? (

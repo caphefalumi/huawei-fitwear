@@ -174,7 +174,7 @@ If Metro reports `Requiring unknown module` from a server-render bundle, stop th
 
 Password fields on login and sign-up have accessible Show/Hide icon controls; toggling visibility preserves the entered value and respects disabled fields. The nutrition ring uses an explicit SVG rotation around its center instead of the library's web `origin` attribute conversion.
 
-Save, add, and delete actions keep their labels unchanged while pending. Pending guards still prevent duplicate submissions, and failures remain visible; initial data-loading indicators are unchanged.
+Save, add, and delete actions keep their labels unchanged while pending. Pending guards still prevent duplicate submissions, and failures remain visible. Data that is not available yet stays absent; the UI shows no loading text or spinner.
 
 ### Accessibility
 

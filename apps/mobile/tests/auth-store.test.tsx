@@ -100,7 +100,7 @@ test("failed login stays signed out and surfaces server error", async () => {
   expect(saved.setToken).not.toHaveBeenCalled();
 });
 
-test("sign-out clears local private state even when server revocation fails", async () => {
+test("sign-out clears local private state before server revocation completes", async () => {
   const { result } = await renderHook(() => useAuth(), { wrapper: AuthProvider });
   await waitFor(() => expect(result.current.loading).toBe(false));
   fetchMock.mockResolvedValueOnce(json(200, authenticated()));
@@ -108,9 +108,26 @@ test("sign-out clears local private state even when server revocation fails", as
     await result.current.signIn("member@example.com", "correct");
   });
   expect(result.current.user?.id).toBe(user.id);
-  fetchMock.mockRejectedValueOnce(new TypeError("offline"));
+  fetchMock.mockReturnValueOnce(new Promise<Response>(() => {}));
   await act(async () => {
-    await expect(result.current.signOut()).rejects.toThrow();
+    await result.current.signOut();
+  });
+  expect(result.current.user).toBeNull();
+  expect(saved.clearToken).toHaveBeenCalled();
+  expect(fetchMock.mock.calls[1][1]?.headers).toHaveProperty("Authorization", "Bearer secret-a");
+});
+
+test("deleteAccount deletes user on server and clears local private state", async () => {
+  const { result } = await renderHook(() => useAuth(), { wrapper: AuthProvider });
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  fetchMock.mockResolvedValueOnce(json(200, authenticated()));
+  await act(async () => {
+    await result.current.signIn("member@example.com", "correct");
+  });
+  expect(result.current.user?.id).toBe(user.id);
+  fetchMock.mockResolvedValueOnce(json(200, { success: true }));
+  await act(async () => {
+    await result.current.deleteAccount();
   });
   expect(result.current.user).toBeNull();
   expect(saved.clearToken).toHaveBeenCalled();

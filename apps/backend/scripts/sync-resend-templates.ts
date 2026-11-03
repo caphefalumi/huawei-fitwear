@@ -24,7 +24,7 @@ const templates: {
     name: "password reset",
     binding: "RESEND_PASSWORD_RESET_TEMPLATE_ID",
     file: "password-reset.html",
-    variables: ["RESET_OTP", "RESET_URL"],
+    variables: ["RESET_OTP"],
   },
 ];
 

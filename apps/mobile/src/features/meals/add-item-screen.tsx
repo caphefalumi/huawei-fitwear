@@ -147,7 +147,6 @@ export function AddItemScreen() {
           {error ?? searchError}
         </Text>
       ) : null}
-      {loading ? <Text style={styles.footnote}>Searching foods…</Text> : null}
       <SecondaryButton
         label="Enter nutrition manually"
         onPress={() =>

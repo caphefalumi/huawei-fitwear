@@ -247,28 +247,24 @@ export function ProfileScreen() {
       ) : null}
       <Pressable
         style={styles.periodButton}
-        disabled={pending}
         accessibilityLabel="Sign out"
-        accessibilityState={{ busy: pending }}
         onPress={() => {
-          void mutate(signOut);
+          void signOut();
         }}
       >
-        <Text style={styles.periodLabel}>{pending ? "Please wait…" : "Sign out"}</Text>
+        <Text style={styles.periodLabel}>Sign out</Text>
       </Pressable>
       <Pressable
         style={[styles.periodButton, styles.deleteAccountButton]}
         disabled={pending}
         accessibilityLabel="Delete account"
         accessibilityRole="button"
-        accessibilityState={{ busy: pending }}
+        accessibilityState={{ disabled: pending, busy: pending }}
         onPress={() => {
           void mutate(deleteAccount);
         }}
       >
-        <Text style={[styles.periodLabel, styles.deleteAccountLabel]}>
-          {pending ? "Please wait…" : "Delete account"}
-        </Text>
+        <Text style={[styles.periodLabel, styles.deleteAccountLabel]}>Delete account</Text>
       </Pressable>
       {mountedSheet === "period" ? (
         <RecoverySheet

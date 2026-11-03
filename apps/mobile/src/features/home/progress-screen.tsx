@@ -20,7 +20,7 @@ import { WeightChart } from "@/features/home/weight-chart";
 
 export function ProgressScreen() {
   const insets = useSafeAreaInsets();
-  const { weights, plan, loading, error, refresh } = useHealth();
+  const { weights, plan, error, refresh } = useHealth();
   const { sessions } = useWorkouts();
   const [range, setRange] = useState<Range>("Month");
   const [stats, setStats] = useState<WorkoutStats | null>(null);
@@ -66,7 +66,6 @@ export function ProgressScreen() {
       <Text accessibilityRole="header" style={styles.title}>
         Your progress.
       </Text>
-      {loading ? <Text style={styles.cardNote}>Loading weight logs…</Text> : null}
       {error ? (
         <Pressable
           onPress={() => {
@@ -130,9 +129,8 @@ export function ProgressScreen() {
           <Text accessibilityRole="header" style={styles.cardTitle}>
             Training activity
           </Text>
-          <Text style={styles.cardNote}>{statsLoading ? "Loading…" : data.sessionsNote}</Text>
+          <Text style={styles.cardNote}>{!statsLoading ? data.sessionsNote : ""}</Text>
         </View>
-        {statsLoading ? <Text style={styles.cardNote}>Loading training activity…</Text> : null}
         {statsError ? (
           <Pressable onPress={() => setRetry((value) => value + 1)}>
             <Text accessibilityRole="alert">{statsError} Tap to retry.</Text>

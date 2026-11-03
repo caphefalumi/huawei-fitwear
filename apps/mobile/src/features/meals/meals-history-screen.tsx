@@ -68,7 +68,6 @@ export function MealsHistoryScreen() {
       >
         <Text style={{ color: C.accent }}>Add meal</Text>
       </Pressable>
-      {loading ? <Text style={styles.subtitle}>Loading meals…</Text> : null}
       {error ? (
         <View>
           <Text accessibilityRole="alert" style={styles.subtitle}>
@@ -131,13 +130,11 @@ export function MealsHistoryScreen() {
         })}
       </ScrollView>
 
-      {items.length === 0 ? (
+      {items.length === 0 && (!loading || query.trim()) ? (
         <Text style={styles.empty}>
           {query.trim()
             ? `No meals match “${query.trim()}”.`
-            : loading
-              ? "Loading your meals…"
-              : "No meals logged yet. Add your first meal above."}
+            : "No meals logged yet. Add your first meal above."}
         </Text>
       ) : (
         items.map((item) => (

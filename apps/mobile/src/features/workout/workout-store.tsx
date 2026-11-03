@@ -194,7 +194,7 @@ function useWorkoutState() {
   async function mutate<T>(request: () => Promise<T>): Promise<T> {
     if (!owner.current) throw new Error("Sign in to manage workouts.");
     if (mutating.current || fetching.current)
-      throw new Error("Workout data is still being saved or loaded. Please wait.");
+      throw new Error("Workout cannot be updated right now.");
     const version = generation.current;
     mutating.current = true;
     try {

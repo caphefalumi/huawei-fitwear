@@ -55,9 +55,11 @@ export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: ()
           gap: 16,
         }}
       >
-        <Text style={{ color: C.text }} accessibilityRole={error ? "alert" : undefined}>
-          {error ?? "Loading meal…"}
-        </Text>
+        {error ? (
+          <Text style={{ color: C.text }} accessibilityRole="alert">
+            {error}
+          </Text>
+        ) : null}
         {error ? (
           <Pressable onPress={() => setAttempt((value) => value + 1)}>
             <Text style={{ color: C.accent }}>Retry</Text>

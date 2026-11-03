@@ -12,6 +12,7 @@ export const AUTH_ENDPOINTS = {
   signIn: "/auth/sign-in",
   signUp: "/auth/sign-up",
   passwordReset: "/auth/password-reset",
+  passwordResetConfirm: "/auth/reset-password",
   signOut: "/auth/sign-out",
   deleteAccount: "/auth/account",
   updateUser: "/auth/update-user",
@@ -39,6 +40,18 @@ export async function sendPasswordReset(email: string): Promise<string> {
   const result = await apiRequest<{ message: string }>(AUTH_ENDPOINTS.passwordReset, {
     method: "POST",
     body: { email: email.trim() },
+  });
+  return result.message;
+}
+
+export async function sendCompletePasswordReset(
+  email: string,
+  code: string,
+  password: string,
+): Promise<string> {
+  const result = await apiRequest<{ message: string }>(AUTH_ENDPOINTS.passwordResetConfirm, {
+    method: "POST",
+    body: { email: email.trim(), code, password },
   });
   return result.message;
 }
