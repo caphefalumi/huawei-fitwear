@@ -86,7 +86,7 @@ export async function assertAuthRateLimit(
   const key = `rl:auth:${action}:${ip}`;
   const options = AUTH_RATE_LIMITS[action];
   const result = await consumeTokenBucket(kv, key, options);
-  if (action === "sign-in" && accountIdentifier) {
+  if (accountIdentifier && (action === "sign-in" || action === "password-reset-confirm")) {
     const normalized = accountIdentifier.trim().toLowerCase();
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(normalized));
     const accountKey = Array.from(new Uint8Array(digest), (byte) =>
@@ -94,8 +94,8 @@ export async function assertAuthRateLimit(
     ).join("");
     const accountResult = await consumeTokenBucket(
       kv,
-      `rl:auth:sign-in:account:${accountKey}`,
-      SIGN_IN_ACCOUNT_LIMIT,
+      `rl:auth:${action}:account:${accountKey}`,
+      action === "sign-in" ? SIGN_IN_ACCOUNT_LIMIT : AUTH_RATE_LIMITS[action],
     );
     if (!accountResult.allowed) {
       set.headers["Retry-After"] = String(accountResult.retryAfterSec);

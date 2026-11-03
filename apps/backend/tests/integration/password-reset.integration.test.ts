@@ -9,6 +9,7 @@ import { createTestEmailQueue } from "../helpers/test-email-queue";
 import type { EmailMessage } from "../../src/modules/email/queue";
 import { withDatabaseBinding } from "../../src/db";
 import { verification } from "../../src/db/schema";
+import { requestPasswordReset } from "../../src/modules/auth/password-reset";
 import { takePasswordResetEmailSlot } from "../../src/modules/auth/rate-limit";
 const originalFetch = globalThis.fetch;
 let db: Database;
@@ -80,12 +81,11 @@ describe("Password reset integration", () => {
     globalThis.fetch = originalFetch;
   });
 
-  it("rejects reset codes that are not exactly four digits", async () => {
+  it("rejects malformed OTP verification codes", async () => {
     for (const code of ["123", "12345"]) {
-      const response = await post("/auth/reset-password", {
+      const response = await post("/auth/password-reset/verify", {
         email: "reset@fitwear.dev",
         code,
-        password: "ReplacementPassword123!",
       });
       expect(response.status).toBe(422);
     }
@@ -158,7 +158,7 @@ describe("Password reset integration", () => {
     expect(queued.messages.filter((message) => message.type === "password-reset")).toHaveLength(1);
   });
 
-  it("replaces the password, revokes all sessions, and consumes the reset code once", async () => {
+  it("exchanges an OTP for a hashed one-time token, resets the password, and revokes sessions", async () => {
     const { session: signedUpSession } = await createAccount();
     const secondLogin = await post("/auth/sign-in", {
       email: "reset@fitwear.dev",
@@ -168,9 +168,37 @@ describe("Password reset integration", () => {
       .session.token;
     const code = await getResetCode("reset@fitwear.dev");
 
-    const reset = await post("/auth/reset-password", {
+    const verificationResponse = await post("/auth/password-reset/verify", {
       email: "reset@fitwear.dev",
       code,
+    });
+    expect(verificationResponse.status).toBe(200);
+    const { resetToken } = (await verificationResponse.json()) as { resetToken: string };
+    expect(resetToken).toBeTruthy();
+
+    const storedReset = await db
+      .select({ identifier: verification.identifier, value: verification.value })
+      .from(verification)
+      .where(like(verification.identifier, "password-reset-token:%"))
+      .get();
+    expect(storedReset?.identifier).toMatch(/^password-reset-token:/);
+    expect(storedReset?.value).not.toBe(resetToken);
+    expect(
+      await db
+        .select({ id: verification.id })
+        .from(verification)
+        .where(like(verification.identifier, "password-reset:%"))
+        .all(),
+    ).toHaveLength(0);
+
+    const replayedCode = await post("/auth/password-reset/verify", {
+      email: "reset@fitwear.dev",
+      code,
+    });
+    expect(replayedCode.status).toBe(400);
+
+    const reset = await post("/auth/reset-password", {
+      resetToken,
       password: "ReplacementPassword123!",
     });
     expect(reset.status).toBe(200);
@@ -191,28 +219,29 @@ describe("Password reset integration", () => {
         })
       ).status,
     ).toBe(200);
-    const oldSession = await app.handle(
-      new Request("http://localhost/auth/session", {
-        headers: { Authorization: `Bearer ${signedUpSession.token}` },
-      }),
-    );
-    expect(oldSession.status).toBe(401);
-    const secondOldSession = await app.handle(
-      new Request("http://localhost/auth/session", {
-        headers: { Authorization: `Bearer ${secondSessionToken}` },
-      }),
-    );
-    expect(secondOldSession.status).toBe(401);
-
-    const reused = await post("/auth/reset-password", {
-      email: "reset@fitwear.dev",
-      code,
-      password: "ThirdPassword123!",
-    });
-    expect(reused.status).toBe(400);
+    for (const token of [signedUpSession.token, secondSessionToken]) {
+      const oldSession = await app.handle(
+        new Request("http://localhost/auth/session", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      );
+      expect(oldSession.status).toBe(401);
+    }
+    expect(
+      (await post("/auth/reset-password", { resetToken, password: "ThirdPassword123!" })).status,
+    ).toBe(400);
+    expect(
+      (
+        await post("/auth/reset-password", {
+          email: "reset@fitwear.dev",
+          code,
+          password: "ThirdPassword123!",
+        })
+      ).status,
+    ).toBe(422);
   });
 
-  it("removes the reset token when queue publication fails", async () => {
+  it("removes the reset code record when queue publication fails", async () => {
     await createAccount();
     setTestDatabaseBinding({
       DB: d1,
@@ -236,7 +265,7 @@ describe("Password reset integration", () => {
     ).toHaveLength(0);
   });
 
-  it("rejects expired reset codes", async () => {
+  it("rejects expired OTPs before issuing a reset token", async () => {
     await createAccount();
     const code = await getResetCode("reset@fitwear.dev");
     await db
@@ -244,37 +273,95 @@ describe("Password reset integration", () => {
       .set({ expiresAt: new Date(Date.now() - 1000) })
       .where(like(verification.identifier, "password-reset:%"))
       .run();
-    const response = await post("/auth/reset-password", {
+    const response = await post("/auth/password-reset/verify", {
       email: "reset@fitwear.dev",
       code,
-      password: "ReplacementPassword123!",
     });
     expect(response.status).toBe(400);
+    expect(
+      await db
+        .select({ id: verification.id })
+        .from(verification)
+        .where(like(verification.identifier, "password-reset-token:%"))
+        .all(),
+    ).toHaveLength(0);
+  });
+  it("rejects wrong and expired reset tokens", async () => {
+    await createAccount();
+    const code = await getResetCode("reset@fitwear.dev");
+    const verified = await post("/auth/password-reset/verify", {
+      email: "reset@fitwear.dev",
+      code,
+    });
+    const { resetToken } = (await verified.json()) as { resetToken: string };
+    expect(
+      (
+        await post("/auth/reset-password", {
+          resetToken: "wrong-token",
+          password: "ReplacementPassword123!",
+        })
+      ).status,
+    ).toBe(400);
+
+    await db
+      .update(verification)
+      .set({ expiresAt: new Date(Date.now() - 1000) })
+      .where(like(verification.identifier, "password-reset-token:%"))
+      .run();
+    expect(
+      (await post("/auth/reset-password", { resetToken, password: "ReplacementPassword123!" }))
+        .status,
+    ).toBe(400);
   });
 
-  it("rate-limits failed OTP attempts", async () => {
+  it("a newly issued OTP invalidates outstanding reset tokens", async () => {
+    await createAccount();
+    const code = await getResetCode("reset@fitwear.dev");
+    const verified = await post("/auth/password-reset/verify", {
+      email: "reset@fitwear.dev",
+      code,
+    });
+    const { resetToken } = (await verified.json()) as { resetToken: string };
+
+    await withDatabaseBinding(
+      {
+        DB: d1,
+        fitwear_kv: createTestKv(),
+        EMAIL_QUEUE: queued.queue,
+        RESEND_API_KEY: "test-resend-key",
+        RESEND_FROM: "Fitwear <support@example.test>",
+        RESEND_PASSWORD_RESET_TEMPLATE_ID: "reset-template-test",
+      },
+      () => requestPasswordReset("reset@fitwear.dev"),
+    );
+    expect(
+      await db
+        .select({ id: verification.id })
+        .from(verification)
+        .where(like(verification.identifier, "password-reset-token:%"))
+        .all(),
+    ).toHaveLength(0);
+    expect(
+      (await post("/auth/reset-password", { resetToken, password: "ReplacementPassword123!" }))
+        .status,
+    ).toBe(400);
+  });
+
+  it("rate-limits failed OTP verification attempts", async () => {
     await createAccount();
     const code = await getResetCode("reset@fitwear.dev");
     const incorrectCode = `${code[0] === "9" ? "8" : "9"}${code.slice(1)}`;
     for (let attempt = 0; attempt < 5; attempt++) {
       const response = await post(
-        "/auth/reset-password",
-        {
-          email: "reset@fitwear.dev",
-          code: incorrectCode,
-          password: "ReplacementPassword123!",
-        },
+        "/auth/password-reset/verify",
+        { email: "reset@fitwear.dev", code: incorrectCode },
         "203.0.113.78",
       );
       expect(response.status).toBe(400);
     }
     const limited = await post(
-      "/auth/reset-password",
-      {
-        email: "reset@fitwear.dev",
-        code: incorrectCode,
-        password: "ReplacementPassword123!",
-      },
+      "/auth/password-reset/verify",
+      { email: "reset@fitwear.dev", code: incorrectCode },
       "203.0.113.78",
     );
     expect(limited.status).toBe(429);

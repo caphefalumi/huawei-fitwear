@@ -10,7 +10,7 @@ App accounts are separate from Expo accounts. Sign up with a real email-format a
 
 Meals, portions, daily nutrition, profile preferences, weights, recovery schedules and workout sessions/sets use the API. Empty accounts show empty states, not seeded personal data. Camera/library images are sent to Workers AI only after tapping **Analyze photo**; review estimates before logging. Logged images are stored privately in R2 and read through authenticated requests. Manual food/label entry works independently of inference.
 
-Forgot-password requests return the same message whether an account exists or not. Reset links are single-use, expire after 30 minutes, and open a private Cloudflare Worker reset form. The Worker requires `RESEND_API_KEY` (secret) and `RESEND_FROM` (verified sender); see [backend deployment](../../docs/backend/README.md#password-reset-email). Body composition and wearable measurements are never fabricated from weight or manual set logs.
+Forgot-password requests return the same message whether an account exists or not. The app collects a four-digit email code (valid for 10 minutes), exchanges a valid code for a short-lived reset token, and submits that token with the new password. Reset tokens expire after 10 minutes and are single-use.
 
 Testing uses the `jest-expo` preset. `flow-parser` is pinned through an override because React Native's `0.327.0` package omits `dist/utils/isReservedWord.js`; `0.338.0` includes it. Revisit the override when the SDK's parser dependency is fixed.
 
