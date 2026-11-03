@@ -16,10 +16,6 @@ import { apiRequest } from "@/lib/api";
 const TUTORIAL_STEPS = [
   { title: "Add a ruler", detail: "Place a 15 cm ruler beside the plate or cup." },
   { title: "Shoot from above", detail: "Keep the whole meal in frame and hold steady." },
-  {
-    title: "Review & edit",
-    detail: "Swipe left to edit, swipe right to delete, tap an item to change it.",
-  },
 ];
 
 export function MealCaptureScreen() {
@@ -120,8 +116,6 @@ export function MealCaptureScreen() {
           />
         ) : (
           <View style={styles.preview}>
-            <Text style={styles.previewLabel}>• GUIDELINES · NO IMAGE</Text>
-
             <View style={[styles.corner, styles.cornerTopLeft]} />
             <View style={[styles.corner, styles.cornerTopRight]} />
             <View style={[styles.corner, styles.cornerBottomLeft]} />
@@ -205,7 +199,6 @@ export function MealCaptureScreen() {
       </ScrollView>
 
       <Sheet visible={!tutorialSeen} title="Capture your meal" onClose={dismissTutorial}>
-        <Text style={styles.tutorialBody}>Three quick tips for an accurate result.</Text>
         <View style={styles.tutorialSteps}>
           {TUTORIAL_STEPS.map((step, index) => (
             <View key={step.title} style={styles.tutorialStep}>
@@ -258,14 +251,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 16,
-  },
-  previewLabel: {
-    position: "absolute",
-    top: 14,
-    left: 18,
-    fontSize: 10,
-    letterSpacing: 0.4,
-    color: "rgba(255,255,255,0.55)",
   },
   corner: {
     position: "absolute",
@@ -419,28 +404,24 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: C.text,
   },
-  tutorialBody: {
-    fontSize: 13,
-    color: C.textMuted,
-  },
   tutorialSteps: {
     gap: 14,
   },
   tutorialStep: {
     flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   tutorialMarker: {
-    minWidth: 24,
-    minHeight: 24,
-    padding: 4,
-    borderRadius: 100,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: C.accentTint,
     alignItems: "center",
     justifyContent: "center",
   },
   tutorialMarkerLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
     color: C.accent,
   },

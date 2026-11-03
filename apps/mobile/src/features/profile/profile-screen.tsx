@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Pressable } from "@/components/pressable";
 import { Palette as C } from "@/constants/palette";
-import { PERIOD_AREA, useHealth } from "@/features/health/health-store";
+import { createRecovery, PERIOD_AREA, useHealth } from "@/features/health/health-store";
 import { useAuth } from "@/features/auth/auth-store";
 import {
   ActivitySheet,
@@ -62,7 +62,6 @@ type OpenSheet =
   | "activity"
   | "target"
   | "recovery"
-  | "period"
   | null;
 
 export function ProfileScreen() {
@@ -236,8 +235,7 @@ export function ProfileScreen() {
           disabled={pending || loading}
           accessibilityState={{ busy: pending }}
           onPress={() => {
-            if (!inPeriod) setOpenSheet("period");
-            else void mutate(() => saveRecovery(null));
+            void mutate(() => saveRecovery(inPeriod ? null : createRecovery(PERIOD_AREA)));
           }}
         >
           <Text style={[styles.periodLabel, inPeriod && styles.periodLabelActive]}>
@@ -266,15 +264,6 @@ export function ProfileScreen() {
       >
         <Text style={[styles.periodLabel, styles.deleteAccountLabel]}>Delete account</Text>
       </Pressable>
-      {mountedSheet === "period" ? (
-        <RecoverySheet
-          visible={openSheet === "period"}
-          initialArea={PERIOD_AREA}
-          onClose={close}
-          onDismiss={didDismiss}
-        />
-      ) : null}
-
       {mountedSheet === "height" ? (
         <HeightSheet visible={openSheet === "height"} onClose={close} onDismiss={didDismiss} />
       ) : null}

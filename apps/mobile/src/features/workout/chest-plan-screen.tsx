@@ -20,7 +20,7 @@ export function ChestPlanScreen() {
   const { exercises, sessions, activeSessionId, loading, refresh } = useWorkouts();
   const savedSession = sessions.find((session) => session.id === params.sessionId);
   const group = savedSession?.workoutSplit ?? params.group ?? "Chest";
-  const routine = routineForGroup(group, exercises);
+  const routine = routineForGroup(group, exercises, recovery);
   const sessionExercises = savedSession?.sets?.map((set) => set.exercise) ?? [];
   const availableExercises = [
     ...(routine?.exercises ?? []),

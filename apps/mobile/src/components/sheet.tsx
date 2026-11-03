@@ -14,6 +14,7 @@ import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useReducedMotion } from "react-native-reanimated";
 
+import { CloseButton } from "@/components/close-button";
 import { Pressable } from "@/components/pressable";
 import { Palette as C } from "@/constants/palette";
 
@@ -107,13 +108,7 @@ export function Sheet({ visible, title, onClose, onDismiss, children }: SheetPro
               <Text accessibilityRole="header" style={styles.title}>
                 {displayed.title}
               </Text>
-              <Pressable
-                accessibilityLabel={`Close ${displayed.title}`}
-                onPress={onClose}
-                style={styles.close}
-              >
-                <Text style={styles.secondaryLabel}>Close</Text>
-              </Pressable>
+              <CloseButton label={`Close ${displayed.title}`} onPress={onClose} />
             </View>
             <ScrollView
               style={styles.scroll}
@@ -200,10 +195,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-  },
-  close: {
-    justifyContent: "center",
-    alignItems: "center",
   },
   title: {
     flex: 1,

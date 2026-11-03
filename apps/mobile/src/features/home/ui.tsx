@@ -28,7 +28,12 @@ export function SectionHeading({
         {title}
       </Text>
       {actionLabel && onPress ? (
-        <Pressable accessibilityLabel={`${actionLabel}, ${title}`} onPress={onPress} hitSlop={10}>
+        <Pressable
+          accessibilityLabel={`${actionLabel}, ${title}`}
+          onPress={onPress}
+          hitSlop={14}
+          style={styles.action}
+        >
           <Text style={styles.headingAction}>{actionLabel}</Text>
         </Pressable>
       ) : null}
@@ -105,6 +110,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontWeight: "600",
     color: C.text,
+  },
+  action: {
+    minWidth: 0,
+    minHeight: 0,
   },
   headingAction: {
     fontSize: 12,

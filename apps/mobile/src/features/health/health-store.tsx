@@ -31,6 +31,8 @@ export type RecoveryPlan = {
 type RecoveryRow = Omit<RecoveryPlan, "start" | "returnDate" | "note"> & { note: string | null };
 
 export const PERIOD_AREA = "In period";
+const PERIOD_REST_DAYS = 3;
+const PERIOD_LIGHT_DAYS = 4;
 export const INJURY_AREAS = ["Right shoulder", "Left shoulder", "Lower back", "Right knee"];
 export const GOALS = {
   weight_loss: "Lose fat",
@@ -66,7 +68,14 @@ function recoveryFromRow(row: RecoveryRow): RecoveryPlan {
 }
 
 export function createRecovery(area: string): RecoveryPlan {
-  return recoveryFromRow({ area, note: "", restDays: 0, lightDays: 0, startDate: dateKey() });
+  const period = area === PERIOD_AREA;
+  return recoveryFromRow({
+    area,
+    note: "",
+    restDays: period ? PERIOD_REST_DAYS : 0,
+    lightDays: period ? PERIOD_LIGHT_DAYS : 0,
+    startDate: dateKey(),
+  });
 }
 
 export function recoveryRanges(recovery: RecoveryPlan) {
@@ -77,6 +86,26 @@ export function recoveryRanges(recovery: RecoveryPlan) {
         ? dateLabel(recovery.startDate, offset)
         : `${dateLabel(recovery.startDate, offset)} – ${dateLabel(recovery.startDate, offset + count - 1)}`;
   return { rest: range(0, recovery.restDays), light: range(recovery.restDays, recovery.lightDays) };
+}
+
+/** Fill (0–1) of the rest, rehab and return stages, measured in days since the plan started. */
+export function recoveryProgress(recovery: RecoveryPlan, now = new Date()) {
+  const [year, month, day] = recovery.startDate.split("-").map(Number);
+  const dayNumber = (date: Date) =>
+    Math.round(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000);
+  const elapsed = dayNumber(now) - dayNumber(new Date(year, month - 1, day));
+  const stage = (start: number, length: number) =>
+    length === 0
+      ? elapsed >= start
+        ? 1
+        : 0
+      : Math.max(0, Math.min(1, (elapsed - start) / length));
+  const total = recovery.restDays + recovery.lightDays;
+  return [
+    stage(0, recovery.restDays),
+    stage(recovery.restDays, recovery.lightDays),
+    elapsed >= total ? 1 : 0,
+  ];
 }
 
 export const recoveryTitle = (recovery: RecoveryPlan) =>

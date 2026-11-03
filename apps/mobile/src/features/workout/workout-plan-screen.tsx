@@ -8,9 +8,10 @@ import { Pressable } from "@/components/pressable";
 import { Palette as C } from "@/constants/palette";
 import { Card, SectionHeading } from "@/features/home/ui";
 import { recoveryRanges, useHealth } from "@/features/health/health-store";
-import { routinesFor, type Routine } from "@/features/workout/routines";
+import { RECOVERY_ROUTINE, routinesFor, type Routine } from "@/features/workout/routines";
 import { useWorkouts } from "@/features/workout/workout-store";
 import { RecoverySheet } from "@/features/recovery/recovery-sheet";
+import { RecoveryTracker } from "@/features/recovery/recovery-stages";
 
 const icons = {
   shieldCheck: require("@/assets/images/home/shield-check.svg"),
@@ -28,7 +29,7 @@ export function WorkoutPlanScreen() {
   const { exercises, sessions, loading, error, refresh, hasMore, loadMore } = useWorkouts();
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [recoveryClosing, setRecoveryClosing] = useState(false);
-  const { today, next } = routinesFor(recovery, exercises);
+  const { today, next, avoid, rest } = routinesFor(recovery, exercises);
   const ranges = recovery ? recoveryRanges(recovery) : null;
   const now = new Date();
   const weekStart = new Date(
@@ -41,7 +42,13 @@ export function WorkoutPlanScreen() {
     date.setDate(date.getDate() + index);
     return date;
   });
-  const groups = [...new Set(exercises.map((exercise) => exercise.muscleGroup))];
+  const groups = [
+    ...new Set(
+      exercises
+        .map((exercise) => exercise.muscleGroup)
+        .filter((group) => group.toLowerCase() !== RECOVERY_ROUTINE.toLowerCase()),
+    ),
+  ];
 
   function routineCard(routine: Routine, label: string) {
     return (
@@ -133,27 +140,21 @@ export function WorkoutPlanScreen() {
         <Text style={styles.footnote}>Refresh workouts</Text>
       </Pressable>
       {recovery && ranges ? (
-        <Pressable
-          accessibilityLabel={`Edit recovery plan. Rest ${ranges.rest}, light ${ranges.light}. Return ${recovery.returnDate}, if ready`}
-          style={styles.recoveryCard}
+        <RecoveryTracker
+          recovery={recovery}
+          label={`Edit recovery plan. Rest ${ranges.rest}, light ${ranges.light}. Return ${recovery.returnDate}, if ready`}
           onPress={() => setRecoveryOpen(true)}
-        >
-          <Image
-            accessible={false}
-            source={icons.shieldCheck}
-            style={styles.recoveryIcon}
-            contentFit="contain"
-          />
-          <View style={styles.recoveryCopy}>
-            <Text style={styles.recoveryTitle}>Recovery</Text>
-            <Text style={styles.recoverySub}>
-              Rest {ranges.rest} · light {ranges.light}
-              {"\n"}Return {recovery.returnDate}, if ready
-            </Text>
-          </View>
-        </Pressable>
+        />
       ) : null}
-      {today ? routineCard(today, "Explore a routine") : null}
+      {avoid && !rest ? (
+        <Text style={styles.subtitle}>Skipping {avoid.join(", ")} until you are back.</Text>
+      ) : null}
+      {today
+        ? routineCard(
+            today,
+            today.name === RECOVERY_ROUTINE ? "Rehab routine" : "Explore a routine",
+          )
+        : null}
       {next ? routineCard(next, "More routines") : null}
       <View style={styles.section}>
         <SectionHeading title="Browse muscle groups" actionLabel={`${groups.length} groups`} />
@@ -301,32 +302,6 @@ const styles = StyleSheet.create({
   },
   dayDateActive: {
     color: C.onAccent,
-  },
-  recoveryCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: C.accentTint,
-    borderRadius: 18,
-    padding: 16,
-  },
-  recoveryIcon: {
-    width: 24,
-    height: 24,
-  },
-  recoveryCopy: {
-    flex: 1,
-    gap: 4,
-  },
-  recoveryTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: C.text,
-  },
-  recoverySub: {
-    fontSize: 11,
-    lineHeight: 16,
-    color: C.textMuted,
   },
   section: {
     gap: 8,
