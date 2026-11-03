@@ -98,7 +98,7 @@ jobs:
           persist-credentials: false
 
       - name: Download Android release APK
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: fitwear-release-apk
           path: apps/mobile/android/app/build/outputs/apk/release
