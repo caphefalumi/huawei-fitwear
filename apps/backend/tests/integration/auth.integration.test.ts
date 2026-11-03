@@ -416,5 +416,55 @@ describe("Integration Test: Auth API Endpoints", () => {
       );
       expect(checkRes.status).toBe(401);
     });
+
+    it("DELETE /auth/account should delete user account and revoke access", async () => {
+      // First sign up a dedicated user to delete
+      const userEmail = "to_delete@example.com";
+      const signUpRes = await app.handle(
+        new Request("http://localhost/auth/sign-up", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: userEmail,
+            password: "SecurePassword123!",
+            name: "Delete Me",
+          }),
+        }),
+      );
+      expect(signUpRes.status).toBe(200);
+      const { session } = await signUpRes.json();
+
+      const deleteRes = await app.handle(
+        new Request("http://localhost/auth/account", {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${session.token}` },
+        }),
+      );
+      expect(deleteRes.status).toBe(200);
+      const body = await deleteRes.json();
+      expect(body.success).toBe(true);
+
+      // Session should no longer be valid
+      const sessionRes = await app.handle(
+        new Request("http://localhost/auth/session", {
+          headers: { Authorization: `Bearer ${session.token}` },
+        }),
+      );
+      expect(sessionRes.status).toBe(401);
+
+      // User should no longer exist and re-registration with same email should now succeed
+      const reSignUpRes = await app.handle(
+        new Request("http://localhost/auth/sign-up", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: userEmail,
+            password: "SecurePassword123!",
+            name: "Delete Me Again",
+          }),
+        }),
+      );
+      expect(reSignUpRes.status).toBe(200);
+    });
   });
 });
