@@ -79,17 +79,17 @@ jobs:
             ~/.gradle/caches
             ~/.gradle/wrapper
             apps/mobile/android/.gradle
-            apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            apps/mobile/android/app/build/outputs/apk/release/app-release.apk
           key: ${{ runner.os }}-gradle-build-${{ hashFiles('apps/mobile/android/**', 'apps/mobile/src/**', 'bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-gradle-build-
             ${{ runner.os }}-gradle-
 
-      - name: Build Android debug APK
+      - name: Build Android release APK
         working-directory: apps/mobile/android
         env:
           EXPO_PUBLIC_API_URL: https://fitwear.tm-project.id.vn/
-        run: ./gradlew assembleDebug --no-daemon --build-cache
+        run: ./gradlew assembleRelease --no-daemon --build-cache -Pandroid.enableMinifyInReleaseBuilds=false
 
       - name: Run the single Maestro end-to-end flow
         uses: reactivecircus/android-emulator-runner@v2
@@ -101,7 +101,7 @@ jobs:
           disable-linux-hw-accel: false
           emulator-options: -accel on -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
-            adb install apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            adb install apps/mobile/android/app/build/outputs/apk/release/app-release.apk
             maestro test apps/mobile/tests/e2e/fitness.yaml
 
       - name: Upload Maestro debug output on failure
