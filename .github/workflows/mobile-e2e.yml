@@ -71,21 +71,25 @@ jobs:
           EXPO_PUBLIC_API_URL: https://fitwear.tm-project.id.vn/
         run: bunx expo prebuild --platform android --no-install
 
-      - name: Cache Gradle packages
+      - name: Cache Gradle build
+        id: cache-gradle-build
         uses: actions/cache@v6
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('apps/mobile/android/**/*.gradle*', 'apps/mobile/android/gradle/wrapper/gradle-wrapper.properties') }}
+            apps/mobile/android/.gradle
+            apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          key: ${{ runner.os }}-gradle-build-${{ hashFiles('apps/mobile/android/**', 'apps/mobile/src/**', 'bun.lock') }}
           restore-keys: |
+            ${{ runner.os }}-gradle-build-
             ${{ runner.os }}-gradle-
 
       - name: Build Android debug APK
         working-directory: apps/mobile/android
         env:
           EXPO_PUBLIC_API_URL: https://fitwear.tm-project.id.vn/
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon --build-cache
 
       - name: Run the single Maestro end-to-end flow
         uses: reactivecircus/android-emulator-runner@v2
