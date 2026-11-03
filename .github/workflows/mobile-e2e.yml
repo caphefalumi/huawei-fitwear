@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -57,26 +58,14 @@ jobs:
           EXPO_PUBLIC_API_URL: https://fitwear.tm-project.id.vn/
         run: bunx expo prebuild --platform android --no-install
 
-      - name: Cache Gradle build
-        id: cache-gradle-build
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            apps/mobile/android/.gradle
-            apps/mobile/android/app/build/outputs/apk/release/app-release.apk
-          key: ${{ runner.os }}-gradle-build-${{ hashFiles('apps/mobile/android/**', 'apps/mobile/src/**', 'bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-build-
-            ${{ runner.os }}-gradle-
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Build Android release APK
-        if: steps.cache-gradle-build.outputs.cache-hit != 'true'
         working-directory: apps/mobile/android
         env:
           EXPO_PUBLIC_API_URL: https://fitwear.tm-project.id.vn/
-        run: ./gradlew assembleRelease --no-daemon --build-cache -Pandroid.enableMinifyInReleaseBuilds=false
+        run: ./gradlew assembleRelease --no-daemon -Pandroid.enableMinifyInReleaseBuilds=false -PreactNativeArchitectures=x86_64
 
       - name: Upload Android release APK
         uses: actions/upload-artifact@v6
