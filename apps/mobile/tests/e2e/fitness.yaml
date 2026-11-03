@@ -21,9 +21,9 @@ env:
 - hideKeyboard
 - assertVisible: "Date of birth"
 - scrollUntilVisible:
-    element: "I agree to the Terms of Service and User Agreement."
+    element: ".*Terms of Service.*"
     direction: DOWN
-- tapOn: "I agree to the Terms of Service and User Agreement."
+- tapOn: ".*Terms of Service.*"
 - scrollUntilVisible:
     element: "Create account"
     direction: DOWN
