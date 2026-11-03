@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { CloseButton } from "@/components/close-button";
 import { Pressable } from "@/components/pressable";
 import { Palette as C } from "@/constants/palette";
 import { dateLabel, recoveryTitle, useHealth } from "@/features/health/health-store";
@@ -40,6 +41,7 @@ export function HomeScreen() {
     refresh: refreshWorkouts,
   } = useWorkouts();
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [chartInfoOpen, setChartInfoOpen] = useState(false);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [recoveryClosing, setRecoveryClosing] = useState(false);
   useEffect(() => setBannerDismissed(false), [weightKg]);
@@ -95,13 +97,12 @@ export function HomeScreen() {
             contentFit="contain"
           />
           <Text style={styles.bannerText}>Weight saved</Text>
-          <Pressable
-            accessibilityLabel="Dismiss weight saved notification"
+          <CloseButton
+            label="Dismiss weight saved notification"
             onPress={() => setBannerDismissed(true)}
-            hitSlop={10}
-          >
-            <Text style={styles.bannerClose}>✕</Text>
-          </Pressable>
+            size={28}
+            background={C.surface}
+          />
         </View>
       ) : null}
 
@@ -147,9 +148,8 @@ export function HomeScreen() {
                 </View>
               </View>
               <Text style={styles.consumedLine}>
-                {summary.consumed.caloriesKcal.toLocaleString()} consumed ·{" "}
-                {summary.remaining.caloriesKcal} kcal left of{" "}
-                {summary.targets.calorieTargetKcal.toLocaleString()}
+                {summary.consumed.caloriesKcal.toLocaleString()} of{" "}
+                {summary.targets.calorieTargetKcal.toLocaleString()} kcal
               </Text>
             </>
           ) : (
@@ -177,10 +177,26 @@ export function HomeScreen() {
                   {latest ? `Logged ${dateLabel(latest.loggedDate)}` : "No weight logs yet"}
                 </Text>
               </View>
-              <View style={{ flex: 1, minWidth: 120 }}>
-                <WeightChart weights={weights.slice(-14).map((row) => row.weightKg)} />
-              </View>
+              {weights.length >= 2 ? (
+                <View style={{ flex: 1, minWidth: 120 }}>
+                  <WeightChart weights={weights.slice(-14).map((row) => row.weightKg)} />
+                </View>
+              ) : (
+                <Pressable
+                  accessibilityLabel="About the weight chart"
+                  onPress={() => setChartInfoOpen((open) => !open)}
+                  hitSlop={10}
+                  style={styles.infoButton}
+                >
+                  <Text style={styles.infoGlyph}>i</Text>
+                </Pressable>
+              )}
             </View>
+            {weights.length < 2 && chartInfoOpen ? (
+              <Text accessibilityRole="alert" style={styles.weightSub}>
+                Chart appears after 2 weight logs.
+              </Text>
+            ) : null}
 
             {previous ? (
               <View style={styles.previousRow}>
@@ -305,8 +321,10 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: C.accentTint,
     borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    minHeight: 48,
+    paddingLeft: 14,
+    paddingRight: 10,
+    paddingVertical: 10,
   },
   bannerIcon: {
     width: 14,
@@ -318,10 +336,23 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: C.accent,
   },
-  bannerClose: {
-    fontSize: 14,
+  infoButton: {
+    width: 24,
+    height: 24,
+    minWidth: 0,
+    minHeight: 0,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.textMuted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  infoGlyph: {
+    fontSize: 12,
     fontWeight: "600",
-    color: C.accent,
+    lineHeight: 14,
+    includeFontPadding: false,
+    color: C.textMuted,
   },
   cardHeaderText: {
     fontSize: 14,

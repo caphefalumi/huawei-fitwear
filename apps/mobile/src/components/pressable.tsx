@@ -35,6 +35,7 @@ const styles = StyleSheet.create({
   target: {
     minWidth: 48,
     minHeight: 48,
+    justifyContent: "center",
   },
   hovered: {
     opacity: 0.85,
