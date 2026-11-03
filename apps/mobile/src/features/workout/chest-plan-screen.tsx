@@ -17,7 +17,7 @@ export function ChestPlanScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ group?: string; sessionId?: string }>();
   const { recovery } = useHealth();
-  const { exercises, sessions, activeSessionId, loading, error, refresh } = useWorkouts();
+  const { exercises, sessions, activeSessionId, loading, refresh } = useWorkouts();
   const savedSession = sessions.find((session) => session.id === params.sessionId);
   const group = savedSession?.workoutSplit ?? params.group ?? "Chest";
   const routine = routineForGroup(group, exercises);
@@ -62,15 +62,6 @@ export function ChestPlanScreen() {
           style={styles.hero}
           contentFit="cover"
         />
-      ) : null}
-      {loading ? <Text style={styles.subtitle}>Loading workout data…</Text> : null}
-      {error ? (
-        <Text accessibilityRole="alert" style={styles.footnote}>
-          {error}
-        </Text>
-      ) : null}
-      {!routine && !loading ? (
-        <Text style={styles.subtitle}>No exercises are available for this group.</Text>
       ) : null}
       <Pressable
         disabled={loading}

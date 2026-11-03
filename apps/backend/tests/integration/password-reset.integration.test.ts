@@ -46,7 +46,7 @@ async function getResetCode(email: string) {
   const body = queued.messages.findLast((message) => message.type === "password-reset");
   expect(body?.type).toBe("password-reset");
   if (body?.type !== "password-reset") throw new Error("Expected reset queue message.");
-  expect(body.otp).toMatch(/^\d{8}$/);
+  expect(body.otp).toMatch(/^\d{4}$/);
   return body.otp;
 }
 
@@ -63,7 +63,6 @@ describe("Password reset integration", () => {
       EMAIL_QUEUE: queued.queue,
       RESEND_API_KEY: "test-resend-key",
       RESEND_FROM: "Fitwear <support@example.test>",
-      RESET_PASSWORD_URL: "https://fitwear.example.test/auth/reset-password",
       RESEND_PASSWORD_RESET_TEMPLATE_ID: "reset-template-test",
     });
     globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
@@ -79,6 +78,17 @@ describe("Password reset integration", () => {
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
+  });
+
+  it("rejects reset codes that are not exactly four digits", async () => {
+    for (const code of ["123", "12345"]) {
+      const response = await post("/auth/reset-password", {
+        email: "reset@fitwear.dev",
+        code,
+        password: "ReplacementPassword123!",
+      });
+      expect(response.status).toBe(422);
+    }
   });
 
   it("applies exponential resend delays by normalized address", async () => {
@@ -120,7 +130,6 @@ describe("Password reset integration", () => {
       {
         RESEND_API_KEY: "test-resend-key",
         RESEND_FROM: "Fitwear <support@example.test>",
-        RESET_PASSWORD_URL: "https://fitwear.example.test/auth/reset-password",
         RESEND_PASSWORD_RESET_TEMPLATE_ID: "reset-template-test",
       },
       () => consumeEmailBatch({ messages: [batchMessage] } as unknown as MessageBatch<unknown>),
@@ -128,9 +137,7 @@ describe("Password reset integration", () => {
     expect(lastEmail?.to).toEqual(["reset@fitwear.dev"]);
     expect(lastEmail?.template.id).toBe("reset-template-test");
     expect(lastEmail?.template.variables.RESET_OTP).toBe(code);
-    expect(lastEmail?.template.variables.RESET_URL).toBe(
-      "https://fitwear.example.test/auth/reset-password",
-    );
+    expect(Object.keys(lastEmail?.template.variables ?? {})).toEqual(["RESET_OTP"]);
     const stored = await db
       .select({ value: verification.value })
       .from(verification)
@@ -216,7 +223,6 @@ describe("Password reset integration", () => {
       } as unknown as Queue<EmailMessage>,
       RESEND_API_KEY: "test-resend-key",
       RESEND_FROM: "Fitwear <support@example.test>",
-      RESET_PASSWORD_URL: "https://fitwear.example.test/auth/reset-password",
       RESEND_PASSWORD_RESET_TEMPLATE_ID: "reset-template-test",
     });
     const response = await requestReset("reset@fitwear.dev");
@@ -230,13 +236,7 @@ describe("Password reset integration", () => {
     ).toHaveLength(0);
   });
 
-  it("renders a private, non-cacheable reset form and rejects expired tokens", async () => {
-    const page = await app.handle(new Request("http://localhost/auth/reset-password"));
-    expect(page.status).toBe(200);
-    expect(page.headers.get("Cache-Control")).toBe("no-store");
-    expect(page.headers.get("Referrer-Policy")).toBe("no-referrer");
-    expect(page.headers.get("Content-Security-Policy")).toContain("default-src 'none'");
-
+  it("rejects expired reset codes", async () => {
     await createAccount();
     const code = await getResetCode("reset@fitwear.dev");
     await db
@@ -293,7 +293,6 @@ describe("Password reset integration", () => {
       EMAIL_QUEUE: queued.queue,
       RESEND_API_KEY: "test-resend-key",
       RESEND_FROM: "Fitwear <support@example.test>",
-      RESET_PASSWORD_URL: "https://fitwear.example.test/auth/reset-password",
       RESEND_PASSWORD_RESET_TEMPLATE_ID: "reset-template-test",
     });
     for (let index = 0; index < 5; index++)

@@ -135,7 +135,6 @@ export class WatchBleClient {
     this.cleanupSubscriptions({ keepStateListener: true });
     const session = ++this.session;
     this.setStatus("scanning");
-    this.listener.onDeviceName("Scanning…");
 
     this.scanTimeout = setTimeout(() => {
       if (session !== this.session) return;

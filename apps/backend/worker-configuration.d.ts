@@ -7,7 +7,6 @@ interface __BaseEnv_Env {
   DB: D1Database;
   EMAIL_QUEUE: Queue;
   AI: Ai;
-  RESET_PASSWORD_URL: "https://fitwear.tm-project.id.vn/auth/reset-password";
   RESEND_FROM: "fitwear@tm-project.id.vn";
   RESEND_WELCOME_TEMPLATE_ID: "b1323c4b-a7b4-4fae-9e70-a4894604ef3d";
   RESEND_PASSWORD_RESET_TEMPLATE_ID: "27bd1568-5767-48f6-945d-df68851bafc3";
@@ -27,7 +26,6 @@ declare namespace NodeJS {
   interface ProcessEnv extends StringifyValues<
     Pick<
       Cloudflare.Env,
-      | "RESET_PASSWORD_URL"
       | "RESEND_FROM"
       | "RESEND_WELCOME_TEMPLATE_ID"
       | "RESEND_PASSWORD_RESET_TEMPLATE_ID"

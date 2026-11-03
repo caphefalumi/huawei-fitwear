@@ -30,10 +30,9 @@ export function HomeScreen() {
     weightUpdated,
     recovery,
     error: healthError,
-    loading: healthLoading,
     refresh: refreshHealth,
   } = useHealth();
-  const { summary, loading: mealsLoading, error: mealsError, refresh: refreshMeals } = useMeals();
+  const { summary, error: mealsError, refresh: refreshMeals } = useMeals();
   const {
     sessions,
     loading: workoutsLoading,
@@ -68,9 +67,6 @@ export function HomeScreen() {
       <Text accessibilityRole="header" style={styles.title}>
         Today
       </Text>
-      {healthLoading || mealsLoading ? (
-        <Text style={styles.weightSub}>Loading today’s data…</Text>
-      ) : null}
       {healthError ? (
         <Pressable
           onPress={() => {
@@ -202,7 +198,6 @@ export function HomeScreen() {
           onPress={() => router.push("/workout")}
         />
         <Card>
-          {workoutsLoading ? <Text style={styles.weightSub}>Loading workouts…</Text> : null}
           {workoutsError ? (
             <Pressable
               onPress={() => {

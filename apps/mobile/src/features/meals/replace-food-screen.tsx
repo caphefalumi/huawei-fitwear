@@ -89,7 +89,6 @@ export function ReplaceFoodScreen() {
           {error ?? searchError}
         </Text>
       ) : null}
-      {loading ? <Text style={styles.footnote}>Searching foods…</Text> : null}
       {!loading && query.trim() && !matches.length ? (
         <Text style={styles.footnote}>No matching foods.</Text>
       ) : null}

@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Pressable } from "@/components/pressable";
@@ -250,18 +250,14 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Create account"
-        accessibilityState={{ disabled: pending, busy: pending }}
+        accessibilityState={{ disabled: pending }}
         disabled={pending}
         onPress={() => {
           void submit();
         }}
         style={[styles.primaryButton, pending && styles.disabled]}
       >
-        {pending ? (
-          <ActivityIndicator color={AuthColors.onAccent} />
-        ) : (
-          <Text style={styles.primaryLabel}>Create account</Text>
-        )}
+        <Text style={styles.primaryLabel}>Create account</Text>
       </Pressable>
 
       <View style={styles.privacy}>

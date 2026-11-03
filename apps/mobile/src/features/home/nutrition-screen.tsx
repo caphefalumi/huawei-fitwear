@@ -37,7 +37,6 @@ export function NutritionScreen() {
           })}
         </Text>
       </View>
-      {loading ? <Text style={styles.noteBody}>Loading nutrition…</Text> : null}
       {error ? (
         <Pressable
           onPress={() => {

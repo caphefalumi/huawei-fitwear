@@ -190,7 +190,6 @@ export abstract class Auth {
     await db.delete(sessionTable).where(eq(sessionTable.token, token)).run();
     return { success: true, message: "Signed out successfully" };
   }
-
   static async deleteAccount(userId: string, d1?: D1Database) {
     const db = getDb(d1);
     await db.delete(sessionTable).where(eq(sessionTable.userId, userId)).run();

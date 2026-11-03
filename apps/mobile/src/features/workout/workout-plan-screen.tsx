@@ -120,7 +120,6 @@ export function WorkoutPlanScreen() {
           );
         })}
       </View>
-      {loading ? <Text style={styles.subtitle}>Loading workouts…</Text> : null}
       {error ? (
         <Text accessibilityRole="alert" style={styles.subtitle}>
           {error}
@@ -161,27 +160,28 @@ export function WorkoutPlanScreen() {
         {!groups.length && !loading ? (
           <Text style={styles.subtitle}>No exercises are available yet. Refresh to try again.</Text>
         ) : null}
-        <View style={styles.groups}>
-          {groups.map((group) => (
-            <Pressable
-              key={group}
-              accessibilityLabel={`View ${group} workout plan`}
-              style={styles.group}
-              onPress={() => router.push({ pathname: "/chest-plan", params: { group } })}
-            >
-              <Image
-                accessible={false}
-                source={icons[group.toLowerCase() as keyof typeof icons] ?? icons.shieldCheck}
-                style={styles.groupImage}
-                contentFit="contain"
-              />
-              <Text style={styles.groupLabel}>{group}</Text>
-            </Pressable>
-          ))}
-        </View>
+        {groups.map((group) => (
+          <Pressable
+            key={group}
+            accessibilityLabel={`View ${group} workout plan`}
+            style={styles.group}
+            onPress={() => router.push({ pathname: "/chest-plan", params: { group } })}
+          >
+            <Image
+              accessible={false}
+              source={icons[group.toLowerCase() as keyof typeof icons] ?? icons.shieldCheck}
+              style={styles.groupImage}
+              contentFit="contain"
+            />
+            <Text style={styles.groupLabel}>{group}</Text>
+          </Pressable>
+        ))}
       </View>
       <View style={styles.section}>
-        <SectionHeading title="Workout history" actionLabel={`${sessions.length} loaded`} />
+        <SectionHeading
+          title="Workout history"
+          actionLabel={`${sessions.length} ${sessions.length === 1 ? "session" : "sessions"}`}
+        />
         {!sessions.length && !loading ? (
           <Text style={styles.subtitle}>
             No saved workouts yet. Choose a group to start your first session.

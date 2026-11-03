@@ -1,7 +1,7 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { type PropsWithChildren } from "react";
-import { ActivityIndicator, useColorScheme, View } from "react-native";
+import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
@@ -40,13 +40,7 @@ function AccountProviders({ children }: PropsWithChildren) {
 
 function RootNavigator() {
   const { user, loading } = useAuth();
-  if (loading) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator accessibilityLabel="Restoring session" />
-      </View>
-    );
-  }
+  if (loading) return null;
   const navigation = (
     <>
       <AnimatedSplashOverlay />

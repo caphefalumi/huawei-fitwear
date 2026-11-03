@@ -1,6 +1,6 @@
 import { Image, type ImageProps } from "expo-image";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { Pressable } from "@/components/pressable";
 import { Palette as C } from "@/constants/palette";
 import { apiRequest } from "@/lib/api";
@@ -69,12 +69,7 @@ export function MealPhoto({
         </Pressable>
       </View>
     );
-  if (!uri)
-    return (
-      <View style={[style, { alignItems: "center", justifyContent: "center" }]}>
-        <ActivityIndicator color={C.accent} accessibilityLabel="Loading meal photo" />
-      </View>
-    );
+  if (!uri) return null;
   return (
     <Image
       source={{ uri }}

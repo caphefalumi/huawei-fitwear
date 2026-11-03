@@ -15,6 +15,7 @@ import {
   getSession,
   sendDeleteAccount,
   sendPasswordReset,
+  sendCompletePasswordReset,
   sendSignIn,
   sendSignOut,
   sendSignUp,
@@ -50,6 +51,7 @@ type AuthContextValue = {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (body: SignUpBody) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<string>;
+  completePasswordReset: (email: string, code: string, password: string) => Promise<string>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   updateUser: (body: UpdateUserBody) => Promise<void>;
@@ -184,23 +186,29 @@ export function AuthProvider({ children }: PropsWithChildren) {
   );
 
   const requestPasswordReset = useCallback((email: string) => sendPasswordReset(email), []);
+  const completePasswordReset = useCallback(
+    (email: string, code: string, password: string) =>
+      sendCompletePasswordReset(email, code, password),
+    [],
+  );
 
-  const signOut = useCallback(async () => {
+  const signOut = useCallback(() => {
     setError(null);
-    try {
-      await sendSignOut();
-    } catch (cause) {
+    revision.current += 1;
+    const localRevision = revision.current;
+    void sendSignOut().catch((cause) => {
+      if (revision.current !== localRevision) return;
       if (!(cause instanceof ApiError && cause.status === 401)) {
         setError(
           "Signed out on this device. The server session could not be revoked; check your connection.",
         );
-        throw cause;
       }
-    } finally {
-      await clearSession();
-    }
+    });
+    return clearSession().catch(() => {
+      if (revision.current === localRevision)
+        setError("Signed out on this device, but saved credentials could not be removed.");
+    });
   }, [clearSession]);
-
   const deleteAccount = useCallback(async () => {
     setError(null);
     setPending(true);
@@ -242,6 +250,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         signIn,
         signUp,
         requestPasswordReset,
+        completePasswordReset,
         signOut,
         deleteAccount,
         updateUser,
