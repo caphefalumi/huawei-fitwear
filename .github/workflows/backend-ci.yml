@@ -4,11 +4,6 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - "apps/backend/**"
-      - "package.json"
-      - "bun.lock"
-      - ".github/workflows/backend-ci.yml"
   merge_group:
     types:
       - checks_requested
@@ -34,12 +29,25 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Detect backend changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'apps/backend/**'
+              - 'package.json'
+              - 'bun.lock'
+              - '.github/workflows/backend-ci.yml'
+
       - name: Setup Bun
+        if: steps.filter.outputs.backend == 'true' || github.event_name != 'pull_request'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
       - name: Cache Bun packages
+        if: steps.filter.outputs.backend == 'true' || github.event_name != 'pull_request'
         uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
@@ -48,10 +56,17 @@ jobs:
             ${{ runner.os }}-bun-
 
       - name: Install workspace dependencies
+        if: steps.filter.outputs.backend == 'true' || github.event_name != 'pull_request'
         run: bun install --frozen-lockfile
 
       - name: Typecheck backend
+        if: steps.filter.outputs.backend == 'true' || github.event_name != 'pull_request'
         run: bun run --cwd apps/backend typecheck
 
       - name: Run backend unit and integration tests
+        if: steps.filter.outputs.backend == 'true' || github.event_name != 'pull_request'
         run: bun run --cwd apps/backend test:all
+
+      - name: Skip notice
+        if: steps.filter.outputs.backend != 'true' && github.event_name == 'pull_request'
+        run: echo "No backend changes detected. Backend tests skipped."
