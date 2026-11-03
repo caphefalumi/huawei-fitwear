@@ -67,7 +67,7 @@ type OpenSheet =
 
 export function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { user, signOut } = useAuth();
+  const { user, signOut, deleteAccount } = useAuth();
   const {
     weightKg,
     heightCm,
@@ -148,7 +148,6 @@ export function ProfileScreen() {
           <Text style={styles.userHandle}>{user?.email}</Text>
         </View>
       </View>
-      {loading ? <Text style={styles.userHandle}>Loading health data…</Text> : null}
       {healthError ? (
         <Pressable
           onPress={() => {
@@ -256,6 +255,20 @@ export function ProfileScreen() {
         }}
       >
         <Text style={styles.periodLabel}>{pending ? "Please wait…" : "Sign out"}</Text>
+      </Pressable>
+      <Pressable
+        style={[styles.periodButton, styles.deleteAccountButton]}
+        disabled={pending}
+        accessibilityLabel="Delete account"
+        accessibilityRole="button"
+        accessibilityState={{ busy: pending }}
+        onPress={() => {
+          void mutate(deleteAccount);
+        }}
+      >
+        <Text style={[styles.periodLabel, styles.deleteAccountLabel]}>
+          {pending ? "Please wait…" : "Delete account"}
+        </Text>
       </Pressable>
       {mountedSheet === "period" ? (
         <RecoverySheet
@@ -422,5 +435,13 @@ const styles = StyleSheet.create({
   },
   periodLabelActive: {
     color: C.accent,
+  },
+  deleteAccountButton: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#ef4444",
+  },
+  deleteAccountLabel: {
+    color: "#ef4444",
   },
 });

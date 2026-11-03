@@ -27,6 +27,7 @@ describe("Integration Test: Root & Swagger API", () => {
     expect(paths).toContain("/auth/session");
     expect(paths).toContain("/auth/update-user");
     expect(paths).toContain("/auth/sign-out");
+    expect(paths).toContain("/auth/account");
     expect(paths).toContain("/user/me");
   });
 

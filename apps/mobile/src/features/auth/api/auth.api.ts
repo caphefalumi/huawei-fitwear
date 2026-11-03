@@ -13,6 +13,7 @@ export const AUTH_ENDPOINTS = {
   signUp: "/auth/sign-up",
   passwordReset: "/auth/password-reset",
   signOut: "/auth/sign-out",
+  deleteAccount: "/auth/account",
   updateUser: "/auth/update-user",
 } as const;
 
@@ -44,6 +45,10 @@ export async function sendPasswordReset(email: string): Promise<string> {
 
 export function sendSignOut(): Promise<unknown> {
   return apiRequest(AUTH_ENDPOINTS.signOut, { method: "POST" });
+}
+
+export function sendDeleteAccount(): Promise<unknown> {
+  return apiRequest(AUTH_ENDPOINTS.deleteAccount, { method: "DELETE" });
 }
 
 export function sendUpdateUser(body: UpdateUserBody): Promise<AuthUser> {
