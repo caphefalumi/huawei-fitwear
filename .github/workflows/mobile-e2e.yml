@@ -13,10 +13,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  e2e:
-    name: Android Maestro E2E
+  build:
+    name: Build Android release APK
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -45,25 +45,11 @@ jobs:
       - name: Install workspace dependencies
         run: bun install --frozen-lockfile
 
-      - name: Enable KVM acceleration for Android E2E
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-          test -r /dev/kvm && test -w /dev/kvm
-
-      - name: Setup Java for Android E2E
+      - name: Setup Java for Android build
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
-
-      - name: Install Maestro CLI
-        run: |
-          export MAESTRO_VERSION=2.12.0
-          curl -fsSL https://get.maestro.mobile.dev | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-          "$HOME/.maestro/bin/maestro" --version
 
       - name: Generate Android project
         working-directory: apps/mobile
@@ -86,10 +72,56 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Build Android release APK
+        if: steps.cache-gradle-build.outputs.cache-hit != 'true'
         working-directory: apps/mobile/android
         env:
           EXPO_PUBLIC_API_URL: https://fitwear.tm-project.id.vn/
         run: ./gradlew assembleRelease --no-daemon --build-cache -Pandroid.enableMinifyInReleaseBuilds=false
+
+      - name: Upload Android release APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: fitwear-release-apk
+          path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+
+  e2e:
+    name: Android Maestro E2E
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download Android release APK
+        uses: actions/download-artifact@v6
+        with:
+          name: fitwear-release-apk
+          path: apps/mobile/android/app/build/outputs/apk/release
+
+      - name: Enable KVM acceleration for Android E2E
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          test -r /dev/kvm && test -w /dev/kvm
+
+      - name: Setup Java for Maestro
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Maestro CLI
+        run: |
+          export MAESTRO_VERSION=2.12.0
+          curl -fsSL https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+          "$HOME/.maestro/bin/maestro" --version
 
       - name: Run the single Maestro end-to-end flow
         uses: reactivecircus/android-emulator-runner@v2
@@ -97,11 +129,15 @@ jobs:
           api-level: 35
           target: google_apis
           arch: x86_64
+          ram-size: 4096M
+          heap-size: 512M
           disable-animations: true
           disable-linux-hw-accel: false
           emulator-options: -accel on -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
-            adb install apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            adb wait-for-device
+            adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            sleep 5
             maestro test apps/mobile/tests/e2e/fitness.yaml
 
       - name: Upload Maestro debug output on failure
