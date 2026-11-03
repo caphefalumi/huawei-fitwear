@@ -171,31 +171,34 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
       <View style={styles.footer}>
         <View style={styles.separator} />
         {resetMode ? (
-          <Text style={styles.footerText}>
-            Remembered your password?{"  "}
-            <Text
-              accessibilityRole="link"
-              style={styles.footerLink}
+          <View style={styles.footerRow}>
+            <Text style={styles.footerText}>Remembered your password?</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Back to log in"
               onPress={() => {
                 setResetMode(false);
                 setResetError(null);
                 setResetMessage(null);
               }}
+              hitSlop={8}
             >
-              Back to log in
-            </Text>
-          </Text>
+              <Text style={styles.footerLink}>Back to log in</Text>
+            </Pressable>
+          </View>
         ) : (
-          <Text style={styles.footerText}>
-            No account?{"  "}
-            <Text
-              accessibilityRole="link"
-              style={styles.footerLink}
+          <View style={styles.footerRow}>
+            <Text style={styles.footerText}>No account?</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Create account"
+              disabled={pending}
               onPress={pending ? undefined : handleCreateAccount}
+              hitSlop={8}
             >
-              Create account
-            </Text>
-          </Text>
+              <Text style={styles.footerLink}>Create account</Text>
+            </Pressable>
+          </View>
         )}
       </View>
     </ScrollView>
@@ -278,11 +281,18 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     backgroundColor: AuthColors.border,
   },
+  footerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
   footerText: {
     fontSize: 13,
     color: AuthColors.textMuted,
   },
   footerLink: {
+    fontSize: 13,
     fontWeight: "600",
     color: AuthColors.accent,
   },
