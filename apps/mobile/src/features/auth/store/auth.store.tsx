@@ -229,8 +229,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, [clearSession]);
 
-
-
   const updateUser = useCallback(async (body: UpdateUserBody) => {
     const currentRevision = revision.current;
     try {

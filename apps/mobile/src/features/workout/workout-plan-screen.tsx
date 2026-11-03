@@ -160,22 +160,22 @@ export function WorkoutPlanScreen() {
         {!groups.length && !loading ? (
           <Text style={styles.subtitle}>No exercises are available yet. Refresh to try again.</Text>
         ) : null}
-          {groups.map((group) => (
-            <Pressable
-              key={group}
-              accessibilityLabel={`View ${group} workout plan`}
-              style={styles.group}
-              onPress={() => router.push({ pathname: "/chest-plan", params: { group } })}
-            >
-              <Image
-                accessible={false}
-                source={icons[group.toLowerCase() as keyof typeof icons] ?? icons.shieldCheck}
-                style={styles.groupImage}
-                contentFit="contain"
-              />
-              <Text style={styles.groupLabel}>{group}</Text>
-            </Pressable>
-          ))}
+        {groups.map((group) => (
+          <Pressable
+            key={group}
+            accessibilityLabel={`View ${group} workout plan`}
+            style={styles.group}
+            onPress={() => router.push({ pathname: "/chest-plan", params: { group } })}
+          >
+            <Image
+              accessible={false}
+              source={icons[group.toLowerCase() as keyof typeof icons] ?? icons.shieldCheck}
+              style={styles.groupImage}
+              contentFit="contain"
+            />
+            <Text style={styles.groupLabel}>{group}</Text>
+          </Pressable>
+        ))}
       </View>
       <View style={styles.section}>
         <SectionHeading

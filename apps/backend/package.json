@@ -16,7 +16,7 @@
     "test:unit": "bun test tests/unit",
     "test:integration": "bun test tests/integration",
     "test:all": "bun test tests/unit tests/integration",
-    "email:sync-resend": "bun run scripts/sync-resend-templates.ts",
+    "email:sync-resend": "bun run scripts/sync-resend-templates.ts"
   },
   "dependencies": {
     "@elysia/openapi": "^1.4.16",

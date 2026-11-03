@@ -56,7 +56,9 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
         setResetMessage(await requestPasswordReset(email));
         setResetStep("code");
       } catch (cause) {
-        setResetError(cause instanceof Error ? cause.message : "Unable to request a password reset.");
+        setResetError(
+          cause instanceof Error ? cause.message : "Unable to request a password reset.",
+        );
       } finally {
         setResetPending(false);
       }
@@ -145,7 +147,8 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
         ) : resetStep === "code" ? (
           <>
             <Text style={styles.terms}>
-              {resetMessage ?? "Enter the 4-digit code sent to your email and choose a new password."}
+              {resetMessage ??
+                "Enter the 4-digit code sent to your email and choose a new password."}
             </Text>
             <AuthField
               label="4-digit code"
@@ -203,11 +206,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={
-            resetMode
-              ? resetStep === "email"
-                ? "Send reset code"
-                : "Reset password"
-              : "Log in"
+            resetMode ? (resetStep === "email" ? "Send reset code" : "Reset password") : "Log in"
           }
           accessibilityState={{
             disabled: resetMode ? resetPending : pending,
@@ -219,11 +218,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
           }}
         >
           <Text style={styles.primaryLabel}>
-            {resetMode
-              ? resetStep === "email"
-                ? "Send reset code"
-                : "Reset password"
-              : "Log in"}
+            {resetMode ? (resetStep === "email" ? "Send reset code" : "Reset password") : "Log in"}
           </Text>
         </Pressable>
       ) : null}

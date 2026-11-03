@@ -197,8 +197,6 @@ export abstract class Auth {
     return { success: true, message: "Account deleted successfully" };
   }
 
-
-
   static async updateUser(userId: string, data: UpdateUserBody, d1?: D1Database) {
     const db = getDb(d1);
 

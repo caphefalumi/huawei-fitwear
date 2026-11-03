@@ -172,11 +172,7 @@ export function MealCaptureScreen() {
             {error} Manual entry remains available.
           </Text>
         ) : null}
-        <PrimaryButton
-          label="Analyze photo"
-          disabled={!image || busy}
-          onPress={analyze}
-        />
+        <PrimaryButton label="Analyze photo" disabled={!image || busy} onPress={analyze} />
         <SecondaryButton
           label="Enter meal manually"
           onPress={() => {
