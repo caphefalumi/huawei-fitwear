@@ -51,7 +51,7 @@ type AuthContextValue = {
   error: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (body: SignUpBody) => Promise<void>;
-  requestPasswordReset: (email: string) => Promise<string>;
+  requestPasswordReset: (email: string) => Promise<{ message: string; resendAfterSeconds: number }>;
   verifyPasswordReset: (email: string, code: string) => Promise<string>;
   completePasswordReset: (resetToken: string, password: string) => Promise<string>;
   signOut: () => Promise<void>;

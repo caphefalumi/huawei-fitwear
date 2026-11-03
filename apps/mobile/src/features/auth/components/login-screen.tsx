@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useState } from "react";
-import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useState } from "react";
+import { AppState, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Pressable } from "@/components/pressable";
@@ -37,6 +37,21 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
   const [resetPending, setResetPending] = useState(false);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
   const [resetError, setResetError] = useState<string | null>(null);
+  const [resendDeadline, setResendDeadline] = useState<number | null>(null);
+  const [resendSeconds, setResendSeconds] = useState(0);
+
+  useEffect(() => {
+    if (resendDeadline === null) return;
+    const updateRemaining = () =>
+      setResendSeconds(Math.max(0, Math.ceil((resendDeadline - Date.now()) / 1000)));
+    updateRemaining();
+    const timer = setInterval(updateRemaining, 1000);
+    const foregroundListener = AppState.addEventListener("change", updateRemaining);
+    return () => {
+      clearInterval(timer);
+      foregroundListener.remove();
+    };
+  }, [resendDeadline]);
 
   async function submit() {
     if (!email.trim() || !password) {
@@ -71,6 +86,21 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
       setResetPending(false);
     }
   }
+  async function resendResetCode() {
+    if (resetPending || resendSeconds > 0) return;
+    setResetPending(true);
+    setResetError(null);
+    try {
+      const result = await requestPasswordReset(email);
+      setResetMessage(result.message);
+      setResendDeadline(Date.now() + result.resendAfterSeconds * 1000);
+      setResetCode("");
+    } catch (cause) {
+      setResetError(cause instanceof Error ? cause.message : "Unable to resend the reset code.");
+    } finally {
+      setResetPending(false);
+    }
+  }
 
   async function submitPasswordReset() {
     if (!email.trim()) {
@@ -82,7 +112,9 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
       setResetError(null);
       setResetMessage(null);
       try {
-        setResetMessage(await requestPasswordReset(email));
+        const result = await requestPasswordReset(email);
+        setResetMessage(result.message);
+        setResendDeadline(Date.now() + result.resendAfterSeconds * 1000);
         setResetStep("code");
       } catch (cause) {
         setResetError(
@@ -234,21 +266,48 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
                 setResetToken(null);
                 setResetCode("");
                 setResetError(null);
+                setResendDeadline(null);
+                setResendSeconds(0);
               }}
             >
               <Text style={styles.footerLink}>Change email address</Text>
             </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                resendSeconds > 0
+                  ? `Resend reset code in ${resendSeconds} seconds`
+                  : "Resend reset code"
+              }
+              accessibilityState={{ disabled: resetPending || resendSeconds > 0 }}
+              disabled={resetPending || resendSeconds > 0}
+              onPress={() => {
+                void resendResetCode();
+              }}
+            >
+              <Text style={styles.footerLink}>
+                {resendSeconds > 0
+                  ? `Resend in ${String(Math.floor(resendSeconds / 60)).padStart(2, "0")}:${String(resendSeconds % 60).padStart(2, "0")}`
+                  : "Resend code"}
+              </Text>
+            </Pressable>
           </>
         ) : resetStep === "password" ? (
-          <AuthField
-            label="New password"
-            icon={icons.eyeOff}
-            value={newPassword}
-            onChangeText={setNewPassword}
-            secureTextEntry
-            autoComplete="new-password"
-            editable={!resetPending}
-          />
+          <>
+            <AuthField
+              label="New password"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry
+              autoComplete="new-password"
+              editable={!resetPending}
+            />
+            <Text accessibilityLiveRegion="polite" style={styles.passwordRequirement}>
+              {Array.from(newPassword).length >= 8
+                ? "✓ Requirement met: at least 8 characters."
+                : "• At least 8 characters."}
+            </Text>
+          </>
         ) : (
           <Text style={styles.terms}>{resetMessage}</Text>
         )}
@@ -458,6 +517,11 @@ const styles = StyleSheet.create({
     opacity: 0.02,
     color: "transparent",
     backgroundColor: "transparent",
+  },
+  passwordRequirement: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: AuthColors.textMuted,
   },
   terms: {
     fontSize: 11,

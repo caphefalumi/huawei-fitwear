@@ -21,6 +21,14 @@ async function digestToken(token: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
+function constantTimeEqual(left: string, right: string): boolean {
+  let difference = left.length ^ right.length;
+  const length = Math.max(left.length, right.length);
+  for (let index = 0; index < length; index += 1) {
+    difference |= (left.charCodeAt(index) || 0) ^ (right.charCodeAt(index) || 0);
+  }
+  return difference === 0;
+}
 function generateResetOtp(): string {
   const range = 0x1_0000_0000;
   const limit = Math.floor(range / 10_000) * 10_000;
@@ -97,17 +105,13 @@ export async function verifyPasswordResetCode({
   const identifier = `${OTP_IDENTIFIER_PREFIX}${account.id}`;
   const otpHash = await digestToken(code);
   const record = await db
-    .select({ id: verification.id })
+    .select({ id: verification.id, value: verification.value })
     .from(verification)
-    .where(
-      and(
-        eq(verification.identifier, identifier),
-        eq(verification.value, otpHash),
-        gt(verification.expiresAt, new Date()),
-      ),
-    )
+    .where(and(eq(verification.identifier, identifier), gt(verification.expiresAt, new Date())))
     .get();
-  if (!record) throw new InvalidPasswordResetToken();
+  if (!record || !constantTimeEqual(record.value, otpHash)) {
+    throw new InvalidPasswordResetToken();
+  }
 
   const resetToken = generateToken();
   const tokenHash = await digestToken(resetToken);
@@ -122,7 +126,7 @@ export async function verifyPasswordResetCode({
       and(
         eq(verification.id, record.id),
         eq(verification.identifier, identifier),
-        eq(verification.value, otpHash),
+        eq(verification.value, record.value),
         gt(verification.expiresAt, new Date()),
       ),
     )

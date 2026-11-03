@@ -95,25 +95,43 @@ describe("Password reset integration", () => {
     const kv = createTestKv();
     const email = "person@example.test";
     const firstSentAt = 1_000;
-    expect(await takePasswordResetEmailSlot(kv, email, firstSentAt)).toBeTrue();
-    expect(
-      await takePasswordResetEmailSlot(kv, email.toUpperCase(), firstSentAt + 59_999),
-    ).toBeFalse();
-    expect(await takePasswordResetEmailSlot(kv, email, firstSentAt + 60_000)).toBeTrue();
-    expect(await takePasswordResetEmailSlot(kv, email, firstSentAt + 179_999)).toBeFalse();
-    expect(await takePasswordResetEmailSlot(kv, email, firstSentAt + 180_000)).toBeTrue();
+    expect(await takePasswordResetEmailSlot(kv, email, firstSentAt)).toEqual({
+      allowed: true,
+      retryAfterSeconds: 60,
+    });
+    expect(await takePasswordResetEmailSlot(kv, email.toUpperCase(), firstSentAt + 59_999)).toEqual(
+      { allowed: false, retryAfterSeconds: 1 },
+    );
+    expect(await takePasswordResetEmailSlot(kv, email, firstSentAt + 60_000)).toEqual({
+      allowed: true,
+      retryAfterSeconds: 120,
+    });
+    expect(await takePasswordResetEmailSlot(kv, email, firstSentAt + 179_999)).toEqual({
+      allowed: false,
+      retryAfterSeconds: 1,
+    });
+    expect(await takePasswordResetEmailSlot(kv, email, firstSentAt + 180_000)).toEqual({
+      allowed: true,
+      retryAfterSeconds: 240,
+    });
   });
 
   it("returns the same response for known and unknown addresses and queues only for the account owner", async () => {
     await createAccount();
     const unknown = await requestReset("absent@fitwear.dev");
     const unknownBody = await unknown.json();
+    expect(unknownBody.success).toBe(true);
+    expect(typeof unknownBody.message).toBe("string");
+    expect(unknownBody.resendAfterSeconds).toBe(60);
     expect(unknown.status).toBe(200);
     expect(queued.messages).toHaveLength(1);
 
     const known = await requestReset("RESET@fitwear.dev");
     expect(known.status).toBe(200);
-    expect(await known.json()).toEqual(unknownBody);
+    const knownBody = await known.json();
+    expect(knownBody.message).toEqual(unknownBody.message);
+    expect(knownBody.resendAfterSeconds).toBeGreaterThan(0);
+    expect(knownBody.resendAfterSeconds).toBeLessThanOrEqual(60);
     expect(queued.messages).toHaveLength(2);
     const resetMessage = queued.messages[1];
     expect(resetMessage).toMatchObject({ type: "password-reset", to: "reset@fitwear.dev" });

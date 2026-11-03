@@ -155,14 +155,17 @@ export const auth = new Elysia({
         set.status = 503;
         return { success: false, message: "Password reset email is not configured." };
       }
+      let resendAfterSeconds = 60;
       try {
-        if (await canSendPasswordResetEmail(body.email)) {
+        const slot = await canSendPasswordResetEmail(body.email);
+        resendAfterSeconds = slot.retryAfterSeconds;
+        if (slot.allowed) {
           await requestPasswordReset(body.email);
         }
       } catch {
         console.error("Password reset email request failed.");
       }
-      return { success: true, message: passwordResetMessage };
+      return { success: true, message: passwordResetMessage, resendAfterSeconds };
     },
     {
       beforeHandle: ({ request, set }) => assertAuthRateLimit(request, "password-reset", set),

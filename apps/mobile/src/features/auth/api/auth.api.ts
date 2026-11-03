@@ -37,12 +37,13 @@ export function sendSignUp(body: SignUpBody): Promise<AuthenticationSessionRespo
   });
 }
 
-export async function sendPasswordReset(email: string): Promise<string> {
-  const result = await apiRequest<{ message: string }>(AUTH_ENDPOINTS.passwordReset, {
+export async function sendPasswordReset(
+  email: string,
+): Promise<{ message: string; resendAfterSeconds: number }> {
+  return apiRequest<{ message: string; resendAfterSeconds: number }>(AUTH_ENDPOINTS.passwordReset, {
     method: "POST",
     body: { email: email.trim() },
   });
-  return result.message;
 }
 
 export async function sendVerifyPasswordReset(email: string, code: string): Promise<string> {
