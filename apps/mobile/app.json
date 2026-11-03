@@ -51,7 +51,8 @@
           "modes": ["central"],
           "bluetoothAlwaysPermission": "Allow $(PRODUCT_NAME) to connect to your Huawei Watch."
         }
-      ]
+      ],
+      "./plugins/withAndroidCiFixes"
     ],
     "experiments": {
       "typedRoutes": true,
