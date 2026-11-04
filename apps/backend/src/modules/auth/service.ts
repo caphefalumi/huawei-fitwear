@@ -12,6 +12,10 @@ import { generateId, generateToken } from "../../lib/id";
 
 import type { SignUpBody, SignInBody, UpdateUserBody } from "./index";
 
+// Public dummy verifier, never an account credential. Match the current bcrypt cost
+// so unknown accounts do not bypass the expensive password check.
+const DUMMY_PASSWORD_HASH = "$2b$12$YvbRQhIG1u3QZLvSTX/wRO50bqc8xV6U.fFNPpEdrGjGJfQ6OVacq";
+
 export abstract class Auth {
   static async signUp(data: SignUpBody, d1?: D1Database) {
     const db = getDb(d1);
@@ -97,12 +101,8 @@ export abstract class Auth {
 
     const foundUser = await db.select().from(userTable).where(eq(userTable.email, email)).get();
 
-    if (!foundUser) {
-      throw status(401, { success: false, message: "Email or password is incorrect." });
-    }
-
-    const isValid = await verifyPassword(data.password, foundUser.password);
-    if (!isValid) {
+    const isValid = await verifyPassword(data.password, foundUser?.password ?? DUMMY_PASSWORD_HASH);
+    if (!foundUser || !isValid) {
       throw status(401, { success: false, message: "Email or password is incorrect." });
     }
     if (needsPasswordRehash(foundUser.password) && isPasswordWithinBcryptLimit(data.password)) {

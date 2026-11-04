@@ -1,23 +1,67 @@
+import { isCancel } from "axios";
+import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
-import { AppState, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useIsFocused } from "expo-router/react-navigation";
+import { StatusBar } from "expo-status-bar";
+import { SymbolView } from "expo-symbols";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  AccessibilityInfo,
+  ActivityIndicator,
+  AppState,
+  findNodeHandle,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
+  type TextInputInstance,
+} from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import Animated, { FadeIn, FadeOut, useReducedMotion } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Pressable } from "@/components/pressable";
-import { Palette as AuthColors } from "@/constants/palette";
+import { ApiError } from "@/lib/api";
 import { useAuth } from "../store/auth.store";
+import { useAuthColors, type AuthColorPalette } from "./auth-colors";
 import { AuthField } from "./auth-field";
+
+const credentialMessage = "Incorrect email or password.";
+const shake = {
+  "0%": { transform: [{ translateX: 0 }] },
+  "25%": { transform: [{ translateX: -4 }] },
+  "75%": { transform: [{ translateX: 4 }] },
+  "100%": { transform: [{ translateX: 0 }] },
+};
+
+async function errorHaptic() {
+  try {
+    if (Platform.OS === "ios") {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } else if (Platform.OS === "android") {
+      try {
+        await Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Reject);
+      } catch {
+        await Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Long_Press);
+      }
+    }
+  } catch {
+    // Haptics may be unavailable or disabled; visual feedback remains authoritative.
+  }
+}
 
 export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void } = {}) {
   const insets = useSafeAreaInsets();
-  const {
-    signIn,
-    requestPasswordReset,
-    verifyPasswordReset,
-    completePasswordReset,
-    pending,
-    error,
-  } = useAuth();
+  const isFocused = useIsFocused();
+  const AuthColors = useAuthColors();
+  const styles = useMemo(() => createStyles(AuthColors), [AuthColors]);
+  const reducedMotion = useReducedMotion();
+  const { fontScale } = useWindowDimensions();
+  const { signIn, requestPasswordReset, verifyPasswordReset, completePasswordReset, pending } =
+    useAuth();
   const handleCreateAccount = onCreateAccount ?? (() => router.replace("/(auth)/sign-up"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,6 +69,13 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
   const [resetToken, setResetToken] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<string | null>(null);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const mounted = useRef(true);
+  const submittingRef = useRef(false);
+  const focusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const passwordInput = useRef<TextInputInstance>(null);
   const [resetMode, setResetMode] = useState(false);
   const [resetStep, setResetStep] = useState<"email" | "code" | "password" | "done">("email");
   const [resetPending, setResetPending] = useState(false);
@@ -32,6 +83,19 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
   const [resetError, setResetError] = useState<string | null>(null);
   const [resendDeadline, setResendDeadline] = useState<number | null>(null);
   const [resendSeconds, setResendSeconds] = useState(0);
+  const [lockoutDeadline, setLockoutDeadline] = useState<number | null>(null);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
+  const [lockoutKind, setLockoutKind] = useState<"rate" | "locked" | null>(null);
+  const loginPending = pending || submitting;
+  const loginDisabled = loginPending || lockoutKind !== null;
+  const lockoutMessage =
+    lockoutKind === null
+      ? null
+      : lockoutSeconds > 0
+        ? `${lockoutKind === "locked" ? "Account temporarily locked" : "Too many attempts"}. Try again in ${Math.floor(lockoutSeconds / 60)}:${String(lockoutSeconds % 60).padStart(2, "0")}.`
+        : lockoutKind === "locked"
+          ? "Account locked. Reset your password to regain access."
+          : "Too many attempts. Reset your password or try again later.";
 
   useEffect(() => {
     if (resendDeadline === null) return;
@@ -46,16 +110,108 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
     };
   }, [resendDeadline]);
 
+  useEffect(() => {
+    if (lockoutDeadline === null) return;
+    const update = () => {
+      const remaining = Math.max(0, Math.ceil((lockoutDeadline - Date.now()) / 1000));
+      setLockoutSeconds(remaining);
+      if (remaining === 0) {
+        setLockoutDeadline(null);
+        setLockoutKind(null);
+      }
+    };
+    update();
+    const timer = setInterval(update, 1000);
+    const foregroundListener = AppState.addEventListener("change", (state) => {
+      if (state === "active") update();
+    });
+    return () => {
+      clearInterval(timer);
+      foregroundListener.remove();
+    };
+  }, [lockoutDeadline]);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      clearTimeout(focusTimer.current);
+    };
+  }, []);
+
+  function clearLoginError() {
+    setFieldError(null);
+    setValidationError(null);
+    clearTimeout(focusTimer.current);
+    focusTimer.current = undefined;
+  }
+
+  function startPasswordReset() {
+    setResetMode(true);
+    setResetStep("email");
+    setResetCode("");
+    setResetToken(null);
+    setNewPassword("");
+    setResetError(null);
+    setResetMessage(null);
+    clearLoginError();
+  }
+
+  function showFieldError(message: string) {
+    setFieldError(message);
+    void errorHaptic();
+    clearTimeout(focusTimer.current);
+    focusTimer.current = setTimeout(() => {
+      focusTimer.current = undefined;
+      if (!mounted.current) return;
+      passwordInput.current?.focus();
+      if (Platform.OS !== "web") {
+        const handle = findNodeHandle(passwordInput.current);
+        if (typeof handle === "number") AccessibilityInfo.setAccessibilityFocus(handle);
+      }
+      if (Platform.OS === "ios") AccessibilityInfo.announceForAccessibility(message);
+    }, 100);
+  }
+
   async function submit() {
-    if (!email.trim() || !password) {
-      setValidationError("Enter your email address and password.");
+    if (submittingRef.current || pending || lockoutKind !== null) return;
+    if (!password) {
+      setValidationError(null);
+      showFieldError("Enter your password.");
       return;
     }
-    setValidationError(null);
+    if (!email.trim()) {
+      setValidationError("Enter your email address.");
+      return;
+    }
+    submittingRef.current = true;
+    setSubmitting(true);
+    clearLoginError();
     try {
-      await signIn(email, password);
-    } catch {
-      // The auth store exposes the server error without discarding entered fields.
+      await signIn(email.trim(), password);
+    } catch (cause) {
+      if (!mounted.current || isCancel(cause)) return;
+      if (cause instanceof ApiError && (cause.code === "ACCOUNT_LOCKED" || cause.status === 429)) {
+        setLockoutKind(cause.code === "ACCOUNT_LOCKED" ? "locked" : "rate");
+        const seconds = cause.retryAfterSec;
+        setLockoutSeconds(seconds ?? 0);
+        setLockoutDeadline(seconds === undefined ? null : Date.now() + seconds * 1000);
+      } else if (cause instanceof ApiError && cause.status === 401) {
+        setFailedAttempts((attempts) => attempts + 1);
+        setPassword("");
+        showFieldError(credentialMessage);
+      } else if (cause instanceof ApiError && (cause.status === 400 || cause.status === 422)) {
+        setValidationError("Check your email address and try again.");
+      } else {
+        setValidationError(
+          cause instanceof ApiError && cause.status >= 500
+            ? "Something went wrong on our end. Try again."
+            : "Can't connect. Check your connection and try again.",
+        );
+      }
+    } finally {
+      submittingRef.current = false;
+      if (mounted.current) setSubmitting(false);
     }
   }
   async function verifyResetCode(code: string) {
@@ -68,15 +224,17 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
     setResetError(null);
     try {
       const token = await verifyPasswordReset(email, code);
+      if (!mounted.current) return;
       setResetToken(token);
       setResetStep("password");
     } catch (cause) {
+      if (!mounted.current) return;
       setResetCode("");
       setResetError(
         cause instanceof Error ? cause.message : "This reset code is invalid or expired.",
       );
     } finally {
-      setResetPending(false);
+      if (mounted.current) setResetPending(false);
     }
   }
   async function resendResetCode() {
@@ -85,17 +243,20 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
     setResetError(null);
     try {
       const result = await requestPasswordReset(email);
+      if (!mounted.current) return;
       setResetMessage(result.message);
       setResendDeadline(Date.now() + result.resendAfterSeconds * 1000);
       setResetCode("");
     } catch (cause) {
+      if (!mounted.current) return;
       setResetError(cause instanceof Error ? cause.message : "Unable to resend the reset code.");
     } finally {
-      setResetPending(false);
+      if (mounted.current) setResetPending(false);
     }
   }
 
   async function submitPasswordReset() {
+    if (resetPending) return;
     if (!email.trim()) {
       setResetError("Enter your email address.");
       return;
@@ -106,15 +267,17 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
       setResetMessage(null);
       try {
         const result = await requestPasswordReset(email);
+        if (!mounted.current) return;
         setResetMessage(result.message);
         setResendDeadline(Date.now() + result.resendAfterSeconds * 1000);
         setResetStep("code");
       } catch (cause) {
+        if (!mounted.current) return;
         setResetError(
           cause instanceof Error ? cause.message : "Unable to request a password reset.",
         );
       } finally {
-        setResetPending(false);
+        if (mounted.current) setResetPending(false);
       }
       return;
     }
@@ -138,344 +301,489 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
     setResetPending(true);
     setResetError(null);
     try {
-      setResetMessage(await completePasswordReset(resetToken, newPassword));
+      const message = await completePasswordReset(resetToken, newPassword);
+      if (!mounted.current) return;
+      setResetMessage(message);
+      setLockoutKind(null);
+      setLockoutDeadline(null);
+      setLockoutSeconds(0);
+      setFailedAttempts(0);
+      setPassword("");
+      setNewPassword("");
       setResetToken(null);
       setResetCode("");
       setResetStep("done");
     } catch (cause) {
+      if (!mounted.current) return;
       setResetError(cause instanceof Error ? cause.message : "Unable to reset your password.");
     } finally {
-      setResetPending(false);
+      if (mounted.current) setResetPending(false);
     }
   }
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}
-      keyboardDismissMode="interactive"
-      keyboardShouldPersistTaps="handled"
-    >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Back"
-        onPress={() => router.replace("/(auth)")}
-        style={styles.back}
+    <KeyboardAvoidingView behavior="padding" style={[styles.screen]}>
+      <ScrollView
+        style={styles.screen}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
+        ]}
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.backLabel}>‹</Text>
-      </Pressable>
-
-      <Text accessibilityRole="header" style={styles.welcome}>
-        {!resetMode
-          ? "Hi, welcome back."
-          : resetStep === "email"
-            ? "Reset your password."
-            : resetStep === "code"
-              ? "Check your email."
-              : resetStep === "password"
-                ? "Choose a new password."
-                : "Password updated."}
-      </Text>
-
-      <View style={styles.credentials}>
-        {!resetMode || resetStep === "email" ? (
-          <AuthField
-            label="Email address"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="example@gmail.com"
-            keyboardType="email-address"
-            returnKeyType="next"
-            autoCapitalize="none"
-            autoCorrect={false}
-            textContentType="emailAddress"
-            autoComplete="email"
-            autoFocus={resetMode && resetStep === "email"}
-            editable={!pending && !resetPending}
-          />
-        ) : null}
-        {!resetMode ? (
-          <AuthField
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Your password"
-            secureTextEntry
-            textContentType="password"
-            autoComplete="current-password"
-            returnKeyType="done"
-            autoCorrect={false}
-            editable={!pending}
-            onSubmitEditing={() => {
-              void submit();
-            }}
-          />
-        ) : resetStep === "email" ? (
-          <Text style={styles.terms}>
-            Enter your account email. If it matches an account, we’ll send a 4-digit reset code.
-          </Text>
-        ) : resetStep === "code" ? (
-          <>
-            <Text style={styles.terms}>
-              We sent a 4-digit code to {email.replace(/^(.{1,2})[^@]*/, "$1•••")}. Codes expire
-              after 10 minutes.
-            </Text>
-            <View style={styles.otpField}>
-              <Text style={styles.otpLabel}>4-digit reset code</Text>
-              <View style={styles.otpCells} accessible={false} pointerEvents="none">
-                {[0, 1, 2, 3].map((index) => (
-                  <View
-                    key={index}
-                    style={[styles.otpCell, resetCode.length === index && styles.otpCellActive]}
-                  >
-                    <Text style={styles.otpDigit}>{resetCode[index] ?? ""}</Text>
-                  </View>
-                ))}
-              </View>
-              <TextInput
-                accessibilityLabel="4-digit reset code"
-                value={resetCode}
-                onChangeText={(value) => {
-                  const code = value.replace(/\D/g, "").slice(0, 4);
-                  setResetCode(code);
-                  if (code.length === 4) void verifyResetCode(code);
-                }}
-                keyboardType="number-pad"
-                inputMode="numeric"
-                maxLength={4}
-                autoComplete="one-time-code"
-                autoFocus
-                editable={!resetPending}
-                selectionColor="transparent"
-                style={styles.otpOverlay}
-              />
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Change email address"
-              onPress={() => {
-                setResetStep("email");
-                setResetToken(null);
-                setResetCode("");
-                setResetError(null);
-                setResendDeadline(null);
-                setResendSeconds(0);
-              }}
-            >
-              <Text style={styles.footerLink}>Change email address</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={
-                resendSeconds > 0
-                  ? `Resend reset code in ${resendSeconds} seconds`
-                  : "Resend reset code"
-              }
-              accessibilityState={{ disabled: resetPending || resendSeconds > 0 }}
-              disabled={resetPending || resendSeconds > 0}
-              onPress={() => {
-                void resendResetCode();
-              }}
-            >
-              <Text style={styles.footerLink}>
-                {resendSeconds > 0
-                  ? `Resend in ${String(Math.floor(resendSeconds / 60)).padStart(2, "0")}:${String(resendSeconds % 60).padStart(2, "0")}`
-                  : "Resend code"}
-              </Text>
-            </Pressable>
-          </>
-        ) : resetStep === "password" ? (
-          <>
-            <AuthField
-              label="New password"
-              value={newPassword}
-              onChangeText={setNewPassword}
-              secureTextEntry
-              autoComplete="new-password"
-              editable={!resetPending}
-            />
-            <Text accessibilityLiveRegion="polite" style={styles.passwordRequirement}>
-              {Array.from(newPassword).length >= 8
-                ? "✓ Requirement met: at least 8 characters."
-                : "• At least 8 characters."}
-            </Text>
-          </>
-        ) : (
-          <Text style={styles.terms}>{resetMessage}</Text>
-        )}
-      </View>
-
-      {!resetMode ? (
+        {isFocused ? <StatusBar style="auto" /> : null}
         <Pressable
           accessibilityRole="button"
-          disabled={pending}
-          onPress={() => {
-            setResetMode(true);
-            setResetStep("email");
-            setResetCode("");
-            setResetToken(null);
-            setNewPassword("");
-            setResetError(null);
-            setResetMessage(null);
-            setValidationError(null);
-          }}
+          accessibilityLabel="Back"
+          onPress={() => router.replace("/(auth)")}
+          style={styles.back}
         >
-          <Text style={styles.forgot}>Forgot password?</Text>
+          <Text style={styles.backLabel}>‹</Text>
         </Pressable>
-      ) : null}
 
-      {resetError || (!resetMode && (validationError || error)) ? (
-        <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>
-          {resetMode ? resetError : (validationError ?? error)}
+        <Text accessibilityRole="header" style={styles.welcome}>
+          {!resetMode
+            ? "Hi, welcome back."
+            : resetStep === "email"
+              ? "Reset your password."
+              : resetStep === "code"
+                ? "Check your email."
+                : resetStep === "password"
+                  ? "Choose a new password."
+                  : "Password updated."}
         </Text>
-      ) : null}
 
-      {resetMode && resetStep === "code" ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Continue to choose a new password"
-          accessibilityState={{ disabled: resetPending || resetCode.length !== 4 }}
-          disabled={resetPending || resetCode.length !== 4}
-          style={[styles.primaryButton, resetCode.length !== 4 && styles.disabled]}
-          onPress={() => {
-            void submitPasswordReset();
-          }}
-        >
-          <Text style={styles.primaryLabel}>Continue</Text>
-        </Pressable>
-      ) : resetStep !== "done" || !resetMode ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={
-            resetMode ? (resetStep === "email" ? "Send reset code" : "Reset password") : "Log in"
-          }
-          accessibilityState={{
-            disabled: resetMode ? resetPending : pending,
-          }}
-          disabled={resetMode ? resetPending : pending}
-          style={[styles.primaryButton, (resetMode ? resetPending : pending) && styles.disabled]}
-          onPress={() => {
-            void (resetMode ? submitPasswordReset() : submit());
-          }}
-        >
-          <Text style={styles.primaryLabel}>
-            {resetMode ? (resetStep === "email" ? "Send reset code" : "Reset password") : "Log in"}
-          </Text>
-        </Pressable>
-      ) : null}
-
-      <View style={styles.footer}>
-        <View style={styles.separator} />
-        {resetMode ? (
-          <View style={styles.footerRow}>
-            <Text style={styles.footerText}>Remembered your password?</Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Back to log in"
-              onPress={() => {
-                setResetMode(false);
-                setResetStep("email");
-                setResetCode("");
-                setResetToken(null);
-                setNewPassword("");
-                setResetMessage(null);
+        <View style={styles.credentials}>
+          {!resetMode || resetStep === "email" ? (
+            <AuthField
+              colors={AuthColors}
+              label="Email address"
+              value={email}
+              onChangeText={(value) => {
+                clearLoginError();
+                setEmail(value);
               }}
-              hitSlop={8}
+              placeholder="example@gmail.com"
+              keyboardType="email-address"
+              returnKeyType="next"
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="emailAddress"
+              autoComplete="email"
+              autoFocus={resetMode && resetStep === "email"}
+              editable={resetMode ? !resetPending : !loginDisabled}
+              submitBehavior="submit"
+              onSubmitEditing={() => passwordInput.current?.focus()}
+            />
+          ) : null}
+          {!resetMode ? (
+            <Animated.View
+              style={
+                !reducedMotion && fieldError === credentialMessage
+                  ? {
+                      animationName: shake,
+                      animationDuration: 100,
+                      animationIterationCount: 3,
+                    }
+                  : undefined
+              }
             >
-              <Text style={styles.footerLink}>Back to log in</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <View style={styles.footerRow}>
-            <Text style={styles.footerText}>Don't have an account?</Text>
+              <AuthField
+                colors={AuthColors}
+                label="Password"
+                value={password}
+                inputRef={passwordInput}
+                placeholder="Your password"
+                secureTextEntry
+                textContentType="password"
+                autoComplete="current-password"
+                returnKeyType="done"
+                autoCorrect={false}
+                autoCapitalize="none"
+                submitBehavior="submit"
+                error={fieldError !== null}
+                errorMessage="Re-enter your password."
+                aria-invalid={fieldError !== null}
+                aria-describedby={fieldError ? "login-password-error" : undefined}
+                editable={!loginDisabled}
+                onChangeText={(value) => {
+                  clearLoginError();
+                  setPassword(value);
+                }}
+                onSubmitEditing={() => {
+                  void submit();
+                }}
+              />
+              <View style={[styles.errorSpace, { minHeight: 32 * fontScale + 4 }]}>
+                {fieldError ? (
+                  <Animated.View
+                    entering={reducedMotion ? undefined : FadeIn.duration(150)}
+                    exiting={reducedMotion ? undefined : FadeOut.duration(100)}
+                    style={styles.errorRow}
+                  >
+                    <SymbolView
+                      name={{
+                        ios: "exclamationmark.triangle.fill",
+                        android: "warning",
+                        web: "warning",
+                      }}
+                      size={16}
+                      tintColor={AuthColors.error}
+                      accessible={false}
+                    />
+                    <Text
+                      nativeID="login-password-error"
+                      selectable
+                      accessibilityRole={Platform.OS === "web" ? "alert" : undefined}
+                      accessibilityLiveRegion={Platform.OS === "ios" ? "none" : "polite"}
+                      style={styles.credentialError}
+                    >
+                      {fieldError}
+                    </Text>
+                  </Animated.View>
+                ) : null}
+              </View>
+            </Animated.View>
+          ) : resetStep === "email" ? (
+            <Text style={styles.terms}>
+              Enter your account email. If it matches an account, we’ll send a 4-digit reset code.
+            </Text>
+          ) : resetStep === "code" ? (
+            <>
+              <Text style={styles.terms}>
+                We sent a 4-digit code to {email.replace(/^(.{1,2})[^@]*/, "$1•••")}. Codes expire
+                after 10 minutes.
+              </Text>
+              <View style={styles.otpField}>
+                <Text style={styles.otpLabel}>4-digit reset code</Text>
+                <View style={styles.otpCells} accessible={false} pointerEvents="none">
+                  {[0, 1, 2, 3].map((index) => (
+                    <View
+                      key={index}
+                      style={[styles.otpCell, resetCode.length === index && styles.otpCellActive]}
+                    >
+                      <Text style={styles.otpDigit}>{resetCode[index] ?? ""}</Text>
+                    </View>
+                  ))}
+                </View>
+                <TextInput
+                  accessibilityLabel="4-digit reset code"
+                  value={resetCode}
+                  onChangeText={(value) => {
+                    const code = value.replace(/\D/g, "").slice(0, 4);
+                    setResetCode(code);
+                    if (code.length === 4) void verifyResetCode(code);
+                  }}
+                  keyboardType="number-pad"
+                  inputMode="numeric"
+                  maxLength={4}
+                  autoComplete="one-time-code"
+                  autoFocus
+                  editable={!resetPending}
+                  selectionColor="transparent"
+                  style={styles.otpOverlay}
+                />
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Change email address"
+                onPress={() => {
+                  setResetStep("email");
+                  setResetToken(null);
+                  setResetCode("");
+                  setResetError(null);
+                  setResendDeadline(null);
+                  setResendSeconds(0);
+                }}
+              >
+                <Text style={styles.footerLink}>Change email address</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={
+                  resendSeconds > 0
+                    ? `Resend reset code in ${resendSeconds} seconds`
+                    : "Resend reset code"
+                }
+                accessibilityState={{ disabled: resetPending || resendSeconds > 0 }}
+                disabled={resetPending || resendSeconds > 0}
+                onPress={() => {
+                  void resendResetCode();
+                }}
+              >
+                <Text style={styles.footerLink}>
+                  {resendSeconds > 0
+                    ? `Resend in ${String(Math.floor(resendSeconds / 60)).padStart(2, "0")}:${String(resendSeconds % 60).padStart(2, "0")}`
+                    : "Resend code"}
+                </Text>
+              </Pressable>
+            </>
+          ) : resetStep === "password" ? (
+            <>
+              <AuthField
+                colors={AuthColors}
+                label="New password"
+                value={newPassword}
+                onChangeText={setNewPassword}
+                secureTextEntry
+                autoComplete="new-password"
+                editable={!resetPending}
+              />
+              <Text accessibilityLiveRegion="polite" style={styles.passwordRequirement}>
+                {Array.from(newPassword).length >= 8
+                  ? "✓ Requirement met: at least 8 characters."
+                  : "• At least 8 characters."}
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.terms}>{resetMessage}</Text>
+          )}
+        </View>
+
+        {!resetMode ? (
+          <Pressable
+            accessibilityRole="button"
+            disabled={loginPending}
+            onPress={startPasswordReset}
+          >
+            <Text style={styles.forgot}>Forgot password?</Text>
+          </Pressable>
+        ) : null}
+
+        {!resetMode && failedAttempts >= 3 && lockoutKind === null ? (
+          <View style={styles.resetHint}>
+            <Text style={styles.terms}>Having trouble? Reset your password.</Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Sign up"
-              disabled={pending}
-              onPress={pending ? undefined : handleCreateAccount}
-              hitSlop={8}
+              disabled={loginPending}
+              onPress={startPasswordReset}
+              style={styles.primaryButton}
             >
-              <Text style={styles.footerLink}>Sign up</Text>
+              <Text style={styles.primaryLabel}>Reset password</Text>
             </Pressable>
           </View>
-        )}
-      </View>
-    </ScrollView>
+        ) : null}
+        {resetMode ? (
+          resetError ? (
+            <Text accessibilityLiveRegion="polite" style={styles.error}>
+              {resetError}
+            </Text>
+          ) : null
+        ) : validationError || lockoutMessage ? (
+          <View style={styles.errorBanner}>
+            <Text selectable accessibilityLiveRegion="polite" style={styles.bannerText}>
+              {lockoutMessage ?? validationError}
+            </Text>
+            {lockoutMessage ? (
+              <>
+                <Text style={styles.bannerText}>
+                  Log in and credential editing are disabled. Password reset is still available.
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={startPasswordReset}
+                  style={styles.primaryButton}
+                >
+                  <Text style={styles.primaryLabel}>Reset password</Text>
+                </Pressable>
+              </>
+            ) : null}
+          </View>
+        ) : null}
+
+        {resetMode && resetStep === "code" ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Continue to choose a new password"
+            accessibilityState={{ disabled: resetPending || resetCode.length !== 4 }}
+            disabled={resetPending || resetCode.length !== 4}
+            style={[styles.primaryButton, resetCode.length !== 4 && styles.disabled]}
+            onPress={() => {
+              void submitPasswordReset();
+            }}
+          >
+            <Text style={styles.primaryLabel}>Continue</Text>
+          </Pressable>
+        ) : resetStep !== "done" || !resetMode ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              resetMode ? (resetStep === "email" ? "Send reset code" : "Reset password") : "Log in"
+            }
+            accessibilityState={{
+              disabled: resetMode ? resetPending : loginDisabled,
+              busy: resetMode ? resetPending : loginPending,
+            }}
+            accessibilityHint={!resetMode ? (lockoutMessage ?? undefined) : undefined}
+            disabled={resetMode ? resetPending : loginDisabled}
+            style={[
+              styles.primaryButton,
+              (resetMode ? resetPending : loginDisabled) && styles.disabled,
+            ]}
+            onPress={() => {
+              void (resetMode ? submitPasswordReset() : submit());
+            }}
+          >
+            <View style={styles.buttonContents}>
+              <View
+                style={styles.spinnerSlot}
+                accessible={false}
+                importantForAccessibility="no-hide-descendants"
+              >
+                {loginPending && !resetMode ? (
+                  reducedMotion ? (
+                    <SymbolView
+                      name={{
+                        ios: "hourglass",
+                        android: "hourglass_empty",
+                        web: "hourglass_empty",
+                      }}
+                      size={20}
+                      tintColor={AuthColors.onAccent}
+                    />
+                  ) : (
+                    <ActivityIndicator size={20} color={AuthColors.onAccent} />
+                  )
+                ) : null}
+              </View>
+              <Text style={styles.primaryLabel}>
+                {resetMode
+                  ? resetStep === "email"
+                    ? "Send reset code"
+                    : "Reset password"
+                  : "Log in"}
+              </Text>
+              <View style={styles.spinnerSlot} />
+            </View>
+          </Pressable>
+        ) : null}
+
+        <View style={styles.footer}>
+          <View style={styles.separator} />
+          {resetMode ? (
+            <View style={styles.footerRow}>
+              <Text style={styles.footerText}>Remembered your password?</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Back to log in"
+                onPress={() => {
+                  setResetMode(false);
+                  setResetStep("email");
+                  setResetCode("");
+                  setResetToken(null);
+                  setNewPassword("");
+                  setResetMessage(null);
+                }}
+                hitSlop={8}
+              >
+                <Text style={styles.footerLink}>Back to log in</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.footerRow}>
+              <Text style={styles.footerText}>Don't have an account?</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Sign up"
+                disabled={loginPending}
+                onPress={loginPending ? undefined : handleCreateAccount}
+                hitSlop={8}
+              >
+                <Text style={styles.footerLink}>Sign up</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
-  error: { color: AuthColors.text, fontSize: 13, lineHeight: 20 },
-  disabled: { opacity: 0.6 },
-  screen: { flex: 1, backgroundColor: AuthColors.background },
-  content: { paddingHorizontal: 24, gap: 22 },
-  back: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
-  backLabel: { fontSize: 30, lineHeight: 36, color: AuthColors.text },
-  welcome: {
-    marginTop: 70,
-    fontSize: 32,
-    lineHeight: 38,
-    fontWeight: "700",
-    color: AuthColors.text,
-  },
-  credentials: { gap: 24 },
-  forgot: { fontSize: 14, fontWeight: "600", color: AuthColors.accent, textAlign: "right" },
-  primaryButton: {
-    minHeight: 54,
-    padding: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: AuthColors.accent,
-    borderWidth: 1,
-    borderColor: AuthColors.accentBorder,
-    borderRadius: 12,
-  },
-  primaryLabel: { fontSize: 16, fontWeight: "600", color: AuthColors.onAccent },
-  otpField: { gap: 8 },
-  otpLabel: { fontSize: 12, fontWeight: "500", color: AuthColors.textMuted },
-  otpCells: { flexDirection: "row", justifyContent: "center", gap: 12 },
-  otpCell: {
-    width: 56,
-    height: 56,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: AuthColors.surface,
-    borderWidth: 1,
-    borderColor: AuthColors.border,
-    borderRadius: 12,
-  },
-  otpCellActive: { borderColor: AuthColors.accent },
-  otpDigit: {
-    fontSize: 24,
-    fontWeight: "600",
-    fontVariant: ["tabular-nums"],
-    color: AuthColors.text,
-  },
-  otpOverlay: {
-    position: "absolute",
-    top: 20,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1,
-    opacity: 0.02,
-    color: "transparent",
-    backgroundColor: "transparent",
-  },
-  passwordRequirement: { fontSize: 12, lineHeight: 18, color: AuthColors.textMuted },
-  terms: { fontSize: 13, lineHeight: 19, color: AuthColors.textMuted, textAlign: "center" },
-  footer: { alignItems: "center", gap: 15, paddingTop: 20 },
-  separator: { width: 48, height: 1, borderRadius: 100, backgroundColor: AuthColors.border },
-  footerRow: {
-    minHeight: 44,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  footerText: { fontSize: 14, color: AuthColors.textMuted },
-  footerLink: { fontSize: 14, fontWeight: "700", color: AuthColors.accent },
-});
+const createStyles = (AuthColors: AuthColorPalette) =>
+  StyleSheet.create({
+    errorSpace: { paddingTop: 4 },
+    resetHint: { gap: 8 },
+    errorRow: { flexDirection: "row", alignItems: "flex-start", gap: 4, paddingHorizontal: 16 },
+    credentialError: { color: AuthColors.error, fontSize: 12, lineHeight: 16, flex: 1 },
+    error: { color: AuthColors.error, fontSize: 13, lineHeight: 20 },
+    errorBanner: {
+      padding: 16,
+      gap: 8,
+      backgroundColor: AuthColors.errorContainer,
+      borderRadius: 12,
+    },
+    bannerText: { color: AuthColors.onErrorContainer, fontSize: 13, lineHeight: 20 },
+    spinnerSlot: { width: 20, height: 20 },
+    buttonContents: { flexDirection: "row", alignItems: "center", gap: 8 },
+    disabled: { opacity: 0.6 },
+    screen: { flex: 1, backgroundColor: AuthColors.background },
+    content: { paddingHorizontal: 24, gap: 22 },
+    back: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
+    backLabel: { fontSize: 30, lineHeight: 36, color: AuthColors.text },
+    welcome: {
+      marginTop: 70,
+      fontSize: 32,
+      lineHeight: 38,
+      fontWeight: "700",
+      color: AuthColors.text,
+    },
+    credentials: { gap: 24 },
+    forgot: { fontSize: 14, fontWeight: "600", color: AuthColors.accent, textAlign: "right" },
+    primaryButton: {
+      minHeight: 54,
+      padding: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: AuthColors.accent,
+      borderWidth: 1,
+      borderColor: AuthColors.accentBorder,
+      borderRadius: 12,
+    },
+    primaryLabel: { fontSize: 16, fontWeight: "600", color: AuthColors.onAccent },
+    otpField: { gap: 8 },
+    otpLabel: { fontSize: 12, fontWeight: "500", color: AuthColors.textMuted },
+    otpCells: { flexDirection: "row", justifyContent: "center", gap: 12 },
+    otpCell: {
+      width: 56,
+      height: 56,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: AuthColors.surface,
+      borderWidth: 1,
+      borderColor: AuthColors.border,
+      borderRadius: 12,
+    },
+    otpCellActive: { borderColor: AuthColors.accent },
+    otpDigit: {
+      fontSize: 24,
+      fontWeight: "600",
+      fontVariant: ["tabular-nums"],
+      color: AuthColors.text,
+    },
+    otpOverlay: {
+      position: "absolute",
+      top: 20,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 1,
+      opacity: 0.02,
+      color: "transparent",
+      backgroundColor: "transparent",
+    },
+    passwordRequirement: { fontSize: 12, lineHeight: 18, color: AuthColors.textMuted },
+    terms: { fontSize: 13, lineHeight: 19, color: AuthColors.textMuted, textAlign: "center" },
+    footer: { alignItems: "center", gap: 15, paddingTop: 20 },
+    separator: { width: 48, height: 1, borderRadius: 100, backgroundColor: AuthColors.border },
+    footerRow: {
+      minHeight: 44,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+    },
+    footerText: { fontSize: 14, color: AuthColors.textMuted },
+    footerLink: { fontSize: 14, fontWeight: "700", color: AuthColors.accent },
+  });
