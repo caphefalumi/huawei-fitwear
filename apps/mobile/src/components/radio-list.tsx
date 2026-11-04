@@ -1,7 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from "react-native";
 
-import { Pressable } from '@/components/pressable';
-import { Palette as C } from '@/constants/palette';
+import { Pressable } from "@/components/pressable";
+import { Palette as C } from "@/constants/palette";
 
 type RadioListProps<T extends string> = {
   options: readonly T[];
@@ -18,8 +18,12 @@ export function RadioList<T extends string>({ options, value, onChange }: RadioL
         return (
           <Pressable
             key={option}
+            accessibilityRole="radio"
+            accessibilityLabel={option}
+            accessibilityState={{ checked: active }}
             style={[styles.row, index < options.length - 1 && styles.rowDivider]}
-            onPress={() => onChange(option)}>
+            onPress={() => onChange(option)}
+          >
             <Text style={styles.label}>{option}</Text>
             <View style={[styles.radio, active && styles.radioActive]}>
               {active ? <View style={styles.dot} /> : null}
@@ -33,10 +37,11 @@ export function RadioList<T extends string>({ options, value, onChange }: RadioL
 
 const styles = StyleSheet.create({
   row: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    minHeight: 52,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
   },
   rowDivider: {
@@ -44,6 +49,7 @@ const styles = StyleSheet.create({
     borderBottomColor: C.border,
   },
   label: {
+    flexShrink: 1,
     fontSize: 15,
     color: C.text,
   },
@@ -53,8 +59,8 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     borderWidth: 2,
     borderColor: C.border,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   radioActive: {
     borderColor: C.accent,

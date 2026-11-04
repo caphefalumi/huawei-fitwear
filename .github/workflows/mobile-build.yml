@@ -1,0 +1,146 @@
+name: Mobile Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_android:
+        description: Build Android debug APK on Windows
+        required: false
+        type: boolean
+        default: false
+      build_ios:
+        description: Build iOS Simulator app on macOS
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Select build targets
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.targets.outputs.matrix }}
+    steps:
+      - name: Create platform matrix
+        id: targets
+        env:
+          BUILD_ANDROID: ${{ inputs.build_android }}
+          BUILD_IOS: ${{ inputs.build_ios }}
+        run: |
+          if [[ "$BUILD_ANDROID" != "true" && "$BUILD_IOS" != "true" ]]; then
+            echo '{"include":[]}' >> "$GITHUB_OUTPUT"
+            echo "Select Android, iOS, or both platforms."
+            exit 1
+          fi
+
+          targets=()
+          if [[ "$BUILD_ANDROID" == "true" ]]; then
+            targets+=('{"platform":"android","os":"windows-latest"}')
+          fi
+          if [[ "$BUILD_IOS" == "true" ]]; then
+            targets+=('{"platform":"ios","os":"macos-latest"}')
+          fi
+
+          matrix="$(printf '%s\n' "${targets[@]}" | jq -s -c '{include: .}')"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.platform }}
+    needs: validate
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.validate.outputs.matrix) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install workspace dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate native project
+        working-directory: apps/mobile
+        env:
+          CI: true
+          EXPO_NO_TELEMETRY: 1
+          EXPO_NONINTERACTIVE: 1
+        run: bunx expo prebuild --platform ${{ matrix.platform }} --no-install
+
+      - name: Setup Java
+        if: ${{ matrix.platform == 'android' }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Setup Android SDK
+        if: ${{ matrix.platform == 'android' }}
+        uses: android-actions/setup-android@v4
+
+      - name: Build Android debug APK
+        if: ${{ matrix.platform == 'android' }}
+        working-directory: apps/mobile/android
+        run: .\gradlew.bat --no-daemon assembleDebug
+
+      - name: Upload Android APK
+        if: ${{ matrix.platform == 'android' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: fitwear-android-debug-apk
+          path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Install CocoaPods dependencies
+        if: ${{ matrix.platform == 'ios' }}
+        working-directory: apps/mobile/ios
+        run: pod install
+
+      - name: Build iOS Simulator app
+        if: ${{ matrix.platform == 'ios' }}
+        working-directory: apps/mobile
+        run: >-
+          xcodebuild
+          -workspace ios/mobile.xcworkspace
+          -scheme mobile
+          -configuration Debug
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath build/ios
+          CODE_SIGNING_ALLOWED=NO
+          build
+
+      - name: Package iOS Simulator app
+        if: ${{ matrix.platform == 'ios' }}
+        working-directory: apps/mobile
+        run: >-
+          ditto -c -k --sequesterRsrc --keepParent
+          build/ios/Build/Products/Debug-iphonesimulator/mobile.app
+          build/ios/mobile-ios-simulator.zip
+
+      - name: Upload iOS Simulator app
+        if: ${{ matrix.platform == 'ios' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: fitwear-ios-simulator-app
+          path: apps/mobile/build/ios/mobile-ios-simulator.zip
+          if-no-files-found: error

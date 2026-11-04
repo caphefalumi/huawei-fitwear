@@ -1,10 +1,16 @@
-import { eq } from 'drizzle-orm';
-import { Elysia, status } from 'elysia';
-import { getDb, user as userTable, session as sessionTable } from '../../db';
-import { hashPassword, verifyPassword } from '../../lib/password';
-import { generateId, generateToken } from '../../lib/id';
+import { enqueueEmail } from "../email/queue";
+import { and, eq } from "drizzle-orm";
+import { Elysia, status } from "elysia";
+import { getDb, user as userTable, session as sessionTable } from "../../db";
+import {
+  hashPassword,
+  isPasswordWithinBcryptLimit,
+  needsPasswordRehash,
+  verifyPassword,
+} from "../../lib/password";
+import { generateId, generateToken } from "../../lib/id";
 
-import type { SignUpBody, SignInBody, UpdateUserBody } from './model';
+import type { SignUpBody, SignInBody, UpdateUserBody } from "./index";
 
 export abstract class Auth {
   static async signUp(data: SignUpBody, d1?: D1Database) {
@@ -18,7 +24,13 @@ export abstract class Auth {
       .get();
 
     if (existing) {
-      throw status(400, { success: false, message: 'A user with this email address already exists' });
+      throw status(400, {
+        success: false,
+        message: "A user with this email address already exists",
+      });
+    }
+    if (!isPasswordWithinBcryptLimit(data.password)) {
+      throw status(422, { success: false, message: "Password must not exceed 72 UTF-8 bytes." });
     }
 
     const hashedPassword = await hashPassword(data.password);
@@ -39,8 +51,9 @@ export abstract class Auth {
       heightCm: data.heightCm ?? null,
       currentWeightKg: data.currentWeightKg ?? null,
       targetWeightKg: data.targetWeightKg ?? null,
-      activityLevel: data.activityLevel ?? 'moderately_active',
-      fitnessGoal: data.fitnessGoal ?? 'muscle_gain',
+      activityLevel: data.activityLevel ?? "moderately_active",
+      fitnessGoal: data.fitnessGoal ?? "muscle_gain",
+      weeklySessions: data.weeklySessions ?? 3,
       createdAt: now,
       updatedAt: now,
     };
@@ -59,6 +72,12 @@ export abstract class Auth {
       db.insert(sessionTable).values(newSession),
     ]);
 
+    try {
+      await enqueueEmail({ type: "welcome", to: newUser.email, name: newUser.name });
+    } catch {
+      console.error(JSON.stringify({ event: "welcome_email_enqueue_failed", userId }));
+    }
+
     const { password: _, ...safeUser } = newUser;
 
     return {
@@ -76,19 +95,23 @@ export abstract class Auth {
     const db = getDb(d1);
     const email = data.email.toLowerCase();
 
-    const foundUser = await db
-      .select()
-      .from(userTable)
-      .where(eq(userTable.email, email))
-      .get();
+    const foundUser = await db.select().from(userTable).where(eq(userTable.email, email)).get();
 
     if (!foundUser) {
-      throw status(401, { success: false, message: 'Invalid email or password' });
+      throw status(401, { success: false, message: "Email or password is incorrect." });
     }
 
     const isValid = await verifyPassword(data.password, foundUser.password);
     if (!isValid) {
-      throw status(401, { success: false, message: 'Invalid email or password' });
+      throw status(401, { success: false, message: "Email or password is incorrect." });
+    }
+    if (needsPasswordRehash(foundUser.password) && isPasswordWithinBcryptLimit(data.password)) {
+      const upgradedHash = await hashPassword(data.password);
+      await db
+        .update(userTable)
+        .set({ password: upgradedHash })
+        .where(and(eq(userTable.id, foundUser.id), eq(userTable.password, foundUser.password)))
+        .run();
     }
 
     const sessionId = generateId();
@@ -138,6 +161,7 @@ export abstract class Auth {
           targetWeightKg: userTable.targetWeightKg,
           activityLevel: userTable.activityLevel,
           fitnessGoal: userTable.fitnessGoal,
+          weeklySessions: userTable.weeklySessions,
           createdAt: userTable.createdAt,
           updatedAt: userTable.updatedAt,
         },
@@ -164,7 +188,13 @@ export abstract class Auth {
   static async signOut(token: string, d1?: D1Database) {
     const db = getDb(d1);
     await db.delete(sessionTable).where(eq(sessionTable.token, token)).run();
-    return { success: true, message: 'Signed out successfully' };
+    return { success: true, message: "Signed out successfully" };
+  }
+  static async deleteAccount(userId: string, d1?: D1Database) {
+    const db = getDb(d1);
+    await db.delete(sessionTable).where(eq(sessionTable.userId, userId)).run();
+    await db.delete(userTable).where(eq(userTable.id, userId)).run();
+    return { success: true, message: "Account deleted successfully" };
   }
 
   static async updateUser(userId: string, data: UpdateUserBody, d1?: D1Database) {
@@ -193,6 +223,7 @@ export abstract class Auth {
         targetWeightKg: userTable.targetWeightKg,
         activityLevel: userTable.activityLevel,
         fitnessGoal: userTable.fitnessGoal,
+        weeklySessions: userTable.weeklySessions,
         createdAt: userTable.createdAt,
         updatedAt: userTable.updatedAt,
       })
@@ -201,45 +232,50 @@ export abstract class Auth {
       .get();
 
     if (!updatedUser) {
-      throw status(404, { success: false, message: 'User not found' });
+      throw status(404, { success: false, message: "User not found" });
     }
 
     return updatedUser;
   }
 }
 
-export const authGuard = new Elysia({ name: 'authGuard' })
-  .macro({
-    auth: (enabled: boolean) => {
-      if (!enabled) return {};
-      return {
-        detail: {
-          security: [{ bearerAuth: [] }],
-        },
-        async resolve({ request, cookie: { session_token }, status: setStatus }) {
-          let token: string | null = null;
-          const authHeader = request.headers.get('authorization');
-          if (authHeader && authHeader.startsWith('Bearer ')) {
-            token = authHeader.substring(7).trim();
-          } else if (session_token?.value) {
-            token = session_token.value as string;
-          }
+export const authGuard = new Elysia({ name: "authGuard" }).macro({
+  auth: (enabled: boolean) => {
+    if (!enabled) return {};
+    return {
+      detail: {
+        security: [{ bearerAuth: [] }],
+      },
+      async resolve({ request, cookie: { session_token }, status: setStatus }) {
+        let token: string | null = null;
+        const authHeader = request.headers.get("authorization");
+        if (authHeader && authHeader.startsWith("Bearer ")) {
+          token = authHeader.substring(7).trim();
+        } else if (session_token?.value) {
+          token = session_token.value as string;
+        }
 
-          if (!token) {
-            throw setStatus(401, { success: false, message: 'Unauthorized: missing authentication token' });
-          }
+        if (!token) {
+          throw setStatus(401, {
+            success: false,
+            message: "Unauthorized: missing authentication token",
+          });
+        }
 
-          const authData = await Auth.validateSession(token);
-          if (!authData) {
-            throw setStatus(401, { success: false, message: 'Unauthorized: invalid or expired session' });
-          }
+        const authData = await Auth.validateSession(token);
+        if (!authData) {
+          throw setStatus(401, {
+            success: false,
+            message: "Unauthorized: invalid or expired session",
+          });
+        }
 
-          return {
-            user: authData.user,
-            session: authData.session,
-            token,
-          };
-        },
-      };
-    },
-  });
+        return {
+          user: authData.user,
+          session: authData.session,
+          token,
+        };
+      },
+    };
+  },
+});

@@ -1,10 +1,10 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Pressable } from '@/components/pressable';
-import { Palette as C } from '@/constants/palette';
+import { Pressable } from "@/components/pressable";
+import { Palette as C } from "@/constants/palette";
 import {
   Box,
   Field,
@@ -16,17 +16,17 @@ import {
   SectionTitle,
   ValueInput,
   icons,
-} from './meals-ui';
-import { Image } from 'expo-image';
+} from "./meals-ui";
+import { Image } from "expo-image";
 import {
-  FOOD_DB,
+  useFoodSearch,
   estimatePortion,
   useMeals,
   type FoodEntry,
   type MealEstimate,
-} from './meals-store';
+} from "./meals-store";
 
-type NutrientKey = 'energy' | 'protein' | 'carbs' | 'fat';
+type NutrientKey = "energy" | "protein" | "carbs" | "fat";
 
 const toDraft = (estimate: MealEstimate) => ({
   energy: String(estimate.kcal),
@@ -38,21 +38,29 @@ const toDraft = (estimate: MealEstimate) => ({
 export function AddItemScreen() {
   const insets = useSafeAreaInsets();
   const { addItem } = useMeals();
-  const [query, setQuery] = useState('');
+  const { log: mealId } = useLocalSearchParams<{ log?: string }>();
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
+  const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<FoodEntry | null>(null);
-  const [amount, setAmount] = useState('180');
+  const [amount, setAmount] = useState("180");
   const [draft, setDraft] = useState<Record<NutrientKey, string>>({
-    energy: '',
-    protein: '',
-    carbs: '',
-    fat: '',
+    energy: "",
+    protein: "",
+    carbs: "",
+    fat: "",
   });
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState("");
 
-  const matches = query.trim()
-    ? FOOD_DB.filter((food) => food.name.toLowerCase().includes(query.trim().toLowerCase()))
-    : [];
-  const noMatch = query.trim().length > 0 && matches.length === 0;
+  const { matches, error: searchError, loading } = useFoodSearch(query);
+  const noMatch = query.trim().length > 0 && !loading && !searchError && matches.length === 0;
 
   function selectFood(food: FoodEntry) {
     const estimate = estimatePortion(food, Number(amount) || 100);
@@ -68,56 +76,104 @@ export function AddItemScreen() {
     setDraft(toDraft(estimatePortion(selected, grams)));
   }
 
-  function handleAdd() {
-    if (!selected) return;
-    const grams = Number(amount) || 0;
-    addItem({
-      id: `${selected.id}-${Date.now()}`,
-      name: selected.name,
-      detail: `${grams}${selected.unit} · cooked`,
-      kcal: Number(draft.energy) || 0,
-      macros: {
-        protein: Number(draft.protein) || 0,
-        carbs: Number(draft.carbs) || 0,
-        fat: Number(draft.fat) || 0,
-      },
-      glyph: selected.glyph,
-    });
-    router.back();
+  async function handleAdd() {
+    if (!selected || saving) return;
+    setError(null);
+    if (
+      !amount.trim() ||
+      Number(amount) <= 0 ||
+      Object.values(draft).some(
+        (value) => !value.trim() || !Number.isFinite(Number(value)) || Number(value) < 0,
+      )
+    ) {
+      setError("Enter a positive portion and all nutrition values (zero is allowed).");
+      return;
+    }
+    setSaving(true);
+    try {
+      await addItem(
+        {
+          id: `${selected.id}-${Date.now()}`,
+          name: selected.name,
+          detail: `${Number(amount)}${selected.unit}`,
+          kcal: Number(draft.energy),
+          macros: {
+            protein: Number(draft.protein),
+            carbs: Number(draft.carbs),
+            fat: Number(draft.fat),
+          },
+          glyph: selected.glyph,
+        },
+        mealId,
+      );
+      if (active.current) router.back();
+    } catch (cause) {
+      if (active.current) setError(cause instanceof Error ? cause.message : "Could not add item.");
+    } finally {
+      if (active.current) setSaving(false);
+    }
   }
 
   return (
     <ScrollView
       style={styles.screen}
+      keyboardShouldPersistTaps="handled"
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}>
-      <Header label="Lunch" onBack={() => router.back()} action="Cancel" onAction={() => router.back()} />
+      ]}
+    >
+      <Header
+        label="Lunch"
+        onBack={() => router.back()}
+        action="Cancel"
+        onAction={() => router.back()}
+      />
 
       <View style={styles.heading}>
-        <Text style={styles.title}>{noMatch ? 'Add Item' : 'Add Item · Database'}</Text>
+        <Text accessibilityRole="header" style={styles.title}>
+          {noMatch ? "Add Item" : "Add Item · Database"}
+        </Text>
         <Text style={styles.subtitle}>
           {noMatch
-            ? 'Search the food and drinks database.'
+            ? "Search the food and drinks database."
             : selected
-              ? 'Search the database, add a portion, and review the nutrition estimate before logging.'
-              : 'Search for a food, then add its portion.'}
+              ? "Search the database, add a portion, and review the nutrition estimate before logging."
+              : "Search for a food, then add its portion."}
         </Text>
       </View>
+      {error || searchError ? (
+        <Text accessibilityRole="alert" style={styles.footnote}>
+          {error ?? searchError}
+        </Text>
+      ) : null}
+      <SecondaryButton
+        label="Enter nutrition manually"
+        onPress={() =>
+          router.push({
+            pathname: "/review-item",
+            params: { name: query, ...(mealId ? { log: mealId } : {}) },
+          })
+        }
+      />
 
       {selected ? (
         <Field label="Search food">
           <Box>
             <Text style={styles.selectedName}>{selected.name}</Text>
-            <Image source={icons.check} style={styles.checkIcon} contentFit="contain" />
+            <Image
+              accessible={false}
+              source={icons.check}
+              style={styles.checkIcon}
+              contentFit="contain"
+            />
           </Box>
         </Field>
       ) : (
         <SearchInput
           value={query}
           onChangeText={setQuery}
-          onClear={() => setQuery('')}
+          onClear={() => setQuery("")}
           placeholder="Search food"
         />
       )}
@@ -130,13 +186,17 @@ export function AddItemScreen() {
             <View key={food.id} style={styles.resultCard}>
               <View style={styles.resultTop}>
                 <Text style={styles.resultName}>{food.name}</Text>
-                <Pressable onPress={() => selectFood(food)} hitSlop={8}>
+                <Pressable
+                  accessibilityLabel={`Select ${food.name}`}
+                  onPress={() => selectFood(food)}
+                  hitSlop={8}
+                >
                   <Text style={styles.resultSelect}>Select</Text>
                 </Pressable>
               </View>
               <Text style={styles.resultServing}>{food.serving}</Text>
               <Text style={styles.resultMacros}>
-                {food.per100.kcal} kcal · P {food.per100.protein}g · C {food.per100.carbs}g · F{' '}
+                {food.per100.kcal} kcal · P {food.per100.protein}g · C {food.per100.carbs}g · F{" "}
                 {food.per100.fat}g
               </Text>
             </View>
@@ -163,14 +223,22 @@ export function AddItemScreen() {
       {noMatch ? (
         <>
           <View style={[styles.hintCard, styles.noMatchCard]}>
-            <Image source={icons.searchLg} style={styles.noMatchIcon} contentFit="contain" />
+            <Image
+              accessible={false}
+              source={icons.searchLg}
+              style={styles.noMatchIcon}
+              contentFit="contain"
+            />
             <Text style={styles.noMatchTitle}>No database match</Text>
-            <Text style={styles.hintNote}>Try a different name, or get an estimate to review.</Text>
+            <Text style={styles.hintNote}>
+              Try a different name, or enter nutrition from the label.
+            </Text>
           </View>
 
           <Field label="Description · optional">
             <Box style={styles.descriptionBox}>
               <ValueInput
+                label="Description, optional"
                 value={description}
                 onChangeText={setDescription}
                 placeholder="250 ml oat milk latte, no added sugar"
@@ -180,20 +248,19 @@ export function AddItemScreen() {
           </Field>
 
           <Text style={styles.footnote}>
-            Search with AI sends the name and description to the cloud for an editable nutrition
-            estimate.
+            No automated text estimate is available. Manual entry uses only the values you enter.
           </Text>
 
           <PrimaryButton
-            label="Search with AI"
+            label="Enter manually"
             onPress={() =>
               router.push(
-                `/review-item?name=${encodeURIComponent(query.trim())}&description=${encodeURIComponent(description)}`,
+                `/review-item?name=${encodeURIComponent(query.trim())}&description=${encodeURIComponent(description)}${mealId ? `&log=${encodeURIComponent(mealId)}` : ""}`,
               )
             }
           />
-          <SecondaryButton label="Search again" onPress={() => setQuery('')} />
-          <Text style={styles.centerNote}>Review and correct the estimate before adding.</Text>
+          <SecondaryButton label="Search again" onPress={() => setQuery("")} />
+          <Text style={styles.centerNote}>Enter the label values for the full portion.</Text>
         </>
       ) : null}
 
@@ -201,7 +268,12 @@ export function AddItemScreen() {
         <>
           <Field label="Portion weight">
             <Box>
-              <ValueInput value={amount} onChangeText={handleAmount} unit={selected.unit} />
+              <ValueInput
+                label="Portion weight"
+                value={amount}
+                onChangeText={handleAmount}
+                unit={selected.unit}
+              />
             </Box>
           </Field>
 
@@ -210,21 +282,16 @@ export function AddItemScreen() {
           <NutrientGrid
             values={draft}
             onChange={(key, value) => setDraft((prev) => ({ ...prev, [key]: value }))}
-            units={{ energy: 'kcal', protein: 'g', carbs: 'g', fat: 'g' }}
+            units={{ energy: "kcal", protein: "g", carbs: "g", fat: "g" }}
           />
 
           <Text style={styles.footnote}>
-            Per 100 {selected.unit}: {selected.per100.kcal} kcal · {selected.per100.protein} g protein
-            · {selected.per100.carbs} g carbs · {selected.per100.fat} g fat. Edit values as needed.
+            Per 100 {selected.unit}: {selected.per100.kcal} kcal · {selected.per100.protein} g
+            protein · {selected.per100.carbs} g carbs · {selected.per100.fat} g fat. Edit values as
+            needed.
           </Text>
 
-          <PrimaryButton label="Add Item" onPress={handleAdd} />
-          <SecondaryButton
-            label="Search with AI"
-            onPress={() =>
-              router.push(`/review-item?name=${encodeURIComponent(selected.name)}`)
-            }
-          />
+          <PrimaryButton label="Add Item" disabled={saving} busy={saving} onPress={handleAdd} />
         </>
       ) : null}
     </ScrollView>
@@ -246,7 +313,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '400',
+    fontWeight: "400",
     color: C.text,
   },
   subtitle: {
@@ -272,19 +339,19 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   resultTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   resultName: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   resultSelect: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.accent,
   },
   resultServing: {
@@ -303,7 +370,7 @@ const styles = StyleSheet.create({
   },
   hintTitle: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   hintNote: {
@@ -315,7 +382,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface,
     borderWidth: 1,
     borderColor: C.border,
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 24,
   },
   noMatchIcon: {
@@ -325,11 +392,11 @@ const styles = StyleSheet.create({
   },
   noMatchTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   descriptionBox: {
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
     minHeight: 76,
   },
   footnote: {
@@ -340,6 +407,6 @@ const styles = StyleSheet.create({
   centerNote: {
     fontSize: 11,
     color: C.textMuted,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

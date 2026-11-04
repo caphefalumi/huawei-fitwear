@@ -1,0 +1,72 @@
+name: Backend CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  merge_group:
+    types:
+      - checks_requested
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Detect backend changes
+        id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            backend:
+              - 'apps/backend/**'
+              - 'package.json'
+              - 'bun.lock'
+              - '.github/workflows/backend-ci.yml'
+
+      - name: Setup Bun
+        if: steps.filter.outputs.backend == 'true' || github.event_name != 'pull_request'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun packages
+        if: steps.filter.outputs.backend == 'true' || github.event_name != 'pull_request'
+        uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install workspace dependencies
+        if: steps.filter.outputs.backend == 'true' || github.event_name != 'pull_request'
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck backend
+        if: steps.filter.outputs.backend == 'true' || github.event_name != 'pull_request'
+        run: bun run --cwd apps/backend typecheck
+
+      - name: Run backend unit and integration tests
+        if: steps.filter.outputs.backend == 'true' || github.event_name != 'pull_request'
+        run: bun run --cwd apps/backend test:all
+
+      - name: Skip notice
+        if: steps.filter.outputs.backend != 'true' && github.event_name == 'pull_request'
+        run: echo "No backend changes detected. Backend tests skipped."

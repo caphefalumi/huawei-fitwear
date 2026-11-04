@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "VoocHealth",
     "slug": "huawei-fitwear",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -27,6 +27,15 @@
     },
     "plugins": [
       "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to choose meal photos for nutrition analysis.",
+          "cameraPermission": "Allow $(PRODUCT_NAME) to photograph meals for nutrition analysis.",
+          "microphonePermission": false
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -40,19 +49,17 @@
         {
           "isBackgroundEnabled": true,
           "modes": ["central"],
-          "bluetoothAlwaysPermission": "Allow $(PRODUCT_NAME) to connect to your Huawei Watch over Bluetooth Low Energy."
+          "bluetoothAlwaysPermission": "Allow $(PRODUCT_NAME) to connect to your Huawei Watch."
         }
-      ]
+      ],
+      "./plugins/withAndroidCiFixes"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "7db03bfd-3c6f-4b96-ab9a-f99315236743"
-      }
+      "router": {}
     },
     "owner": "caphefalumis-organization"
   }

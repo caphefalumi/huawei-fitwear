@@ -1,4 +1,4 @@
-# Fitwear
+# VoocHealth
 
 Dual-device fitness ecosystem pairing a mobile client with a HarmonyOS smartwatch companion.
 
@@ -8,6 +8,9 @@ Dual-device fitness ecosystem pairing a mobile client with a HarmonyOS smartwatc
 
 - **`apps/mobile`**: React Native (Expo) application handling user UI, workout tracking, computation, and history.
 - **`apps/watch`**: ArkTS (HarmonyOS NEXT) wearable application handling real-time wrist sensor sampling (IMU) and low-latency interaction.
+- **`apps/backend`**: Elysia API on Cloudflare Workers, D1 persistence, private R2 meal photos and Workers AI image analysis. [Backend guide](docs/backend/README.md).
+
+Mobile defaults to the deployed API at https://fitwear-backend.dangduytoan13l.workers.dev. Override `EXPO_PUBLIC_API_URL` in `apps/mobile/.env.local` for local development; use a LAN-reachable address for physical phones.
 
 ---
 
@@ -39,11 +42,11 @@ huawei-fitwear/
 
 ## Prerequisites
 
-| Tool | Purpose | Requirement |
-| :--- | :--- | :--- |
-| **Bun** | Root package manager & scripts | v1.1+ |
-| **Node.js** | Mobile runtime environment | v18+ |
-| **Huawei DevEco Studio** | Watch IDE & SDK manager | 5.0+ (API 11+ / `6.1.1(24)`) |
+| Tool                     | Purpose                        | Requirement                  |
+| :----------------------- | :----------------------------- | :--------------------------- |
+| **Bun**                  | Root package manager & scripts | v1.1+                        |
+| **Node.js**              | Mobile runtime environment     | v18+                         |
+| **Huawei DevEco Studio** | Watch IDE & SDK manager        | 5.0+ (API 11+ / `6.1.1(24)`) |
 
 ---
 
@@ -97,6 +100,12 @@ cd apps/mobile
 
 # Run TypeScript checks
 bunx tsc --noEmit
+
+# Expo Jest regressions
+bun run test
+
+# Native Android Maestro flow (emulator, installed app, and local backend required)
+bun run test:e2e
 ```
 
 ---
@@ -118,15 +127,20 @@ For watch details, see [`apps/watch/README.md`](apps/watch/README.md).
 
 Available from the root directory:
 
-| Command | Action |
-| :--- | :--- |
-| `bun start` | Starts the Expo dev server for `apps/mobile` |
-| `bun android` | Launches the mobile app on an Android device/emulator |
-| `bun ios` | Launches the mobile app on an iOS simulator |
-| `bun run build:ios` | Compiles and runs the native iOS build locally |
-| `bun run build:android` | Compiles and runs the native Android build locally |
-| `bun web` | Launches the mobile web app in your browser |
-| `bun lint` | Runs mobile code linter |
+| Command                     | Action                                                   |
+| :-------------------------- | :------------------------------------------------------- |
+| `bun start`                 | Starts the Expo dev server for `apps/mobile`             |
+| `bun android`               | Launches the mobile app on an Android device/emulator    |
+| `bun ios`                   | Launches the mobile app on an iOS simulator              |
+| `bun run build:ios`         | Compiles and runs the native iOS build locally           |
+| `bun run build:android`     | Compiles and runs the native Android build locally       |
+| `bun web`                   | Launches the mobile web app in your browser              |
+| `bun lint`                  | Runs mobile code linter                                  |
+| `bun run test`              | Runs backend unit/integration and mobile Expo Jest tests |
+| `bun run test:e2e`          | Runs the single native Maestro mobile flow               |
+| `bun run backend:typecheck` | Checks backend types against generated Worker bindings   |
+| `bun run mobile:typecheck`  | Checks mobile application and test types                 |
+| `bun run backend:deploy`    | Deploys the backend Worker                               |
 
 ---
 

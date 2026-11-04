@@ -1,67 +1,153 @@
-import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useMutation } from "@tanstack/react-query";
+import { Image } from "expo-image";
+import { router } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Pressable } from '@/components/pressable';
-import { Sheet } from '@/components/sheet';
-import { Palette as C } from '@/constants/palette';
-import { Header, icons } from './meals-ui';
-import { useMeals } from './meals-store';
+import { pickImage } from "@/features/camera/image-picker";
+
+import { Pressable } from "@/components/pressable";
+import { Sheet } from "@/components/sheet";
+import { Palette as C } from "@/constants/palette";
+import { Header, icons, PrimaryButton, SecondaryButton } from "./meals-ui";
+import { useMeals, type ApiMealItem } from "./meals-store";
+import { apiRequest } from "@/lib/api";
 
 const TUTORIAL_STEPS = [
-  { title: 'Add a ruler', detail: 'Place a 15 cm ruler beside the plate or cup.' },
-  { title: 'Shoot from above', detail: 'Keep the whole meal in frame and hold steady.' },
-  {
-    title: 'Review & edit',
-    detail: 'Swipe left to edit, swipe right to delete, tap an item to change it.',
-  },
+  { title: "Add a ruler", detail: "Place a 15 cm ruler beside the plate or cup." },
+  { title: "Shoot from above", detail: "Keep the whole meal in frame and hold steady." },
 ];
 
 export function MealCaptureScreen() {
   const insets = useSafeAreaInsets();
-  const { tutorialSeen, dismissTutorial } = useMeals();
-  const [description, setDescription] = useState('');
+  const { tutorialSeen, dismissTutorial, setAnalysis, setDraftPhoto, items } = useMeals();
+  const [description, setDescription] = useState("");
+  const [image, setImage] = useState<{
+    uri: string;
+    base64: string;
+    mimeType: "image/jpeg" | "image/png";
+  } | null>(null);
+  const analyzeMutation = useMutation({
+    mutationFn: (body: { image: string; mimeType: string; description?: string }) =>
+      apiRequest<{ items: ApiMealItem[] }>("/meals/analyze", { method: "POST", body }),
+  });
+  const [error, setError] = useState<string | null>(null);
+  const active = useRef(true);
+  const request = useRef(0);
+  const busy = analyzeMutation.isPending;
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+      request.current++;
+    };
+  }, []);
+
+  async function selectImage(camera: boolean) {
+    if (busy) return;
+    setError(null);
+    try {
+      const image = await pickImage(camera);
+      if (image && active.current) setImage(image);
+    } catch (cause) {
+      if (active.current)
+        setError(cause instanceof Error ? cause.message : "Could not open image picker.");
+    }
+  }
+  async function analyze() {
+    if (!image || busy) return;
+    if (items.length) {
+      setError(
+        "Your current meal draft has items. Review or clear that draft before analyzing another meal.",
+      );
+      return;
+    }
+    const current = ++request.current;
+    setError(null);
+    analyzeMutation.reset();
+    try {
+      const result = await analyzeMutation.mutateAsync({
+        image: image.base64,
+        mimeType: image.mimeType,
+        ...(description.trim() ? { description: description.trim() } : {}),
+      });
+      if (!active.current || current !== request.current) return;
+      if (!result.items.length)
+        throw new Error("No food was identified. Try another photo or enter items manually.");
+      setAnalysis(result.items, image.uri, { data: image.base64, mimeType: image.mimeType });
+      router.push("/meal");
+    } catch (cause) {
+      if (active.current && current === request.current)
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "Photo analysis is unavailable. You can enter nutrition manually.",
+        );
+    }
+  }
 
   return (
     <>
       <ScrollView
         style={styles.screen}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.content,
           { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-        ]}>
+        ]}
+      >
         <Header label="Meals" onBack={() => router.back()} />
 
         <View style={styles.heading}>
-          <Text style={styles.title}>Capture Meal</Text>
+          <Text accessibilityRole="header" style={styles.title}>
+            Capture Meal
+          </Text>
           <Text style={styles.subtitle}>Capture food or drinks.</Text>
         </View>
 
-        <View style={styles.preview}>
-          <Text style={styles.previewLabel}>• GUIDELINES · NO IMAGE</Text>
+        {image ? (
+          <Image
+            accessible
+            accessibilityLabel="Selected meal photo"
+            source={{ uri: image.uri }}
+            style={styles.preview}
+            contentFit="contain"
+          />
+        ) : (
+          <View style={styles.preview}>
+            <View style={[styles.corner, styles.cornerTopLeft]} />
+            <View style={[styles.corner, styles.cornerTopRight]} />
+            <View style={[styles.corner, styles.cornerBottomLeft]} />
+            <View style={[styles.corner, styles.cornerBottomRight]} />
 
-          <View style={[styles.corner, styles.cornerTopLeft]} />
-          <View style={[styles.corner, styles.cornerTopRight]} />
-          <View style={[styles.corner, styles.cornerBottomLeft]} />
-          <View style={[styles.corner, styles.cornerBottomRight]} />
+            <View style={styles.circle}>
+              <Image
+                accessible={false}
+                source={icons.utensils}
+                style={styles.circleIcon}
+                contentFit="contain"
+              />
+              <Text style={styles.circleTitle}>Place food or drink here</Text>
+              <Text style={styles.circleNote}>Top-down shot · keep steady</Text>
+            </View>
 
-          <View style={styles.circle}>
-            <Image source={icons.utensils} style={styles.circleIcon} contentFit="contain" />
-            <Text style={styles.circleTitle}>Place food or drink here</Text>
-            <Text style={styles.circleNote}>Top-down shot · keep steady</Text>
+            <View style={styles.rulerChip}>
+              <Image
+                accessible={false}
+                source={icons.ruler}
+                style={styles.rulerIcon}
+                contentFit="contain"
+              />
+              <Text style={styles.rulerText}>Place 15 cm ruler beside plate or cup</Text>
+            </View>
           </View>
-
-          <View style={styles.rulerChip}>
-            <Image source={icons.ruler} style={styles.rulerIcon} contentFit="contain" />
-            <Text style={styles.rulerText}>Place 15 cm ruler beside plate or cup</Text>
-          </View>
-        </View>
+        )}
 
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Optional description</Text>
           <TextInput
+            accessibilityLabel="Optional meal description"
             value={description}
             onChangeText={setDescription}
             placeholder="Add ingredients, preparation, or drink details (e.g. sugar, milk, size)."
@@ -72,25 +158,47 @@ export function MealCaptureScreen() {
         </View>
 
         <Text style={styles.footnote}>
-          Photo and description are sent to cloud analysis for ingredient detection.
+          Only when you tap Analyze, your selected photo and description are sent to the configured
+          cloud model. Estimates must be reviewed; no wearable or medical measurements are inferred.
         </Text>
+        {error ? (
+          <Text accessibilityRole="alert" style={styles.footnote}>
+            {error} Manual entry remains available.
+          </Text>
+        ) : null}
+        <PrimaryButton label="Analyze photo" disabled={!image || busy} onPress={analyze} />
+        <SecondaryButton
+          label="Enter meal manually"
+          onPress={() => {
+            if (image) setDraftPhoto(image.uri, { data: image.base64, mimeType: image.mimeType });
+            router.push("/meal");
+          }}
+        />
 
         <View style={styles.controls}>
-          <Image source={icons.zapOff} style={styles.controlIcon} contentFit="contain" />
-          <Pressable style={styles.shutterRing} onPress={() => router.push('/meal')}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Take meal photo"
+            disabled={busy}
+            style={styles.shutterRing}
+            onPress={() => selectImage(true)}
+          >
             <View style={styles.shutter} />
           </Pressable>
-          <Image source={icons.switchCamera} style={styles.controlIcon} contentFit="contain" />
         </View>
 
-        <Pressable style={styles.libraryButton} onPress={() => router.push('/meal')}>
-          <Image source={icons.images} style={styles.libraryIcon} contentFit="contain" />
+        <Pressable disabled={busy} style={styles.libraryButton} onPress={() => selectImage(false)}>
+          <Image
+            accessible={false}
+            source={icons.images}
+            style={styles.libraryIcon}
+            contentFit="contain"
+          />
           <Text style={styles.libraryLabel}>Upload from library</Text>
         </Pressable>
       </ScrollView>
 
       <Sheet visible={!tutorialSeen} title="Capture your meal" onClose={dismissTutorial}>
-        <Text style={styles.tutorialBody}>Three quick tips for an accurate result.</Text>
         <View style={styles.tutorialSteps}>
           {TUTORIAL_STEPS.map((step, index) => (
             <View key={step.title} style={styles.tutorialStep}>
@@ -127,7 +235,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '400',
+    fontWeight: "400",
     color: C.text,
   },
   subtitle: {
@@ -135,28 +243,20 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   preview: {
-    height: 370,
+    minHeight: 370,
     borderRadius: 18,
-    backgroundColor: '#2B2724',
+    backgroundColor: "#2B2724",
     paddingVertical: 44,
     paddingHorizontal: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: 16,
   },
-  previewLabel: {
-    position: 'absolute',
-    top: 14,
-    left: 18,
-    fontSize: 10,
-    letterSpacing: 0.4,
-    color: 'rgba(255,255,255,0.55)',
-  },
   corner: {
-    position: 'absolute',
+    position: "absolute",
     width: 26,
     height: 26,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderColor: "rgba(255,255,255,0.35)",
   },
   cornerTopLeft: {
     top: 44,
@@ -183,14 +283,15 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
   },
   circle: {
-    width: 192,
-    height: 192,
+    minWidth: 192,
+    minHeight: 192,
+    padding: 16,
     borderRadius: 96,
     borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(255,255,255,0.28)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderStyle: "dashed",
+    borderColor: "rgba(255,255,255,0.28)",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   circleIcon: {
@@ -199,38 +300,41 @@ const styles = StyleSheet.create({
   },
   circleTitle: {
     fontSize: 12,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.92)',
+    textAlign: "center",
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.92)",
   },
   circleNote: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.45)',
+    textAlign: "center",
+    color: "rgba(255,255,255,0.45)",
   },
   rulerChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(255,255,255,0.28)',
+    borderStyle: "dashed",
+    borderColor: "rgba(255,255,255,0.28)",
   },
   rulerIcon: {
     width: 20,
     height: 20,
   },
   rulerText: {
+    flex: 1,
     fontSize: 11,
-    color: 'rgba(255,255,255,0.8)',
+    color: "rgba(255,255,255,0.8)",
   },
   field: {
     gap: 8,
   },
   fieldLabel: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
     color: C.textMuted,
   },
   description: {
@@ -243,7 +347,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 12,
     color: C.text,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   footnote: {
     fontSize: 11,
@@ -251,9 +355,9 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   controls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 24,
     marginTop: -2,
   },
@@ -267,9 +371,9 @@ const styles = StyleSheet.create({
     height: 76,
     borderRadius: 38,
     borderWidth: 1,
-    borderColor: 'rgba(157,35,50,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: "rgba(157,35,50,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   shutter: {
     width: 58,
@@ -278,11 +382,13 @@ const styles = StyleSheet.create({
     backgroundColor: C.accent,
   },
   libraryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
-    height: 52,
+    minHeight: 52,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: C.border,
@@ -294,31 +400,29 @@ const styles = StyleSheet.create({
   },
   libraryLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    flexShrink: 1,
+    fontWeight: "600",
     color: C.text,
-  },
-  tutorialBody: {
-    fontSize: 13,
-    color: C.textMuted,
   },
   tutorialSteps: {
     gap: 14,
   },
   tutorialStep: {
-    flexDirection: 'row',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   tutorialMarker: {
-    width: 24,
-    height: 24,
-    borderRadius: 100,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: C.accentTint,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   tutorialMarkerLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: "600",
     color: C.accent,
   },
   tutorialCopy: {
@@ -327,7 +431,7 @@ const styles = StyleSheet.create({
   },
   tutorialTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   tutorialDetail: {
@@ -336,15 +440,17 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   primary: {
-    height: 52,
+    minHeight: 52,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderRadius: 14,
     backgroundColor: C.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   primaryLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.onAccent,
   },
 });

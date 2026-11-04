@@ -1,6 +1,6 @@
-# Fitwear Monorepo Agent Guide
+# VoocHealth Monorepo Agent Guide
 
-This repository contains two independent sibling applications for a dual-device fitness ecosystem. They do not share JS dependencies, node_modules, or build pipelines.
+This repository contains two Bun workspaces for a dual-device fitness ecosystem plus an independent HarmonyOS watch app. Mobile and backend share the root dependency installation and lint/format tooling; each keeps its own application dependencies, tests, and build pipeline. The watch app remains independent.
 
 ---
 
@@ -19,9 +19,9 @@ This repository contains two independent sibling applications for a dual-device 
    - Never run `bun`, `npm`, or node tools inside `apps/watch`.
    - Code location: `apps/watch/entry/src/main/ets/` (feature-based: `ets/features/<feature>/`, hub in `ets/pages/`).
 
-3. **`apps/backend`**: ElysiaJS on Cloudflare Workers (Bun runtime, Drizzle ORM, Better Auth, D1 SQLite).
+3. **`apps/backend`**: ElysiaJS on Cloudflare Workers (Bun runtime, custom auth, Drizzle ORM, D1 SQLite).
    - Package manager: **Bun**.
-   - Role: Edge API gateway, Better Auth (Email & Password), Cloudflare D1 data layer via Drizzle ORM.
+   - Role: Edge API gateway with application-managed email/password authentication and Cloudflare D1 data layer via Drizzle ORM.
    - Code location: `apps/backend/src/` (Drizzle schema in `apps/backend/src/db/schema.ts`).
 
 ---
@@ -38,13 +38,24 @@ bun start                    # Start Expo dev server (apps/mobile)
 bun android                  # Run mobile on Android emulator/device
 bun ios                      # Run mobile on iOS simulator (macOS)
 bun web                      # Run mobile in browser
-bun lint                     # Lint mobile workspace
+bun lint                     # Lint mobile and backend workspaces
 ```
+
+### Git Workflow (Required)
+
+- **Branch automatically**: Before implementation, create a descriptive task branch such as `fix/profile-keyboard-motion`, `feat/<feature>`, or `chore/<task>`. Reuse an existing branch only when it belongs to the same task. Never implement directly on `main` or `master`.
+- **Commit and push frequently**: At each small, coherent milestone, run the relevant checks, commit the verified changes, and push immediately. Do not wait until the entire task is finished or batch all work into one final commit/push.
+- **No routine confirmation**: Creating task branches, making task-scoped commits, and pushing them are authorized by default. Use `git push -u origin HEAD` for the first push and `git push` afterward.
+- **Open a pull request automatically**: After pushing a task branch, check for an existing PR for that branch; otherwise, read the repository PR template, fill every section with accurate change and verification details, and create a PR targeting `main` with `gh pr create`. Do not leave template placeholders or unchecked items unexplained. If GitHub CLI or authentication fails, report the blocker and provide the pushed branch URL. Never merge unless explicitly requested.
+- **Monitor merge conflicts**: After every push, check the task PR's mergeability against the latest `origin/main`. If GitHub reports a conflict or the branch is behind `origin/main`, fetch the latest main and rebase the task branch, preserving both sides' intended changes. Verify the rebase, then push the updated branch. Never force-push without explicit user approval; if a rebase requires rewriting published history, ask before pushing.
+- **Preserve unrelated work**: Stage only changes belonging to the current task. Never discard or include unrelated user changes in a commit.
+- **Report blockers honestly**: If verification, authentication, or pushing fails, resolve what is actionable and report the remaining blocker; never claim a commit or push succeeded without confirmation.
+- **No destructive Git operations**: Do not force-push or merge into the default branch unless explicitly requested.
 
 ### Mobile Development Rules (`apps/mobile`)
 
 - **Installing packages**: ALWAYS use `npx expo install <package>` or `bunx expo install <package>` instead of direct package manager add. This resolves Expo SDK-compatible versions.
-- **Routing**: Use **Expo Router**. Route screens live in `apps/mobile/src/app/`. Keep feature logic in `src/features/<feature>/`, not in `src/app/`.
+- **Routing**: Use **Expo Router**. Route screens live in `apps/mobile/app/` as thin route files. Keep feature logic in `src/features/<feature>/`, not in route files.
 - **Navigation hooks**: Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
 - **Pre-commit verification**:
   ```bash

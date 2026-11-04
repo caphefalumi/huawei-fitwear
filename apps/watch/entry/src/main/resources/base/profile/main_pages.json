@@ -2,6 +2,7 @@
   "src": [
     "pages/Index",
     "features/ble/BlePage",
-    "features/imu/ImuPage"
+    "features/imu/ImuPage",
+    "features/sync/BleSyncDemoPage"
   ]
 }

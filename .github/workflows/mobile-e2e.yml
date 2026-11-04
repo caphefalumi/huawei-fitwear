@@ -1,0 +1,176 @@
+name: Mobile E2E
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Android release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 26
+
+      - name: Install workspace dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Setup Java for Android build
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Generate Android project
+        working-directory: apps/mobile
+        env:
+          EXPO_PUBLIC_API_URL: https://fitwear.tm-project.id.vn/
+        run: bunx expo prebuild --platform android --no-install
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          add-job-summary: "never"
+
+      - name: Build Android release APK
+        working-directory: apps/mobile/android
+        env:
+          EXPO_PUBLIC_API_URL: https://fitwear.tm-project.id.vn/
+        run: ./gradlew assembleRelease --no-daemon -Pandroid.enableMinifyInReleaseBuilds=false -PreactNativeArchitectures=x86_64
+
+      - name: Upload Android release APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: fitwear-release-apk
+          path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+
+  e2e:
+    name: Android Maestro E2E
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download Android release APK
+        uses: actions/download-artifact@v8
+        with:
+          name: fitwear-release-apk
+          path: apps/mobile/android/app/build/outputs/apk/release
+
+      - name: Enable KVM acceleration for Android E2E
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules || true
+          sudo udevadm trigger --name-match=kvm || true
+          [ -e /dev/kvm ] && sudo chmod 666 /dev/kvm || true
+
+      - name: Setup Java for Maestro
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Node.js for reporting
+        uses: actions/setup-node@v5
+        with:
+          node-version: 26
+
+      - name: Install Maestro CLI
+        run: |
+          export MAESTRO_VERSION=2.12.0
+          curl -fsSL https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+          "$HOME/.maestro/bin/maestro" --version
+
+      - name: Run the single Maestro end-to-end flow
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          ram-size: 4096M
+          heap-size: 512M
+          disable-animations: true
+          disable-linux-hw-accel: false
+          emulator-options: -accel on -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: |
+            adb wait-for-device
+            adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            sleep 5
+            mkdir -p maestro-artifacts/recordings
+            set +e
+            maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts apps/mobile/tests/e2e/fitness.yaml
+            MAESTRO_EXIT=$?
+            echo "MAESTRO_EXIT_CODE=$MAESTRO_EXIT" >> "$GITHUB_ENV"
+            exit $MAESTRO_EXIT
+
+      - name: Collect Maestro test recordings and artifacts
+        if: always()
+        run: |
+          mkdir -p maestro-artifacts/recordings
+          find ~/.maestro/tests maestro-artifacts -type f -name "*.mp4" -exec cp -f {} maestro-artifacts/recordings/ \; 2>/dev/null || true
+          find ~/.maestro/tests -type f -name "*.png" -exec cp -f {} maestro-artifacts/ \; 2>/dev/null || true
+          ls -la maestro-artifacts/recordings/ || true
+
+      - name: Upload Maestro recording video
+        id: upload-recording
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: fitwear-e2e-recording
+          path: maestro-artifacts/recordings/*.mp4
+          if-no-files-found: ignore
+
+      - name: Upload Maestro test artifacts and recordings
+        id: upload-artifacts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: maestro-e2e-artifacts
+          path: maestro-artifacts/
+          if-no-files-found: ignore
+
+      - name: Generate Maestro E2E summary
+        if: always()
+        env:
+          RECORDING_URL: ${{ steps.upload-recording.outputs.artifact-url }}
+          ARTIFACTS_URL: ${{ steps.upload-artifacts.outputs.artifact-url }}
+          MAESTRO_EXIT_CODE: ${{ env.MAESTRO_EXIT_CODE }}
+        run: node .github/scripts/generate-maestro-summary.mjs
