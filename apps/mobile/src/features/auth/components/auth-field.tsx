@@ -15,9 +15,17 @@ import Svg, { Circle, Path } from "react-native-svg"
 
 import { Pressable } from "@/components/pressable"
 import { Palette as AuthColors } from "@/constants/palette"
-import type { AuthColorPalette } from "./auth-colors"
 
 const defaultColors = { ...AuthColors, error: "#B3261D" }
+
+type AuthFieldColors = {
+  surface: string
+  text: string
+  textMuted: string
+  border: string
+  accent: string
+  error: string
+}
 
 type AuthFieldProps = {
   label: string
@@ -26,7 +34,7 @@ type AuthFieldProps = {
   error?: boolean
   inputRef?: React.Ref<TextInputInstance>
   errorMessage?: string
-  colors?: Pick<AuthColorPalette, "surface" | "text" | "textMuted" | "border" | "accent" | "error">
+  colors?: AuthFieldColors
   style?: TextInputProps["style"]
 } & Omit<TextInputProps, "style">
 

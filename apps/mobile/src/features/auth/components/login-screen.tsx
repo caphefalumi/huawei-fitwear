@@ -24,10 +24,23 @@ import Animated, { FadeIn, FadeOut, useReducedMotion } from "react-native-reanim
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
+import { Palette } from "@/constants/palette"
 import { ApiError } from "@/lib/api"
 import { useAuth } from "../store/auth.store"
-import { useAuthColors, type AuthColorPalette } from "./auth-colors"
 import { AuthField } from "./auth-field"
+
+const AuthColors = {
+  ...Palette,
+  background: "#FFFFFF",
+  surface: "#FFFFFF",
+  text: "#1C1B1F",
+  textMuted: "#49454F",
+  border: "#79747E",
+  error: "#B3261D",
+  errorContainer: "#F9DEDC",
+  onErrorContainer: "#410E0B",
+}
+type AuthColorPalette = typeof AuthColors
 
 const credentialMessage = "Incorrect email or password."
 const shake = {
@@ -56,8 +69,7 @@ async function errorHaptic() {
 export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void } = {}) {
   const insets = useSafeAreaInsets()
   const isFocused = useIsFocused()
-  const AuthColors = useAuthColors()
-  const styles = useMemo(() => createStyles(AuthColors), [AuthColors])
+  const styles = useMemo(() => createStyles(AuthColors), [])
   const reducedMotion = useReducedMotion()
   const { fontScale } = useWindowDimensions()
   const { signIn, requestPasswordReset, verifyPasswordReset, completePasswordReset, pending } =
