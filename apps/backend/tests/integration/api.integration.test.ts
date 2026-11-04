@@ -19,7 +19,7 @@ describe("Integration Test: Root & Swagger API", () => {
 
     const spec = await res.json();
     expect(spec.openapi.startsWith("3.")).toBeTrue();
-    expect(spec.info.title).toBe("Fitwear Edge API");
+    expect(spec.info.title).toBe("VoocHealth Edge API");
 
     const paths = Object.keys(spec.paths);
     expect(paths).toContain("/auth/sign-up");

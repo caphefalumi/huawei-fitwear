@@ -16,7 +16,7 @@ Complete local mirror of official Huawei Developer documentation for **Huawei Wa
 
 ---
 
-## Quick Links for Fitwear Architecture
+## Quick Links for VoocHealth Architecture
 
 ### Huawei Watch & Wear Engine (`docs/huawei-watch/`)
 - [About Wear Engine Service](huawei-watch/wear-engine-harmonyos/we-business-introduction.md)

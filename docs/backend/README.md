@@ -1,6 +1,6 @@
-# Fitwear Backend Architecture & Coding Practices Guide
+# VoocHealth Backend Architecture & Coding Practices Guide
 
-The Fitwear backend runs ElysiaJS on Cloudflare Workers, Drizzle on D1, private meal photos on R2, and meal-image inference on Workers AI. Bun is the local development/test runner, not the production runtime.
+The VoocHealth backend runs ElysiaJS on Cloudflare Workers, Drizzle on D1, private meal photos on R2, and meal-image inference on Workers AI. Bun is the local development/test runner, not the production runtime.
 
 ---
 

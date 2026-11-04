@@ -1,4 +1,4 @@
-# Fitwear Watch Application (`apps/watch`)
+# VoocHealth Watch Application (`apps/watch`)
 
 ArkTS (HarmonyOS NEXT) companion application running as the **Sensor Agent** on Huawei Wearable devices.
 

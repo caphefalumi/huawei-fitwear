@@ -1,6 +1,6 @@
 # ArkTS & HarmonyOS Documentation Reference
 
-Curated official reference documentation for building the Fitwear Wearable Sensor Agent.
+Curated official reference documentation for building the VoocHealth Wearable Sensor Agent.
 
 | Document | Description |
 | :--- | :--- |

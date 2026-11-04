@@ -1,4 +1,4 @@
-# Fitwear
+# VoocHealth
 
 Dual-device fitness ecosystem pairing a mobile client with a HarmonyOS smartwatch companion.
 

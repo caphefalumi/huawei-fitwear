@@ -1,6 +1,6 @@
-# Fitwear Mobile (`apps/mobile`)
+# VoocHealth Mobile (`apps/mobile`)
 
-React Native application built with **Expo** and **Expo Router**, serving as the Central Brain for the Fitwear ecosystem.
+React Native application built with **Expo** and **Expo Router**, serving as the Central Brain for the VoocHealth ecosystem.
 
 ## Cloudflare API integration
 
