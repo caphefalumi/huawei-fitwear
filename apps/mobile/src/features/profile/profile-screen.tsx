@@ -299,6 +299,15 @@ export function ProfileScreen() {
         <Pressable
           style={styles.row}
           accessibilityRole="button"
+          accessibilityLabel="Test BLE"
+          onPress={() => router.push("/ble-sync" as never)}
+        >
+          <Text style={styles.rowLabel}>Test BLE</Text>
+          <Image accessible={false} source={icons.chevronRight} style={styles.chevron} />
+        </Pressable>
+        <Pressable
+          style={styles.row}
+          accessibilityRole="button"
           accessibilityLabel="Sign out"
           onPress={() => void signOut()}
         >
