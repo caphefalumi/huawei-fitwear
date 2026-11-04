@@ -1,12 +1,9 @@
 name: Format
 
 on:
-  pull_request:
+  push:
     branches:
       - main
-  merge_group:
-    types:
-      - checks_requested
   workflow_dispatch:
 
 permissions:
@@ -24,7 +21,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.sha }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
