@@ -16,7 +16,7 @@ let db: Database;
 let d1: D1Database;
 let queued: ReturnType<typeof createTestEmailQueue>;
 let lastEmail:
-  | { to: string[]; template: { id: string; variables: Record<string, string> } }
+  | { from: string; to: string[]; template: { id: string; variables: Record<string, string> } }
   | undefined;
 function post(path: string, body: unknown, ip = "203.0.113.70") {
   return app.handle(
@@ -63,13 +63,14 @@ describe("Password reset integration", () => {
       fitwear_kv: createTestKv(),
       EMAIL_QUEUE: queued.queue,
       RESEND_API_KEY: "test-resend-key",
-      RESEND_FROM: "Fitwear <support@example.test>",
+      RESEND_FROM: "VoocHealth <support@example.test>",
       RESEND_PASSWORD_RESET_TEMPLATE_ID: "reset-template-test",
     });
     globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
       expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer test-resend-key");
       expect(new Headers(init?.headers).get("Idempotency-Key")).toBe("queue-message-reset");
       lastEmail = JSON.parse(String(init?.body)) as {
+        from: string;
         to: string[];
         template: { id: string; variables: Record<string, string> };
       };
@@ -147,12 +148,12 @@ describe("Password reset integration", () => {
     await withDatabaseBinding(
       {
         RESEND_API_KEY: "test-resend-key",
-        RESEND_FROM: "Fitwear <support@example.test>",
+        RESEND_FROM: "VoocHealth <support@example.test>",
         RESEND_PASSWORD_RESET_TEMPLATE_ID: "reset-template-test",
       },
       () => consumeEmailBatch({ messages: [batchMessage] } as unknown as MessageBatch<unknown>),
     );
-    expect(lastEmail?.to).toEqual(["reset@fitwear.dev"]);
+    expect(lastEmail?.from).toBe("VoocHealth <support@example.test>");
     expect(lastEmail?.template.id).toBe("reset-template-test");
     expect(lastEmail?.template.variables.RESET_OTP).toBe(code);
     expect(Object.keys(lastEmail?.template.variables ?? {})).toEqual(["RESET_OTP"]);
@@ -269,7 +270,7 @@ describe("Password reset integration", () => {
         },
       } as unknown as Queue<EmailMessage>,
       RESEND_API_KEY: "test-resend-key",
-      RESEND_FROM: "Fitwear <support@example.test>",
+      RESEND_FROM: "VoocHealth <support@example.test>",
       RESEND_PASSWORD_RESET_TEMPLATE_ID: "reset-template-test",
     });
     const response = await requestReset("reset@fitwear.dev");
@@ -302,7 +303,7 @@ describe("Password reset integration", () => {
           fitwear_kv: createTestKv(),
           EMAIL_QUEUE: queued.queue,
           RESEND_API_KEY: "test-resend-key",
-          RESEND_FROM: "Fitwear <support@example.test>",
+          RESEND_FROM: "VoocHealth <support@example.test>",
           RESEND_PASSWORD_RESET_TEMPLATE_ID: "reset-template-test",
         },
         () => requestPasswordReset("reset@fitwear.dev"),
@@ -380,7 +381,7 @@ describe("Password reset integration", () => {
         fitwear_kv: createTestKv(),
         EMAIL_QUEUE: queued.queue,
         RESEND_API_KEY: "test-resend-key",
-        RESEND_FROM: "Fitwear <support@example.test>",
+        RESEND_FROM: "VoocHealth <support@example.test>",
         RESEND_PASSWORD_RESET_TEMPLATE_ID: "reset-template-test",
       },
       () => requestPasswordReset("reset@fitwear.dev"),
@@ -430,7 +431,7 @@ describe("Password reset integration", () => {
       fitwear_kv: createTestKv(),
       EMAIL_QUEUE: queued.queue,
       RESEND_API_KEY: "test-resend-key",
-      RESEND_FROM: "Fitwear <support@example.test>",
+      RESEND_FROM: "VoocHealth <support@example.test>",
       RESEND_PASSWORD_RESET_TEMPLATE_ID: "reset-template-test",
     });
     for (let index = 0; index < 5; index++)

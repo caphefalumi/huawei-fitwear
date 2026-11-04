@@ -171,7 +171,7 @@ export function ProfileScreen() {
         </View>
         <View style={styles.user}>
           <Text numberOfLines={2} accessibilityRole="header" style={styles.userName}>
-            {user?.name?.trim() || "Fitwear member"}
+            {user?.name?.trim() || "VoocHealth member"}
           </Text>
           <Text numberOfLines={1} ellipsizeMode="middle" selectable style={styles.userHandle}>
             {user?.email ?? ""}
