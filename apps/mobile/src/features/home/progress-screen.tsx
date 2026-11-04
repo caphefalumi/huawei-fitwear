@@ -7,7 +7,7 @@ import { Pressable } from '@/components/pressable';
 import { Palette as C } from '@/constants/palette';
 import { useHealth } from '@/features/health/health-store';
 import { BackHeader, Card } from '@/features/home/ui';
-import { RANGE_DATA, RANGES, type Range } from '@/features/home/progress-data';
+import { progressData, RANGES, type Range } from '@/features/home/progress-data';
 import { WeightChart } from '@/features/home/weight-chart';
 
 /** Bar grows with a spring each time it appears. */
@@ -31,10 +31,11 @@ function ActivityBar({ height, index }: { height: number; index: number }) {
 
 export function ProgressScreen() {
   const insets = useSafeAreaInsets();
-  const { weightKg } = useHealth();
+  const { weightKg, weights } = useHealth();
   const [range, setRange] = useState<Range>('Month');
-  const data = RANGE_DATA[range];
-  const maxSessions = Math.max(...data.bars.map((bar) => bar.sessions));
+  const data = progressData(range, weights, null);
+  const latestWeight = weightKg ?? data.weights.at(-1) ?? 0;
+  const maxSessions = Math.max(1, ...data.bars.map((bar) => bar.sessions));
 
   return (
     <ScrollView
@@ -71,7 +72,7 @@ export function ProgressScreen() {
           </View>
         </View>
 
-        <Text style={styles.bigValue}>{weightKg.toFixed(1)} kg</Text>
+        <Text style={styles.bigValue}>{latestWeight.toFixed(1)} kg</Text>
 
         <WeightChart key={range} weights={data.weights} />
 

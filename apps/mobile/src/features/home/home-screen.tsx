@@ -59,8 +59,11 @@ export function HomeScreen() {
   const kcalLeft = targetKcal - consumedKcal;
   const kcalShown = useCountUp(kcalLeft);
   const today = routinesFor(recovery).today;
+  const latestWeightKg = weightKg ?? DEMO_WEIGHTS[DEMO_WEIGHTS.length - 1];
   const weights =
-    weightKg >= 70 && weightKg <= 74 ? [...DEMO_WEIGHTS.slice(0, -1), weightKg] : DEMO_WEIGHTS;
+    latestWeightKg >= 70 && latestWeightKg <= 74
+      ? [...DEMO_WEIGHTS.slice(0, -1), latestWeightKg]
+      : DEMO_WEIGHTS;
 
   return (
     <ScrollView
@@ -152,7 +155,7 @@ export function HomeScreen() {
               </Text>
               <View style={styles.weightValueRow}>
                 <Text style={styles.weightValue} numberOfLines={1}>
-                  {weightKg.toFixed(1)}
+                  {latestWeightKg.toFixed(1)}
                 </Text>
                 <Text style={styles.weightUnit}>kg</Text>
               </View>

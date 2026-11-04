@@ -47,6 +47,10 @@ export function ProfileScreen() {
   const { weightKg, heightCm, sex, plan, recovery, saveRecovery } = useHealth();
   const inPeriod = recovery?.area === PERIOD_AREA;
   const [openSheet, setOpenSheet] = useState<OpenSheet>(null);
+  const sexLabel = sex ?? 'Not set';
+  const weightLabel = weightKg === null ? 'Not set' : `${weightKg.toFixed(1)} kg`;
+  const targetWeightLabel =
+    plan.targetWeightKg === null ? 'Not set' : `${plan.targetWeightKg.toFixed(1)} kg`;
 
   const close = () => setOpenSheet(null);
 
@@ -75,7 +79,7 @@ export function ProfileScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Profile overview</Text>
         <ProfileRow label="Birthdate" value="14 Jun 1998" />
-        <ProfileRow label="Sex / gender" value={sex} onPress={() => setOpenSheet('sex')} />
+        <ProfileRow label="Sex / gender" value={sexLabel} onPress={() => setOpenSheet('sex')} />
         <ProfileRow
           label="Height"
           value={`${heightCm} cm`}
@@ -83,7 +87,7 @@ export function ProfileScreen() {
         />
         <ProfileRow
           label="Weight"
-          value={`${weightKg.toFixed(1)} kg`}
+          value={weightLabel}
           onPress={() => setOpenSheet('weight')}
         />
       </View>
@@ -105,7 +109,7 @@ export function ProfileScreen() {
         />
         <ProfileRow
           label="Target weight"
-          value={`${plan.targetWeightKg.toFixed(1)} kg`}
+          value={targetWeightLabel}
           onPress={() => setOpenSheet('target')}
         />
         <ProfileRow
