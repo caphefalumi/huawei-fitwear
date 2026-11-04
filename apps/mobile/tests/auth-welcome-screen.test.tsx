@@ -11,9 +11,9 @@ jest.mock("react-native-safe-area-context", () => ({
 test("routes welcome actions to login and signup", async () => {
   const screen = await render(<WelcomeScreen />);
 
-  fireEvent.press(screen.getByRole("button", { name: "Sign in" }));
+  await fireEvent.press(screen.getByRole("button", { name: "Sign in" }));
   expect(router.push).toHaveBeenCalledWith("/(auth)/login");
 
-  fireEvent.press(screen.getByRole("button", { name: "Create account" }));
+  await fireEvent.press(screen.getByRole("button", { name: "Create account" }));
   expect(router.push).toHaveBeenCalledWith("/(auth)/sign-up");
 });

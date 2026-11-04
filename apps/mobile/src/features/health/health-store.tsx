@@ -1,12 +1,5 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 
 import { useAuth } from "@/features/auth/auth-store";
 import { apiRequest } from "@/lib/api";
@@ -125,104 +118,98 @@ type HealthContextValue = {
   recovery: RecoveryPlan | null;
   saveRecovery: (next: RecoveryPlan | null) => Promise<void>;
   loading: boolean;
+  refreshing: boolean;
   error: string | null;
   refresh: () => Promise<void>;
 };
 const HealthContext = createContext<HealthContextValue | null>(null);
 
+export const healthQueryKeys = {
+  all: (userId: string) => ["health", userId] as const,
+  weights: (userId: string) => [...healthQueryKeys.all(userId), "weights"] as const,
+  recovery: (userId: string) => [...healthQueryKeys.all(userId), "recovery"] as const,
+};
+
 export function HealthProvider({ children }: { children: ReactNode }) {
   const { user, updateUser } = useAuth();
-  const [weights, setWeights] = useState<WeightLog[]>([]);
+  const queryClient = useQueryClient();
+  const userId = user?.id;
+  const weightsQuery = useQuery({
+    queryKey: userId ? healthQueryKeys.weights(userId) : ["health", "signed-out", "weights"],
+    queryFn: async ({ signal }) =>
+      (await apiRequest<{ weights: WeightLog[] }>("/health/weights", { signal })).weights,
+    enabled: Boolean(userId),
+  });
+  const recoveryQuery = useQuery({
+    queryKey: userId ? healthQueryKeys.recovery(userId) : ["health", "signed-out", "recovery"],
+    queryFn: async ({ signal }) =>
+      (await apiRequest<{ recovery: RecoveryRow | null }>("/health/recovery", { signal })).recovery,
+    enabled: Boolean(userId),
+  });
   const [weightUpdated, setWeightUpdated] = useState(false);
-  const [recovery, setRecovery] = useState<RecoveryPlan | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const alive = useRef(true);
-  const request = useRef(0);
-  const weightRevision = useRef(0);
-  const recoveryRevision = useRef(0);
-  useEffect(() => {
-    alive.current = true;
-    return () => {
-      alive.current = false;
-      request.current++;
-    };
-  }, []);
-
-  const refresh = useCallback(async () => {
-    const version = ++request.current;
-    const loadedWeightRevision = weightRevision.current;
-    const loadedRecoveryRevision = recoveryRevision.current;
-    setLoading(true);
-    setError(null);
-    try {
-      const [logs, active] = await Promise.all([
-        apiRequest<{ weights: WeightLog[] }>("/health/weights"),
-        apiRequest<{ recovery: RecoveryRow | null }>("/health/recovery"),
-      ]);
-      if (!alive.current || version !== request.current) return;
-      setWeights((previous) =>
-        loadedWeightRevision === weightRevision.current
-          ? logs.weights
-          : [
-              ...logs.weights.filter(
-                (row) => !previous.some((saved) => saved.loggedDate === row.loggedDate),
-              ),
-              ...previous,
-            ].sort((a, b) => a.loggedDate.localeCompare(b.loggedDate)),
+  const weights = weightsQuery.data ?? [];
+  const recovery = recoveryQuery.data ? recoveryFromRow(recoveryQuery.data) : null;
+  const loading = weightsQuery.isLoading || recoveryQuery.isLoading;
+  const refreshing = (weightsQuery.isFetching || recoveryQuery.isFetching) && !loading;
+  const error =
+    [weightsQuery.error, recoveryQuery.error].find((cause) => cause instanceof Error)?.message ??
+    null;
+  const saveWeightMutation = useMutation({
+    mutationKey: [...healthQueryKeys.all(userId ?? "signed-out"), "save-weight"],
+    mutationFn: async (weightKg: number) =>
+      (
+        await apiRequest<{ weight: WeightLog }>("/health/weight", {
+          method: "PUT",
+          body: { weightKg, date: dateKey() },
+        })
+      ).weight,
+    onSuccess: (weight) => {
+      if (!userId) return;
+      queryClient.setQueryData<WeightLog[]>(healthQueryKeys.weights(userId), (previous = []) =>
+        [...previous.filter((row) => row.loggedDate !== weight.loggedDate), weight].sort((a, b) =>
+          a.loggedDate.localeCompare(b.loggedDate),
+        ),
       );
-      if (loadedRecoveryRevision === recoveryRevision.current)
-        setRecovery(active.recovery ? recoveryFromRow(active.recovery) : null);
-    } catch (cause) {
-      if (alive.current && version === request.current)
-        setError(cause instanceof Error ? cause.message : "Could not load health data. Try again.");
-    } finally {
-      if (alive.current && version === request.current) setLoading(false);
-    }
-  }, []);
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
+      setWeightUpdated(true);
+    },
+  });
+  const saveRecoveryMutation = useMutation({
+    mutationKey: [...healthQueryKeys.all(userId ?? "signed-out"), "save-recovery"],
+    mutationFn: async (next: RecoveryPlan | null) => {
+      const result = await apiRequest<{ recovery?: RecoveryRow }>(
+        "/health/recovery",
+        next
+          ? {
+              method: "PUT",
+              body: {
+                area: next.area,
+                note: next.note,
+                restDays: next.restDays,
+                lightDays: next.lightDays,
+                startDate: next.startDate,
+              },
+            }
+          : { method: "DELETE" },
+      );
+      return result.recovery ?? null;
+    },
+    onSuccess: (next) => {
+      if (userId) queryClient.setQueryData(healthQueryKeys.recovery(userId), next);
+    },
+  });
+  const refresh = useCallback(async () => {
+    await Promise.all([weightsQuery.refetch(), recoveryQuery.refetch()]);
+  }, [weightsQuery.refetch, recoveryQuery.refetch]);
   const saveWeight = async (weightKg: number) => {
-    const { weight } = await apiRequest<{ weight: WeightLog }>("/health/weight", {
-      method: "PUT",
-      body: { weightKg, date: dateKey() },
-    });
-    if (!alive.current) return;
-    weightRevision.current++;
-    setWeights((previous) =>
-      [...previous.filter((row) => row.loggedDate !== weight.loggedDate), weight].sort((a, b) =>
-        a.loggedDate.localeCompare(b.loggedDate),
-      ),
-    );
-    setWeightUpdated(true);
+    await saveWeightMutation.mutateAsync(weightKg);
     await updateUser({});
   };
   const saveRecovery = async (next: RecoveryPlan | null) => {
-    const result = await apiRequest<{ recovery?: RecoveryRow }>(
-      "/health/recovery",
-      next
-        ? {
-            method: "PUT",
-            body: {
-              area: next.area,
-              note: next.note,
-              restDays: next.restDays,
-              lightDays: next.lightDays,
-              startDate: next.startDate,
-            },
-          }
-        : { method: "DELETE" },
-    );
-    if (!alive.current) return;
-    recoveryRevision.current++;
-    setRecovery(result.recovery ? recoveryFromRow(result.recovery) : null);
+    await saveRecoveryMutation.mutateAsync(next);
   };
   const saveSex = async (next: Sex) => {
     await updateUser({ gender: next === "Male" ? "male" : next === "Female" ? "female" : "other" });
-    if (alive.current && next !== "Female" && recovery?.area === PERIOD_AREA)
-      await saveRecovery(null);
+    if (next !== "Female" && recovery?.area === PERIOD_AREA) await saveRecovery(null);
   };
   const savePlan = async (next: PlanPreferences) => {
     const fitnessGoal = (Object.keys(GOALS) as (keyof typeof GOALS)[]).find(
@@ -238,6 +225,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
       ...(next.targetWeightKg !== null ? { targetWeightKg: next.targetWeightKg } : {}),
     });
   };
+
   const plan: PlanPreferences = {
     goal: user?.fitnessGoal ? GOALS[user.fitnessGoal] : "Not set",
     activity: user?.activityLevel ? ACTIVITIES[user.activityLevel] : "Not set",
@@ -270,6 +258,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
         saveRecovery,
         loading,
         error,
+        refreshing,
         refresh,
       }}
     >

@@ -4,9 +4,17 @@ import { MealDetailScreen } from "@/features/meals/meal-detail-screen";
 import { useMeals } from "@/features/meals/meals-store";
 import { apiRequest } from "@/lib/api";
 
+import { createQueryWrapper } from "./query-wrapper";
+
 jest.mock("@/features/meals/meals-store", () => ({
   fromApiMeal: (meal: unknown) => meal,
+  mealsQueryKeys: {
+    detail: (userId: string, mealId: string) => ["meals", userId, "detail", mealId],
+  },
   useMeals: jest.fn(),
+}));
+jest.mock("@/features/auth/store/auth.store", () => ({
+  useAuth: () => ({ user: { id: "member-a" } }),
 }));
 jest.mock("@/lib/api", () => ({ apiRequest: jest.fn() }));
 jest.mock("@/features/meals/meal-result-screen", () => {
@@ -32,19 +40,29 @@ test("loads a meal by encoded route ID and retries a failed request", async () =
     .mockImplementationOnce(() => initialRequest.promise)
     .mockResolvedValueOnce({ name: "Saved meal" } as never);
   const onBack = jest.fn();
-  const screen = await render(<MealDetailScreen logId="meal/42" onBack={onBack} />);
+  const screen = await render(<MealDetailScreen logId="meal/42" onBack={onBack} />, {
+    wrapper: createQueryWrapper(),
+  });
 
   expect(screen.getByRole("header", { name: "Meal" })).toBeTruthy();
-  expect(screen.queryByText(/loading meal/i)).toBeNull();
+  expect(screen.getByText(/loading meal/i)).toBeTruthy();
   await act(async () => {
     initialRequest.reject(new Error("Could not reach meal service."));
   });
   await waitFor(() => expect(screen.getByText("Could not reach meal service.")).toBeTruthy());
   expect(screen.getByRole("alert")).toBeTruthy();
-  expect(request).toHaveBeenNthCalledWith(1, "/meals/meal%2F42");
+  expect(request).toHaveBeenNthCalledWith(
+    1,
+    "/meals/meal%2F42",
+    expect.objectContaining({ signal: expect.any(AbortSignal) }),
+  );
 
   await fireEvent.press(screen.getByRole("button", { name: "Retry" }));
   await waitFor(() => expect(screen.getByText("Saved meal")).toBeTruthy());
-  expect(request).toHaveBeenNthCalledWith(2, "/meals/meal%2F42");
+  expect(request).toHaveBeenNthCalledWith(
+    2,
+    "/meals/meal%2F42",
+    expect.objectContaining({ signal: expect.any(AbortSignal) }),
+  );
   expect(onBack).not.toHaveBeenCalled();
 });
