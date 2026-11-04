@@ -150,7 +150,6 @@ function useWorkoutState(): WorkoutState {
       if (!match) return undefined;
       const key = workoutQueryKeys.history(userId);
       await queryClient.cancelQueries({ queryKey: key });
-      const previous = queryClient.getQueryData(key);
       queryClient.setQueryData(key, (data: typeof historyQuery.data) =>
         data
           ? {
@@ -162,10 +161,10 @@ function useWorkoutState(): WorkoutState {
             }
           : data,
       );
-      return { key, previous };
+      return { key };
     },
-    onError: (_error, _variables, context) => {
-      if (context?.previous) queryClient.setQueryData(context.key, context.previous);
+    onError: async (_error, _variables, context) => {
+      if (context) await queryClient.invalidateQueries({ queryKey: context.key });
     },
     onSuccess: async (result, variables) => {
       if (!userId) return;
