@@ -8,7 +8,7 @@ import { util } from '@kit.ArkTS';
 const DOMAIN: number = 0x0000;
 const TAG: string = 'FitwearBleWatch';
 const DESC_CCC_UUID: string = '00002902-0000-1000-8000-00805F9B34FB';
-const READY_MESSAGE: string = 'Fitwear Watch Ready';
+const READY_MESSAGE: string = 'VoocHealth Watch Ready';
 
 /** Private Fitwear GATT service UUID (not a Bluetooth SIG assigned number). */
 export const SERVICE_UUID: string = 'F17E0001-6B2A-4C8E-9D15-3A7F2E8C4B01';

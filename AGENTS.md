@@ -1,4 +1,4 @@
-# Fitwear Monorepo Agent Guide
+# VoocHealth Monorepo Agent Guide
 
 This repository contains two Bun workspaces for a dual-device fitness ecosystem plus an independent HarmonyOS watch app. Mobile and backend share the root dependency installation and lint/format tooling; each keeps its own application dependencies, tests, and build pipeline. The watch app remains independent.
 

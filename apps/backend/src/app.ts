@@ -35,7 +35,7 @@ export function buildFitwearApp() {
     .use(workouts)
     .use(health)
     .get("/", () => ({
-      name: "Fitwear Backend API",
+      name: "VoocHealth Backend API",
       status: "online",
       framework: "ElysiaJS",
       docs: "/swagger",

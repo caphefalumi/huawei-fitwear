@@ -12,12 +12,14 @@ const templates: {
   name: string;
   binding: string;
   file: string;
+  subject: string;
   variables: readonly string[];
 }[] = [
   {
     name: "welcome",
     binding: "RESEND_WELCOME_TEMPLATE_ID",
     file: "welcome.html",
+    subject: "Welcome to VoocHealth",
     variables: ["NAME"],
   },
   {
@@ -25,13 +27,18 @@ const templates: {
     binding: "RESEND_PASSWORD_RESET_TEMPLATE_ID",
     file: "password-reset.html",
     variables: ["RESET_OTP"],
+    subject: "Reset your VoocHealth password",
   },
 ];
 
 for (const template of templates) {
   const id = wrangler.vars?.[template.binding];
+  const from = wrangler.vars?.RESEND_FROM;
   if (typeof id !== "string" || !id) {
     throw new Error(`Missing ${template.binding} in apps/backend/wrangler.json.`);
+  }
+  if (typeof from !== "string" || !from) {
+    throw new Error("Missing RESEND_FROM in apps/backend/wrangler.json.");
   }
 
   const html = await readFile(resolve(root, "email-templates", template.file), "utf8");
@@ -47,7 +54,9 @@ for (const template of templates) {
   }
 
   if (dryRun) {
-    console.info(`Validated ${template.name} template (${id}) from ${template.file}.`);
+    console.info(
+      `Validated ${template.name} template (${id}) from ${template.file} with subject "${template.subject}".`,
+    );
     continue;
   }
 
@@ -58,7 +67,7 @@ for (const template of templates) {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ html }),
+    body: JSON.stringify({ from, subject: template.subject, html }),
   });
   if (!response.ok) {
     throw new Error(

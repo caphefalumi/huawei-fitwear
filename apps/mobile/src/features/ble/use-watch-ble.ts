@@ -107,9 +107,9 @@ export function useWatchBle(options: UseWatchBleOptions = {}) {
     void clientRef.current?.disconnect();
     simModeRef.current = true;
     setErrorText(null);
-    setDeviceName("Fitwear Watch (Simulator)");
+    setDeviceName("VoocHealth Watch (Simulator)");
     setMode("ble-simulated");
-    const ready = "Fitwear Watch Ready";
+    const ready = "VoocHealth Watch Ready";
     appendMessage("watch-to-phone", ready, encodeUtf8Bytes(ready).byteLength);
   }, [appendMessage, enableSimulator]);
 
@@ -166,7 +166,7 @@ export function useWatchBle(options: UseWatchBleOptions = {}) {
         });
       if (mode === "disconnected") {
         simModeRef.current = true;
-        setDeviceName("Fitwear Watch (Simulator)");
+        setDeviceName("VoocHealth Watch (Simulator)");
         setMode("ble-simulated");
       }
       appendMessage("watch-to-phone", clean, encodeUtf8Bytes(clean).byteLength);

@@ -6,7 +6,7 @@ export const fitwearOpenapi = openapi({
   provider: "scalar",
   documentation: {
     info: {
-      title: "Fitwear Edge API",
+      title: "VoocHealth Edge API",
       version: "1.0.0",
       description:
         "High-performance fitness backend powered by Elysia on Cloudflare Workers and D1.",

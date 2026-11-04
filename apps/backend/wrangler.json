@@ -59,7 +59,7 @@
     ]
   },
   "vars": {
-    "RESEND_FROM": "fitwear@tm-project.id.vn",
+    "RESEND_FROM": "VoocHealth <fitwear@tm-project.id.vn>",
     "RESEND_WELCOME_TEMPLATE_ID": "b1323c4b-a7b4-4fae-9e70-a4894604ef3d",
     "RESEND_PASSWORD_RESET_TEMPLATE_ID": "27bd1568-5767-48f6-945d-df68851bafc3"
   }

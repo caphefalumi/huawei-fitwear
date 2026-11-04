@@ -51,7 +51,7 @@ async function requestAndroidBlePermissions(): Promise<boolean> {
 }
 
 /**
- * Production BLE central for the Fitwear watch GATT peripheral.
+ * Production BLE central for the VoocHealth watch GATT peripheral.
  *
  * Usage:
  * ```ts
