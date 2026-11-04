@@ -60,6 +60,8 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
+        with:
+          add-job-summary: "never"
 
       - name: Build Android release APK
         working-directory: apps/mobile/android
@@ -105,6 +107,11 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Setup Node.js for reporting
+        uses: actions/setup-node@v5
+        with:
+          node-version: 26
+
       - name: Install Maestro CLI
         run: |
           export MAESTRO_VERSION=2.12.0
@@ -127,12 +134,43 @@ jobs:
             adb wait-for-device
             adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
             sleep 5
-            maestro test apps/mobile/tests/e2e/fitness.yaml
+            mkdir -p maestro-artifacts/recordings
+            set +e
+            maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts apps/mobile/tests/e2e/fitness.yaml
+            MAESTRO_EXIT=$?
+            echo "MAESTRO_EXIT_CODE=$MAESTRO_EXIT" >> "$GITHUB_ENV"
+            exit $MAESTRO_EXIT
+
+      - name: Collect Maestro test recordings and artifacts
+        if: always()
+        run: |
+          mkdir -p maestro-artifacts/recordings
+          find ~/.maestro/tests maestro-artifacts -type f -name "*.mp4" -exec cp -f {} maestro-artifacts/recordings/ \; 2>/dev/null || true
+          find ~/.maestro/tests -type f -name "*.png" -exec cp -f {} maestro-artifacts/ \; 2>/dev/null || true
+          ls -la maestro-artifacts/recordings/ || true
+
+      - name: Upload Maestro recording video
+        id: upload-recording
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: fitwear-e2e-recording
+          path: maestro-artifacts/recordings/*.mp4
+          if-no-files-found: ignore
 
       - name: Upload Maestro test artifacts and recordings
+        id: upload-artifacts
         if: always()
         uses: actions/upload-artifact@v6
         with:
           name: maestro-e2e-artifacts
-          path: ~/.maestro/tests/
+          path: maestro-artifacts/
           if-no-files-found: ignore
+
+      - name: Generate Maestro E2E summary
+        if: always()
+        env:
+          RECORDING_URL: ${{ steps.upload-recording.outputs.artifact-url }}
+          ARTIFACTS_URL: ${{ steps.upload-artifacts.outputs.artifact-url }}
+          MAESTRO_EXIT_CODE: ${{ env.MAESTRO_EXIT_CODE }}
+        run: node .github/scripts/generate-maestro-summary.mjs
