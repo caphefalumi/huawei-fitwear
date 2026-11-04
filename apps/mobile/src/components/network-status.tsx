@@ -20,8 +20,12 @@ export function NetworkStatusBanner() {
         backgroundColor: C.card,
       }}
     >
-      <Text accessibilityLabel="Warning" style={{ color: C.accent, fontWeight: "700" }}>!</Text>
-      <Text style={{ color: C.text, fontSize: 14 }}>You're offline. Saved information may be out of date.</Text>
+      <Text accessibilityLabel="Warning" style={{ color: C.accent, fontWeight: "700" }}>
+        !
+      </Text>
+      <Text style={{ color: C.text, fontSize: 14 }}>
+        You're offline. Saved information may be out of date.
+      </Text>
     </View>
   );
 }

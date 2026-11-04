@@ -35,8 +35,7 @@ export function MealPhoto({
   const [imageError, setImageError] = useState<string | null>(null);
   useEffect(() => setImageError(null), [imageUrl]);
   const error =
-    imageError ??
-    (photoQuery.error ? apiErrorMessage(photoQuery.error, "your meal photo") : null);
+    imageError ?? (photoQuery.error ? apiErrorMessage(photoQuery.error, "your meal photo") : null);
   const uri = remotePhoto ? photoQuery.data : imageUrl;
   if (!imageUrl)
     return compact ? (

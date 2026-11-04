@@ -124,7 +124,9 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
         </View>
 
         {actionError && !meals.actionError ? (
-          <Text accessibilityRole="alert" style={styles.footnote}>{actionError}</Text>
+          <Text accessibilityRole="alert" style={styles.footnote}>
+            {actionError}
+          </Text>
         ) : null}
         {meals.actionError ? (
           <FetchErrorState

@@ -26,15 +26,7 @@ const metricOf = (item: MealLog, key: Exclude<SortKey, "newest">) =>
 
 export function MealsHistoryScreen() {
   const insets = useSafeAreaInsets();
-  const {
-    history,
-    loading,
-    refreshing,
-    error,
-    actionError,
-    retryAction,
-    refresh,
-  } = useMeals();
+  const { history, loading, refreshing, error, actionError, retryAction, refresh } = useMeals();
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("newest");
   const [descending, setDescending] = useState(true);
@@ -58,7 +50,12 @@ export function MealsHistoryScreen() {
   return (
     <ScrollView
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={C.accent} colors={[C.accent]} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => void refresh()}
+          tintColor={C.accent}
+          colors={[C.accent]}
+        />
       }
       style={styles.screen}
       keyboardShouldPersistTaps="handled"
@@ -82,9 +79,19 @@ export function MealsHistoryScreen() {
       </Pressable>
       {error ? (
         history.length ? (
-          <FetchErrorState title="Couldn't refresh meals" message={error} onRetry={refresh} retrying={refreshing} />
+          <FetchErrorState
+            title="Couldn't refresh meals"
+            message={error}
+            onRetry={refresh}
+            retrying={refreshing}
+          />
         ) : (
-          <FetchErrorState title="Couldn't load meals" message={error} onRetry={refresh} retrying={refreshing} />
+          <FetchErrorState
+            title="Couldn't load meals"
+            message={error}
+            onRetry={refresh}
+            retrying={refreshing}
+          />
         )
       ) : null}
       {actionError ? (

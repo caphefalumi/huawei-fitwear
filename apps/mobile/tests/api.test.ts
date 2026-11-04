@@ -20,7 +20,9 @@ afterEach(() => {
 });
 
 test("normalizes server validation responses without discarding status or code", async () => {
-  request.mockResolvedValue(response(422, { message: "Weight must be positive", code: "VALIDATION" }));
+  request.mockResolvedValue(
+    response(422, { message: "Weight must be positive", code: "VALIDATION" }),
+  );
   await expect(
     apiRequest("/health/weight", { method: "PUT", body: { weightKg: -1 } }),
   ).rejects.toMatchObject({ status: 422, code: "VALIDATION", message: "Weight must be positive" });
@@ -35,7 +37,10 @@ test("expires the active bearer session on unauthorized data access", async () =
   expect(expired).toHaveBeenCalledTimes(1);
   request.mockResolvedValueOnce(response(200, { meals: [] }));
   await apiRequest("/meals");
-  expect(request.mock.calls[1][0]).toMatchObject({ url: "/meals", headers: { Accept: "application/json" } });
+  expect(request.mock.calls[1][0]).toMatchObject({
+    url: "/meals",
+    headers: { Accept: "application/json" },
+  });
   expect(request.mock.calls[1][0]?.headers).not.toHaveProperty("Authorization");
   unsubscribe();
 });
@@ -63,7 +68,9 @@ test("maps network and timeout errors to user-safe retryable error types", async
   request.mockRejectedValueOnce(new AxiosError("timeout", "ETIMEDOUT"));
   const failure = await apiRequest("/meals").catch((error: unknown) => error);
   expect(failure).toMatchObject({ code: "TIMEOUT", retryable: true });
-  expect(apiErrorMessage(failure, "your meals")).toBe("Loading your meals took too long. Try again.");
+  expect(apiErrorMessage(failure, "your meals")).toBe(
+    "Loading your meals took too long. Try again.",
+  );
 });
 
 test("rejects non-API destinations before sending a request", async () => {
@@ -72,7 +79,13 @@ test("rejects non-API destinations before sending a request", async () => {
 });
 
 test("maps common response statuses to specific plain-language guidance", () => {
-  expect(apiErrorMessage(new ApiError("private", 404), "this meal")).toBe("This item no longer exists.");
-  expect(apiErrorMessage(new ApiError("throttled", 429))).toBe("Too many requests. Wait a moment, then try again.");
-  expect(apiErrorMessage(new ApiError("oops", 503))).toBe("Something went wrong on our end. Try again.");
+  expect(apiErrorMessage(new ApiError("private", 404), "this meal")).toBe(
+    "This item no longer exists.",
+  );
+  expect(apiErrorMessage(new ApiError("throttled", 429))).toBe(
+    "Too many requests. Wait a moment, then try again.",
+  );
+  expect(apiErrorMessage(new ApiError("oops", 503))).toBe(
+    "Something went wrong on our end. Try again.",
+  );
 });

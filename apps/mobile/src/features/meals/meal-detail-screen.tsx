@@ -54,7 +54,13 @@ export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: ()
         {detailQuery.isLoading ? <LoadingSkeleton label="Loading meal" rows={3} /> : null}
         {error ? (
           <FetchErrorState
-            title={detailQuery.error instanceof Error && "status" in detailQuery.error && detailQuery.error.status === 404 ? "Meal not found" : "Couldn't load this meal"}
+            title={
+              detailQuery.error instanceof Error &&
+              "status" in detailQuery.error &&
+              detailQuery.error.status === 404
+                ? "Meal not found"
+                : "Couldn't load this meal"
+            }
             message={error}
             onRetry={() => detailQuery.refetch()}
             retrying={detailQuery.isFetching}

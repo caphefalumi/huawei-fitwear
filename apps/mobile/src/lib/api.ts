@@ -15,11 +15,7 @@ export class ApiError extends Error {
   }
 
   get retryable() {
-    return (
-      this.code === "NETWORK_ERROR" ||
-      this.code === "TIMEOUT" ||
-      this.status >= 500
-    );
+    return this.code === "NETWORK_ERROR" || this.code === "TIMEOUT" || this.status >= 500;
   }
 }
 

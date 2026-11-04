@@ -286,7 +286,9 @@ test("failed history deletion leaves the saved meal available", async () => {
     await expect(result.current.deleteLog("meal-a")).rejects.toThrow("Delete unavailable");
   });
   expect(result.current.history.map((meal) => meal.id)).toEqual(["meal-a"]);
-  await waitFor(() => expect(result.current.actionError).toBe("Couldn't save your change. Try again."));
+  await waitFor(() =>
+    expect(result.current.actionError).toBe("Couldn't save your change. Try again."),
+  );
 });
 
 test("food search maps backend catalogue units and nutrients", async () => {

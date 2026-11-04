@@ -4,7 +4,13 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { Pressable } from "@/components/pressable";
 import { Palette as C } from "@/constants/palette";
 
-export function LoadingSkeleton({ label = "Loading", rows = 3 }: { label?: string; rows?: number }) {
+export function LoadingSkeleton({
+  label = "Loading",
+  rows = 3,
+}: {
+  label?: string;
+  rows?: number;
+}) {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     setVisible(false);
@@ -61,7 +67,9 @@ export function FetchErrorState({
       <Text accessibilityLabel="Warning" style={styles.icon}>
         !
       </Text>
-      <Text accessibilityRole="header" style={styles.title}>{title}</Text>
+      <Text accessibilityRole="header" style={styles.title}>
+        {title}
+      </Text>
       <Text style={styles.message}>{message}</Text>
       {onRetry ? (
         <Pressable
@@ -72,7 +80,11 @@ export function FetchErrorState({
           onPress={() => void runRetry()}
           style={styles.retry}
         >
-          {busy || retrying ? <ActivityIndicator color={C.onAccent} /> : <Text style={styles.retryText}>Try again</Text>}
+          {busy || retrying ? (
+            <ActivityIndicator color={C.onAccent} />
+          ) : (
+            <Text style={styles.retryText}>Try again</Text>
+          )}
         </Pressable>
       ) : null}
       {onBack ? (

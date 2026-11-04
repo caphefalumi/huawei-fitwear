@@ -104,7 +104,12 @@ export function WorkoutPlanScreen() {
   return (
     <ScrollView
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={C.accent} colors={[C.accent]} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => void refresh()}
+          tintColor={C.accent}
+          colors={[C.accent]}
+        />
       }
       style={styles.screen}
       contentContainerStyle={[
@@ -144,7 +149,11 @@ export function WorkoutPlanScreen() {
       </View>
       {error ? (
         <FetchErrorState
-          title={sessions.length || exercises.length ? "Couldn't refresh workouts" : "Couldn't load workouts"}
+          title={
+            sessions.length || exercises.length
+              ? "Couldn't refresh workouts"
+              : "Couldn't load workouts"
+          }
           message={error}
           onRetry={refresh}
           retrying={refreshing}

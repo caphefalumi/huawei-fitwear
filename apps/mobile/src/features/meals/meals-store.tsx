@@ -323,9 +323,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: invalidateMeals,
   });
-  const error = [historyQuery.error, summaryQuery.error].find(
-    (cause) => cause instanceof Error,
-  );
+  const error = [historyQuery.error, summaryQuery.error].find((cause) => cause instanceof Error);
   const errorMessage = error ? apiErrorMessage(error, "your meals") : null;
   const actionError = writeMutation.error
     ? apiErrorMessage(writeMutation.error, "that change")

@@ -41,7 +41,9 @@ export function ProgressScreen() {
       apiRequest<WorkoutStats>(`/workouts/stats?from=${bounds.from}&to=${bounds.to}`, { signal }),
   });
   const stats = statsQuery.data ?? null;
-  const statsError = statsQuery.error ? apiErrorMessage(statsQuery.error, "training activity") : null;
+  const statsError = statsQuery.error
+    ? apiErrorMessage(statsQuery.error, "training activity")
+    : null;
   const statsLoading = statsQuery.isLoading;
   const data = progressData(range, weights, stats);
   const maxSessions = Math.max(1, ...data.bars.map((bar) => bar.sessions));
@@ -50,7 +52,9 @@ export function ProgressScreen() {
     <ScrollView
       refreshControl={
         <RefreshControl
-          refreshing={!healthLoading && !statsLoading && (healthRefreshing || statsQuery.isFetching)}
+          refreshing={
+            !healthLoading && !statsLoading && (healthRefreshing || statsQuery.isFetching)
+          }
           onRefresh={() => void Promise.all([refresh(), statsQuery.refetch()])}
           tintColor={C.accent}
           colors={[C.accent]}
