@@ -5,16 +5,16 @@ import {
   TabTriggerSlotProps,
   Tabs,
   type TabListProps,
-} from 'expo-router/ui';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+} from "expo-router/ui";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { Palette as C } from '@/constants/palette';
+import { Palette as C } from "@/constants/palette";
 
 const TABS = [
-  { name: 'home', label: 'Home' },
-  { name: 'meals', label: 'Meals' },
-  { name: 'workout', label: 'Workout' },
-  { name: 'profile', label: 'Profile' },
+  { name: "home", label: "Home" },
+  { name: "meals", label: "Meals" },
+  { name: "workout", label: "Workout" },
+  { name: "profile", label: "Profile" },
 ] as const;
 
 export default function AppTabs() {
@@ -53,20 +53,20 @@ function TabBar(props: TabListProps) {
 
 const styles = StyleSheet.create({
   slot: {
-    height: '100%',
+    height: "100%",
   },
   bar: {
-    flexDirection: 'row',
+    flexDirection: "row",
     backgroundColor: C.surface,
     borderTopWidth: 1,
     borderTopColor: C.border,
     paddingVertical: 12,
     gap: 12,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   button: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 6,
   },
   pressed: {
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   labelActive: {
-    fontWeight: '700',
+    fontWeight: "700",
     color: C.accent,
   },
   dot: {
