@@ -1,14 +1,20 @@
-import { TabList, TabSlot, TabTrigger, Tabs, type TabListProps } from "expo-router/ui";
-import type { ComponentProps, ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  TabList,
+  TabSlot,
+  TabTrigger,
+  TabTriggerSlotProps,
+  Tabs,
+  type TabListProps,
+} from 'expo-router/ui';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Palette as C } from "@/constants/palette";
+import { Palette as C } from '@/constants/palette';
 
 const TABS = [
-  { name: "home", label: "Home" },
-  { name: "meals", label: "Meals" },
-  { name: "workout", label: "Workout" },
-  { name: "profile", label: "Profile" },
+  { name: 'home', label: 'Home' },
+  { name: 'meals', label: 'Meals' },
+  { name: 'workout', label: 'Workout' },
+  { name: 'profile', label: 'Profile' },
 ] as const;
 
 export default function AppTabs() {
@@ -28,22 +34,11 @@ export default function AppTabs() {
   );
 }
 
-function TabButton({
-  children,
-  isFocused,
-  ...props
-}: Omit<ComponentProps<typeof Pressable>, "children"> & {
-  children?: ReactNode;
-  isFocused?: boolean;
-}) {
+function TabButton({ children, isFocused, ref: _ref, ...props }: TabTriggerSlotProps) {
   return (
-    <Pressable
-      {...props}
-      accessibilityRole="tab"
-      accessibilityState={{ selected: isFocused }}
-      style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-    >
+    <Pressable {...props} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
       <Text style={[styles.label, isFocused && styles.labelActive]}>{children}</Text>
+      {isFocused && <View style={styles.dot} />}
     </Pressable>
   );
 }
@@ -58,22 +53,20 @@ function TabBar(props: TabListProps) {
 
 const styles = StyleSheet.create({
   slot: {
-    height: "100%",
+    height: '100%',
   },
   bar: {
-    flexDirection: "row",
+    flexDirection: 'row',
     backgroundColor: C.surface,
     borderTopWidth: 1,
     borderTopColor: C.border,
     paddingVertical: 12,
     gap: 12,
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   button: {
     flex: 1,
-    minHeight: 48,
-    justifyContent: "center",
-    alignItems: "center",
+    alignItems: 'center',
     paddingVertical: 6,
   },
   pressed: {
@@ -84,7 +77,14 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   labelActive: {
-    fontWeight: "600",
+    fontWeight: '700',
     color: C.accent,
+  },
+  dot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: C.accent,
+    marginTop: 3,
   },
 });

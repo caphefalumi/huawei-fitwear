@@ -1,12 +1,13 @@
-import { Image } from "expo-image";
-import type { ReactNode } from "react";
-import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { Image } from 'expo-image';
+import type { ReactNode } from 'react';
+import { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
+import { Pressable } from '@/components/pressable';
+import { Palette as C } from '@/constants/palette';
 
 const icons = {
-  back: require("@/assets/images/progress/chevron-left.svg"),
+  back: require('@/assets/images/progress/chevron-left.svg'),
 };
 
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
@@ -24,16 +25,9 @@ export function SectionHeading({
 }) {
   return (
     <View style={styles.headingRow}>
-      <Text accessibilityRole="header" style={styles.headingText}>
-        {title}
-      </Text>
+      <Text style={styles.headingText}>{title}</Text>
       {actionLabel && onPress ? (
-        <Pressable
-          accessibilityLabel={`${actionLabel}, ${title}`}
-          onPress={onPress}
-          hitSlop={14}
-          style={styles.action}
-        >
+        <Pressable onPress={onPress} hitSlop={10}>
           <Text style={styles.headingAction}>{actionLabel}</Text>
         </Pressable>
       ) : null}
@@ -43,13 +37,8 @@ export function SectionHeading({
 
 export function BackHeader({ label, onPress }: { label: string; onPress: () => void }) {
   return (
-    <Pressable
-      accessibilityLabel={`Back to ${label}`}
-      style={styles.back}
-      onPress={onPress}
-      hitSlop={10}
-    >
-      <Image accessible={false} source={icons.back} style={styles.backIcon} contentFit="contain" />
+    <Pressable style={styles.back} onPress={onPress} hitSlop={10}>
+      <Image source={icons.back} style={styles.backIcon} contentFit="contain" />
       <Text style={styles.backLabel}>{label}</Text>
     </Pressable>
   );
@@ -68,13 +57,18 @@ export function MacroBar({
   unit: string;
   note?: string;
 }) {
-  const fill = target > 0 ? Math.max(0, Math.min(1, value / target)) : 0;
+  const fill = Math.max(0, Math.min(1, value / target));
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const t = Animated.timing(anim, { toValue: fill, duration: 500, useNativeDriver: false });
+    t.start();
+    return () => t.stop();
+  }, [anim, fill]);
+
+  const barWidth = anim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
   return (
-    <View
-      accessible
-      accessibilityLabel={`${label}: ${value} of ${target} ${unit === "g" ? "grams" : unit}${note ? `. ${note}` : ""}`}
-      style={styles.macro}
-    >
+    <View style={styles.macro}>
       <View style={styles.macroRow}>
         <Text style={styles.macroLabel}>{label}</Text>
         <Text style={styles.macroValue}>
@@ -82,7 +76,7 @@ export function MacroBar({
         </Text>
       </View>
       <View style={styles.track}>
-        <View style={[styles.fill, { width: `${fill * 100}%` }]} />
+        <Animated.View style={[styles.fill, { width: barWidth }]} />
       </View>
       {note ? <Text style={styles.macroNote}>{note}</Text> : null}
     </View>
@@ -99,30 +93,23 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   headingRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   headingText: {
     fontSize: 17,
-    flexShrink: 1,
-    fontWeight: "600",
+    fontWeight: '600',
     color: C.text,
-  },
-  action: {
-    minWidth: 0,
-    minHeight: 0,
   },
   headingAction: {
     fontSize: 12,
-    fontWeight: "500",
+    fontWeight: '500',
     color: C.accent,
   },
   back: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
   },
   backIcon: {
@@ -131,17 +118,14 @@ const styles = StyleSheet.create({
   },
   backLabel: {
     fontSize: 13,
-    flexShrink: 1,
     color: C.accent,
   },
   macro: {
     gap: 4,
   },
   macroRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 4,
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   macroLabel: {
     fontSize: 11,
@@ -149,14 +133,14 @@ const styles = StyleSheet.create({
   },
   macroValue: {
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: '600',
     color: C.text,
   },
   track: {
     height: 5,
     borderRadius: 100,
     backgroundColor: C.card,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   fill: {
     height: 5,

@@ -1,291 +1,200 @@
-import { Image } from "expo-image";
-import { router } from "expo-router";
-import { useEffect, useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from 'expo-image';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CloseButton } from "@/components/close-button";
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
-import { dateLabel, recoveryTitle, useHealth } from "@/features/health/health-store";
-import { useAuth } from "@/features/auth/auth-store";
-import { useWorkouts } from "@/features/workout/workout-store";
-import { WeightChart } from "@/features/home/weight-chart";
-import { RecoverySheet } from "@/features/recovery/recovery-sheet";
-import { RecoveryTracker } from "@/features/recovery/recovery-stages";
-import { useMeals } from "@/features/meals/meals-store";
-import { NutritionRing } from "@/features/home/ring";
-import { Card, MacroBar, SectionHeading } from "@/features/home/ui";
-import { FetchErrorState } from "@/components/fetch-states";
+import { Pressable } from '@/components/pressable';
+import { Palette as C } from '@/constants/palette';
+import { recoveryTitle, useHealth } from '@/features/health/health-store';
+import { routinesFor } from '@/features/workout/routines';
+import { RecoverySheet } from '@/features/recovery/recovery-sheet';
+import { useMeals } from '@/features/meals/meals-store';
+import { NutritionRing } from '@/features/home/ring';
+import { WeightChart } from '@/features/home/weight-chart';
+import { Card, MacroBar, SectionHeading } from '@/features/home/ui';
+
+const DEMO_WEIGHTS = [72.8, 72.5, 72.3, 72.1, 71.9, 71.7, 71.5];
+const WEEK_ACTIVE = [true, true, false, true, true, false, true];
 
 const icons = {
-  check: require("@/assets/images/home/check.svg"),
+  chevronRight: require('@/assets/images/home/chevron-right.svg'),
+  previousLog: require('@/assets/images/home/previous-log.svg'),
+  shieldCheck: require('@/assets/images/home/shield-check.svg'),
+  check: require('@/assets/images/home/check.svg'),
 };
+
+/** Ease-out count-up for hero numbers. */
+function useCountUp(target: number, duration = 600) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    const start = Date.now();
+    const tick = () => {
+      const p = Math.min(1, (Date.now() - start) / duration);
+      setVal(Math.round(target * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return val;
+}
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
-  const {
-    weightKg,
-    weights,
-    weightUpdated,
-    recovery,
-    error: healthError,
-    refreshing: healthRefreshing,
-    refresh: refreshHealth,
-  } = useHealth();
-  const {
-    summary,
-    error: mealsError,
-    refreshing: mealsRefreshing,
-    actionError: mealsActionError,
-    retryAction: retryMealAction,
-    refresh: refreshMeals,
-  } = useMeals();
-  const {
-    sessions,
-    loading: workoutsLoading,
-    error: workoutsError,
-    refreshing: workoutsRefreshing,
-    actionError: workoutActionError,
-    retryAction: retryWorkoutAction,
-    refresh: refreshWorkouts,
-  } = useWorkouts();
+  const { weightKg, weightUpdated, recovery } = useHealth();
+  const { loggedKcal, loggedMacros } = useMeals();
   const [bannerDismissed, setBannerDismissed] = useState(false);
-  const [chartInfoOpen, setChartInfoOpen] = useState(false);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
-  const [recoveryClosing, setRecoveryClosing] = useState(false);
+  const [visit, setVisit] = useState(0);
+
+  useFocusEffect(useCallback(() => setVisit((v) => v + 1), []));
+
   useEffect(() => setBannerDismissed(false), [weightKg]);
-  const latest = weights.at(-1);
-  const previous = weights.at(-2);
-  const completed = sessions.filter((session) => session.completedAt).slice(0, 3);
+
+  const targetKcal = weightUpdated ? 2160 : 2200;
+  const consumedKcal = 1320 + loggedKcal;
+  const kcalLeft = targetKcal - consumedKcal;
+  const kcalShown = useCountUp(kcalLeft);
+  const today = routinesFor(recovery).today;
+  const latestWeightKg = weightKg ?? DEMO_WEIGHTS[DEMO_WEIGHTS.length - 1];
+  const weights =
+    latestWeightKg >= 70 && latestWeightKg <= 74
+      ? [...DEMO_WEIGHTS.slice(0, -1), latestWeightKg]
+      : DEMO_WEIGHTS;
 
   return (
     <ScrollView
-      refreshControl={
-        <RefreshControl
-          refreshing={healthRefreshing || mealsRefreshing || workoutsRefreshing}
-          onRefresh={() => void Promise.all([refreshHealth(), refreshMeals(), refreshWorkouts()])}
-          tintColor={C.accent}
-          colors={[C.accent]}
-        />
-      }
       style={styles.screen}
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}
-    >
+      ]}>
       <View style={styles.topRow}>
-        <Text style={styles.date}>
-          {new Date()
-            .toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
-            .toUpperCase()}
-        </Text>
-        <Text style={styles.name}>{user?.name}</Text>
+        <Text style={styles.date}>THU, OCT 8</Text>
+        <Text style={styles.name}>Sam N.</Text>
       </View>
 
-      <Text accessibilityRole="header" style={styles.title}>
-        Today
-      </Text>
-      {healthError ? (
-        <FetchErrorState
-          title={weights.length ? "Couldn't refresh health data" : "Couldn't load health data"}
-          message={healthError}
-          onRetry={refreshHealth}
-        />
-      ) : null}
-      {mealsError ? (
-        <FetchErrorState
-          title={summary ? "Couldn't refresh nutrition" : "Couldn't load nutrition"}
-          message={mealsError}
-          onRetry={refreshMeals}
-        />
-      ) : null}
-      {mealsActionError ? (
-        <FetchErrorState
-          title="Couldn't save your meal"
-          message={mealsActionError}
-          onRetry={retryMealAction}
-        />
-      ) : null}
+      <Text style={styles.title}>Today</Text>
+
+      <Animated.View entering={FadeInUp.duration(250)}>
+        <Card style={styles.focus}>
+          <Text style={styles.focusLine} numberOfLines={1}>
+            Today: {today.name} · {today.sets} sets · ~{today.minutes} min
+          </Text>
+          <Text style={styles.focusMuted} numberOfLines={1}>
+            {kcalShown} kcal left
+          </Text>
+          <Text style={styles.focusMuted} numberOfLines={1}>
+            {recovery ? recoveryTitle(recovery) : 'Watch connected'}
+          </Text>
+          <View style={styles.weekDots}>
+            {WEEK_ACTIVE.map((active, index) => (
+              <View
+                // ponytail: static demo strip, real activity data when health store has it
+                key={index}
+                style={[styles.dot, active ? styles.dotActive : styles.dotIdle]}
+              />
+            ))}
+          </View>
+        </Card>
+      </Animated.View>
 
       {weightUpdated && !bannerDismissed ? (
         <View style={styles.banner}>
-          <Image
-            accessible={false}
-            source={icons.check}
-            style={styles.bannerIcon}
-            contentFit="contain"
-          />
-          <Text style={styles.bannerText}>Weight saved</Text>
-          <CloseButton
-            label="Dismiss weight saved notification"
-            onPress={() => setBannerDismissed(true)}
-            size={28}
-            background={C.surface}
-          />
+          <Image source={icons.check} style={styles.bannerIcon} contentFit="contain" />
+          <Text style={styles.bannerText}>Weight saved · nutrition targets updated</Text>
+          <Pressable onPress={() => setBannerDismissed(true)} hitSlop={10}>
+            <Text style={styles.bannerClose}>✕</Text>
+          </Pressable>
         </View>
       ) : null}
 
-      <Pressable
-        accessibilityLabel={
-          summary
-            ? `Nutrition. ${summary.consumed.caloriesKcal} kilocalories consumed, ${summary.remaining.caloriesKcal} remaining of ${summary.targets.calorieTargetKcal}. Protein ${summary.consumed.proteinG} of ${summary.targets.proteinTargetG} grams. Carbs ${summary.consumed.carbsG} of ${summary.targets.carbsTargetG} grams. Fat ${summary.consumed.fatG} of ${summary.targets.fatTargetG} grams.`
-            : "Nutrition. Summary is not available."
-        }
-        accessibilityHint="Opens your nutrition details"
-        onPress={() => router.push("/nutrition")}
-      >
-        <Card>
+      <Animated.View key={visit} entering={FadeInUp.delay(60).duration(250)}>
+        <Pressable onPress={() => router.push('/nutrition')}>
+          <Card>
           <Text style={styles.cardHeaderText}>Nutrition</Text>
 
-          {summary ? (
-            <>
-              <View style={styles.nutritionBody}>
-                <NutritionRing
-                  kcalLeft={summary.remaining.caloriesKcal}
-                  targetKcal={summary.targets.calorieTargetKcal}
-                  consumedKcal={summary.consumed.caloriesKcal}
-                />
-                <View style={styles.macros}>
-                  <MacroBar
-                    label="Protein"
-                    value={summary.consumed.proteinG}
-                    target={summary.targets.proteinTargetG}
-                    unit="g"
-                  />
-                  <MacroBar
-                    label="Carbs"
-                    value={summary.consumed.carbsG}
-                    target={summary.targets.carbsTargetG}
-                    unit="g"
-                  />
-                  <MacroBar
-                    label="Fat"
-                    value={summary.consumed.fatG}
-                    target={summary.targets.fatTargetG}
-                    unit="g"
-                  />
-                </View>
-              </View>
-              <Text style={styles.consumedLine}>
-                {summary.consumed.caloriesKcal.toLocaleString()} of{" "}
-                {summary.targets.calorieTargetKcal.toLocaleString()} kcal
-              </Text>
-            </>
-          ) : (
-            <Text style={styles.weightSub}>Your nutrition summary will appear after it loads.</Text>
-          )}
-        </Card>
-      </Pressable>
+          <View style={styles.nutritionBody}>
+            <NutritionRing kcalLeft={kcalShown} progress={consumedKcal / targetKcal} />
 
-      <View style={styles.section}>
-        <SectionHeading title="Progress" />
-        <Pressable
-          accessibilityLabel={`Progress. ${latest ? `Latest weight ${latest.weightKg.toFixed(1)} kilograms, logged ${dateLabel(latest.loggedDate)}.` : "No weight logs yet."}${previous ? ` Previous weight ${previous.weightKg.toFixed(1)} kilograms, logged ${dateLabel(previous.loggedDate)}.` : ""}`}
-          accessibilityHint="Opens weight and training progress"
-          onPress={() => router.push("/progress")}
-        >
-          <Card>
-            <View style={styles.weightRow}>
-              <View style={styles.weightText}>
-                <Text style={styles.weightLabel}>Latest weight</Text>
-                <View style={styles.weightValueRow}>
-                  <Text style={styles.weightValue}>{weightKg?.toFixed(1) ?? "—"}</Text>
-                  <Text style={styles.weightUnit}>kg</Text>
-                </View>
-                <Text style={styles.weightSub}>
-                  {latest ? `Logged ${dateLabel(latest.loggedDate)}` : "No weight logs yet"}
-                </Text>
-              </View>
-              {weights.length >= 2 ? (
-                <View style={{ flex: 1, minWidth: 120 }}>
-                  <WeightChart weights={weights.slice(-14).map((row) => row.weightKg)} />
-                </View>
-              ) : (
-                <Pressable
-                  accessibilityLabel="About the weight chart"
-                  onPress={() => setChartInfoOpen((open) => !open)}
-                  hitSlop={10}
-                  style={styles.infoButton}
-                >
-                  <Text style={styles.infoGlyph}>i</Text>
-                </Pressable>
-              )}
+            <View style={styles.macros}>
+              <MacroBar label="Protein" value={92 + loggedMacros.protein} target={140} unit="g" />
+              <MacroBar
+                label="Carbs"
+                value={152 + loggedMacros.carbs}
+                target={weightUpdated ? 265 : 275}
+                unit="g"
+              />
+              <MacroBar label="Fat" value={38 + loggedMacros.fat} target={60} unit="g" />
             </View>
-            {weights.length < 2 && chartInfoOpen ? (
-              <Text accessibilityRole="alert" style={styles.weightSub}>
-                Chart appears after 2 weight logs.
-              </Text>
-            ) : null}
+          </View>
 
-            {previous ? (
-              <View style={styles.previousRow}>
-                <Text style={styles.previousText}>Previous · {dateLabel(previous.loggedDate)}</Text>
-                <Text style={styles.previousValue}>{previous.weightKg.toFixed(1)} kg</Text>
-              </View>
-            ) : null}
-          </Card>
-        </Pressable>
-      </View>
-      <View style={styles.section}>
-        <SectionHeading
-          title="Workouts"
-          actionLabel="Plan"
-          onPress={() => router.push("/workout")}
-        />
-        <Card>
-          {workoutsError ? (
-            <FetchErrorState
-              title={sessions.length ? "Couldn't refresh workouts" : "Couldn't load workouts"}
-              message={workoutsError}
-              onRetry={refreshWorkouts}
-            />
-          ) : null}
-          {workoutActionError ? (
-            <FetchErrorState
-              title="Couldn't save your workout"
-              message={workoutActionError}
-              onRetry={retryWorkoutAction}
-            />
-          ) : null}
-          {completed.map((session) => (
-            <View key={session.id}>
-              <Text style={styles.cardHeaderText}>{session.sessionTitle}</Text>
-              <Text style={styles.weightSub}>
-                Completed {new Date(session.completedAt!).toLocaleDateString()}
-              </Text>
-            </View>
-          ))}
-          {!workoutsLoading && !completed.length ? (
-            <Text style={styles.weightSub}>
-              No completed workouts yet. Open your plan to start a session.
+          {weightUpdated ? (
+            <Text style={styles.consumedLine}>
+              {consumedKcal.toLocaleString('en-US')} consumed · {kcalShown} kcal left of{' '}
+              {targetKcal.toLocaleString('en-US')}
             </Text>
           ) : null}
         </Card>
-      </View>
+        </Pressable>
+      </Animated.View>
+
+      <Animated.View
+        key={`progress-${visit}`}
+        entering={FadeInUp.delay(120).duration(250)}
+        style={styles.section}>
+        <SectionHeading title="Progress" />
+        <Pressable onPress={() => router.push('/progress')}>
+          <Card>
+            <View style={styles.weightText}>
+              <Text style={styles.weightLabel} numberOfLines={1}>
+                Latest weight
+              </Text>
+              <View style={styles.weightValueRow}>
+                <Text style={styles.weightValue} numberOfLines={1}>
+                  {latestWeightKg.toFixed(1)}
+                </Text>
+                <Text style={styles.weightUnit}>kg</Text>
+              </View>
+              <Text style={styles.weightSub} numberOfLines={1}>
+                {weightUpdated ? 'Logged Oct 8' : '−1.2 kg in 4 weeks'}
+              </Text>
+            </View>
+            <WeightChart weights={weights} />
+
+            {weightUpdated ? (
+              <View style={styles.previousRow}>
+                <Image source={icons.previousLog} style={styles.previousChart} contentFit="contain" />
+                <Text style={styles.previousText}>Previous · Oct 7</Text>
+                <Text style={styles.previousValue}>72.0 kg</Text>
+              </View>
+            ) : null}
+
+          </Card>
+        </Pressable>
+      </Animated.View>
 
       {recovery ? (
-        <RecoveryTracker
-          recovery={recovery}
-          label={`Recovery. ${recoveryTitle(recovery)}. ${recovery.restDays} rest days, ${recovery.lightDays} light days.`}
-          onPress={() => setRecoveryOpen(true)}
-        />
+        <Pressable style={styles.recovery} onPress={() => setRecoveryOpen(true)}>
+          <Image source={icons.shieldCheck} style={styles.recoveryIcon} contentFit="contain" />
+          <View style={styles.recoveryText}>
+            <Text style={styles.recoveryTitle}>{recoveryTitle(recovery)}</Text>
+            <Text style={styles.recoverySub}>
+              {recovery.restDays} rest days · {recovery.lightDays} light days
+            </Text>
+          </View>
+          <Image source={icons.chevronRight} style={styles.recoveryChevron} contentFit="contain" />
+        </Pressable>
       ) : null}
 
-      {recoveryOpen || recoveryClosing ? (
-        <RecoverySheet
-          visible={recoveryOpen}
-          onClose={() => {
-            setRecoveryClosing(true);
-            setRecoveryOpen(false);
-          }}
-          onDismiss={() => setRecoveryClosing(false)}
-        />
-      ) : null}
+      {recoveryOpen ? <RecoverySheet visible onClose={() => setRecoveryOpen(false)} /> : null}
 
-      <Text style={styles.footnote}>Personal targets are estimates, not medical advice.</Text>
+      {weightUpdated ? (
+        <Text style={styles.footnote}>Demo personal targets · estimates, not medical advice.</Text>
+      ) : null}
     </ScrollView>
   );
 }
@@ -300,11 +209,9 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   topRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   date: {
     fontSize: 12,
@@ -312,26 +219,23 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 13,
-    flexShrink: 1,
-    fontWeight: "600",
+    fontWeight: '600',
     color: C.accent,
   },
   title: {
     fontSize: 28,
-    fontWeight: "400",
+    fontWeight: '400',
     color: C.text,
     marginTop: -6,
   },
   banner: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
     backgroundColor: C.accentTint,
     borderRadius: 12,
-    minHeight: 48,
-    paddingLeft: 14,
-    paddingRight: 10,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   bannerIcon: {
     width: 14,
@@ -340,73 +244,80 @@ const styles = StyleSheet.create({
   bannerText: {
     flex: 1,
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
     color: C.accent,
   },
-  infoButton: {
-    width: 24,
-    height: 24,
-    minWidth: 0,
-    minHeight: 0,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.textMuted,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  infoGlyph: {
-    fontSize: 12,
-    fontWeight: "600",
-    lineHeight: 14,
-    includeFontPadding: false,
-    color: C.textMuted,
+  bannerClose: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: C.accent,
   },
   cardHeaderText: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: '600',
     color: C.text,
   },
   nutritionBody: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 20,
   },
   macros: {
     flex: 1,
-    minWidth: 120,
     gap: 10,
   },
   consumedLine: {
     fontSize: 11,
     color: C.textMuted,
   },
+  focus: {
+    gap: 4,
+    paddingVertical: 14,
+  },
+  focusLine: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.text,
+  },
+  focusMuted: {
+    fontSize: 12,
+    color: C.textMuted,
+  },
+  weekDots: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 6,
+  },
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  dotActive: {
+    backgroundColor: C.accent,
+  },
+  dotIdle: {
+    borderWidth: 1,
+    borderColor: C.border,
+  },
   section: {
     gap: 10,
   },
-  weightRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
   weightText: {
     gap: 2,
-    flexShrink: 1,
   },
   weightLabel: {
     fontSize: 12,
     color: C.textMuted,
   },
   weightValueRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
+    flexDirection: 'row',
+    alignItems: 'baseline',
     gap: 4,
   },
   weightValue: {
     fontSize: 27,
-    fontWeight: "600",
+    fontWeight: '600',
     color: C.text,
   },
   weightUnit: {
@@ -418,10 +329,13 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   previousRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
+  },
+  previousChart: {
+    width: 44,
+    height: 20,
   },
   previousText: {
     flex: 1,
@@ -430,12 +344,41 @@ const styles = StyleSheet.create({
   },
   previousValue: {
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: '600',
     color: C.text,
+  },
+  recovery: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: C.card,
+    borderRadius: 12,
+    padding: 14,
+  },
+  recoveryIcon: {
+    width: 21,
+    height: 21,
+  },
+  recoveryText: {
+    flex: 1,
+    gap: 2,
+  },
+  recoveryTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: C.text,
+  },
+  recoverySub: {
+    fontSize: 11,
+    color: C.textMuted,
+  },
+  recoveryChevron: {
+    width: 17,
+    height: 17,
   },
   footnote: {
     fontSize: 10,
     color: C.textMuted,
-    textAlign: "center",
+    textAlign: 'center',
   },
 });

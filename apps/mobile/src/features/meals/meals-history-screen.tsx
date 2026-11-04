@@ -1,40 +1,39 @@
-import { Image } from "expo-image";
-import { router } from "expo-router";
-import { useMemo, useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from 'expo-image';
+import { router } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { FetchErrorState, LoadingSkeleton } from "@/components/fetch-states";
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
-import { icons } from "./meals-ui";
-import { useMeals, type MealLog } from "./meals-store";
-import { MealPhoto } from "./meal-photo";
+import { Pressable } from '@/components/pressable';
+import { Palette as C } from '@/constants/palette';
+import { icons } from './meals-ui';
+import { useMeals, type MealLog } from './meals-store';
 
-type SortKey = "newest" | "kcal" | "protein" | "carbs" | "fat";
+type SortKey = 'newest' | 'kcal' | 'protein' | 'carbs' | 'fat';
 
 const SORTS: { key: SortKey; label: string }[] = [
-  { key: "newest", label: "Newest" },
-  { key: "kcal", label: "kcal" },
-  { key: "protein", label: "Protein" },
-  { key: "carbs", label: "Carbs" },
-  { key: "fat", label: "Fat" },
+  { key: 'newest', label: 'Newest' },
+  { key: 'kcal', label: 'kcal' },
+  { key: 'protein', label: 'Protein' },
+  { key: 'carbs', label: 'Carbs' },
+  { key: 'fat', label: 'Fat' },
 ];
 
-const metricOf = (item: MealLog, key: Exclude<SortKey, "newest">) =>
-  key === "kcal" ? item.kcal : item.macros[key];
+const metricOf = (item: MealLog, key: Exclude<SortKey, 'newest'>) =>
+  key === 'kcal' ? item.kcal : item.macros[key];
 
 export function MealsHistoryScreen() {
   const insets = useSafeAreaInsets();
-  const { history, loading, refreshing, error, actionError, retryAction, refresh } = useMeals();
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<SortKey>("newest");
+  const { history } = useMeals();
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<SortKey>('newest');
   const [descending, setDescending] = useState(true);
 
   const items = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const filtered = history.filter((item) => item.name.toLowerCase().includes(needle));
-    if (sort === "newest") return descending ? filtered : [...filtered].reverse();
+    if (sort === 'newest') return descending ? filtered : [...filtered].reverse();
     const direction = descending ? -1 : 1;
     return [...filtered].sort((a, b) => direction * (metricOf(a, sort) - metricOf(b, sort)));
   }, [history, query, sort, descending]);
@@ -49,70 +48,20 @@ export function MealsHistoryScreen() {
 
   return (
     <ScrollView
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => void refresh()}
-          tintColor={C.accent}
-          colors={[C.accent]}
-        />
-      }
       style={styles.screen}
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}
-    >
+      ]}>
       <View style={styles.heading}>
-        <Text accessibilityRole="header" style={styles.title}>
-          Meals
-        </Text>
+        <Text style={styles.title}>Meals</Text>
         <Text style={styles.subtitle}>Your logged meals</Text>
       </View>
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => router.push("/capture")}
-        style={{ paddingVertical: 12 }}
-      >
-        <Text style={{ color: C.accent }}>Add meal</Text>
-      </Pressable>
-      {error ? (
-        history.length ? (
-          <FetchErrorState
-            title="Couldn't refresh meals"
-            message={error}
-            onRetry={refresh}
-            retrying={refreshing}
-          />
-        ) : (
-          <FetchErrorState
-            title="Couldn't load meals"
-            message={error}
-            onRetry={refresh}
-            retrying={refreshing}
-          />
-        )
-      ) : null}
-      {actionError ? (
-        <FetchErrorState
-          title="Couldn't save your meal"
-          message={actionError}
-          onRetry={retryAction}
-        />
-      ) : null}
-      {loading ? <LoadingSkeleton label="Loading meals" rows={5} /> : null}
-      {refreshing ? <Text style={styles.subtitle}>Updating meals…</Text> : null}
 
       <View style={styles.search}>
-        <Image
-          accessible={false}
-          source={icons.searchMd}
-          style={styles.searchIcon}
-          contentFit="contain"
-        />
+        <Image source={icons.searchMd} style={styles.searchIcon} contentFit="contain" />
         <TextInput
-          accessibilityLabel="Search logged meals"
           value={query}
           onChangeText={setQuery}
           placeholder="Search meals"
@@ -126,54 +75,53 @@ export function MealsHistoryScreen() {
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.sortsScroll}
-        contentContainerStyle={styles.sorts}
-      >
+        contentContainerStyle={styles.sorts}>
         {SORTS.map((option) => {
           const active = option.key === sort;
           return (
             <Pressable
               key={option.key}
-              accessibilityLabel={`Sort by ${option.label}${active ? `, ${descending ? "descending" : "ascending"}` : ""}`}
-              accessibilityHint={
-                active ? "Double tap to reverse sort order" : "Double tap to sort meals"
-              }
-              accessibilityState={{ selected: active }}
               style={[styles.sortChip, active && styles.sortChipActive]}
-              onPress={() => handleSort(option.key)}
-            >
+              onPress={() => handleSort(option.key)}>
               <Text style={[styles.sortLabel, active && styles.sortLabelActive]}>
                 {option.label}
-                {active ? (descending ? " ↓" : " ↑") : ""}
+                {active ? (descending ? ' ↓' : ' ↑') : ''}
               </Text>
             </Pressable>
           );
         })}
       </ScrollView>
 
-      {!loading && items.length === 0 ? (
-        <Text style={styles.empty}>
-          {query.trim()
-            ? `No meals match “${query.trim()}”.`
-            : "No meals logged yet. Add your first meal above."}
-        </Text>
+      {items.length === 0 ? (
+        <Text style={styles.empty}>No meals match “{query.trim()}”.</Text>
       ) : (
-        items.map((item) => (
-          <Pressable
+        items.map((item, index) => (
+          <Animated.View
             key={item.id}
+            entering={index < 4 ? FadeInUp.delay(index * 50).duration(220) : undefined}>
+          <Pressable
             style={styles.card}
-            onPress={() => router.push(`/meal?log=${item.id}`)}
-          >
-            <MealPhoto mealId={item.id} imageUrl={item.imageUrl} style={styles.photo} compact />
+            onPress={() => router.push(`/meal?log=${item.id}`)}>
+            <Image
+              source={require('@/assets/images/meals/meal-photo.png')}
+              style={styles.photo}
+              contentFit="cover"
+            />
             <View style={styles.copy}>
-              <Text style={styles.name}>{item.name}</Text>
+              <Text style={styles.name} numberOfLines={1}>
+                {item.name}
+              </Text>
               <Text style={styles.date}>
                 {item.date}
-                {sort === "newest" ? ` · ${item.time}` : ""}
-                {sort !== "newest" && sort !== "kcal" ? ` · ${metricOf(item, sort)} g ${sort}` : ""}
+                {sort === 'newest' ? ` · ${item.time}` : ''}
+                {sort !== 'newest' && sort !== 'kcal'
+                  ? ` · ${metricOf(item, sort)} g ${sort}`
+                  : ''}
               </Text>
             </View>
             <Text style={styles.kcal}>{item.kcal} kcal</Text>
           </Pressable>
+          </Animated.View>
         ))
       )}
     </ScrollView>
@@ -194,7 +142,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: "400",
+    fontWeight: '400',
     color: C.text,
   },
   subtitle: {
@@ -202,11 +150,10 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   search: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
-    minHeight: 48,
-    paddingVertical: 12,
+    height: 44,
     paddingHorizontal: 14,
     borderRadius: 14,
     borderWidth: 1,
@@ -224,6 +171,7 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   sortsScroll: {
+    // Chips scale on press; the extra padding keeps that from being clipped at the edges.
     marginHorizontal: -24,
     marginVertical: -6,
   },
@@ -234,14 +182,13 @@ const styles = StyleSheet.create({
   },
   sortChip: {
     paddingHorizontal: 14,
-    minHeight: 48,
-    paddingVertical: 10,
+    height: 34,
     borderRadius: 100,
     borderWidth: 1,
     borderColor: C.border,
     backgroundColor: C.surface,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sortChipActive: {
     backgroundColor: C.accentTint,
@@ -249,7 +196,7 @@ const styles = StyleSheet.create({
   },
   sortLabel: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
     color: C.textMuted,
   },
   sortLabelActive: {
@@ -258,13 +205,12 @@ const styles = StyleSheet.create({
   empty: {
     fontSize: 13,
     color: C.textMuted,
-    textAlign: "center",
+    textAlign: 'center',
     paddingVertical: 24,
   },
   card: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
     padding: 10,
     borderRadius: 16,
@@ -284,7 +230,7 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: '600',
     color: C.text,
   },
   date: {
@@ -293,7 +239,7 @@ const styles = StyleSheet.create({
   },
   kcal: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: '600',
     color: C.text,
   },
 });
