@@ -1,4 +1,4 @@
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 export const API_BASE_URL = (
   process.env.EXPO_PUBLIC_API_URL ?? "https://fitwear.tm-project.id.vn"
 ).replace(/\/$/, "");
@@ -9,6 +9,7 @@ export class ApiError extends Error {
     public readonly status: number,
     public readonly code = "API_ERROR",
     public readonly details?: unknown,
+    public readonly retryAfterSec?: number,
   ) {
     super(message);
     this.name = "ApiError";
@@ -43,9 +44,82 @@ export function apiErrorMessage(error: unknown, subject = "your data"): string {
 }
 
 const REQUEST_TIMEOUT_MS = 12_000;
-
 let apiToken: string | null = null;
 const expirationListeners = new Set<() => void>();
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  withCredentials: false,
+  timeout: REQUEST_TIMEOUT_MS,
+});
+
+// Capture the bearer before dispatch; sign-out may clear it in the same turn.
+apiClient.interceptors.request.use(
+  (config) => {
+    if (apiToken) config.headers.set("Authorization", `Bearer ${apiToken}`);
+    return config;
+  },
+  undefined,
+  { synchronous: true },
+);
+
+function retryAfterSeconds(details: unknown, header: unknown): number | undefined {
+  if (details && typeof details === "object" && "retryAfterSec" in details) {
+    const seconds = details.retryAfterSec;
+    if (typeof seconds === "number" && Number.isFinite(seconds) && seconds >= 0) {
+      return Math.ceil(seconds);
+    }
+  }
+  if (typeof header !== "string") return undefined;
+  const value = header.trim();
+  if (/^\d+$/.test(value)) {
+    const seconds = Number(value);
+    return Number.isFinite(seconds) ? seconds : undefined;
+  }
+  if (/^[+-]?\d/.test(value)) return undefined;
+  const deadline = Date.parse(value);
+  return Number.isFinite(deadline)
+    ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000))
+    : undefined;
+}
+
+apiClient.interceptors.response.use(undefined, (cause: unknown) => {
+  // Aborts are not connection failures and must remain recognizable to Query.
+  if (axios.isCancel(cause)) return Promise.reject(cause);
+  if (!axios.isAxiosError(cause)) return Promise.reject(cause);
+
+  const response = cause.response;
+  if (response) {
+    if (
+      response.status === 401 &&
+      apiToken &&
+      cause.config?.headers.get("Authorization") === `Bearer ${apiToken}`
+    ) {
+      apiToken = null;
+      for (const listener of expirationListeners) listener();
+    }
+    const data: unknown = response.data;
+    const error = data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+    return Promise.reject(
+      new ApiError(
+        typeof error.message === "string" ? error.message : "The request could not be completed.",
+        response.status,
+        typeof error.code === "string" ? error.code : "API_ERROR",
+        data,
+        retryAfterSeconds(data, response.headers["retry-after"]),
+      ),
+    );
+  }
+  if (cause.code === "ECONNABORTED" || cause.code === "ETIMEDOUT") {
+    return Promise.reject(new ApiError("The request timed out.", 0, "TIMEOUT"));
+  }
+  return Promise.reject(
+    new ApiError(
+      "Unable to reach the server. Check your connection and try again.",
+      0,
+      "NETWORK_ERROR",
+    ),
+  );
+});
 
 export function setApiToken(token: string | null) {
   apiToken = token;
@@ -65,61 +139,15 @@ export async function apiRequest<T>(
   if (!path.startsWith("/") || path.startsWith("//")) {
     throw new ApiError("API paths must begin with a single slash.", 0, "INVALID_PATH");
   }
-  const token = apiToken;
-  try {
-    const response = await axios.request<unknown>({
-      baseURL: API_BASE_URL,
-      url: path,
-      method: options.method ?? "GET",
-      data: options.body,
-      headers: {
-        Accept: "application/json",
-        ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      withCredentials: false,
-      signal: options.signal,
-      timeout: REQUEST_TIMEOUT_MS,
-      validateStatus: () => true,
-    });
-    if (response.status === 401 && token && token === apiToken) {
-      apiToken = null;
-      for (const listener of expirationListeners) listener();
-    }
-    if (response.status < 200 || response.status >= 300) {
-      const data = response.data;
-      const error = data && typeof data === "object" ? (data as Record<string, unknown>) : {};
-      throw new ApiError(
-        typeof error.message === "string" ? error.message : "The request could not be completed.",
-        response.status,
-        typeof error.code === "string" ? error.code : "API_ERROR",
-        data,
-      );
-    }
-    return response.data as T;
-  } catch (cause) {
-    if (cause instanceof ApiError) throw cause;
-    if (axios.isCancel(cause)) throw cause;
-    if (
-      cause instanceof AxiosError &&
-      cause.code &&
-      ["ECONNABORTED", "ETIMEDOUT"].includes(cause.code)
-    ) {
-      throw new ApiError("The request timed out.", 0, "TIMEOUT", cause);
-    }
-    if (cause instanceof AxiosError && cause.response) {
-      throw new ApiError(
-        "The request could not be completed.",
-        cause.response.status,
-        "API_ERROR",
-        cause.response.data,
-      );
-    }
-    throw new ApiError(
-      "Unable to reach the server. Check your connection and try again.",
-      0,
-      "NETWORK_ERROR",
-      cause,
-    );
-  }
+  const response = await apiClient.request<T>({
+    url: path,
+    method: options.method ?? "GET",
+    data: options.body,
+    headers: {
+      Accept: "application/json",
+      ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
+    },
+    signal: options.signal,
+  });
+  return response.data;
 }

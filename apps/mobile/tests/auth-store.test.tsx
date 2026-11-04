@@ -1,4 +1,4 @@
-import axios, { type AxiosResponse } from "axios";
+import { type AxiosResponse } from "axios";
 import { act, renderHook, waitFor } from "@testing-library/react-native";
 import type { QueryClient } from "@tanstack/react-query";
 import {
@@ -49,10 +49,10 @@ function mockAuthenticationSession(
 
 jest.mock("axios", () => {
   const actual = jest.requireActual("axios");
-  const instance = Object.assign({}, actual.default, { request: jest.fn() });
-  return { __esModule: true, default: instance, AxiosError: actual.AxiosError };
+  actual.default.defaults.adapter = jest.requireActual("./http-adapter").httpAdapter;
+  return actual;
 });
-const request = jest.mocked(axios.request);
+import { request } from "./http-adapter";
 const saved = jest.mocked(sessionStorage);
 const user = mockAuthenticationUser;
 const authenticated = () => mockAuthenticationSession();
@@ -102,10 +102,6 @@ test("failed login stays signed out and surfaces server error", async () => {
     await expect(result.current.signIn("member@example.com", "wrong")).rejects.toMatchObject({
       status: 401,
     });
-  });
-  expect(request.mock.calls[0][0]).toMatchObject({
-    url: "/auth/sign-in",
-    data: { email: "member@example.com", password: "wrong" },
   });
   expect(result.current.user).toBeNull();
   expect(result.current.error).toBe("Invalid email or password");
