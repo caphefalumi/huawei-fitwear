@@ -283,6 +283,39 @@ describe("Password reset integration", () => {
     ).toHaveLength(0);
   });
 
+  it("preserves the existing reset code when replacement insertion fails", async () => {
+    await createAccount();
+    const existingCode = await getResetCode("reset@fitwear.dev");
+    await d1.exec(`
+      CREATE TRIGGER reject_reset_replacement
+      BEFORE INSERT ON verification
+      WHEN NEW.identifier LIKE 'password-reset:%'
+      BEGIN
+        SELECT RAISE(ABORT, 'forced reset insert failure');
+      END;
+    `);
+
+    await expect(
+      withDatabaseBinding(
+        {
+          DB: d1,
+          fitwear_kv: createTestKv(),
+          EMAIL_QUEUE: queued.queue,
+          RESEND_API_KEY: "test-resend-key",
+          RESEND_FROM: "Fitwear <support@example.test>",
+          RESEND_PASSWORD_RESET_TEMPLATE_ID: "reset-template-test",
+        },
+        () => requestPasswordReset("reset@fitwear.dev"),
+      ),
+    ).rejects.toThrow();
+
+    const response = await post("/auth/password-reset/verify", {
+      email: "reset@fitwear.dev",
+      code: existingCode,
+    });
+    expect(response.status).toBe(200);
+  });
+
   it("rejects expired OTPs before issuing a reset token", async () => {
     await createAccount();
     const code = await getResetCode("reset@fitwear.dev");
