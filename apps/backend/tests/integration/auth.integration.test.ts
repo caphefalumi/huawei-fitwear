@@ -1,5 +1,5 @@
 import { createTestEmailQueue } from "../helpers/test-email-queue";
-import { describe, expect, it, beforeEach } from "bun:test";
+import { describe, expect, it, beforeEach, spyOn } from "bun:test";
 import { app, setTestDatabaseBinding } from "../helpers/test-app";
 import { createTestDatabase } from "../helpers/test-db";
 import { createTestKv } from "../helpers/test-kv";
@@ -156,33 +156,36 @@ describe("Integration Test: Auth API Endpoints", () => {
 
   describe("auth rate limits", () => {
     it("returns 429 with Retry-After when sign-in bucket is exhausted", async () => {
-      const body = JSON.stringify({
-        email: "unknown@fitwear.dev",
-        password: "Password123!",
-      });
-      const headers = {
-        "Content-Type": "application/json",
-        "cf-connecting-ip": "203.0.113.50",
-      };
-
-      for (let i = 0; i < 20; i++) {
-        await app.handle(
+      // Keep bucket refill deterministic while real cost-12 bcrypt work runs.
+      const clock = spyOn(Date, "now").mockReturnValue(Date.now());
+      try {
+        const body = JSON.stringify({
+          email: "unknown@fitwear.dev",
+          password: "Password123!",
+        });
+        const headers = {
+          "Content-Type": "application/json",
+          "cf-connecting-ip": "203.0.113.50",
+        };
+        for (let i = 0; i < 20; i++) {
+          await app.handle(
+            new Request("http://localhost/auth/sign-in", { method: "POST", headers, body }),
+          );
+        }
+        const res = await app.handle(
           new Request("http://localhost/auth/sign-in", { method: "POST", headers, body }),
         );
+        expect(res.status).toBe(429);
+        const retryAfter = res.headers.get("Retry-After");
+        expect(retryAfter).not.toBeNull();
+        const retryAfterSec = Number(retryAfter);
+        expect(retryAfterSec).toBeGreaterThan(0);
+        const err = await res.json();
+        expect(err.retryAfterSec).toBe(retryAfterSec);
+      } finally {
+        clock.mockRestore();
       }
-
-      const res = await app.handle(
-        new Request("http://localhost/auth/sign-in", { method: "POST", headers, body }),
-      );
-
-      expect(res.status).toBe(429);
-      const retryAfter = res.headers.get("Retry-After");
-      expect(retryAfter).not.toBeNull();
-      const retryAfterSec = Number(retryAfter);
-      expect(retryAfterSec).toBeGreaterThan(0);
-      const err = await res.json();
-      expect(err.retryAfterSec).toBe(retryAfterSec);
-    });
+    }, 20_000);
   });
 
   describe("POST /auth/sign-in", () => {
@@ -222,64 +225,54 @@ describe("Integration Test: Auth API Endpoints", () => {
       expect(setCookie).toContain("session_token=");
     });
 
-    it("should reject authentication with incorrect password (401)", async () => {
-      const res = await app.handle(
-        new Request("http://localhost/auth/sign-in", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: "member@fitwear.dev",
-            password: "WrongPassword!",
-          }),
-        }),
-      );
-
-      expect(res.status).toBe(401);
-
-      const data = await res.json();
-      expect(data.message).toBe("Email or password is incorrect.");
-    });
-
-    it("should reject non-existent email (401)", async () => {
-      const res = await app.handle(
-        new Request("http://localhost/auth/sign-in", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: "unknown@fitwear.dev",
-            password: "Password123!",
-          }),
-        }),
-      );
-
-      expect(res.status).toBe(401);
-      const body = await res.json();
-      expect(body.message).toBe("Email or password is incorrect.");
-    });
-    it("throttles sign-in guesses by account across different IP addresses", async () => {
-      for (let attempt = 0; attempt < 10; attempt++) {
+    it("does not distinguish unknown users from incorrect passwords or issue sessions", async () => {
+      const sessionsBefore = await testD1.prepare("SELECT COUNT(*) AS total FROM session").first();
+      const bodies = [];
+      for (const email of ["member@fitwear.dev", "unknown@fitwear.dev"]) {
         const response = await app.handle(
           new Request("http://localhost/auth/sign-in", {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "cf-connecting-ip": `203.0.113.${attempt + 1}`,
-            },
-            body: JSON.stringify({ email: "target@fitwear.dev", password: "WrongPassword123!" }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password: "WrongPassword!" }),
           }),
         );
         expect(response.status).toBe(401);
+        expect(response.headers.get("set-cookie")).toBeNull();
+        bodies.push(await response.json());
       }
-
-      const limited = await app.handle(
-        new Request("http://localhost/auth/sign-in", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "cf-connecting-ip": "203.0.113.99" },
-          body: JSON.stringify({ email: "target@fitwear.dev", password: "WrongPassword123!" }),
-        }),
+      expect(bodies[0]).toEqual(bodies[1]);
+      expect(await testD1.prepare("SELECT COUNT(*) AS total FROM session").first()).toEqual(
+        sessionsBefore,
       );
-      expect(limited.status).toBe(429);
     });
+    it("throttles sign-in guesses by account across different IP addresses", async () => {
+      const clock = spyOn(Date, "now").mockReturnValue(Date.now());
+      try {
+        for (let attempt = 0; attempt < 10; attempt++) {
+          const response = await app.handle(
+            new Request("http://localhost/auth/sign-in", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "cf-connecting-ip": `203.0.113.${attempt + 1}`,
+              },
+              body: JSON.stringify({ email: "target@fitwear.dev", password: "WrongPassword123!" }),
+            }),
+          );
+          expect(response.status).toBe(401);
+        }
+        const limited = await app.handle(
+          new Request("http://localhost/auth/sign-in", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "cf-connecting-ip": "203.0.113.99" },
+            body: JSON.stringify({ email: "target@fitwear.dev", password: "WrongPassword123!" }),
+          }),
+        );
+        expect(limited.status).toBe(429);
+      } finally {
+        clock.mockRestore();
+      }
+    }, 20_000);
 
     it("should sign in when user was inserted directly into D1", async () => {
       const password = "LegacyLogin123!";

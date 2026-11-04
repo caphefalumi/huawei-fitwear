@@ -2,6 +2,12 @@ import { fireEvent, render } from "@testing-library/react-native";
 import { useAuth } from "@/features/auth/store/auth.store";
 import { SignUpScreen } from "@/features/auth/components/sign-up-screen";
 
+jest.mock("react-native-reanimated", () => ({
+  __esModule: true,
+  default: { View: require("react-native").View },
+  useReducedMotion: () => true,
+}));
+
 jest.mock("@/features/auth/store/auth.store", () => ({
   APP_ROUTES: { login: "/login" },
   useAuth: jest.fn(),

@@ -1,19 +1,36 @@
 import { Image } from "expo-image";
 import { useState } from "react";
-import { StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
+import {
+  AccessibilityInfo,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type TextInputInstance,
+  type TextInputProps,
+} from "react-native";
+import Animated, { useReducedMotion } from "react-native-reanimated";
 import Svg, { Circle, Path } from "react-native-svg";
 
 import { Pressable } from "@/components/pressable";
 import { Palette as AuthColors } from "@/constants/palette";
+import type { AuthColorPalette } from "./auth-colors";
+
+const defaultColors = { ...AuthColors, error: "#B3261D" };
 
 type AuthFieldProps = {
   label: string;
   icon?: number;
   helper?: string;
+  error?: boolean;
+  inputRef?: React.Ref<TextInputInstance>;
+  errorMessage?: string;
+  colors?: Pick<AuthColorPalette, "surface" | "text" | "textMuted" | "border" | "accent" | "error">;
   style?: TextInputProps["style"];
 } & Omit<TextInputProps, "style">;
 
-function EyeIcon({ color = AuthColors.textMuted, size = 19 }: { color?: string; size?: number }) {
+function EyeIcon({ color = AuthColors.textMuted, size = 24 }: { color?: string; size?: number }) {
   return (
     <Svg
       width={size}
@@ -33,7 +50,7 @@ function EyeIcon({ color = AuthColors.textMuted, size = 19 }: { color?: string; 
 
 function EyeOffIcon({
   color = AuthColors.textMuted,
-  size = 19,
+  size = 24,
 }: {
   color?: string;
   size?: number;
@@ -57,48 +74,92 @@ function EyeOffIcon({
   );
 }
 
-export function AuthField({ label, icon, helper, style, ...inputProps }: AuthFieldProps) {
+export function AuthField({
+  label,
+  icon,
+  helper,
+  error = false,
+  inputRef,
+  errorMessage,
+  colors = defaultColors,
+  style,
+  ...inputProps
+}: AuthFieldProps) {
+  const reducedMotion = useReducedMotion();
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const disabled = inputProps.editable === false;
   return (
-    <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.box}>
+    <View style={[styles.field, disabled && { opacity: 0.38 }]}>
+      <Text style={[styles.label, { color: colors.textMuted }]}>{label}</Text>
+      <Animated.View
+        style={[
+          styles.box,
+          {
+            backgroundColor: colors.surface,
+            borderWidth: !disabled && (error || focused) ? 2 : 1,
+            borderColor: disabled
+              ? colors.border
+              : error
+                ? colors.error
+                : focused
+                  ? colors.accent
+                  : colors.border,
+            transitionProperty: "borderColor",
+            transitionDuration: reducedMotion ? 0 : 150,
+          },
+        ]}
+      >
         <TextInput
+          ref={inputRef}
           accessibilityLabel={label}
-          accessibilityHint={helper}
-          placeholderTextColor={AuthColors.textMuted}
+          accessibilityHint={error ? errorMessage : helper}
+          accessibilityState={{ disabled: inputProps.editable === false }}
+          placeholderTextColor={colors.textMuted}
+          aria-invalid={error || undefined}
           {...inputProps}
+          onFocus={(event) => {
+            setFocused(true);
+            inputProps.onFocus?.(event);
+          }}
+          onBlur={(event) => {
+            setFocused(false);
+            inputProps.onBlur?.(event);
+          }}
           secureTextEntry={inputProps.secureTextEntry && !passwordVisible}
-          style={[styles.input, style]}
+          style={[styles.input, { color: colors.text }, style]}
         />
         {inputProps.secureTextEntry ? (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={passwordVisible ? "Hide password" : "Show password"}
-            accessibilityHint={
-              passwordVisible ? "Obscures password characters" : "Displays password in plain text"
-            }
-            accessibilityState={{ disabled: inputProps.editable === false }}
+            accessibilityHint={passwordVisible ? "Password is visible" : "Password is hidden"}
+            accessibilityState={{
+              disabled: inputProps.editable === false,
+            }}
             disabled={inputProps.editable === false}
-            onPress={() => setPasswordVisible((visible) => !visible)}
-            style={[
-              styles.visibilityButton,
-              inputProps.editable === false && styles.visibilityButtonDisabled,
-            ]}
+            onPress={() => {
+              const visible = !passwordVisible;
+              setPasswordVisible(visible);
+              AccessibilityInfo.announceForAccessibility(
+                visible ? "Password is visible" : "Password is hidden",
+              );
+            }}
+            style={styles.visibilityButton}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             testID="password-visibility-toggle"
           >
             {passwordVisible ? (
-              <EyeOffIcon color={AuthColors.text} />
+              <EyeOffIcon color={colors.text} />
             ) : (
-              <EyeIcon color={AuthColors.textMuted} />
+              <EyeIcon color={colors.textMuted} />
             )}
           </Pressable>
         ) : icon ? (
           <Image source={icon} style={styles.icon} contentFit="contain" accessible={false} />
         ) : null}
-      </View>
-      {helper ? <Text style={styles.helper}>{helper}</Text> : null}
+      </Animated.View>
+      {helper ? <Text style={[styles.helper, { color: colors.textMuted }]}>{helper}</Text> : null}
     </View>
   );
 }
@@ -108,17 +169,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "500",
     color: AuthColors.textMuted,
   },
   box: {
-    minHeight: 52,
+    minHeight: Platform.OS === "android" ? 56 : 52,
     paddingVertical: 2,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
     backgroundColor: AuthColors.surface,
     borderWidth: 1,
     borderColor: AuthColors.border,
@@ -126,9 +187,11 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    padding: 0,
+    paddingVertical: 12,
+    paddingHorizontal: 0,
     fontSize: 16,
     color: AuthColors.text,
+    outlineWidth: 0,
   },
   icon: {
     width: 19,
@@ -139,9 +202,6 @@ const styles = StyleSheet.create({
     minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
-  },
-  visibilityButtonDisabled: {
-    opacity: 0.4,
   },
   helper: {
     fontSize: 11,

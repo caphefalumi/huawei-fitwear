@@ -1,24 +1,26 @@
 import { focusManager, onlineManager, QueryClient } from "@tanstack/react-query";
 import { addNetworkStateListener, getNetworkStateAsync } from "expo-network";
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
 
 import { ApiError } from "@/lib/api";
 
 const isOnline = (state: { isInternetReachable?: boolean | null; isConnected?: boolean | null }) =>
   state.isInternetReachable ?? state.isConnected ?? true;
 
-focusManager.setEventListener((onFocus) => {
-  const subscription = AppState.addEventListener("change", (state) => {
-    onFocus(state === "active");
+if (Platform.OS !== "web" || typeof window !== "undefined") {
+  focusManager.setEventListener((onFocus) => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      onFocus(state === "active");
+    });
+    return () => subscription.remove();
   });
-  return () => subscription.remove();
-});
 
-onlineManager.setEventListener((setOnline) => {
-  void getNetworkStateAsync().then((state) => setOnline(isOnline(state)));
-  const subscription = addNetworkStateListener((state) => setOnline(isOnline(state)));
-  return () => subscription.remove();
-});
+  onlineManager.setEventListener((setOnline) => {
+    void getNetworkStateAsync().then((state) => setOnline(isOnline(state)));
+    const subscription = addNetworkStateListener((state) => setOnline(isOnline(state)));
+    return () => subscription.remove();
+  });
+}
 
 export const queryClient = new QueryClient({
   defaultOptions: {
