@@ -30,7 +30,7 @@ export function onSessionExpired(listener: () => void) {
 
 export async function apiRequest<T>(
   path: string,
-  options: { method?: string; body?: unknown } = {},
+  options: { method?: string; body?: unknown; signal?: AbortSignal } = {},
 ): Promise<T> {
   if (!path.startsWith("/") || path.startsWith("//")) {
     throw new ApiError("API paths must begin with a single slash.", 0, "INVALID_PATH");
@@ -47,8 +47,10 @@ export async function apiRequest<T>(
       },
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
       credentials: "omit",
+      signal: options.signal,
     });
   } catch (cause) {
+    if (cause instanceof Error && cause.name === "AbortError") throw cause;
     throw new ApiError(
       "Unable to reach the server. Check your connection and try again.",
       0,

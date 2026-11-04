@@ -25,7 +25,7 @@ const metricOf = (item: MealLog, key: Exclude<SortKey, "newest">) =>
 
 export function MealsHistoryScreen() {
   const insets = useSafeAreaInsets();
-  const { history, loading, error, refresh } = useMeals();
+  const { history, loading, refreshing, error, refresh } = useMeals();
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("newest");
   const [descending, setDescending] = useState(true);
@@ -71,7 +71,7 @@ export function MealsHistoryScreen() {
       {error ? (
         <View>
           <Text accessibilityRole="alert" style={styles.subtitle}>
-            {error}
+            {history.length ? `Could not refresh. Showing saved meals. ${error}` : error}
           </Text>
           <Pressable
             onPress={() => {
@@ -83,6 +83,8 @@ export function MealsHistoryScreen() {
           </Pressable>
         </View>
       ) : null}
+      {loading ? <Text style={styles.subtitle}>Loading meals…</Text> : null}
+      {refreshing ? <Text style={styles.subtitle}>Updating meals…</Text> : null}
 
       <View style={styles.search}>
         <Image
@@ -130,7 +132,7 @@ export function MealsHistoryScreen() {
         })}
       </ScrollView>
 
-      {items.length === 0 && (!loading || query.trim()) ? (
+      {!loading && items.length === 0 ? (
         <Text style={styles.empty}>
           {query.trim()
             ? `No meals match “${query.trim()}”.`

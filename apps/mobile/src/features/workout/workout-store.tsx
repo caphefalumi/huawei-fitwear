@@ -1,12 +1,5 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createContext, useContext, type ReactNode } from "react";
 
 import { useAuth } from "@/features/auth/auth-store";
 import { apiRequest } from "@/lib/api";
@@ -59,6 +52,7 @@ export type WorkoutState = {
   exercises: Exercise[];
   sessions: WorkoutSession[];
   loading: boolean;
+  refreshing: boolean;
   error: string | null;
   hasMore: boolean;
   activeSessionId: string | null;
@@ -71,202 +65,170 @@ export type WorkoutState = {
   saveSet: (sessionId: string, input: SetInput, setId?: string) => Promise<SessionWithSets>;
   deleteSet: (sessionId: string, setId: string) => Promise<SessionWithSets>;
 };
+export const workoutQueryKeys = {
+  all: (userId: string) => ["workouts", userId] as const,
+  catalog: (userId: string) => [...workoutQueryKeys.all(userId), "exercises"] as const,
+  history: (userId: string) => [...workoutQueryKeys.all(userId), "history"] as const,
+  progress: (userId: string) => [...workoutQueryKeys.all(userId), "stats"] as const,
+  detail: (userId: string, sessionId: string) =>
+    [...workoutQueryKeys.all(userId), "session", sessionId] as const,
+};
 
-function useWorkoutState() {
+function useWorkoutState(): WorkoutState {
   const { user } = useAuth();
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const userId = user?.id;
-  const [count, setCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const generation = useRef(0);
-  const revision = useRef(0);
-  const mutating = useRef(false);
-  const fetching = useRef(false);
-  const owner = useRef(user?.id);
-  owner.current = user?.id;
-
-  const upsert = useCallback((session: WorkoutSession) => {
-    setSessions((previous) =>
-      [session, ...previous.filter((entry) => entry.id !== session.id)].sort(
-        (a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt),
-      ),
-    );
-  }, []);
-
-  const refresh = useCallback(async () => {
-    if (!userId || fetching.current || mutating.current) return;
-    fetching.current = true;
-    const version = generation.current;
-    setLoading(true);
-    setError(null);
-    try {
-      const [catalog, history] = await Promise.all([
-        apiRequest<{ exercises: Exercise[]; count: number }>("/exercises?limit=200"),
-        apiRequest<{ sessions: WorkoutSession[]; count: number }>("/workouts?limit=20&offset=0"),
-      ]);
-      const allExercises = [...catalog.exercises];
-      while (allExercises.length < catalog.count) {
-        const page = await apiRequest<{ exercises: Exercise[] }>(
-          "/exercises?limit=200&offset=" + allExercises.length,
+  const queryClient = useQueryClient();
+  const catalogQuery = useQuery({
+    queryKey: workoutQueryKeys.catalog(userId ?? "signed-out"),
+    enabled: Boolean(userId),
+    queryFn: async ({ signal }) => {
+      const initial = await apiRequest<{ exercises: Exercise[]; count: number }>(
+        "/exercises?limit=200",
+        { signal },
+      );
+      const exercises = [...initial.exercises];
+      while (exercises.length < initial.count) {
+        const next = await apiRequest<{ exercises: Exercise[] }>(
+          `/exercises?limit=200&offset=${exercises.length}`,
+          { signal },
         );
-        if (!page.exercises.length)
+        if (!next.exercises.length)
           throw new Error("The exercise catalog could not be fully loaded.");
-        allExercises.push(...page.exercises);
+        exercises.push(...next.exercises);
       }
-      if (version !== generation.current) return;
-      setExercises(allExercises);
-      setSessions((previous) =>
-        history.sessions.map((session) => ({
-          ...session,
-          sets: previous.find((entry) => entry.id === session.id)?.sets,
-        })),
-      );
-      setCount(history.count);
-      setActiveSessionId(history.sessions.find((session) => !session.completedAt)?.id ?? null);
-    } catch (cause) {
-      if (version === generation.current)
-        setError(cause instanceof Error ? cause.message : "Unable to load workouts.");
-    } finally {
-      if (version === generation.current) {
-        setLoading(false);
-        fetching.current = false;
-      }
-    }
-  }, [userId]);
-
-  useEffect(() => {
-    generation.current += 1;
-    fetching.current = false;
-    mutating.current = false;
-    setExercises([]);
-    setSessions([]);
-    setCount(0);
-    setActiveSessionId(null);
-    void refresh();
-    return () => {
-      generation.current += 1;
-    };
-  }, [userId, refresh]);
-
-  async function loadMore() {
-    if (!user || fetching.current || mutating.current || sessions.length >= count) return;
-    fetching.current = true;
-    const version = generation.current;
-    setLoading(true);
-    setError(null);
-    try {
-      const page = await apiRequest<{ sessions: WorkoutSession[]; count: number }>(
-        `/workouts?limit=20&offset=${sessions.length}`,
-      );
-      if (version !== generation.current) return;
-      setSessions((previous) => [
-        ...previous,
-        ...page.sessions.filter((session) => !previous.some((entry) => entry.id === session.id)),
-      ]);
-      setCount(page.count);
-    } catch (cause) {
-      if (version === generation.current)
-        setError(cause instanceof Error ? cause.message : "Unable to load history.");
-    } finally {
-      if (version === generation.current) {
-        setLoading(false);
-        fetching.current = false;
-      }
-    }
-  }
-
-  const loadSession = useCallback(
-    async (id: string) => {
-      const version = generation.current;
-      const requestRevision = revision.current;
-      const session = await apiRequest<SessionWithSets>(`/workouts/${encodeURIComponent(id)}`);
-      if (version !== generation.current || session.userId !== owner.current)
-        throw new Error("Your account changed. Reopen the workout.");
-      if (requestRevision === revision.current) upsert(session);
-      return session;
+      return exercises;
     },
-    [upsert],
-  );
-
-  async function mutate<T>(request: () => Promise<T>): Promise<T> {
-    if (!owner.current) throw new Error("Sign in to manage workouts.");
-    if (mutating.current || fetching.current)
-      throw new Error("Workout cannot be updated right now.");
-    const version = generation.current;
-    mutating.current = true;
-    try {
-      const result = await request();
-      if (version !== generation.current)
-        throw new Error("Your account changed. Reopen the workout.");
-      revision.current += 1;
-      return result;
-    } finally {
-      if (version === generation.current) mutating.current = false;
-    }
-  }
-
-  async function startSession(sessionTitle: string, workoutSplit: string) {
-    const session = await mutate(() =>
-      apiRequest<SessionWithSets>("/workouts", {
-        method: "POST",
-        body: { sessionTitle, workoutSplit },
-      }),
+  });
+  const historyQuery = useInfiniteQuery({
+    queryKey: workoutQueryKeys.history(userId ?? "signed-out"),
+    enabled: Boolean(userId),
+    initialPageParam: 0,
+    queryFn: ({ pageParam, signal }) =>
+      apiRequest<{ sessions: WorkoutSession[]; count: number }>(
+        `/workouts?limit=20&offset=${pageParam}`,
+        { signal },
+      ),
+    getNextPageParam: (lastPage, pages) => {
+      const loaded = pages.reduce((total, page) => total + page.sessions.length, 0);
+      return loaded < lastPage.count && lastPage.sessions.length ? loaded : undefined;
+    },
+  });
+  const sessions = historyQuery.data?.pages.flatMap((page) => page.sessions) ?? [];
+  const count = historyQuery.data?.pages[0]?.count ?? 0;
+  const activeSessionId = sessions.find((session) => !session.completedAt)?.id ?? null;
+  const upsert = (session: SessionWithSets) => {
+    if (!userId) return;
+    queryClient.setQueryData(workoutQueryKeys.detail(userId, session.id), session);
+    queryClient.setQueryData(
+      workoutQueryKeys.history(userId),
+      (previous: typeof historyQuery.data) => {
+        if (!previous?.pages.length) return previous;
+        const allSessions = previous.pages.flatMap((page) => page.sessions);
+        const sessionsWithUpdate = [
+          session,
+          ...allSessions.filter((entry) => entry.id !== session.id),
+        ];
+        let offset = 0;
+        return {
+          ...previous,
+          pages: previous.pages.map((page) => {
+            const nextSessions = sessionsWithUpdate.slice(offset, offset + page.sessions.length);
+            offset += page.sessions.length;
+            return { ...page, sessions: nextSessions };
+          }),
+        };
+      },
     );
+  };
+  const writeMutation = useMutation({
+    mutationKey: [...workoutQueryKeys.all(userId ?? "signed-out"), "write"],
+    mutationFn: ({ path, method, body }: { path: string; method: string; body?: unknown }) =>
+      apiRequest<unknown>(path, { method, ...(body === undefined ? {} : { body }) }),
+    onMutate: async ({ path, method }) => {
+      if (!userId || method !== "DELETE") return undefined;
+      const match = /^\/workouts\/([^/]+)$/.exec(path);
+      if (!match) return undefined;
+      const key = workoutQueryKeys.history(userId);
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData(key);
+      queryClient.setQueryData(key, (data: typeof historyQuery.data) =>
+        data
+          ? {
+              ...data,
+              pages: data.pages.map((page) => ({
+                ...page,
+                sessions: page.sessions.filter((session) => session.id !== match[1]),
+              })),
+            }
+          : data,
+      );
+      return { key, previous };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) queryClient.setQueryData(context.key, context.previous);
+    },
+    onSuccess: async (result, variables) => {
+      if (!userId) return;
+      const match = /^\/workouts\/([^/]+)$/.exec(variables.path);
+      if (match && variables.method === "DELETE") {
+        queryClient.removeQueries({ queryKey: workoutQueryKeys.detail(userId, match[1]) });
+      } else if (result && typeof result === "object" && "id" in result && "sets" in result) {
+        upsert(result as SessionWithSets);
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: workoutQueryKeys.history(userId) }),
+        queryClient.invalidateQueries({ queryKey: workoutQueryKeys.progress(userId) }),
+      ]);
+    },
+  });
+  const refresh = async () => {
+    await Promise.all([catalogQuery.refetch(), historyQuery.refetch()]);
+  };
+  const loadMore = async () => {
+    if (historyQuery.hasNextPage) await historyQuery.fetchNextPage();
+  };
+  const loadSession = async (id: string) => {
+    if (!userId) throw new Error("Sign in to load workouts.");
+    const session = await queryClient.fetchQuery({
+      queryKey: workoutQueryKeys.detail(userId, id),
+      queryFn: ({ signal }) =>
+        apiRequest<SessionWithSets>(`/workouts/${encodeURIComponent(id)}`, { signal }),
+    });
     upsert(session);
-    setCount((previous) => previous + 1);
-    setActiveSessionId(session.id);
     return session;
-  }
-
-  async function finishSession(id: string) {
-    const session = await mutate(() =>
-      apiRequest<SessionWithSets>(`/workouts/${encodeURIComponent(id)}/complete`, {
-        method: "POST",
-        body: {},
-      }),
-    );
-    upsert(session);
-    setActiveSessionId((previous) => (previous === id ? null : previous));
-    return session;
-  }
-
-  async function cancelSession(id: string) {
-    await mutate(() => apiRequest(`/workouts/${encodeURIComponent(id)}`, { method: "DELETE" }));
-    setSessions((previous) => previous.filter((session) => session.id !== id));
-    setCount((previous) => Math.max(0, previous - 1));
-    setActiveSessionId((previous) => (previous === id ? null : previous));
-  }
-
-  async function saveSet(sessionId: string, input: SetInput, setId?: string) {
+  };
+  const write = async <T,>(path: string, method: string, body?: unknown): Promise<T> =>
+    (await writeMutation.mutateAsync({ path, method, body })) as T;
+  const startSession = (title: string, split: string) =>
+    write<SessionWithSets>("/workouts", "POST", { sessionTitle: title, workoutSplit: split });
+  const finishSession = (id: string) =>
+    write<SessionWithSets>(`/workouts/${encodeURIComponent(id)}/complete`, "POST", {});
+  const cancelSession = async (id: string) => {
+    await write(`/workouts/${encodeURIComponent(id)}`, "DELETE");
+  };
+  const saveSet = (sessionId: string, input: SetInput, setId?: string) => {
     const { exerciseId: _exerciseId, ...metrics } = input;
-    const session = await mutate(() =>
-      apiRequest<SessionWithSets>(
-        `/workouts/${encodeURIComponent(sessionId)}/sets${setId ? "/" + encodeURIComponent(setId) : ""}`,
-        { method: setId ? "PATCH" : "POST", body: setId ? metrics : input },
-      ),
+    return write<SessionWithSets>(
+      `/workouts/${encodeURIComponent(sessionId)}/sets${setId ? `/${encodeURIComponent(setId)}` : ""}`,
+      setId ? "PATCH" : "POST",
+      setId ? metrics : input,
     );
-    upsert(session);
-    return session;
-  }
-
-  async function deleteSet(sessionId: string, setId: string) {
-    const session = await mutate(() =>
-      apiRequest<SessionWithSets>(
-        `/workouts/${encodeURIComponent(sessionId)}/sets/${encodeURIComponent(setId)}`,
-        { method: "DELETE" },
-      ),
+  };
+  const deleteSet = (sessionId: string, setId: string) =>
+    write<SessionWithSets>(
+      `/workouts/${encodeURIComponent(sessionId)}/sets/${encodeURIComponent(setId)}`,
+      "DELETE",
     );
-    upsert(session);
-    return session;
-  }
-
+  const loading = catalogQuery.isLoading || historyQuery.isLoading;
+  const error =
+    [catalogQuery.error, historyQuery.error, writeMutation.error].find(
+      (cause) => cause instanceof Error,
+    )?.message ?? null;
   return {
-    exercises,
+    exercises: catalogQuery.data ?? [],
     sessions,
     loading,
+    refreshing: (catalogQuery.isFetching || historyQuery.isFetching) && !loading,
     error,
     refresh,
     loadMore,
@@ -280,6 +242,7 @@ function useWorkoutState() {
     deleteSet,
   };
 }
+
 const WorkoutContext = createContext<WorkoutState | null>(null);
 export function WorkoutProvider({ children }: { children: ReactNode }) {
   return <WorkoutContext.Provider value={useWorkoutState()}>{children}</WorkoutContext.Provider>;

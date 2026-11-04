@@ -1,3 +1,4 @@
+import { queryOptions } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
 import type {
   AuthUser,
@@ -6,6 +7,16 @@ import type {
   SignUpBody,
   UpdateUserBody,
 } from "../types";
+
+export const authQueryKeys = {
+  session: ["auth", "session"] as const,
+};
+
+export const authSessionQueryOptions = () =>
+  queryOptions({
+    queryKey: authQueryKeys.session,
+    queryFn: ({ signal }) => getSession(signal),
+  });
 
 export const AUTH_ENDPOINTS = {
   session: "/auth/session",
@@ -19,8 +30,8 @@ export const AUTH_ENDPOINTS = {
   updateUser: "/auth/update-user",
 } as const;
 
-export function getSession(): Promise<AuthenticationSessionResponse> {
-  return apiRequest(AUTH_ENDPOINTS.session);
+export function getSession(signal?: AbortSignal): Promise<AuthenticationSessionResponse> {
+  return apiRequest(AUTH_ENDPOINTS.session, { signal });
 }
 
 export function sendSignIn(body: SignInBody): Promise<AuthenticationSessionResponse> {

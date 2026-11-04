@@ -1,14 +1,16 @@
+import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Pressable } from "@/components/pressable";
 import { Palette as C } from "@/constants/palette";
+import { useAuth } from "@/features/auth";
 import { dateLabel, useHealth } from "@/features/health/health-store";
-import { useWorkouts } from "@/features/workout/workout-store";
-import { apiRequest } from "@/lib/api";
 import { BackHeader, Card } from "@/features/home/ui";
+import { WeightChart } from "@/features/home/weight-chart";
+import { apiRequest } from "@/lib/api";
 import {
   progressBounds,
   progressData,
@@ -16,40 +18,30 @@ import {
   type Range,
   type WorkoutStats,
 } from "@/features/home/progress-data";
-import { WeightChart } from "@/features/home/weight-chart";
+import { workoutQueryKeys } from "@/features/workout/workout-store";
 
 export function ProgressScreen() {
   const insets = useSafeAreaInsets();
-  const { weights, plan, error, refresh } = useHealth();
-  const { sessions } = useWorkouts();
+  const { user } = useAuth();
+  const {
+    weights,
+    plan,
+    error,
+    refresh,
+    loading: healthLoading,
+    refreshing: healthRefreshing,
+  } = useHealth();
   const [range, setRange] = useState<Range>("Month");
-  const [stats, setStats] = useState<WorkoutStats | null>(null);
-  const [statsError, setStatsError] = useState<string | null>(null);
-  const [statsLoading, setStatsLoading] = useState(true);
-  const [retry, setRetry] = useState(0);
-  useEffect(() => {
-    let active = true;
-    const bounds = progressBounds(range);
-    setStats(null);
-    setStatsError(null);
-    setStatsLoading(true);
-    apiRequest<WorkoutStats>(`/workouts/stats?from=${bounds.from}&to=${bounds.to}`)
-      .then((result) => {
-        if (active) setStats(result);
-      })
-      .catch((cause) => {
-        if (active)
-          setStatsError(
-            cause instanceof Error ? cause.message : "Could not load training activity.",
-          );
-      })
-      .finally(() => {
-        if (active) setStatsLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [range, sessions, retry]);
+  const bounds = progressBounds(range);
+  const statsQuery = useQuery({
+    queryKey: [...workoutQueryKeys.progress(user?.id ?? "signed-out"), bounds.from, bounds.to],
+    enabled: Boolean(user?.id),
+    queryFn: ({ signal }) =>
+      apiRequest<WorkoutStats>(`/workouts/stats?from=${bounds.from}&to=${bounds.to}`, { signal }),
+  });
+  const stats = statsQuery.data ?? null;
+  const statsError = statsQuery.error instanceof Error ? statsQuery.error.message : null;
+  const statsLoading = statsQuery.isLoading;
   const data = progressData(range, weights, stats);
   const maxSessions = Math.max(1, ...data.bars.map((bar) => bar.sessions));
 
@@ -67,14 +59,15 @@ export function ProgressScreen() {
         Your progress.
       </Text>
       {error ? (
-        <Pressable
-          onPress={() => {
-            void refresh();
-          }}
-        >
-          <Text accessibilityRole="alert">{error} Tap to retry.</Text>
+        <Pressable onPress={() => void refresh()}>
+          <Text accessibilityRole="alert">
+            {weights.length ? `Could not refresh health data. Showing saved data. ${error}` : error}{" "}
+            Tap to retry.
+          </Text>
         </Pressable>
       ) : null}
+      {healthLoading ? <Text style={styles.cardNote}>Loading health data…</Text> : null}
+      {healthRefreshing ? <Text style={styles.cardNote}>Updating health data…</Text> : null}
 
       <View style={styles.segments}>
         {RANGES.map((item) => {
@@ -108,6 +101,9 @@ export function ProgressScreen() {
         </Text>
 
         <WeightChart weights={data.weights} />
+        {!healthLoading && !data.weights.length ? (
+          <Text style={styles.cardNote}>No weight entries for this period yet.</Text>
+        ) : null}
 
         <View style={styles.dates}>
           {data.dates.map((date) => (
@@ -132,12 +128,19 @@ export function ProgressScreen() {
           <Text style={styles.cardNote}>{!statsLoading ? data.sessionsNote : ""}</Text>
         </View>
         {statsError ? (
-          <Pressable onPress={() => setRetry((value) => value + 1)}>
-            <Text accessibilityRole="alert">{statsError} Tap to retry.</Text>
+          <Pressable onPress={() => void statsQuery.refetch()}>
+            <Text accessibilityRole="alert">
+              {stats
+                ? `Could not refresh training activity. Showing saved data. ${statsError} Tap to retry.`
+                : `${statsError} Tap to retry.`}
+            </Text>
           </Pressable>
         ) : null}
-
-        {stats ? (
+        {statsLoading ? <Text style={styles.cardNote}>Loading training activity…</Text> : null}
+        {statsQuery.isFetching && !statsLoading ? (
+          <Text style={styles.cardNote}>Updating training activity…</Text>
+        ) : null}
+        {stats?.completedSessionCount ? (
           <View style={styles.bars}>
             {data.bars.map((week) => (
               <View
@@ -158,6 +161,9 @@ export function ProgressScreen() {
               </View>
             ))}
           </View>
+        ) : null}
+        {stats && stats.completedSessionCount === 0 ? (
+          <Text style={styles.cardNote}>No completed workouts in this period yet.</Text>
         ) : null}
 
         <View style={styles.durationRow}>
