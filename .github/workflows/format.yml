@@ -10,8 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  actions: write
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -43,38 +42,5 @@ jobs:
       - name: Install workspace dependencies
         run: bun install --frozen-lockfile
 
-      - name: Autoformat and commit pull request changes
-        id: format
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          BRANCH: ${{ github.head_ref }}
-        run: |
-          bun run fmt
-          if git diff --quiet; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -u
-          git commit -m "style: format with oxfmt"
-          git push origin "HEAD:refs/heads/$BRANCH"
-          echo "changed=true" >> "$GITHUB_OUTPUT"
-
-      - name: Check formatting when the bot cannot push
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+      - name: Check formatting
         run: bun run fmt:check
-
-      - name: Dispatch PR checks for the formatted commit
-        if: steps.format.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          BRANCH: ${{ github.head_ref }}
-        run: |
-          gh workflow run format.yml --ref "$BRANCH"
-          gh workflow run backend-ci.yml --ref "$BRANCH"
-          gh workflow run mobile-ci.yml --ref "$BRANCH"
-          gh workflow run lint.yml --ref "$BRANCH"
