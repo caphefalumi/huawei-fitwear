@@ -39,7 +39,8 @@ export type {
 import { isLoggedIn } from "../utils/is-logged-in";
 
 export const APP_ROUTES = {
-  login: "/",
+  welcome: "/",
+  login: "/login",
   signUp: "/sign-up",
   home: "/home",
 } as const;

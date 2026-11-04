@@ -1,4 +1,3 @@
-import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { AppState, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
@@ -6,14 +5,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Pressable } from "@/components/pressable";
 import { Palette as AuthColors } from "@/constants/palette";
-import { APP_ROUTES, useAuth } from "../store/auth.store";
+import { useAuth } from "../store/auth.store";
 import { AuthField } from "./auth-field";
-
-const icons = {
-  logo: require("@/assets/images/auth/logo.svg"),
-  user: require("@/assets/images/auth/user-round.svg"),
-  eyeOff: require("@/assets/images/auth/eye-off.svg"),
-};
 
 export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void } = {}) {
   const insets = useSafeAreaInsets();
@@ -25,7 +18,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
     pending,
     error,
   } = useAuth();
-  const handleCreateAccount = onCreateAccount ?? (() => router.push(APP_ROUTES.signUp));
+  const handleCreateAccount = onCreateAccount ?? (() => router.replace("/(auth)/sign-up"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [resetCode, setResetCode] = useState("");
@@ -163,21 +156,21 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
       ]}
+      keyboardDismissMode="interactive"
       keyboardShouldPersistTaps="handled"
     >
-      <View style={styles.brand}>
-        <Image
-          accessible={false}
-          source={icons.logo}
-          style={styles.brandMark}
-          contentFit="contain"
-        />
-        <Text style={styles.brandName}>VoocHealth</Text>
-      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Back"
+        onPress={() => router.replace("/(auth)")}
+        style={styles.back}
+      >
+        <Text style={styles.backLabel}>‹</Text>
+      </Pressable>
 
       <Text accessibilityRole="header" style={styles.welcome}>
         {!resetMode
-          ? "Welcome back."
+          ? "Hi, welcome back."
           : resetStep === "email"
             ? "Reset your password."
             : resetStep === "code"
@@ -190,12 +183,12 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
       <View style={styles.credentials}>
         {!resetMode || resetStep === "email" ? (
           <AuthField
-            label="Email"
-            icon={icons.user}
+            label="Email address"
             value={email}
             onChangeText={setEmail}
-            placeholder="you@example.com"
+            placeholder="example@gmail.com"
             keyboardType="email-address"
+            returnKeyType="next"
             autoCapitalize="none"
             autoCorrect={false}
             textContentType="emailAddress"
@@ -207,12 +200,14 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
         {!resetMode ? (
           <AuthField
             label="Password"
-            icon={icons.eyeOff}
             value={password}
             onChangeText={setPassword}
+            placeholder="Your password"
             secureTextEntry
             textContentType="password"
             autoComplete="current-password"
+            returnKeyType="done"
+            autoCorrect={false}
             editable={!pending}
             onSubmitEditing={() => {
               void submit();
@@ -372,13 +367,6 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
         </Pressable>
       ) : null}
 
-      {!resetMode ? (
-        <Text style={styles.terms}>
-          By continuing, you agree to <Text style={styles.link}>Terms of Service</Text> and{" "}
-          <Text style={styles.link}>User Agreement</Text>.
-        </Text>
-      ) : null}
-
       <View style={styles.footer}>
         <View style={styles.separator} />
         {resetMode ? (
@@ -402,15 +390,15 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
           </View>
         ) : (
           <View style={styles.footerRow}>
-            <Text style={styles.footerText}>No account?</Text>
+            <Text style={styles.footerText}>Don't have an account?</Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Create account"
+              accessibilityLabel="Sign up"
               disabled={pending}
               onPress={pending ? undefined : handleCreateAccount}
               hitSlop={8}
             >
-              <Text style={styles.footerLink}>Create account</Text>
+              <Text style={styles.footerLink}>Sign up</Text>
             </Pressable>
           </View>
         )}
@@ -422,46 +410,21 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
 const styles = StyleSheet.create({
   error: { color: AuthColors.text, fontSize: 13, lineHeight: 20 },
   disabled: { opacity: 0.6 },
-  screen: {
-    flex: 1,
-    backgroundColor: AuthColors.background,
-  },
-  content: {
-    paddingHorizontal: 24,
-    gap: 22,
-  },
-  brand: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 9,
-  },
-  brandMark: {
-    width: 26,
-    height: 26,
-  },
-  brandName: {
-    fontSize: 19,
-    fontWeight: "400",
-    color: AuthColors.text,
-  },
+  screen: { flex: 1, backgroundColor: AuthColors.background },
+  content: { paddingHorizontal: 24, gap: 22 },
+  back: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" },
+  backLabel: { fontSize: 30, lineHeight: 36, color: AuthColors.text },
   welcome: {
     marginTop: 70,
-    fontSize: 36,
-    lineHeight: 41,
-    fontWeight: "600",
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: "700",
     color: AuthColors.text,
   },
-  credentials: {
-    gap: 18,
-  },
-  forgot: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: AuthColors.accent,
-    textAlign: "right",
-  },
+  credentials: { gap: 24 },
+  forgot: { fontSize: 14, fontWeight: "600", color: AuthColors.accent, textAlign: "right" },
   primaryButton: {
-    minHeight: 52,
+    minHeight: 54,
     padding: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -470,24 +433,10 @@ const styles = StyleSheet.create({
     borderColor: AuthColors.accentBorder,
     borderRadius: 12,
   },
-  primaryLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: AuthColors.onAccent,
-  },
-  otpField: {
-    gap: 8,
-  },
-  otpLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: AuthColors.textMuted,
-  },
-  otpCells: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 12,
-  },
+  primaryLabel: { fontSize: 16, fontWeight: "600", color: AuthColors.onAccent },
+  otpField: { gap: 8 },
+  otpLabel: { fontSize: 12, fontWeight: "500", color: AuthColors.textMuted },
+  otpCells: { flexDirection: "row", justifyContent: "center", gap: 12 },
   otpCell: {
     width: 56,
     height: 56,
@@ -498,9 +447,7 @@ const styles = StyleSheet.create({
     borderColor: AuthColors.border,
     borderRadius: 12,
   },
-  otpCellActive: {
-    borderColor: AuthColors.accent,
-  },
+  otpCellActive: { borderColor: AuthColors.accent },
   otpDigit: {
     fontSize: 24,
     fontWeight: "600",
@@ -518,45 +465,17 @@ const styles = StyleSheet.create({
     color: "transparent",
     backgroundColor: "transparent",
   },
-  passwordRequirement: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: AuthColors.textMuted,
-  },
-  terms: {
-    fontSize: 11,
-    lineHeight: 19,
-    color: AuthColors.textMuted,
-    textAlign: "center",
-  },
-
-  link: {
-    color: AuthColors.accent,
-  },
-  footer: {
-    alignItems: "center",
-    gap: 15,
-    paddingTop: 20,
-  },
-  separator: {
-    width: 48,
-    height: 1,
-    borderRadius: 100,
-    backgroundColor: AuthColors.border,
-  },
+  passwordRequirement: { fontSize: 12, lineHeight: 18, color: AuthColors.textMuted },
+  terms: { fontSize: 13, lineHeight: 19, color: AuthColors.textMuted, textAlign: "center" },
+  footer: { alignItems: "center", gap: 15, paddingTop: 20 },
+  separator: { width: 48, height: 1, borderRadius: 100, backgroundColor: AuthColors.border },
   footerRow: {
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
   },
-  footerText: {
-    fontSize: 13,
-    color: AuthColors.textMuted,
-  },
-  footerLink: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: AuthColors.accent,
-  },
+  footerText: { fontSize: 14, color: AuthColors.textMuted },
+  footerLink: { fontSize: 14, fontWeight: "700", color: AuthColors.accent },
 });

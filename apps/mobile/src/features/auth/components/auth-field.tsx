@@ -24,7 +24,6 @@ function EyeIcon({ color = AuthColors.textMuted, size = 19 }: { color?: string; 
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
-      accessible={false}
     >
       <Path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
       <Circle cx="12" cy="12" r="3" />
@@ -49,7 +48,6 @@ function EyeOffIcon({
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
-      accessible={false}
     >
       <Path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" />
       <Path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" />
@@ -110,7 +108,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "500",
     color: AuthColors.textMuted,
   },
@@ -129,7 +127,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     padding: 0,
-    fontSize: 15,
+    fontSize: 16,
     color: AuthColors.text,
   },
   icon: {

@@ -42,7 +42,7 @@ beforeEach(() => {
 
 test("requires successful OTP verification before collecting a password and completes with the token", async () => {
   const screen = await render(<LoginScreen />);
-  await fireEvent.changeText(screen.getByLabelText("Email"), "member@example.com");
+  await fireEvent.changeText(screen.getByLabelText("Email address"), "member@example.com");
   await fireEvent.press(screen.getByRole("button", { name: "Forgot password?" }));
   await waitFor(() => expect(screen.getByLabelText("Send reset code")).toBeTruthy());
   await fireEvent.press(screen.getByLabelText("Send reset code"));
