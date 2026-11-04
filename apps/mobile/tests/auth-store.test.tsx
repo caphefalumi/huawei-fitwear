@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react-native";
+import type { QueryClient } from "@tanstack/react-query";
 import {
   AuthProvider,
   useAuth,
@@ -108,21 +109,31 @@ test("failed login stays signed out and surfaces server error", async () => {
 });
 
 test("sign-out clears local private state before server revocation completes", async () => {
-  const { result } = await renderHook(() => useAuth(), {
-    wrapper: createQueryWrapper(AuthProvider),
+  const client = { current: null as QueryClient | null };
+  const wrapper = createQueryWrapper(AuthProvider, (queryClient) => {
+    client.current = queryClient;
   });
+  const { result } = await renderHook(() => useAuth(), { wrapper });
   await waitFor(() => expect(result.current.loading).toBe(false));
   fetchMock.mockResolvedValueOnce(json(200, authenticated()));
   await act(async () => {
     await result.current.signIn("member@example.com", "correct");
   });
   expect(result.current.user?.id).toBe(user.id);
-  fetchMock.mockReturnValueOnce(new Promise<Response>(() => {}));
+  const { promise: revocation, resolve: resolveRevocation } = Promise.withResolvers<Response>();
+  fetchMock.mockReturnValueOnce(revocation);
   await act(async () => {
     await result.current.signOut();
   });
   expect(result.current.user).toBeNull();
   expect(saved.clearToken).toHaveBeenCalled();
+  await act(async () => {
+    resolveRevocation(json(200, {}));
+    await revocation;
+    const { promise: notification, resolve } = Promise.withResolvers<void>();
+    setTimeout(resolve, 0);
+    await notification;
+  });
   expect(fetchMock.mock.calls[1][1]?.headers).toHaveProperty("Authorization", "Bearer secret-a");
 });
 
