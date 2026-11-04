@@ -12,10 +12,10 @@
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
     "fmt": "oxfmt",
-    "test": "bun test --parallel=4 tests/unit tests/integration",
-    "test:unit": "bun test --parallel=4 tests/unit",
-    "test:integration": "bun test --parallel=4 tests/integration",
-    "test:all": "bun test --parallel=4 tests/unit tests/integration",
+    "test": "bun test tests/unit tests/integration",
+    "test:unit": "bun test tests/unit",
+    "test:integration": "bun test tests/integration",
+    "test:all": "bun test tests/unit tests/integration",
     "email:sync-resend": "bun run scripts/sync-resend-templates.ts"
   },
   "dependencies": {
