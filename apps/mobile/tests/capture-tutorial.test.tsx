@@ -11,6 +11,7 @@ jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 jest.mock("react-native-reanimated", () => ({ useReducedMotion: () => true }));
+import { createQueryWrapper } from "./query-wrapper";
 jest.mock("react-native-keyboard-controller", () => {
   const { View } = require("react-native");
   return { KeyboardAvoidingView: View };
@@ -29,7 +30,7 @@ function mockMeals(tutorialSeen: boolean) {
 
 test("first capture shows two tips and no longer shows the old intro or guideline label", async () => {
   mockMeals(false);
-  const screen = await render(<MealCaptureScreen />);
+  const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() });
 
   expect(screen.getByText("Capture your meal")).toBeTruthy();
   expect(screen.getByText("Add a ruler")).toBeTruthy();
@@ -44,7 +45,7 @@ test("first capture shows two tips and no longer shows the old intro or guidelin
 
 test("Got it and the circular X both dismiss the tutorial", async () => {
   mockMeals(false);
-  const screen = await render(<MealCaptureScreen />);
+  const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() });
 
   await fireEvent.press(screen.getByText("Got it"));
   expect(dismissTutorial).toHaveBeenCalledTimes(1);
@@ -54,6 +55,6 @@ test("Got it and the circular X both dismiss the tutorial", async () => {
 
 test("the tutorial stays hidden once it has been seen", async () => {
   mockMeals(true);
-  const screen = await render(<MealCaptureScreen />);
+  const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() });
   expect(screen.queryByText("Add a ruler")).toBeNull();
 });

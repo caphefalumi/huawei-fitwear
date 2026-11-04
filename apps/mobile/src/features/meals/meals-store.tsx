@@ -1,16 +1,17 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { AppState } from "react-native";
 import { useAuth } from "@/features/auth/auth-store";
 import { apiRequest } from "@/lib/api";
+import { useMealClientStore } from "./meal-client.store";
 
 export type Macros = { protein: number; carbs: number; fat: number };
 export type MealGlyph = "wheat" | "drumstick" | "carrot" | "droplet";
@@ -23,6 +24,7 @@ export type MealItem = {
   glyph: MealGlyph;
   aiConfidence?: number;
 };
+const EMPTY_MEAL_ITEMS: MealItem[] = [];
 export type FoodEntry = {
   id: string;
   name: string;
@@ -186,6 +188,7 @@ type MealsContextValue = {
   history: MealLog[];
   summary: NutritionSummary | null;
   loading: boolean;
+  refreshing: boolean;
   busy: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -200,75 +203,145 @@ type MealsContextValue = {
   updateMealType: (id: string, type: MealType) => Promise<void>;
 };
 const MealsContext = createContext<MealsContextValue | null>(null);
+export const mealsQueryKeys = {
+  all: (userId: string) => ["meals", userId] as const,
+  history: (userId: string) => [...mealsQueryKeys.all(userId), "history"] as const,
+  summary: (userId: string, date: string) =>
+    [...mealsQueryKeys.all(userId), "summary", date] as const,
+  foodSearch: (userId: string, query: string) =>
+    [...mealsQueryKeys.all(userId), "food-search", query] as const,
+  detail: (userId: string, mealId: string) =>
+    [...mealsQueryKeys.all(userId), "detail", mealId] as const,
+  photo: (userId: string, mealId: string) =>
+    [...mealsQueryKeys.all(userId), "photo", mealId] as const,
+};
+
 export function MealsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [items, setItems] = useState<MealItem[]>([]);
-  const [mealType, setMealType] = useState<MealType>("lunch");
-  const [draftImage, setDraftImage] = useState<string | null>(null);
-  const [draftImageData, setDraftImageData] = useState<MealImage | null>(null);
-  const [tutorialSeen, setTutorialSeen] = useState(false);
-  const [history, setHistory] = useState<MealLog[]>([]);
-  const [summary, setSummary] = useState<NutritionSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const active = useRef(true);
-  const mutation = useRef(false);
-  const generation = useRef(0);
+  const queryClient = useQueryClient();
+  const userId = user?.id;
+  const accountMatches = useMealClientStore((state) => state.accountId === (userId ?? null));
+  const items = useMealClientStore((state) => (accountMatches ? state.items : EMPTY_MEAL_ITEMS));
+  const mealType = useMealClientStore((state) => (accountMatches ? state.mealType : "lunch"));
+  const draftImage = useMealClientStore((state) => (accountMatches ? state.draftImage : null));
+  const draftImageData = useMealClientStore((state) =>
+    accountMatches ? state.draftImageData : null,
+  );
+  const tutorialSeen = useMealClientStore((state) => state.tutorialSeen);
+  const storedSummaryDate = useMealClientStore((state) =>
+    accountMatches ? state.summaryDate : "",
+  );
+  const summaryDate = storedSummaryDate || localDate();
+  const setItems = useMealClientStore((state) => state.setItems);
+  const setMealType = useMealClientStore((state) => state.setMealType);
+  const setDraftPhoto = useMealClientStore((state) => state.setDraftPhoto);
+  const setAnalysis = useMealClientStore((state) => state.setAnalysis);
+  const clearDraft = useMealClientStore((state) => state.clearDraft);
+  const setSummaryDate = useMealClientStore((state) => state.setSummaryDate);
+  const dismissTutorial = useMealClientStore((state) => state.dismissTutorial);
   useEffect(() => {
-    active.current = true;
-    return () => {
-      active.current = false;
-      generation.current++;
-    };
-  }, []);
-  const refresh = useCallback(async () => {
-    if (!active.current) return;
-    const request = ++generation.current;
-    try {
+    useMealClientStore.getState().setAccountId(userId ?? null, localDate());
+  }, [userId]);
+  const historyQuery = useQuery({
+    queryKey: userId ? mealsQueryKeys.history(userId) : ["meals", "signed-out", "history"],
+    enabled: Boolean(userId),
+    queryFn: async ({ signal }) => {
       const all: MealLog[] = [];
       let offset = 0;
       while (true) {
-        const result = await apiRequest<{ meals: ApiMeal[] }>(`/meals?limit=100&offset=${offset}`);
-        if (!active.current || request !== generation.current) return;
+        const result = await apiRequest<{ meals: ApiMeal[] }>(`/meals?limit=100&offset=${offset}`, {
+          signal,
+        });
         all.push(...result.meals.map(fromApiMeal));
-        if (result.meals.length < 100) break;
+        if (result.meals.length < 100) return all;
         offset += result.meals.length;
       }
-      if (active.current && request === generation.current) setHistory(all);
-      const nextSummary = await apiRequest<NutritionSummary>(`/meals/summary?date=${localDate()}`);
-      if (active.current && request === generation.current) {
-        setSummary(nextSummary);
-        setError(null);
-      }
-    } catch (cause) {
-      if (active.current && request === generation.current)
-        setError(cause instanceof Error ? cause.message : "Could not load meals.");
-    } finally {
-      if (active.current && request === generation.current) setLoading(false);
+    },
+  });
+  const summaryQuery = useQuery({
+    queryKey: userId
+      ? mealsQueryKeys.summary(userId, summaryDate)
+      : ["meals", "signed-out", "summary", summaryDate],
+    enabled: Boolean(userId),
+    queryFn: ({ signal }) =>
+      apiRequest<NutritionSummary>(`/meals/summary?date=${summaryDate}`, { signal }),
+  });
+  const history = historyQuery.data ?? [];
+  const summary = summaryQuery.data ?? null;
+  const loading = historyQuery.isLoading || summaryQuery.isLoading;
+  const refresh = useCallback(async () => {
+    await Promise.all([historyQuery.refetch(), summaryQuery.refetch()]);
+  }, [historyQuery.refetch, summaryQuery.refetch]);
+  const invalidateMeals = async (_result: unknown, variables: { path: string; method: string }) => {
+    if (!userId) return;
+    const match = /^\/meals\/([^/]+)/.exec(variables.path);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: mealsQueryKeys.history(userId) }),
+      queryClient.invalidateQueries({ queryKey: [...mealsQueryKeys.all(userId), "summary"] }),
+      ...(match && variables.method !== "DELETE"
+        ? [queryClient.invalidateQueries({ queryKey: mealsQueryKeys.detail(userId, match[1]) })]
+        : []),
+    ]);
+    if (match && variables.method === "DELETE" && variables.path === `/meals/${match[1]}`) {
+      queryClient.removeQueries({ queryKey: mealsQueryKeys.detail(userId, match[1]) });
+      queryClient.removeQueries({ queryKey: mealsQueryKeys.photo(userId, match[1]) });
     }
-  }, []);
+  };
+  const writeMutation = useMutation({
+    mutationKey: [...mealsQueryKeys.all(userId ?? "signed-out"), "write"],
+    mutationFn: ({ path, method, body }: { path: string; method: string; body?: unknown }) =>
+      apiRequest<unknown>(path, { method, ...(body === undefined ? {} : { body }) }),
+    onMutate: async ({ path, method, body }) => {
+      if (!userId) return undefined;
+      const key = mealsQueryKeys.history(userId);
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<MealLog[]>(key);
+      const match = /^\/meals\/([^/]+)$/.exec(path);
+      if (previous && match && method === "DELETE") {
+        queryClient.setQueryData(
+          key,
+          previous.filter((meal) => meal.id !== match[1]),
+        );
+      }
+      if (previous && match && method === "PATCH" && body && typeof body === "object") {
+        const { mealType: nextType } = body as { mealType?: MealType };
+        if (nextType) {
+          queryClient.setQueryData(
+            key,
+            previous.map((meal) => (meal.id === match[1] ? { ...meal, mealType: nextType } : meal)),
+          );
+        }
+      }
+      return { key, previous };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) queryClient.setQueryData(context.key, context.previous);
+    },
+    onSuccess: invalidateMeals,
+  });
+  const error =
+    [historyQuery.error, summaryQuery.error, writeMutation.error].find(
+      (cause) => cause instanceof Error,
+    )?.message ?? null;
+  const busy = writeMutation.isPending;
+  const runWrite = async <T,>(path: string, method: string, body?: unknown): Promise<T> =>
+    (await writeMutation.mutateAsync({ path, method, body })) as T;
   useEffect(() => {
-    void refresh();
-  }, [
-    refresh,
-    user?.updatedAt,
-    user?.heightCm,
-    user?.currentWeightKg,
-    user?.birthDate,
-    user?.gender,
-    user?.activityLevel,
-    user?.fitnessGoal,
-  ]);
+    if (user?.updatedAt) void summaryQuery.refetch();
+  }, [user?.updatedAt, summaryQuery.refetch]);
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") void refresh();
+      if (state === "active") {
+        setSummaryDate(localDate());
+        void refresh();
+      }
     });
     let midnight: ReturnType<typeof setTimeout>;
     const schedule = () => {
       const next = new Date();
       next.setHours(24, 0, 0, 0);
       midnight = setTimeout(() => {
+        setSummaryDate(localDate());
         void refresh();
         schedule();
       }, next.getTime() - Date.now());
@@ -279,120 +352,57 @@ export function MealsProvider({ children }: { children: ReactNode }) {
       clearTimeout(midnight);
     };
   }, [refresh]);
-  const mutate = async (work: () => Promise<void>) => {
-    if (mutation.current) throw new Error("A meal change is already being saved.");
-    mutation.current = true;
-    setBusy(true);
-    setError(null);
-    try {
-      await work();
-    } catch (cause) {
-      if (active.current) setError(cause instanceof Error ? cause.message : "Could not save meal.");
-      throw cause;
-    } finally {
-      mutation.current = false;
-      if (active.current) setBusy(false);
-    }
-  };
-  const replaceSaved = (meal: ApiMeal) => {
-    if (!active.current) return;
-    const saved = fromApiMeal(meal);
-    setHistory((prev) =>
-      prev.some((entry) => entry.id === meal.id)
-        ? prev.map((entry) => (entry.id === meal.id ? saved : entry))
-        : [saved, ...prev],
-    );
-  };
   const addItem = async (item: MealItem, mealId?: string) => {
     validateItem(item);
     if (!mealId) {
-      setItems((prev) => [...prev, item]);
+      setItems((previous) => [...previous, item]);
       return;
     }
-    await mutate(async () => {
-      replaceSaved(
-        await apiRequest<ApiMeal>(`/meals/${mealId}/items`, {
-          method: "POST",
-          body: toApiItem(item),
-        }),
-      );
-      await refresh();
-    });
+    await runWrite<ApiMeal>(`/meals/${mealId}/items`, "POST", toApiItem(item));
   };
   const updateItem = async (id: string, item: MealItem, mealId?: string) => {
     validateItem(item);
     if (!mealId) {
-      setItems((prev) => prev.map((entry) => (entry.id === id ? item : entry)));
+      setItems((previous) => previous.map((entry) => (entry.id === id ? item : entry)));
       return;
     }
-    await mutate(async () => {
-      const { estimatedWeightG, aiConfidence: _confidence, ...body } = toApiItem(item);
-      replaceSaved(
-        await apiRequest<ApiMeal>(`/meals/${mealId}/items/${id}`, {
-          method: "PATCH",
-          body: { ...body, correctedWeightG: estimatedWeightG },
-        }),
-      );
-      await refresh();
+    const { estimatedWeightG, aiConfidence: _confidence, ...body } = toApiItem(item);
+    await runWrite<ApiMeal>(`/meals/${mealId}/items/${id}`, "PATCH", {
+      ...body,
+      correctedWeightG: estimatedWeightG,
     });
   };
   const removeItem = async (id: string, mealId?: string) => {
     if (!mealId) {
-      setItems((prev) => prev.filter((entry) => entry.id !== id));
+      setItems((previous) => previous.filter((entry) => entry.id !== id));
       return;
     }
-    await mutate(async () => {
-      const result = await apiRequest<ApiMeal | { success: true }>(`/meals/${mealId}/items/${id}`, {
-        method: "DELETE",
-      });
-      if ("items" in result) replaceSaved(result);
-      else if (active.current) setHistory((prev) => prev.filter((entry) => entry.id !== mealId));
-      await refresh();
-    });
+    await runWrite<ApiMeal | { success: true }>(`/meals/${mealId}/items/${id}`, "DELETE");
   };
   const deleteMeal = () => {
-    setItems([]);
-    setDraftImage(null);
-    setDraftImageData(null);
+    clearDraft();
   };
   const logMeal = async () => {
     if (!items.length) throw new Error("Add at least one item before logging.");
     items.forEach(validateItem);
-    await mutate(async () => {
-      const result = await apiRequest<ApiMeal>("/meals", {
-        method: "POST",
-        body: {
-          mealType,
-          targetDate: localDate(),
-          loggedAt: new Date().toISOString(),
-          scaleReferenceType: "none",
-          items: items.map(toApiItem),
-          ...(draftImageData ? { image: draftImageData } : {}),
-        },
-      });
-      if (active.current) {
-        setHistory((prev) => [fromApiMeal(result), ...prev]);
-        deleteMeal();
-      }
-      await refresh();
+    await runWrite<ApiMeal>("/meals", "POST", {
+      mealType,
+      targetDate: localDate(),
+      loggedAt: new Date().toISOString(),
+      scaleReferenceType: "none",
+      items: items.map(toApiItem),
+      ...(draftImageData ? { image: draftImageData } : {}),
     });
+    deleteMeal();
   };
   const deleteLog = async (id: string) => {
-    await mutate(async () => {
-      await apiRequest(`/meals/${id}`, { method: "DELETE" });
-      if (active.current) setHistory((prev) => prev.filter((entry) => entry.id !== id));
-      await refresh();
-    });
+    await runWrite(`/meals/${id}`, "DELETE");
   };
   const updateMealType = async (id: string, type: MealType) => {
-    await mutate(async () => {
-      replaceSaved(
-        await apiRequest<ApiMeal>(`/meals/${id}`, { method: "PATCH", body: { mealType: type } }),
-      );
-      await refresh();
-    });
+    await runWrite(`/meals/${id}`, "PATCH", { mealType: type });
   };
   const totals = useMemo(() => sumItems(items), [items]);
+  const refreshing = (historyQuery.isFetching || summaryQuery.isFetching) && !loading;
   return (
     <MealsContext.Provider
       value={{
@@ -402,18 +412,12 @@ export function MealsProvider({ children }: { children: ReactNode }) {
         items,
         totals,
         draftImage,
-        setDraftPhoto: (imageUri, image) => {
-          setDraftImage(imageUri);
-          setDraftImageData(image);
-        },
-        setAnalysis: (next, imageUri, image) => {
-          setItems(next.map(fromApiItem));
-          setDraftImage(imageUri);
-          setDraftImageData(image);
-        },
+        setDraftPhoto,
+        setAnalysis: (next, imageUri, image) => setAnalysis(next.map(fromApiItem), imageUri, image),
         history,
         summary,
         loading,
+        refreshing,
         busy,
         error,
         refresh,
@@ -425,7 +429,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
         },
         loggedMealName: history.find((meal) => meal.targetDate === localDate())?.name ?? null,
         tutorialSeen,
-        dismissTutorial: () => setTutorialSeen(true),
+        dismissTutorial,
         addItem,
         updateItem,
         removeItem,
@@ -446,20 +450,18 @@ export function useMeals(): MealsContextValue {
 }
 
 export function useFoodSearch(query: string) {
-  const [matches, setMatches] = useState<FoodEntry[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+  const normalized = query.trim();
+  const [debounced, setDebounced] = useState(normalized);
   useEffect(() => {
-    let current = true;
-    setMatches([]);
-    setError(null);
-    if (!query.trim()) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const timer = setTimeout(() => {
-      apiRequest<{
+    const timer = setTimeout(() => setDebounced(normalized), 250);
+    return () => clearTimeout(timer);
+  }, [normalized]);
+  const searchQuery = useQuery({
+    queryKey: mealsQueryKeys.foodSearch(user?.id ?? "signed-out", debounced),
+    enabled: Boolean(user?.id && debounced),
+    queryFn: async ({ signal }) => {
+      const result = await apiRequest<{
         foods: {
           id: string;
           name: string;
@@ -470,36 +472,30 @@ export function useFoodSearch(query: string) {
           carbsPer100G: number;
           fatPer100G: number;
         }[];
-      }>(`/foods?q=${encodeURIComponent(query.trim())}`)
-        .then((result) => {
-          if (current)
-            setMatches(
-              result.foods.map((food) => ({
-                id: food.id,
-                name: food.name,
-                serving: `Per 100 ${food.servingUnit}`,
-                unit: food.servingUnit,
-                glyph: food.glyph,
-                per100: {
-                  kcal: food.caloriesPer100,
-                  protein: food.proteinPer100G,
-                  carbs: food.carbsPer100G,
-                  fat: food.fatPer100G,
-                },
-              })),
-            );
-        })
-        .catch((cause) => {
-          if (current) setError(cause instanceof Error ? cause.message : "Food search failed.");
-        })
-        .finally(() => {
-          if (current) setLoading(false);
-        });
-    }, 250);
-    return () => {
-      current = false;
-      clearTimeout(timer);
-    };
-  }, [query]);
-  return { matches, error, loading };
+      }>(`/foods?q=${encodeURIComponent(debounced)}`, { signal });
+      return result.foods.map((food) => ({
+        id: food.id,
+        name: food.name,
+        serving: `Per 100 ${food.servingUnit}`,
+        unit: food.servingUnit,
+        glyph: food.glyph,
+        per100: {
+          kcal: food.caloriesPer100,
+          protein: food.proteinPer100G,
+          carbs: food.carbsPer100G,
+          fat: food.fatPer100G,
+        },
+      }));
+    },
+  });
+  const matches = debounced === normalized ? (searchQuery.data ?? []) : [];
+  return {
+    matches,
+    error: searchQuery.error instanceof Error ? searchQuery.error.message : null,
+    loading: Boolean(normalized && (debounced !== normalized || searchQuery.isLoading)),
+    refreshing: searchQuery.isFetching && !searchQuery.isLoading,
+    empty: Boolean(
+      normalized && debounced === normalized && !searchQuery.isLoading && matches.length === 0,
+    ),
+  };
 }

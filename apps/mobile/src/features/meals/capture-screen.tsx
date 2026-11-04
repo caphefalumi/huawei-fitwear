@@ -1,3 +1,4 @@
+import { useMutation } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -27,10 +28,14 @@ export function MealCaptureScreen() {
     base64: string;
     mimeType: "image/jpeg" | "image/png";
   } | null>(null);
-  const [busy, setBusy] = useState(false);
+  const analyzeMutation = useMutation({
+    mutationFn: (body: { image: string; mimeType: string; description?: string }) =>
+      apiRequest<{ items: ApiMealItem[] }>("/meals/analyze", { method: "POST", body }),
+  });
   const [error, setError] = useState<string | null>(null);
   const active = useRef(true);
   const request = useRef(0);
+  const busy = analyzeMutation.isPending;
   useEffect(() => {
     active.current = true;
     return () => {
@@ -59,16 +64,13 @@ export function MealCaptureScreen() {
       return;
     }
     const current = ++request.current;
-    setBusy(true);
     setError(null);
+    analyzeMutation.reset();
     try {
-      const result = await apiRequest<{ items: ApiMealItem[] }>("/meals/analyze", {
-        method: "POST",
-        body: {
-          image: image.base64,
-          mimeType: image.mimeType,
-          ...(description.trim() ? { description: description.trim() } : {}),
-        },
+      const result = await analyzeMutation.mutateAsync({
+        image: image.base64,
+        mimeType: image.mimeType,
+        ...(description.trim() ? { description: description.trim() } : {}),
       });
       if (!active.current || current !== request.current) return;
       if (!result.items.length)
@@ -82,8 +84,6 @@ export function MealCaptureScreen() {
             ? cause.message
             : "Photo analysis is unavailable. You can enter nutrition manually.",
         );
-    } finally {
-      if (active.current && current === request.current) setBusy(false);
     }
   }
 

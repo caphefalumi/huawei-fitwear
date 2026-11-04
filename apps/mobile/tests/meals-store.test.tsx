@@ -12,10 +12,13 @@ import {
   sumItems,
   type MealItem,
 } from "@/features/meals/meals-store";
+import { createQueryWrapper } from "./query-wrapper";
+import { useMealClientStore } from "@/features/meals/meal-client.store";
+let mockUserId = "member-a";
 
 jest.mock("@/lib/api", () => ({ apiRequest: jest.fn() }));
 jest.mock("@/features/auth/auth-store", () => ({
-  useAuth: () => ({ user: { id: "member-a", updatedAt: "2026-11-01T00:00:00Z" } }),
+  useAuth: () => ({ user: { id: mockUserId, updatedAt: "2026-11-01T00:00:00Z" } }),
 }));
 const request = apiRequest as jest.MockedFunction<
   (path: string, options?: { method?: string; body?: unknown }) => Promise<unknown>
@@ -62,6 +65,16 @@ const savedMeal = {
 
 beforeEach(() => {
   request.mockReset();
+  mockUserId = "member-a";
+  useMealClientStore.setState({
+    accountId: null,
+    items: [],
+    mealType: "lunch",
+    draftImage: null,
+    draftImageData: null,
+    tutorialSeen: false,
+    summaryDate: localDate(),
+  });
   request.mockImplementation(async (path) =>
     path.startsWith("/meals/summary") ? summary : { meals: [] },
   );
@@ -111,7 +124,9 @@ test("API adapters use corrected portions and real timestamps, not seeded histor
 });
 
 test("new account has an empty draft and uses the server daily summary", async () => {
-  const { result } = await renderHook(() => useMeals(), { wrapper: MealsProvider });
+  const { result } = await renderHook(() => useMeals(), {
+    wrapper: createQueryWrapper(MealsProvider),
+  });
   await waitFor(() => expect(result.current.loading).toBe(false));
   expect(result.current.items).toEqual([]);
   expect(result.current.history).toEqual([]);
@@ -120,7 +135,9 @@ test("new account has an empty draft and uses the server daily summary", async (
 });
 
 test("draft CRUD is local until awaited logging persists the complete meal", async () => {
-  const { result } = await renderHook(() => useMeals(), { wrapper: MealsProvider });
+  const { result } = await renderHook(() => useMeals(), {
+    wrapper: createQueryWrapper(MealsProvider),
+  });
   await waitFor(() => expect(result.current.loading).toBe(false));
   await act(async () => {
     await result.current.addItem(item);
@@ -157,7 +174,9 @@ test("draft CRUD is local until awaited logging persists the complete meal", asy
 });
 
 test("failed logging preserves the editable draft and surfaces the error", async () => {
-  const { result } = await renderHook(() => useMeals(), { wrapper: MealsProvider });
+  const { result } = await renderHook(() => useMeals(), {
+    wrapper: createQueryWrapper(MealsProvider),
+  });
   await waitFor(() => expect(result.current.loading).toBe(false));
   await act(async () => {
     await result.current.addItem(item);
@@ -175,7 +194,9 @@ test("persisted correction uses the item endpoint and awaits the new server resu
   request.mockImplementation(async (path) =>
     path.startsWith("/meals/summary") ? summary : { meals: [savedMeal] },
   );
-  const { result } = await renderHook(() => useMeals(), { wrapper: MealsProvider });
+  const { result } = await renderHook(() => useMeals(), {
+    wrapper: createQueryWrapper(MealsProvider),
+  });
   await waitFor(() => expect(result.current.loading).toBe(false));
   request.mockImplementation(async (path, options) =>
     options?.method === "PATCH"
@@ -201,29 +222,35 @@ test("persisted correction uses the item endpoint and awaits the new server resu
   });
 });
 
-test("late account responses cannot continue loading into a remounted account", async () => {
+test("late responses for a previous account never populate the current account cache", async () => {
   const pending = Promise.withResolvers<{ meals: (typeof savedMeal)[] }>();
-  request.mockImplementationOnce(() => pending.promise);
-  const view = await renderHook(() => useMeals(), { wrapper: MealsProvider });
-  await view.unmount();
-  await act(async () => {
-    pending.resolve({ meals: [savedMeal] });
+  request.mockImplementation(async (path) => {
+    if (path.startsWith("/meals/summary")) return summary;
+    return mockUserId === "member-a" ? pending.promise : { meals: [] };
   });
-  expect(request).toHaveBeenCalledTimes(1);
+  const view = await renderHook(() => useMeals(), { wrapper: createQueryWrapper(MealsProvider) });
+
+  mockUserId = "member-b";
+  view.rerender(undefined);
+  await waitFor(() => expect(view.result.current.loading).toBe(false));
+  await act(async () => pending.resolve({ meals: [savedMeal] }));
+  expect(view.result.current.history).toEqual([]);
 });
 
 test("failed history deletion leaves the saved meal available", async () => {
   request.mockImplementation(async (path) =>
     path.startsWith("/meals/summary") ? summary : { meals: [savedMeal] },
   );
-  const { result } = await renderHook(() => useMeals(), { wrapper: MealsProvider });
+  const { result } = await renderHook(() => useMeals(), {
+    wrapper: createQueryWrapper(MealsProvider),
+  });
   await waitFor(() => expect(result.current.loading).toBe(false));
   request.mockRejectedValueOnce(new Error("Delete unavailable"));
   await act(async () => {
     await expect(result.current.deleteLog("meal-a")).rejects.toThrow("Delete unavailable");
   });
   expect(result.current.history.map((meal) => meal.id)).toEqual(["meal-a"]);
-  expect(result.current.error).toBe("Delete unavailable");
+  await waitFor(() => expect(result.current.error).toBe("Delete unavailable"));
 });
 
 test("food search maps backend catalogue units and nutrients", async () => {
@@ -241,9 +268,14 @@ test("food search maps backend catalogue units and nutrients", async () => {
       },
     ],
   });
-  const { result } = await renderHook(() => useFoodSearch("Milk"));
-  await waitFor(() => expect(result.current.loading).toBe(false));
-  expect(request).toHaveBeenCalledWith("/foods?q=Milk");
+  const { result } = await renderHook(() => useFoodSearch("Milk"), {
+    wrapper: createQueryWrapper(),
+  });
+  await waitFor(() => expect(result.current.matches).toHaveLength(1));
+  expect(request).toHaveBeenCalledWith(
+    "/foods?q=Milk",
+    expect.objectContaining({ signal: expect.any(AbortSignal) }),
+  );
   expect(result.current.matches).toEqual([
     {
       id: "milk",
@@ -257,7 +289,9 @@ test("food search maps backend catalogue units and nutrients", async () => {
 });
 
 test("captured photo stays with failed drafts and is uploaded with the logged meal", async () => {
-  const { result } = await renderHook(() => useMeals(), { wrapper: MealsProvider });
+  const { result } = await renderHook(() => useMeals(), {
+    wrapper: createQueryWrapper(MealsProvider),
+  });
   await waitFor(() => expect(result.current.loading).toBe(false));
   const image = { data: "/9j/actual-selected-image-bytes", mimeType: "image/jpeg" as const };
   await act(async () => {

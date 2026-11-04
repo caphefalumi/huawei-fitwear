@@ -10,7 +10,7 @@ import { BackHeader, Card, MacroBar } from "@/features/home/ui";
 
 export function NutritionScreen() {
   const insets = useSafeAreaInsets();
-  const { summary, loading, error, refresh } = useMeals();
+  const { summary, loading, refreshing, error, refresh } = useMeals();
   const consumed = summary?.consumed;
   const targets = summary?.targets;
   const left = summary?.remaining.caloriesKcal;
@@ -38,14 +38,14 @@ export function NutritionScreen() {
         </Text>
       </View>
       {error ? (
-        <Pressable
-          onPress={() => {
-            void refresh();
-          }}
-        >
-          <Text accessibilityRole="alert">{error} Tap to retry.</Text>
+        <Pressable onPress={() => void refresh()}>
+          <Text accessibilityRole="alert">
+            {summary ? `Could not refresh. Showing saved nutrition. ${error}` : error} Tap to retry.
+          </Text>
         </Pressable>
       ) : null}
+      {loading ? <Text style={styles.noteBody}>Loading today’s nutrition…</Text> : null}
+      {refreshing ? <Text style={styles.noteBody}>Updating nutrition…</Text> : null}
       {!summary && !loading ? (
         <Text style={styles.noteBody}>
           Nutrition summary is unavailable. Retry to load your targets and logged meals.

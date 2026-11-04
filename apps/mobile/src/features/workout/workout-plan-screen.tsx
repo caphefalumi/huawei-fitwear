@@ -26,7 +26,8 @@ const icons = {
 export function WorkoutPlanScreen() {
   const insets = useSafeAreaInsets();
   const { plan, recovery } = useHealth();
-  const { exercises, sessions, loading, error, refresh, hasMore, loadMore } = useWorkouts();
+  const { exercises, sessions, loading, refreshing, error, refresh, hasMore, loadMore } =
+    useWorkouts();
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [recoveryClosing, setRecoveryClosing] = useState(false);
   const { today, next, avoid, rest } = routinesFor(recovery, exercises);
@@ -129,9 +130,13 @@ export function WorkoutPlanScreen() {
       </View>
       {error ? (
         <Text accessibilityRole="alert" style={styles.subtitle}>
-          {error}
+          {sessions.length || exercises.length
+            ? `Could not refresh. Showing saved workouts. ${error}`
+            : error}
         </Text>
       ) : null}
+      {loading ? <Text style={styles.subtitle}>Loading workouts…</Text> : null}
+      {refreshing ? <Text style={styles.subtitle}>Updating workouts…</Text> : null}
       <Pressable
         disabled={loading}
         accessibilityState={{ busy: loading }}
