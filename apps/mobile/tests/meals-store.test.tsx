@@ -1,5 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react-native";
 import { apiRequest } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import {
   MealsProvider,
   useMeals,
@@ -7,6 +9,7 @@ import {
   estimatePortion,
   fromApiMeal,
   localDate,
+  mealsQueryKeys,
   rescaleItem,
   splitDetail,
   sumItems,
@@ -220,6 +223,36 @@ test("persisted correction uses the item endpoint and awaits the new server resu
       fatG: 0.8,
     },
   });
+});
+test("deleting a meal item invalidates its cached parent detail", async () => {
+  request.mockImplementation(async (path) => {
+    if (path.startsWith("/meals/summary")) return summary;
+    if (path.startsWith("/meals?")) return { meals: [savedMeal] };
+    return { success: true };
+  });
+  const client = { current: null as QueryClient | null };
+  const wrapper = createQueryWrapper(MealsProvider, (queryClient) => {
+    client.current = queryClient;
+  });
+  const detailKey = mealsQueryKeys.detail("member-a", "meal-a");
+  const { result } = await renderHook(
+    () => {
+      const meals = useMeals();
+      useQuery({
+        queryKey: detailKey,
+        queryFn: async () => fromApiMeal(savedMeal),
+        enabled: false,
+      });
+      return meals;
+    },
+    { wrapper },
+  );
+  await waitFor(() => expect(result.current.loading).toBe(false));
+
+  client.current!.setQueryData(detailKey, fromApiMeal(savedMeal));
+  await act(async () => result.current.removeItem("saved-item", "meal-a"));
+
+  expect(client.current!.getQueryState(detailKey)?.isInvalidated).toBe(true);
 });
 
 test("late responses for a previous account never populate the current account cache", async () => {

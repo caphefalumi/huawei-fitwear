@@ -274,17 +274,19 @@ export function MealsProvider({ children }: { children: ReactNode }) {
   }, [historyQuery.refetch, summaryQuery.refetch]);
   const invalidateMeals = async (_result: unknown, variables: { path: string; method: string }) => {
     if (!userId) return;
-    const match = /^\/meals\/([^/]+)/.exec(variables.path);
+    const mealId = /^\/meals\/([^/]+)/.exec(variables.path)?.[1];
+    const deletingMeal =
+      variables.method === "DELETE" && mealId && variables.path === `/meals/${mealId}`;
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: mealsQueryKeys.history(userId) }),
       queryClient.invalidateQueries({ queryKey: [...mealsQueryKeys.all(userId), "summary"] }),
-      ...(match && variables.method !== "DELETE"
-        ? [queryClient.invalidateQueries({ queryKey: mealsQueryKeys.detail(userId, match[1]) })]
+      ...(mealId && !deletingMeal
+        ? [queryClient.invalidateQueries({ queryKey: mealsQueryKeys.detail(userId, mealId) })]
         : []),
     ]);
-    if (match && variables.method === "DELETE" && variables.path === `/meals/${match[1]}`) {
-      queryClient.removeQueries({ queryKey: mealsQueryKeys.detail(userId, match[1]) });
-      queryClient.removeQueries({ queryKey: mealsQueryKeys.photo(userId, match[1]) });
+    if (deletingMeal && mealId) {
+      queryClient.removeQueries({ queryKey: mealsQueryKeys.detail(userId, mealId) });
+      queryClient.removeQueries({ queryKey: mealsQueryKeys.photo(userId, mealId) });
     }
   };
   const writeMutation = useMutation({
