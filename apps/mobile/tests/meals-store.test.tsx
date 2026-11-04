@@ -192,7 +192,9 @@ test("failed logging preserves the editable draft and surfaces the error", async
     await expect(result.current.logMeal()).rejects.toThrow("Network unavailable");
   });
   expect(result.current.items).toEqual([item]);
-  expect(result.current.actionError).toBe("Couldn't save your change. Try again.");
+  await waitFor(() =>
+    expect(result.current.actionError).toBe("Couldn't save your change. Try again."),
+  );
   expect(result.current.busy).toBe(false);
 
   await act(async () => {
