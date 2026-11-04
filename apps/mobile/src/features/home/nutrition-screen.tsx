@@ -1,12 +1,12 @@
-import { router } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from "expo-router";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Palette as C } from '@/constants/palette';
-import { useHealth } from '@/features/health/health-store';
-import { useMeals } from '@/features/meals/meals-store';
-import { NutritionRing } from '@/features/home/ring';
-import { BackHeader, Card, MacroBar } from '@/features/home/ui';
+import { Palette as C } from "@/constants/palette";
+import { useHealth } from "@/features/health/health-store";
+import { useMeals } from "@/features/meals/meals-store";
+import { NutritionRing } from "@/features/home/ring";
+import { BackHeader, Card, MacroBar } from "@/features/home/ui";
 
 export function NutritionScreen() {
   const insets = useSafeAreaInsets();
@@ -23,7 +23,8 @@ export function NutritionScreen() {
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}>
+      ]}
+    >
       <BackHeader label="Today" onPress={() => router.back()} />
 
       <View style={styles.heading}>
@@ -37,11 +38,11 @@ export function NutritionScreen() {
         <View style={styles.stats}>
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Consumed</Text>
-            <Text style={styles.statValue}>{consumedKcal.toLocaleString('en-US')} kcal</Text>
+            <Text style={styles.statValue}>{consumedKcal.toLocaleString("en-US")} kcal</Text>
           </View>
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Daily target</Text>
-            <Text style={styles.statValue}>{targetKcal.toLocaleString('en-US')} kcal</Text>
+            <Text style={styles.statValue}>{targetKcal.toLocaleString("en-US")} kcal</Text>
           </View>
         </View>
       </Card>
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '400',
+    fontWeight: "400",
     color: C.text,
   },
   subtitle: {
@@ -110,15 +111,15 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   center: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   stats: {
-    alignSelf: 'stretch',
+    alignSelf: "stretch",
     gap: 8,
   },
   statRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   statLabel: {
     fontSize: 12,
@@ -126,17 +127,17 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   cardTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   remaining: {
     fontSize: 27,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   macros: {
@@ -147,7 +148,7 @@ const styles = StyleSheet.create({
   },
   noteTitle: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   noteBody: {

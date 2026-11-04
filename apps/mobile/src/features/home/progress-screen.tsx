@@ -1,14 +1,14 @@
-import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import { Animated, Easing, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Pressable } from '@/components/pressable';
-import { Palette as C } from '@/constants/palette';
-import { useHealth } from '@/features/health/health-store';
-import { BackHeader, Card } from '@/features/home/ui';
-import { progressData, RANGES, type Range } from '@/features/home/progress-data';
-import { WeightChart } from '@/features/home/weight-chart';
+import { Pressable } from "@/components/pressable";
+import { Palette as C } from "@/constants/palette";
+import { useHealth } from "@/features/health/health-store";
+import { BackHeader, Card } from "@/features/home/ui";
+import { progressData, RANGES, type Range } from "@/features/home/progress-data";
+import { WeightChart } from "@/features/home/weight-chart";
 
 /** Bar grows with a spring each time it appears. */
 function ActivityBar({ height, index }: { height: number; index: number }) {
@@ -32,7 +32,7 @@ function ActivityBar({ height, index }: { height: number; index: number }) {
 export function ProgressScreen() {
   const insets = useSafeAreaInsets();
   const { weightKg, weights } = useHealth();
-  const [range, setRange] = useState<Range>('Month');
+  const [range, setRange] = useState<Range>("Month");
   const data = progressData(range, weights, null);
   const latestWeight = weightKg ?? data.weights.at(-1) ?? 0;
   const maxSessions = Math.max(1, ...data.bars.map((bar) => bar.sessions));
@@ -43,7 +43,8 @@ export function ProgressScreen() {
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}>
+      ]}
+    >
       <BackHeader label="Overview" onPress={() => router.back()} />
 
       <Text style={styles.title}>Your progress.</Text>
@@ -55,10 +56,9 @@ export function ProgressScreen() {
             <Pressable
               key={item}
               style={[styles.segment, active && styles.segmentActive]}
-              onPress={() => setRange(item)}>
-              <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>
-                {item}
-              </Text>
+              onPress={() => setRange(item)}
+            >
+              <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>{item}</Text>
             </Pressable>
           );
         })}
@@ -108,8 +108,8 @@ export function ProgressScreen() {
         </View>
 
         <Text style={styles.cardNote}>
-          Logged sessions and total workout time. Weighted exercises are tracked separately in
-          your workout history.
+          Logged sessions and total workout time. Weighted exercises are tracked separately in your
+          workout history.
         </Text>
       </Card>
 
@@ -141,7 +141,7 @@ export function ProgressScreen() {
           Basic body info gives you a starting nutrition estimate. Adding daily activity and goals
           helps personalize your plan. More details live in Profile.
         </Text>
-        <Pressable onPress={() => router.push('/profile')} hitSlop={8}>
+        <Pressable onPress={() => router.push("/profile")} hitSlop={8}>
           <Text style={styles.link}>Profile</Text>
         </Pressable>
       </Card>
@@ -160,11 +160,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '400',
+    fontWeight: "400",
     color: C.text,
   },
   segments: {
-    flexDirection: 'row',
+    flexDirection: "row",
     backgroundColor: C.card,
     borderRadius: 12,
     padding: 4,
@@ -174,8 +174,8 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 32,
     borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   segmentActive: {
     backgroundColor: C.surface,
@@ -185,18 +185,18 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   segmentLabelActive: {
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.accent,
   },
   weightHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 8,
   },
   cardTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   pill: {
@@ -207,17 +207,17 @@ const styles = StyleSheet.create({
   },
   pillText: {
     fontSize: 11,
-    fontWeight: '500',
+    fontWeight: "500",
     color: C.accent,
   },
   bigValue: {
     fontSize: 34,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   dates: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   dateLabel: {
     fontSize: 9,
@@ -229,30 +229,30 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   bars: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
     gap: 12,
   },
   barColumn: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 6,
   },
   bar: {
-    width: '100%',
+    width: "100%",
     borderRadius: 6,
     backgroundColor: C.accentTint,
     borderWidth: 1,
     borderColor: C.border,
   },
   durationRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
     gap: 8,
   },
   compositionRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   compositionItem: {
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   },
   compositionValue: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   compositionLabel: {
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   },
   link: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.accent,
   },
 });

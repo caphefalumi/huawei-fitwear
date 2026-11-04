@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
+import { useEffect, useRef } from "react";
+import { Animated, StyleSheet, Text, View } from "react-native";
+import Svg, { Circle } from "react-native-svg";
 
-import { Palette as C } from '@/constants/palette';
+import { Palette as C } from "@/constants/palette";
 
 /** Ring frame size from Figma (node 4:3836, "Nutrition" body). */
 const SIZE = 112;
@@ -11,13 +11,7 @@ const LEN = 2 * Math.PI * R;
 
 const ACircle = Animated.createAnimatedComponent(Circle);
 
-export function NutritionRing({
-  kcalLeft,
-  progress,
-}: {
-  kcalLeft: number;
-  progress: number;
-}) {
+export function NutritionRing({ kcalLeft, progress }: { kcalLeft: number; progress: number }) {
   const anim = useRef(new Animated.Value(0)).current;
   const fill = Math.max(0, Math.min(1, progress));
 
@@ -36,14 +30,7 @@ export function NutritionRing({
   return (
     <View style={styles.ring}>
       <Svg width={SIZE} height={SIZE}>
-        <Circle
-          cx={SIZE / 2}
-          cy={SIZE / 2}
-          r={R}
-          fill="none"
-          stroke={C.card}
-          strokeWidth={10}
-        />
+        <Circle cx={SIZE / 2} cy={SIZE / 2} r={R} fill="none" stroke={C.card} strokeWidth={10} />
         <ACircle
           cx={SIZE / 2}
           cy={SIZE / 2}
@@ -70,21 +57,21 @@ const styles = StyleSheet.create({
   ring: {
     width: SIZE,
     height: SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   center: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   value: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     color: C.text,
   },
   label: {

@@ -1,16 +1,16 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router, useLocalSearchParams } from "expo-router";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Pressable } from '@/components/pressable';
-import { Palette as C } from '@/constants/palette';
-import { BackHeader, Card, SectionHeading } from '@/features/home/ui';
-import { GROUP_ROUTINES } from '@/features/workout/routines';
+import { Pressable } from "@/components/pressable";
+import { Palette as C } from "@/constants/palette";
+import { BackHeader, Card, SectionHeading } from "@/features/home/ui";
+import { GROUP_ROUTINES } from "@/features/workout/routines";
 
 export function GroupPlanScreen() {
   const insets = useSafeAreaInsets();
   const { group } = useLocalSearchParams<{ group?: string }>();
-  const routine = GROUP_ROUTINES[group ?? ''] ?? GROUP_ROUTINES.chest;
+  const routine = GROUP_ROUTINES[group ?? ""] ?? GROUP_ROUTINES.chest;
 
   return (
     <ScrollView
@@ -18,7 +18,8 @@ export function GroupPlanScreen() {
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}>
+      ]}
+    >
       <BackHeader label="Workout plan" onPress={() => router.back()} />
 
       <View style={styles.heading}>
@@ -43,7 +44,7 @@ export function GroupPlanScreen() {
         </Card>
       </View>
 
-      <Pressable style={styles.primaryButton} onPress={() => router.push('/session')}>
+      <Pressable style={styles.primaryButton} onPress={() => router.push("/session")}>
         <Text style={styles.primaryLabel}>Start workout</Text>
       </Pressable>
     </ScrollView>
@@ -64,12 +65,12 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
     color: C.textMuted,
   },
   title: {
     fontSize: 28,
-    fontWeight: '400',
+    fontWeight: "400",
     color: C.text,
   },
   subtitle: {
@@ -84,8 +85,8 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   exerciseRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   exerciseName: {
     fontSize: 12,
@@ -99,12 +100,12 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 16,
     backgroundColor: C.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   primaryLabel: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.onAccent,
   },
 });
