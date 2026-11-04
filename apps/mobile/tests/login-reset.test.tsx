@@ -338,7 +338,7 @@ describe("wall-clock lockouts and delayed focus", () => {
     await screen.unmount();
     await act(async () => {
       rejectRequest(new ApiError("invalid", 401));
-      await Promise.resolve();
+      await promise.catch(() => undefined);
       jest.advanceTimersByTime(1000);
     });
     expect(AccessibilityInfo.announceForAccessibility).not.toHaveBeenCalled();
