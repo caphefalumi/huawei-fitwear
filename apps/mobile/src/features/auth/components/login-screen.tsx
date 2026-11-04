@@ -70,13 +70,11 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
   const [newPassword, setNewPassword] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<string | null>(null);
-  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const mounted = useRef(true);
   const submittingRef = useRef(false);
   const focusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const snackbarTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const emailInput = useRef<TextInputInstance>(null);
   const passwordInput = useRef<TextInputInstance>(null);
   const [resetMode, setResetMode] = useState(false);
@@ -139,18 +137,14 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
     return () => {
       mounted.current = false;
       clearTimeout(focusTimer.current);
-      clearTimeout(snackbarTimer.current);
     };
   }, []);
 
   function clearLoginError() {
     setFieldError(null);
     setValidationError(null);
-    setSnackbarMessage(null);
     clearTimeout(focusTimer.current);
-    clearTimeout(snackbarTimer.current);
     focusTimer.current = undefined;
-    snackbarTimer.current = undefined;
   }
 
   function startPasswordReset() {
@@ -172,15 +166,6 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
     }
   }
 
-  function showSnackbar(message: string) {
-    setFieldError(null);
-    setValidationError(null);
-    setSnackbarMessage(message);
-    clearTimeout(focusTimer.current);
-    focusTimer.current = undefined;
-    clearTimeout(snackbarTimer.current);
-    snackbarTimer.current = setTimeout(() => setSnackbarMessage(null), 4000);
-  }
   function showFieldError(message: string) {
     setFieldError(message);
     void errorHaptic();
@@ -196,7 +181,6 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
       if (Platform.OS === "ios") AccessibilityInfo.announceForAccessibility(message);
     }, 100);
   }
-
   async function submit() {
     if (submittingRef.current || pending || lockoutKind !== null) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
@@ -224,7 +208,8 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
         setLockoutDeadline(seconds === undefined ? null : Date.now() + seconds * 1000);
       } else if (cause instanceof ApiError && cause.status === 401) {
         setFailedAttempts((attempts) => attempts + 1);
-        showSnackbar(credentialMessage);
+        setFieldError(null);
+        setValidationError("We couldn’t sign you in. Check your email and password and try again.");
       } else if (cause instanceof ApiError && (cause.status === 400 || cause.status === 422)) {
         setValidationError("Check your email address and try again.");
       } else {
@@ -382,27 +367,51 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
 
         <View style={styles.credentials}>
           {!resetMode || resetStep === "email" ? (
-            <AuthField
-              colors={AuthColors}
-              label="Email address"
-              inputRef={emailInput}
-              value={email}
-              onChangeText={(value) => {
-                clearLoginError();
-                setEmail(value);
-              }}
-              placeholder="example@gmail.com"
-              keyboardType="email-address"
-              returnKeyType="next"
-              autoCapitalize="none"
-              autoCorrect={false}
-              textContentType="emailAddress"
-              autoComplete="email"
-              autoFocus={resetMode && resetStep === "email"}
-              editable={resetMode ? !resetPending : !loginDisabled}
-              submitBehavior="submit"
-              onSubmitEditing={() => passwordInput.current?.focus()}
-            />
+            <View>
+              <AuthField
+                colors={AuthColors}
+                label="Email address"
+                inputRef={emailInput}
+                value={email}
+                error={validationError === "Enter a valid email address."}
+                errorMessage={
+                  validationError === "Enter a valid email address." ? validationError : undefined
+                }
+                aria-invalid={validationError === "Enter a valid email address."}
+                aria-describedby={
+                  validationError === "Enter a valid email address."
+                    ? "login-email-error"
+                    : undefined
+                }
+                accessibilityHint={
+                  validationError === "Enter a valid email address." ? validationError : undefined
+                }
+                placeholder="example@gmail.com"
+                keyboardType="email-address"
+                returnKeyType="next"
+                autoCapitalize="none"
+                autoCorrect={false}
+                textContentType="emailAddress"
+                autoComplete="email"
+                autoFocus={resetMode && resetStep === "email"}
+                editable={resetMode ? !resetPending : !loginDisabled}
+                submitBehavior="submit"
+                onChangeText={(value) => {
+                  clearLoginError();
+                  setEmail(value);
+                }}
+                onSubmitEditing={() => passwordInput.current?.focus()}
+              />
+              {validationError === "Enter a valid email address." ? (
+                <Text
+                  nativeID="login-email-error"
+                  accessibilityLiveRegion="polite"
+                  style={styles.error}
+                >
+                  Enter a valid email address.
+                </Text>
+              ) : null}
+            </View>
           ) : null}
           {!resetMode ? (
             <Animated.View
@@ -591,32 +600,34 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
             </Pressable>
           </View>
         ) : null}
-        {resetMode ? (
-          resetError ? (
-            <Text accessibilityLiveRegion="polite" style={styles.error}>
-              {resetError}
-            </Text>
-          ) : null
-        ) : validationError || lockoutMessage ? (
+        {!resetMode && validationError && validationError !== "Enter a valid email address." ? (
           <View style={styles.errorBanner}>
             <Text selectable accessibilityLiveRegion="polite" style={styles.bannerText}>
-              {lockoutMessage ?? validationError}
+              {validationError}
             </Text>
-            {lockoutMessage ? (
-              <>
-                <Text style={styles.bannerText}>
-                  Log in and credential editing are disabled. Password reset is still available.
-                </Text>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={startPasswordReset}
-                  style={styles.primaryButton}
-                >
-                  <Text style={styles.primaryLabel}>Reset password</Text>
-                </Pressable>
-              </>
-            ) : null}
           </View>
+        ) : null}
+        {!resetMode && lockoutMessage ? (
+          <View style={styles.errorBanner}>
+            <Text selectable accessibilityLiveRegion="polite" style={styles.bannerText}>
+              {lockoutMessage}
+            </Text>
+            <Text style={styles.bannerText}>
+              Log in and credential editing are disabled. Password reset is still available.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={startPasswordReset}
+              style={styles.primaryButton}
+            >
+              <Text style={styles.primaryLabel}>Reset password</Text>
+            </Pressable>
+          </View>
+        ) : null}
+        {resetMode && resetError ? (
+          <Text accessibilityLiveRegion="polite" style={styles.error}>
+            {resetError}
+          </Text>
         ) : null}
 
         {resetMode && resetStep === "code" ? (
@@ -723,11 +734,6 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
           )}
         </View>
       </ScrollView>
-      {snackbarMessage ? (
-        <View accessibilityRole="alert" accessibilityLiveRegion="assertive" style={styles.snackbar}>
-          <Text style={styles.snackbarText}>{snackbarMessage}</Text>
-        </View>
-      ) : null}
     </KeyboardAvoidingView>
   );
 }
@@ -804,16 +810,6 @@ const createStyles = (AuthColors: AuthColorPalette) =>
       color: "transparent",
       backgroundColor: "transparent",
     },
-    snackbar: {
-      position: "absolute",
-      bottom: 24,
-      left: 24,
-      right: 24,
-      padding: 14,
-      borderRadius: 10,
-      backgroundColor: AuthColors.text,
-    },
-    snackbarText: { color: AuthColors.background, fontSize: 14, lineHeight: 20 },
     passwordRequirement: { fontSize: 12, lineHeight: 18, color: AuthColors.textMuted },
     terms: { fontSize: 13, lineHeight: 19, color: AuthColors.textMuted, textAlign: "center" },
     footer: { alignItems: "center", gap: 15, paddingTop: 20 },
