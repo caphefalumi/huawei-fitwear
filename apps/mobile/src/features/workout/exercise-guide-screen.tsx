@@ -1,13 +1,12 @@
 import { Image } from "expo-image"
 import { router, useLocalSearchParams } from "expo-router"
 import { useState } from "react"
-import { ScrollView, StyleSheet, Text, View } from "react-native"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { StyleSheet, Text, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
+import { BackHeader, Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
 import { Palette as C } from "@/constants/palette"
 import { useHealth } from "@/features/health/health-store"
-import { BackHeader, Card } from "@/features/home/ui"
 
 const icons = {
   play: require("@/assets/images/workout/play.svg"),
@@ -79,7 +78,6 @@ const GUIDES: Record<string, Guide> = {
 }
 
 export function ExerciseGuideScreen() {
-  const insets = useSafeAreaInsets()
   const { name } = useLocalSearchParams<{ name?: string }>()
   const { recovery } = useHealth()
   const guide = GUIDES[name ?? "bench-press"] ?? GUIDES["bench-press"]
@@ -90,19 +88,10 @@ export function ExerciseGuideScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}
-    >
+    <Screen contentStyle={styles.content}>
       <BackHeader label="Chest plan" onPress={() => router.back()} />
 
-      <View style={styles.heading}>
-        <Text style={styles.title}>{guide.name}</Text>
-        <Text style={styles.subtitle}>Technique guide</Text>
-      </View>
+      <PageHeading title={guide.name} subtitle="Technique guide" />
 
       <View style={styles.demoWrap}>
         <Image
@@ -150,7 +139,7 @@ export function ExerciseGuideScreen() {
       </Card>
 
       <View style={styles.cues}>
-        <Text style={styles.sectionTitle}>3 key cues</Text>
+        <SectionHeading title="3 key cues" />
         {guide.cues.map((cue, index) => (
           <View key={cue.title} style={styles.cue}>
             <View style={styles.cueMarker}>
@@ -173,39 +162,26 @@ export function ExerciseGuideScreen() {
         </View>
       ) : null}
 
-      <Pressable style={styles.primaryButton} onPress={() => router.push("/session")}>
-        <Image
-          source={icons.play}
-          style={styles.actionIcon}
-          contentFit="contain"
-          tintColor={C.onAccent}
-        />
-        <Text style={styles.primaryLabel}>Start workout</Text>
-      </Pressable>
-    </ScrollView>
+      <Button
+        label="Start workout"
+        onPress={() => router.push("/session")}
+        icon={
+          <Image
+            accessible={false}
+            source={icons.play}
+            style={styles.actionIcon}
+            contentFit="contain"
+            tintColor={C.onAccent}
+          />
+        }
+      />
+    </Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: C.background,
-  },
   content: {
-    paddingHorizontal: 24,
     gap: 14,
-  },
-  heading: {
-    gap: 3,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "400",
-    color: C.text,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: C.textMuted,
   },
   demoWrap: {
     borderRadius: 18,
@@ -325,11 +301,6 @@ const styles = StyleSheet.create({
   cues: {
     gap: 12,
   },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: C.text,
-  },
   cue: {
     flexDirection: "row",
     gap: 10,
@@ -396,19 +367,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: C.textMuted,
-  },
-  primaryButton: {
-    flexDirection: "row",
-    gap: 8,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: C.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryLabel: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: C.onAccent,
   },
 })

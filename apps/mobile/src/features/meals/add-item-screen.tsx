@@ -4,19 +4,9 @@ import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
+import { BackHeader, Button, SectionHeading } from "@/components/ui"
 import { Palette as C } from "@/constants/palette"
-import {
-  Box,
-  Field,
-  Header,
-  NutrientGrid,
-  PrimaryButton,
-  SearchInput,
-  SecondaryButton,
-  SectionTitle,
-  ValueInput,
-  icons,
-} from "./meals-ui"
+import { Box, Field, NutrientGrid, SearchInput, ValueInput, icons } from "./meals-ui"
 import { Image } from "expo-image"
 import {
   useFoodSearch,
@@ -123,10 +113,10 @@ export function AddItemScreen() {
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
       ]}
     >
-      <Header
+      <BackHeader
         label="Lunch"
-        onBack={() => router.back()}
-        action="Cancel"
+        onPress={() => router.back()}
+        actionLabel="Cancel"
         onAction={() => router.back()}
       />
 
@@ -147,7 +137,8 @@ export function AddItemScreen() {
           {error ?? searchError}
         </Text>
       ) : null}
-      <SecondaryButton
+      <Button
+        variant="secondary"
         label="Enter nutrition manually"
         onPress={() =>
           router.push({
@@ -180,7 +171,7 @@ export function AddItemScreen() {
 
       {!selected && query.trim().length > 0 && !noMatch ? (
         <>
-          <SectionTitle title="Database results" action={`${matches.length} matches`} />
+          <SectionHeading title="Database results" actionLabel={`${matches.length} matches`} />
 
           {matches.map((food) => (
             <View key={food.id} style={styles.resultCard}>
@@ -251,7 +242,7 @@ export function AddItemScreen() {
             No automated text estimate is available. Manual entry uses only the values you enter.
           </Text>
 
-          <PrimaryButton
+          <Button
             label="Enter manually"
             onPress={() =>
               router.push(
@@ -259,7 +250,7 @@ export function AddItemScreen() {
               )
             }
           />
-          <SecondaryButton label="Search again" onPress={() => setQuery("")} />
+          <Button variant="secondary" label="Search again" onPress={() => setQuery("")} />
           <Text style={styles.centerNote}>Enter the label values for the full portion.</Text>
         </>
       ) : null}
@@ -277,7 +268,7 @@ export function AddItemScreen() {
             </Box>
           </Field>
 
-          <SectionTitle title="Nutrition estimate" action="Manual" />
+          <SectionHeading title="Nutrition estimate" actionLabel="Manual" />
 
           <NutrientGrid
             values={draft}
@@ -291,7 +282,7 @@ export function AddItemScreen() {
             needed.
           </Text>
 
-          <PrimaryButton label="Add Item" disabled={saving} busy={saving} onPress={handleAdd} />
+          <Button label="Add Item" disabled={saving} busy={saving} onPress={handleAdd} />
         </>
       ) : null}
     </ScrollView>

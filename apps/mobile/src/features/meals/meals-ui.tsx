@@ -7,7 +7,6 @@ import { Palette as C } from "@/constants/palette"
 import type { MealGlyph } from "./meals-store"
 
 export const icons = {
-  back: require("@/assets/images/recovery/chevron-left.svg"),
   chevronRight: require("@/assets/images/meals/chevron-right.svg"),
   search: require("@/assets/images/meals/search.svg"),
   searchMd: require("@/assets/images/meals/search-md.svg"),
@@ -141,64 +140,6 @@ export function SearchInput({
   )
 }
 
-export function PrimaryButton({
-  label,
-  onPress,
-  disabled,
-  busy,
-}: {
-  label: string
-  onPress: () => void
-  disabled?: boolean
-  busy?: boolean
-}) {
-  return (
-    <Pressable
-      style={[styles.primary, disabled && styles.primaryDisabled]}
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityState={{ busy }}
-    >
-      <Text style={styles.primaryLabel}>{label}</Text>
-    </Pressable>
-  )
-}
-
-export function SecondaryButton({ label, onPress }: { label: string; onPress: () => void }) {
-  return (
-    <Pressable style={styles.secondary} onPress={onPress}>
-      <Text style={styles.secondaryLabel}>{label}</Text>
-    </Pressable>
-  )
-}
-
-export function SectionTitle({
-  title,
-  action,
-  onPress,
-}: {
-  title: string
-  action?: string
-  onPress?: () => void
-}) {
-  return (
-    <View style={styles.sectionRow}>
-      <Text accessibilityRole="header" style={styles.sectionTitle}>
-        {title}
-      </Text>
-      {action ? (
-        onPress ? (
-          <Pressable onPress={onPress} hitSlop={10}>
-            <Text style={styles.sectionAction}>{action}</Text>
-          </Pressable>
-        ) : (
-          <Text style={styles.sectionAction}>{action}</Text>
-        )
-      ) : null}
-    </View>
-  )
-}
-
 /** 2×2 editable nutrient inputs used by the Database and AI Review screens. */
 export function NutrientGrid({
   values,
@@ -259,42 +200,6 @@ export function NutrientGrid({
   )
 }
 
-export function Header({
-  label,
-  onBack,
-  action,
-  onAction,
-}: {
-  label: string
-  onBack: () => void
-  action?: string
-  onAction?: () => void
-}) {
-  return (
-    <View style={styles.headerRow}>
-      <Pressable
-        accessibilityLabel={`Back to ${label}`}
-        style={styles.headerBack}
-        onPress={onBack}
-        hitSlop={10}
-      >
-        <Image
-          accessible={false}
-          source={icons.back}
-          style={styles.headerBackIcon}
-          contentFit="contain"
-        />
-        <Text style={styles.headerLabel}>{label}</Text>
-      </Pressable>
-      {action && onAction ? (
-        <Pressable onPress={onAction} hitSlop={10}>
-          <Text style={styles.headerAction}>{action}</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  )
-}
-
 const styles = StyleSheet.create({
   field: {
     gap: 8,
@@ -340,58 +245,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: C.text,
   },
-  primary: {
-    minHeight: 52,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    backgroundColor: C.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryDisabled: {
-    backgroundColor: C.card,
-  },
-  primaryLabel: {
-    textAlign: "center",
-    fontSize: 14,
-    fontWeight: "600",
-    color: C.onAccent,
-  },
-  secondary: {
-    minHeight: 48,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: C.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryLabel: {
-    textAlign: "center",
-    fontSize: 14,
-    fontWeight: "600",
-    color: C.accent,
-  },
-  sectionRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: C.text,
-  },
-  sectionAction: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: C.accent,
-  },
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -407,32 +260,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
     color: C.textMuted,
-  },
-  headerRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerBack: {
-    flexDirection: "row",
-    flexShrink: 1,
-    alignItems: "center",
-    gap: 6,
-  },
-  headerBackIcon: {
-    width: 18,
-    height: 18,
-  },
-  headerLabel: {
-    flexShrink: 1,
-    fontSize: 13,
-    color: C.accent,
-  },
-  headerAction: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: C.accent,
   },
 })

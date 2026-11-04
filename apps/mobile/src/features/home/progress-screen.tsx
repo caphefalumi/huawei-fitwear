@@ -1,12 +1,11 @@
 import { router } from "expo-router"
 import { useEffect, useRef, useState } from "react"
-import { Animated, Easing, ScrollView, StyleSheet, Text, View } from "react-native"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { Animated, Easing, StyleSheet, Text, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
+import { BackHeader, Card, PageHeading, Screen } from "@/components/ui"
 import { Palette as C } from "@/constants/palette"
 import { useHealth } from "@/features/health/health-store"
-import { BackHeader, Card } from "@/features/home/ui"
 import { progressData, RANGES, type Range } from "@/features/home/progress-data"
 import { WeightChart } from "@/features/home/weight-chart"
 
@@ -30,7 +29,6 @@ function ActivityBar({ height, index }: { height: number; index: number }) {
 }
 
 export function ProgressScreen() {
-  const insets = useSafeAreaInsets()
   const { weightKg, weights } = useHealth()
   const [range, setRange] = useState<Range>("Month")
   const data = progressData(range, weights, null)
@@ -38,16 +36,10 @@ export function ProgressScreen() {
   const maxSessions = Math.max(1, ...data.bars.map((bar) => bar.sessions))
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}
-    >
+    <Screen>
       <BackHeader label="Overview" onPress={() => router.back()} />
 
-      <Text style={styles.title}>Your progress.</Text>
+      <PageHeading title="Your progress." />
 
       <View style={styles.segments}>
         {RANGES.map((item) => {
@@ -145,24 +137,11 @@ export function ProgressScreen() {
           <Text style={styles.link}>Profile</Text>
         </Pressable>
       </Card>
-    </ScrollView>
+    </Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: C.background,
-  },
-  content: {
-    paddingHorizontal: 24,
-    gap: 18,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "400",
-    color: C.text,
-  },
   segments: {
     flexDirection: "row",
     backgroundColor: C.card,

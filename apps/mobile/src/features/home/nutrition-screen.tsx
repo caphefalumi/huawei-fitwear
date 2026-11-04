@@ -1,15 +1,14 @@
 import { router } from "expo-router"
-import { ScrollView, StyleSheet, Text, View } from "react-native"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { StyleSheet, Text, View } from "react-native"
 
+import { BackHeader, Card, PageHeading, Screen } from "@/components/ui"
 import { Palette as C } from "@/constants/palette"
 import { useHealth } from "@/features/health/health-store"
 import { useMeals } from "@/features/meals/meals-store"
 import { NutritionRing } from "@/features/home/ring"
-import { BackHeader, Card, MacroBar } from "@/features/home/ui"
+import { MacroBar } from "@/features/home/ui"
 
 export function NutritionScreen() {
-  const insets = useSafeAreaInsets()
   const { weightUpdated } = useHealth()
   const { loggedKcal, loggedMacros } = useMeals()
 
@@ -18,19 +17,10 @@ export function NutritionScreen() {
   const left = targetKcal - consumedKcal
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}
-    >
+    <Screen>
       <BackHeader label="Today" onPress={() => router.back()} />
 
-      <View style={styles.heading}>
-        <Text style={styles.title}>Nutrition</Text>
-        <Text style={styles.subtitle}>Thursday, Oct 8</Text>
-      </View>
+      <PageHeading title="Nutrition" subtitle="Thursday, Oct 8" />
 
       <Card style={styles.center}>
         <NutritionRing kcalLeft={left} progress={consumedKcal / targetKcal} />
@@ -85,31 +75,11 @@ export function NutritionScreen() {
           Food values and personal targets are estimates, not medical guidance.
         </Text>
       </View>
-    </ScrollView>
+    </Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: C.background,
-  },
-  content: {
-    paddingHorizontal: 24,
-    gap: 18,
-  },
-  heading: {
-    gap: 4,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "400",
-    color: C.text,
-  },
-  subtitle: {
-    fontSize: 12,
-    color: C.textMuted,
-  },
   center: {
     alignItems: "center",
   },

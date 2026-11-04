@@ -4,7 +4,7 @@ import { StyleSheet, Text, TextInput, View } from "react-native"
 import { Pressable } from "@/components/pressable"
 import { Sheet, SheetField } from "@/components/sheet"
 import { Palette as C } from "@/constants/palette"
-import { Card } from "@/features/home/ui"
+import { Card } from "@/components/ui"
 import { useWorkouts, type Exercise, type WorkoutSet } from "@/features/workout/workout-store"
 
 export function WorkoutSessionPanel({

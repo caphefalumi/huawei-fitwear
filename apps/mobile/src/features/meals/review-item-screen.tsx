@@ -3,9 +3,10 @@ import { useEffect, useRef, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
+import { BackHeader, Button } from "@/components/ui"
 import { Palette as C } from "@/constants/palette"
 import { Pressable } from "@/components/pressable"
-import { Box, Field, Header, NutrientGrid, PrimaryButton, ValueInput } from "./meals-ui"
+import { Box, Field, NutrientGrid, ValueInput } from "./meals-ui"
 import { splitDetail, useMeals } from "./meals-store"
 
 type NutrientKey = "energy" | "protein" | "carbs" | "fat"
@@ -100,10 +101,10 @@ export function ReviewItemScreen() {
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
       ]}
     >
-      <Header
+      <BackHeader
         label="Search"
-        onBack={() => router.back()}
-        action="Cancel"
+        onPress={() => router.back()}
+        actionLabel="Cancel"
         onAction={() => router.back()}
       />
 
@@ -185,7 +186,7 @@ export function ReviewItemScreen() {
 
       <Text style={styles.centerNote}>Review the name, amount, and nutrients above.</Text>
 
-      <PrimaryButton
+      <Button
         label={existing ? "Save item" : "Add item"}
         disabled={saving}
         busy={saving}
