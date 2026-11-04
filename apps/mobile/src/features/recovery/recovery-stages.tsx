@@ -1,17 +1,17 @@
-import { Fragment } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Fragment } from "react"
+import { StyleSheet, Text, View } from "react-native"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
-import { recoveryProgress, type RecoveryPlan } from "@/features/health/health-store";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
+import { recoveryProgress, type RecoveryPlan } from "@/features/health/health-store"
 
-const STAGES = ["Rest", "Rehab", "Return"];
+const STAGES = ["Rest", "Rehab", "Return"]
 
 /** Short day and month, e.g. "8 Nov", for the day a stage begins. */
 function stageDate(recovery: RecoveryPlan, offset: number) {
-  const date = new Date(`${recovery.startDate}T12:00:00`);
-  date.setDate(date.getDate() + offset);
-  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const date = new Date(`${recovery.startDate}T12:00:00`)
+  date.setDate(date.getDate() + offset)
+  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" })
 }
 
 /** "Recovery" heading over three checkpoints: white while pending, primary red once reached. */
@@ -20,12 +20,12 @@ export function RecoveryTracker({
   label,
   onPress,
 }: {
-  recovery: RecoveryPlan;
-  label: string;
-  onPress: () => void;
+  recovery: RecoveryPlan
+  label: string
+  onPress: () => void
 }) {
-  const reached = recoveryProgress(recovery).map((fill) => fill >= 1);
-  const offsets = [0, recovery.restDays, recovery.restDays + recovery.lightDays];
+  const reached = recoveryProgress(recovery).map((fill) => fill >= 1)
+  const offsets = [0, recovery.restDays, recovery.restDays + recovery.lightDays]
   return (
     <Pressable
       accessibilityLabel={label}
@@ -69,7 +69,7 @@ export function RecoveryTracker({
         </View>
       </View>
     </Pressable>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -129,4 +129,4 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: C.textMuted,
   },
-});
+})

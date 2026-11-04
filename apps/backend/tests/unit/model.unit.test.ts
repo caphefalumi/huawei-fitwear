@@ -1,6 +1,6 @@
-import { describe, expect, it } from "bun:test";
-import { Value } from "@sinclair/typebox/value";
-import { AuthSchemas } from "../../src/modules/auth";
+import { describe, expect, it } from "bun:test"
+import { Value } from "@sinclair/typebox/value"
+import { AuthSchemas } from "../../src/modules/auth"
 
 describe("Unit Test: Auth Validation Schemas", () => {
   describe("signUpBody", () => {
@@ -16,68 +16,68 @@ describe("Unit Test: Auth Validation Schemas", () => {
         targetWeightKg: 62.0,
         activityLevel: "very_active",
         fitnessGoal: "maintenance",
-      };
+      }
 
-      expect(Value.Check(AuthSchemas.signUpBody, validPayload)).toBeTrue();
-    });
+      expect(Value.Check(AuthSchemas.signUpBody, validPayload)).toBeTrue()
+    })
 
     it("should reject invalid email format", () => {
       const invalidPayload = {
         email: "not-an-email",
         password: "StrongPassword123",
-      };
+      }
 
-      expect(Value.Check(AuthSchemas.signUpBody, invalidPayload)).toBeFalse();
-    });
+      expect(Value.Check(AuthSchemas.signUpBody, invalidPayload)).toBeFalse()
+    })
 
     it("should reject passwords shorter than 8 characters", () => {
       const shortPasswordPayload = {
         email: "user@fitwear.dev",
         password: "short",
-      };
+      }
 
-      expect(Value.Check(AuthSchemas.signUpBody, shortPasswordPayload)).toBeFalse();
-    });
+      expect(Value.Check(AuthSchemas.signUpBody, shortPasswordPayload)).toBeFalse()
+    })
 
     it("should reject invalid gender or enum values", () => {
       const invalidEnumPayload = {
         email: "user@fitwear.dev",
         password: "StrongPassword123",
         gender: "alien",
-      };
+      }
 
-      expect(Value.Check(AuthSchemas.signUpBody, invalidEnumPayload)).toBeFalse();
-    });
-  });
+      expect(Value.Check(AuthSchemas.signUpBody, invalidEnumPayload)).toBeFalse()
+    })
+  })
 
   describe("signInBody", () => {
     it("should accept valid credentials", () => {
       const validPayload = {
         email: "member@fitwear.dev",
         password: "password123",
-      };
+      }
 
-      expect(Value.Check(AuthSchemas.signInBody, validPayload)).toBeTrue();
-    });
+      expect(Value.Check(AuthSchemas.signInBody, validPayload)).toBeTrue()
+    })
 
     it("should reject empty password", () => {
       const emptyPasswordPayload = {
         email: "member@fitwear.dev",
         password: "",
-      };
+      }
 
-      expect(Value.Check(AuthSchemas.signInBody, emptyPasswordPayload)).toBeFalse();
-    });
-  });
+      expect(Value.Check(AuthSchemas.signInBody, emptyPasswordPayload)).toBeFalse()
+    })
+  })
 
   describe("updateUserBody", () => {
     it("should accept partial profile updates", () => {
       const partialUpdate = {
         currentWeightKg: 73.2,
         fitnessGoal: "muscle_gain",
-      };
+      }
 
-      expect(Value.Check(AuthSchemas.updateUserBody, partialUpdate)).toBeTrue();
-    });
-  });
-});
+      expect(Value.Check(AuthSchemas.updateUserBody, partialUpdate)).toBeTrue()
+    })
+  })
+})

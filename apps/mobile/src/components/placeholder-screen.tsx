@@ -1,11 +1,11 @@
-import { StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StyleSheet, Text, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Palette as C } from "@/constants/palette";
+import { Palette as C } from "@/constants/palette"
 
 /** Placeholder for tab screens that have no Figma design yet. */
 export function PlaceholderScreen({ title, note }: { title: string; note: string }) {
-  const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets()
 
   return (
     <View
@@ -14,7 +14,7 @@ export function PlaceholderScreen({ title, note }: { title: string; note: string
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.note}>{note}</Text>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -33,4 +33,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: C.textMuted,
   },
-});
+})

@@ -1,13 +1,13 @@
-import { router } from "expo-router";
-import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router } from "expo-router"
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as AuthColors } from "@/constants/palette";
+import { Pressable } from "@/components/pressable"
+import { Palette as AuthColors } from "@/constants/palette"
 
 export function WelcomeScreen() {
-  const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets()
+  const { height } = useWindowDimensions()
 
   return (
     <View
@@ -52,7 +52,7 @@ export function WelcomeScreen() {
         </Pressable>
       </View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -170,4 +170,4 @@ const styles = StyleSheet.create({
     backgroundColor: AuthColors.surface,
   },
   secondaryLabel: { color: AuthColors.text, fontSize: 16, fontWeight: "600" },
-});
+})

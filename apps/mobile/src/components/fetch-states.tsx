@@ -1,23 +1,23 @@
-import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react"
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
 
 export function LoadingSkeleton({
   label = "Loading",
   rows = 3,
 }: {
-  label?: string;
-  rows?: number;
+  label?: string
+  rows?: number
 }) {
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(false)
   useEffect(() => {
-    setVisible(false);
-    const timer = setTimeout(() => setVisible(true), 250);
-    return () => clearTimeout(timer);
-  }, [label, rows]);
-  if (!visible) return null;
+    setVisible(false)
+    const timer = setTimeout(() => setVisible(true), 250)
+    return () => clearTimeout(timer)
+  }, [label, rows])
+  if (!visible) return null
   return (
     <View accessibilityLabel={label} accessibilityLiveRegion="polite" style={styles.skeleton}>
       {Array.from({ length: rows }, (_, index) => (
@@ -31,7 +31,7 @@ export function LoadingSkeleton({
         />
       ))}
     </View>
-  );
+  )
 }
 
 export function FetchErrorState({
@@ -41,27 +41,27 @@ export function FetchErrorState({
   retrying = false,
   onBack,
 }: {
-  title?: string;
-  message: string;
-  onRetry?: () => void | Promise<unknown>;
-  retrying?: boolean;
-  onBack?: () => void;
+  title?: string
+  message: string
+  onRetry?: () => void | Promise<unknown>
+  retrying?: boolean
+  onBack?: () => void
 }) {
-  const [busy, setBusy] = useState(false);
-  const retryLock = useRef(false);
+  const [busy, setBusy] = useState(false)
+  const retryLock = useRef(false)
   const runRetry = async () => {
-    if (!onRetry || retryLock.current || retrying) return;
-    retryLock.current = true;
-    setBusy(true);
+    if (!onRetry || retryLock.current || retrying) return
+    retryLock.current = true
+    setBusy(true)
     try {
-      await onRetry();
+      await onRetry()
     } catch {
       // Keep the visible error; the caller retains the failed state.
     } finally {
-      retryLock.current = false;
-      setBusy(false);
+      retryLock.current = false
+      setBusy(false)
     }
-  };
+  }
   return (
     <View accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>
       <Text accessibilityLabel="Warning" style={styles.icon}>
@@ -93,7 +93,7 @@ export function FetchErrorState({
         </Pressable>
       ) : null}
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -134,4 +134,4 @@ const styles = StyleSheet.create({
   retryText: { color: C.onAccent, fontSize: 15, fontWeight: "600" },
   back: { minHeight: 48, justifyContent: "center", paddingHorizontal: 8 },
   backText: { color: C.accent, fontSize: 15, fontWeight: "600" },
-});
+})

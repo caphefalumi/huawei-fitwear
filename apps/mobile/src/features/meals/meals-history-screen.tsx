@@ -1,16 +1,16 @@
-import { Image } from "expo-image";
-import { router } from "expo-router";
-import { useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import Animated, { FadeInUp } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from "expo-image"
+import { router } from "expo-router"
+import { useMemo, useState } from "react"
+import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
+import Animated, { FadeInUp } from "react-native-reanimated"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
-import { icons } from "./meals-ui";
-import { useMeals, type MealLog } from "./meals-store";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
+import { icons } from "./meals-ui"
+import { useMeals, type MealLog } from "./meals-store"
 
-type SortKey = "newest" | "kcal" | "protein" | "carbs" | "fat";
+type SortKey = "newest" | "kcal" | "protein" | "carbs" | "fat"
 
 const SORTS: { key: SortKey; label: string }[] = [
   { key: "newest", label: "Newest" },
@@ -18,31 +18,31 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "protein", label: "Protein" },
   { key: "carbs", label: "Carbs" },
   { key: "fat", label: "Fat" },
-];
+]
 
 const metricOf = (item: MealLog, key: Exclude<SortKey, "newest">) =>
-  key === "kcal" ? item.kcal : item.macros[key];
+  key === "kcal" ? item.kcal : item.macros[key]
 
 export function MealsHistoryScreen() {
-  const insets = useSafeAreaInsets();
-  const { history } = useMeals();
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<SortKey>("newest");
-  const [descending, setDescending] = useState(true);
+  const insets = useSafeAreaInsets()
+  const { history } = useMeals()
+  const [query, setQuery] = useState("")
+  const [sort, setSort] = useState<SortKey>("newest")
+  const [descending, setDescending] = useState(true)
 
   const items = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    const filtered = history.filter((item) => item.name.toLowerCase().includes(needle));
-    if (sort === "newest") return descending ? filtered : [...filtered].reverse();
-    const direction = descending ? -1 : 1;
-    return [...filtered].sort((a, b) => direction * (metricOf(a, sort) - metricOf(b, sort)));
-  }, [history, query, sort, descending]);
+    const needle = query.trim().toLowerCase()
+    const filtered = history.filter((item) => item.name.toLowerCase().includes(needle))
+    if (sort === "newest") return descending ? filtered : [...filtered].reverse()
+    const direction = descending ? -1 : 1
+    return [...filtered].sort((a, b) => direction * (metricOf(a, sort) - metricOf(b, sort)))
+  }, [history, query, sort, descending])
 
   function handleSort(next: SortKey) {
-    if (next === sort) setDescending((prev) => !prev);
+    if (next === sort) setDescending((prev) => !prev)
     else {
-      setSort(next);
-      setDescending(true);
+      setSort(next)
+      setDescending(true)
     }
   }
 
@@ -79,7 +79,7 @@ export function MealsHistoryScreen() {
         contentContainerStyle={styles.sorts}
       >
         {SORTS.map((option) => {
-          const active = option.key === sort;
+          const active = option.key === sort
           return (
             <Pressable
               key={option.key}
@@ -91,7 +91,7 @@ export function MealsHistoryScreen() {
                 {active ? (descending ? " ↓" : " ↑") : ""}
               </Text>
             </Pressable>
-          );
+          )
         })}
       </ScrollView>
 
@@ -127,7 +127,7 @@ export function MealsHistoryScreen() {
         ))
       )}
     </ScrollView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -244,4 +244,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: C.text,
   },
-});
+})

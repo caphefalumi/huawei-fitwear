@@ -1,32 +1,32 @@
-import { router } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, TextInput, useColorScheme, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { Pressable, ScrollView, StyleSheet, TextInput, useColorScheme, View } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { BottomTabInset, Spacing } from "@/constants/theme";
-import { useWatchBle } from "@/features/ble/use-watch-ble";
-import { useTheme } from "@/hooks/use-theme";
+import { ThemedText } from "@/components/themed-text"
+import { ThemedView } from "@/components/themed-view"
+import { BottomTabInset, Spacing } from "@/constants/theme"
+import { useWatchBle } from "@/features/ble/use-watch-ble"
+import { useTheme } from "@/hooks/use-theme"
 
 // ─── IMU packet type ──────────────────────────────────────────────────────────
 interface ImuPacket {
-  type: "imu";
-  ax: number;
-  ay: number;
-  az: number;
-  mag: number;
-  gx: number;
-  gy: number;
-  gz: number;
-  ts: number;
+  type: "imu"
+  ax: number
+  ay: number
+  az: number
+  mag: number
+  gx: number
+  gy: number
+  gz: number
+  ts: number
 }
 
 function parseImuPacket(text: string): ImuPacket | null {
   try {
-    const obj = JSON.parse(text);
-    if (!obj) return null;
-    if (obj.type === "imu") return obj as ImuPacket;
+    const obj = JSON.parse(text)
+    if (!obj) return null
+    if (obj.type === "imu") return obj as ImuPacket
     // Fallback compact format for low-MTU links (< 100B)
     if (obj.t === "i" && Array.isArray(obj.a) && Array.isArray(obj.g)) {
       return {
@@ -39,11 +39,11 @@ function parseImuPacket(text: string): ImuPacket | null {
         gy: obj.g[1] ?? 0,
         gz: obj.g[2] ?? 0,
         ts: obj.ts ?? Date.now(),
-      };
+      }
     }
-    return null;
+    return null
   } catch {
-    return null;
+    return null
   }
 }
 
@@ -53,12 +53,12 @@ function StatusDot({ color }: { color: string }) {
     <View style={styles.dotWrap}>
       <View style={[styles.dot, { backgroundColor: color }]} />
     </View>
-  );
+  )
 }
 
 // ─── IMU gauge bar ────────────────────────────────────────────────────────────
 function GaugeBar({ value, max, color }: { value: number; max: number; color: string }) {
-  const pct = Math.min(Math.abs(value) / max, 1);
+  const pct = Math.min(Math.abs(value) / max, 1)
   return (
     <View style={styles.gaugeTrack}>
       <View
@@ -68,7 +68,7 @@ function GaugeBar({ value, max, color }: { value: number; max: number; color: st
         ]}
       />
     </View>
-  );
+  )
 }
 
 // ─── Axis row ────────────────────────────────────────────────────────────────
@@ -78,10 +78,10 @@ function AxisRow({
   max,
   color,
 }: {
-  axis: string;
-  value: number;
-  max: number;
-  color: string;
+  axis: string
+  value: number
+  max: number
+  color: string
 }) {
   return (
     <View style={styles.axisRow}>
@@ -94,14 +94,14 @@ function AxisRow({
         {value.toFixed(2)}
       </ThemedText>
     </View>
-  );
+  )
 }
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 export function BleSyncScreen() {
-  const theme = useTheme();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const theme = useTheme()
+  const colorScheme = useColorScheme()
+  const isDark = colorScheme === "dark"
   const {
     mode,
     deviceName,
@@ -113,83 +113,83 @@ export function BleSyncScreen() {
     sendTextToWatch,
     disconnect,
     clearMessages,
-  } = useWatchBle({ enableSimulator: true });
+  } = useWatchBle({ enableSimulator: true })
 
-  const [imu, setImu] = useState<ImuPacket | null>(null);
-  const [imuAge, setImuAge] = useState(0);
-  const [phoneDraft, setPhoneDraft] = useState("Start Set: Bench Press");
-  const [sendFeedback, setSendFeedback] = useState<string | null>(null);
-  const [sending, setSending] = useState(false);
-  const lastPacketMs = useRef<number>(0);
+  const [imu, setImu] = useState<ImuPacket | null>(null)
+  const [imuAge, setImuAge] = useState(0)
+  const [phoneDraft, setPhoneDraft] = useState("Start Set: Bench Press")
+  const [sendFeedback, setSendFeedback] = useState<string | null>(null)
+  const [sending, setSending] = useState(false)
+  const lastPacketMs = useRef<number>(0)
 
   // Monitor the latest incoming watch message for IMU data
   useEffect(() => {
-    const latest = messages[0];
-    if (!latest || latest.direction !== "watch-to-phone") return;
-    const parsed = parseImuPacket(latest.text);
+    const latest = messages[0]
+    if (!latest || latest.direction !== "watch-to-phone") return
+    const parsed = parseImuPacket(latest.text)
     if (parsed) {
-      setImu(parsed);
-      lastPacketMs.current = Date.now();
-      setImuAge(0);
+      setImu(parsed)
+      lastPacketMs.current = Date.now()
+      setImuAge(0)
     }
-  }, [messages]);
+  }, [messages])
 
   // Tick the age counter so the user sees freshness
   useEffect(() => {
-    if (!imu) return;
+    if (!imu) return
     const interval = setInterval(() => {
       if (lastPacketMs.current > 0) {
-        setImuAge(Math.round((Date.now() - lastPacketMs.current) / 100) / 10);
+        setImuAge(Math.round((Date.now() - lastPacketMs.current) / 100) / 10)
       }
-    }, 200);
-    return () => clearInterval(interval);
-  }, [imu]);
+    }, 200)
+    return () => clearInterval(interval)
+  }, [imu])
 
-  const isConnected = mode === "ble-hardware" || mode === "ble-simulated";
+  const isConnected = mode === "ble-hardware" || mode === "ble-simulated"
 
   // Status banner styling
-  const statusColor = isConnected ? (mode === "ble-hardware" ? "#22C55E" : "#38BDF8") : "#94A3B8";
+  const statusColor = isConnected ? (mode === "ble-hardware" ? "#22C55E" : "#38BDF8") : "#94A3B8"
 
   const statusLabel = isConnected
     ? mode === "ble-hardware"
       ? `Connected · ${deviceName || "Huawei Watch"}`
       : "Connected · Simulated Watch"
-    : "Disconnected";
+    : "Disconnected"
 
   // Quick draft buttons
   const sendQuickText = useCallback(
     async (txt: string) => {
-      setPhoneDraft(txt);
-      setSending(true);
-      setSendFeedback(null);
+      setPhoneDraft(txt)
+      setSending(true)
+      setSendFeedback(null)
       try {
-        const ok = await sendTextToWatch(txt);
-        setSendFeedback(ok ? "Sent ✓" : "Failed to send");
+        const ok = await sendTextToWatch(txt)
+        setSendFeedback(ok ? "Sent ✓" : "Failed to send")
       } catch (e) {
-        setSendFeedback(`Error: ${e instanceof Error ? e.message : String(e)}`);
+        setSendFeedback(`Error: ${e instanceof Error ? e.message : String(e)}`)
       } finally {
-        setSending(false);
+        setSending(false)
       }
     },
     [sendTextToWatch],
-  );
+  )
 
   const handleSendCustomText = useCallback(async () => {
-    if (!phoneDraft.trim()) return;
-    setSending(true);
-    setSendFeedback(null);
+    if (!phoneDraft.trim()) return
+    setSending(true)
+    setSendFeedback(null)
     try {
-      const ok = await sendTextToWatch(phoneDraft.trim());
-      setSendFeedback(ok ? "Sent ✓" : "Failed to send");
+      const ok = await sendTextToWatch(phoneDraft.trim())
+      setSendFeedback(ok ? "Sent ✓" : "Failed to send")
     } catch (e) {
-      setSendFeedback(`Error: ${e instanceof Error ? e.message : String(e)}`);
+      setSendFeedback(`Error: ${e instanceof Error ? e.message : String(e)}`)
     } finally {
-      setSending(false);
+      setSending(false)
     }
-  }, [phoneDraft, sendTextToWatch]);
+  }, [phoneDraft, sendTextToWatch])
 
   // Filter messages to show non-imu lines cleanly, but keep last 20 overall
-  const logMessages = messages.slice(0, 15);
+  const logMessages = messages.slice(0, 15)
 
   return (
     <ThemedView type="background" style={styles.root}>
@@ -472,7 +472,7 @@ export function BleSyncScreen() {
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -588,4 +588,4 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 14,
   },
-});
+})

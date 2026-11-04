@@ -1,4 +1,4 @@
-import { openapi } from "@elysia/openapi";
+import { openapi } from "@elysia/openapi"
 
 export const fitwearOpenapi = openapi({
   path: "/swagger",
@@ -22,4 +22,4 @@ export const fitwearOpenapi = openapi({
       },
     },
   },
-});
+})

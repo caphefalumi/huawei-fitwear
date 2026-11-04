@@ -1,31 +1,31 @@
-import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router, useLocalSearchParams } from "expo-router"
+import { useEffect, useRef, useState } from "react"
+import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Palette as C } from "@/constants/palette";
-import { Pressable } from "@/components/pressable";
-import { Box, Field, Header, NutrientGrid, PrimaryButton, ValueInput } from "./meals-ui";
-import { splitDetail, useMeals } from "./meals-store";
+import { Palette as C } from "@/constants/palette"
+import { Pressable } from "@/components/pressable"
+import { Box, Field, Header, NutrientGrid, PrimaryButton, ValueInput } from "./meals-ui"
+import { splitDetail, useMeals } from "./meals-store"
 
-type NutrientKey = "energy" | "protein" | "carbs" | "fat";
+type NutrientKey = "energy" | "protein" | "carbs" | "fat"
 
 export function ReviewItemScreen() {
-  const insets = useSafeAreaInsets();
-  const { addItem, updateItem, items, history } = useMeals();
+  const insets = useSafeAreaInsets()
+  const { addItem, updateItem, items, history } = useMeals()
   const params = useLocalSearchParams<{
-    name?: string;
-    description?: string;
-    log?: string;
-    id?: string;
-  }>();
+    name?: string
+    description?: string
+    log?: string
+    id?: string
+  }>()
   const existing = (
     params.log ? history.find((meal) => meal.id === params.log)?.items : items
-  )?.find((item) => item.id === params.id);
-  const portion = existing ? splitDetail(existing.detail) : null;
-  const [name, setName] = useState(existing?.name ?? params.name ?? "");
-  const [unit, setUnit] = useState<"g" | "ml">(portion?.unit === "ml" ? "ml" : "g");
-  const [amount, setAmount] = useState(portion ? String(portion.amount) : "");
+  )?.find((item) => item.id === params.id)
+  const portion = existing ? splitDetail(existing.detail) : null
+  const [name, setName] = useState(existing?.name ?? params.name ?? "")
+  const [unit, setUnit] = useState<"g" | "ml">(portion?.unit === "ml" ? "ml" : "g")
+  const [amount, setAmount] = useState(portion ? String(portion.amount) : "")
   const [draft, setDraft] = useState<Record<NutrientKey, string>>(
     existing
       ? {
@@ -35,22 +35,22 @@ export function ReviewItemScreen() {
           fat: String(existing.macros.fat),
         }
       : { energy: "", protein: "", carbs: "", fat: "" },
-  );
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const active = useRef(true);
+  )
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const active = useRef(true)
   useEffect(() => {
-    active.current = true;
+    active.current = true
     return () => {
-      active.current = false;
-    };
-  }, []);
+      active.current = false
+    }
+  }, [])
 
   async function handleAdd() {
-    if (saving) return;
+    if (saving) return
     if (params.id && !existing) {
-      setError("This item is no longer available. Return to the meal.");
-      return;
+      setError("This item is no longer available. Return to the meal.")
+      return
     }
     if (
       !name.trim() ||
@@ -61,11 +61,11 @@ export function ReviewItemScreen() {
         (value) => !value.trim() || !Number.isFinite(Number(value)) || Number(value) < 0,
       )
     ) {
-      setError("Enter a name, positive amount and all nutrition values (zero is allowed).");
-      return;
+      setError("Enter a name, positive amount and all nutrition values (zero is allowed).")
+      return
     }
-    setSaving(true);
-    setError(null);
+    setSaving(true)
+    setError(null)
     try {
       const item = {
         id: existing?.id ?? `manual-${Date.now()}`,
@@ -78,16 +78,16 @@ export function ReviewItemScreen() {
           fat: Number(draft.fat),
         },
         glyph: unit === "ml" ? ("droplet" as const) : ("wheat" as const),
-      };
-      if (existing) await updateItem(existing.id, item, params.log);
-      else await addItem(item, params.log);
-      if (!active.current) return;
-      if (existing || params.log) router.back();
-      else router.navigate("/meal");
+      }
+      if (existing) await updateItem(existing.id, item, params.log)
+      else await addItem(item, params.log)
+      if (!active.current) return
+      if (existing || params.log) router.back()
+      else router.navigate("/meal")
     } catch (cause) {
-      if (active.current) setError(cause instanceof Error ? cause.message : "Could not save item.");
+      if (active.current) setError(cause instanceof Error ? cause.message : "Could not save item.")
     } finally {
-      if (active.current) setSaving(false);
+      if (active.current) setSaving(false)
     }
   }
 
@@ -192,7 +192,7 @@ export function ReviewItemScreen() {
         onPress={handleAdd}
       />
     </ScrollView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -263,4 +263,4 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: C.textMuted,
   },
-});
+})

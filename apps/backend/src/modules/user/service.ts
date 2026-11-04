@@ -1,10 +1,10 @@
-import { eq } from "drizzle-orm";
-import { status } from "elysia";
-import { getDb, user as userTable } from "../../db";
+import { eq } from "drizzle-orm"
+import { status } from "elysia"
+import { getDb, user as userTable } from "../../db"
 
 export abstract class User {
   static async getById(userId: string, d1?: D1Database) {
-    const db = getDb(d1);
+    const db = getDb(d1)
     const foundUser = await db
       .select({
         id: userTable.id,
@@ -24,12 +24,12 @@ export abstract class User {
       })
       .from(userTable)
       .where(eq(userTable.id, userId))
-      .get();
+      .get()
 
     if (!foundUser) {
-      throw status(404, { success: false, message: "User not found" });
+      throw status(404, { success: false, message: "User not found" })
     }
 
-    return foundUser;
+    return foundUser
   }
 }

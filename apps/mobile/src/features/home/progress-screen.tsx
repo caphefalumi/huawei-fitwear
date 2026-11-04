@@ -1,18 +1,18 @@
-import { router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { Animated, Easing, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router } from "expo-router"
+import { useEffect, useRef, useState } from "react"
+import { Animated, Easing, ScrollView, StyleSheet, Text, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
-import { useHealth } from "@/features/health/health-store";
-import { BackHeader, Card } from "@/features/home/ui";
-import { progressData, RANGES, type Range } from "@/features/home/progress-data";
-import { WeightChart } from "@/features/home/weight-chart";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
+import { useHealth } from "@/features/health/health-store"
+import { BackHeader, Card } from "@/features/home/ui"
+import { progressData, RANGES, type Range } from "@/features/home/progress-data"
+import { WeightChart } from "@/features/home/weight-chart"
 
 /** Bar grows with a spring each time it appears. */
 function ActivityBar({ height, index }: { height: number; index: number }) {
-  const anim = useRef(new Animated.Value(0)).current;
+  const anim = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
     const t = Animated.timing(anim, {
@@ -21,21 +21,21 @@ function ActivityBar({ height, index }: { height: number; index: number }) {
       delay: index * 60,
       easing: Easing.bezier(0.22, 1, 0.36, 1),
       useNativeDriver: false,
-    });
-    t.start();
-    return () => t.stop();
-  }, [anim, height, index]);
+    })
+    t.start()
+    return () => t.stop()
+  }, [anim, height, index])
 
-  return <Animated.View style={[styles.bar, { height: anim }]} />;
+  return <Animated.View style={[styles.bar, { height: anim }]} />
 }
 
 export function ProgressScreen() {
-  const insets = useSafeAreaInsets();
-  const { weightKg, weights } = useHealth();
-  const [range, setRange] = useState<Range>("Month");
-  const data = progressData(range, weights, null);
-  const latestWeight = weightKg ?? data.weights.at(-1) ?? 0;
-  const maxSessions = Math.max(1, ...data.bars.map((bar) => bar.sessions));
+  const insets = useSafeAreaInsets()
+  const { weightKg, weights } = useHealth()
+  const [range, setRange] = useState<Range>("Month")
+  const data = progressData(range, weights, null)
+  const latestWeight = weightKg ?? data.weights.at(-1) ?? 0
+  const maxSessions = Math.max(1, ...data.bars.map((bar) => bar.sessions))
 
   return (
     <ScrollView
@@ -51,7 +51,7 @@ export function ProgressScreen() {
 
       <View style={styles.segments}>
         {RANGES.map((item) => {
-          const active = item === range;
+          const active = item === range
           return (
             <Pressable
               key={item}
@@ -60,7 +60,7 @@ export function ProgressScreen() {
             >
               <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>{item}</Text>
             </Pressable>
-          );
+          )
         })}
       </View>
 
@@ -146,7 +146,7 @@ export function ProgressScreen() {
         </Pressable>
       </Card>
     </ScrollView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -280,4 +280,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: C.accent,
   },
-});
+})

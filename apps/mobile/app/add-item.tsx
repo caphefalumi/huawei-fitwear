@@ -1,1 +1,1 @@
-export { AddItemScreen as default } from "@/features/meals";
+export { AddItemScreen as default } from "@/features/meals"

@@ -1,16 +1,16 @@
-import { Elysia, t, type Static } from "elysia";
-import { DATE_KEY_PATTERN } from "../../lib/date";
-import { authGuard } from "../auth/service";
-import { Meals } from "./service";
+import { Elysia, t, type Static } from "elysia"
+import { DATE_KEY_PATTERN } from "../../lib/date"
+import { authGuard } from "../auth/service"
+import { Meals } from "./service"
 
 const dateKey = t.String({
   pattern: DATE_KEY_PATTERN,
   error: "date must be formatted as YYYY-MM-DD",
-});
+})
 const mealType = t.Union(
   [t.Literal("breakfast"), t.Literal("lunch"), t.Literal("dinner"), t.Literal("snack")],
   { error: "mealType must be breakfast, lunch, dinner or snack" },
-);
+)
 const itemBody = t.Object({
   foodName: t.String({ minLength: 1 }),
   servingUnit: t.Optional(t.Union([t.Literal("g"), t.Literal("ml")])),
@@ -22,7 +22,7 @@ const itemBody = t.Object({
   fatG: t.Number({ minimum: 0 }),
   aiConfidence: t.Optional(t.Number({ minimum: 0, maximum: 1 })),
   boundingBoxJson: t.Optional(t.String()),
-});
+})
 const createBody = t.Object({
   targetDate: t.Optional(dateKey),
   mealType,
@@ -39,12 +39,12 @@ const createBody = t.Object({
   aiConfidenceOverall: t.Optional(t.Number({ minimum: 0, maximum: 1 })),
   loggedAt: t.Optional(t.String({ format: "date-time" })),
   items: t.Array(itemBody, { minItems: 1, error: "A meal needs at least one item" }),
-});
+})
 const updateBody = t.Object({
   mealType: t.Optional(mealType),
   imageUrl: t.Optional(t.String()),
   aiConfidenceOverall: t.Optional(t.Number({ minimum: 0, maximum: 1 })),
-});
+})
 const updateItemBody = t.Object({
   foodName: t.Optional(t.String({ minLength: 1 })),
   servingUnit: t.Optional(t.Union([t.Literal("g"), t.Literal("ml")])),
@@ -53,19 +53,19 @@ const updateItemBody = t.Object({
   proteinG: t.Optional(t.Number({ minimum: 0 })),
   carbsG: t.Optional(t.Number({ minimum: 0 })),
   fatG: t.Optional(t.Number({ minimum: 0 })),
-});
+})
 const listQuery = t.Object({
   date: t.Optional(dateKey),
   limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100, multipleOf: 1 })),
   offset: t.Optional(t.Numeric({ minimum: 0, multipleOf: 1 })),
-});
-const dateQuery = t.Object({ date: t.Optional(dateKey) });
+})
+const dateQuery = t.Object({ date: t.Optional(dateKey) })
 
-export type MealItemBody = Static<typeof itemBody>;
-export type MealCreateBody = Static<typeof createBody>;
-export type MealUpdateBody = Static<typeof updateBody>;
-export type MealItemUpdateBody = Static<typeof updateItemBody>;
-export type MealListQuery = Static<typeof listQuery>;
+export type MealItemBody = Static<typeof itemBody>
+export type MealCreateBody = Static<typeof createBody>
+export type MealUpdateBody = Static<typeof updateBody>
+export type MealItemUpdateBody = Static<typeof updateItemBody>
+export type MealListQuery = Static<typeof listQuery>
 
 const mealModels = new Elysia().model({
   "meals.dateQuery": dateQuery,
@@ -74,7 +74,7 @@ const mealModels = new Elysia().model({
   "meals.updateBody": updateBody,
   "meals.itemBody": itemBody,
   "meals.updateItemBody": updateItemBody,
-});
+})
 
 export const meals = new Elysia({
   prefix: "/meals",
@@ -148,4 +148,4 @@ export const meals = new Elysia({
         description: "Removing the last remaining item deletes the parent meal log.",
       },
     },
-  );
+  )

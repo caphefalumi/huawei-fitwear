@@ -1,1 +1,1 @@
-export * from "./secure";
+export * from "./secure"

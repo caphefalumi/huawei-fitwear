@@ -1,45 +1,45 @@
-import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router, useLocalSearchParams } from "expo-router"
+import { useEffect, useRef, useState } from "react"
+import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
-import { Header, SearchInput, SectionTitle } from "./meals-ui";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
+import { Header, SearchInput, SectionTitle } from "./meals-ui"
 import {
   useFoodSearch,
   estimatePortion,
   splitDetail,
   useMeals,
   type FoodEntry,
-} from "./meals-store";
+} from "./meals-store"
 
 export function ReplaceFoodScreen() {
-  const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ id?: string; log?: string }>();
-  const { items, history, updateItem } = useMeals();
+  const insets = useSafeAreaInsets()
+  const params = useLocalSearchParams<{ id?: string; log?: string }>()
+  const { items, history, updateItem } = useMeals()
   const current = (
     params.log ? history.find((meal) => meal.id === params.log)?.items : items
-  )?.find((item) => item.id === params.id);
-  const [query, setQuery] = useState("");
+  )?.find((item) => item.id === params.id)
+  const [query, setQuery] = useState("")
 
-  const { matches, loading, error: searchError } = useFoodSearch(query);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const active = useRef(true);
+  const { matches, loading, error: searchError } = useFoodSearch(query)
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const active = useRef(true)
   useEffect(() => {
-    active.current = true;
+    active.current = true
     return () => {
-      active.current = false;
-    };
-  }, []);
+      active.current = false
+    }
+  }, [])
 
   async function replace(food: FoodEntry) {
-    if (!current || saving) return;
-    const amount = splitDetail(current.detail).amount || 100;
-    const estimate = estimatePortion(food, amount);
-    setSaving(true);
-    setError(null);
+    if (!current || saving) return
+    const amount = splitDetail(current.detail).amount || 100
+    const estimate = estimatePortion(food, amount)
+    setSaving(true)
+    setError(null)
     try {
       await updateItem(
         current.id,
@@ -52,13 +52,13 @@ export function ReplaceFoodScreen() {
           glyph: food.glyph,
         },
         params.log,
-      );
-      if (active.current) router.back();
+      )
+      if (active.current) router.back()
     } catch (cause) {
       if (active.current)
-        setError(cause instanceof Error ? cause.message : "Could not replace food.");
+        setError(cause instanceof Error ? cause.message : "Could not replace food.")
     } finally {
-      if (active.current) setSaving(false);
+      if (active.current) setSaving(false)
     }
   }
 
@@ -141,7 +141,7 @@ export function ReplaceFoodScreen() {
         Select a food, then review its amount before confirming the replacement.
       </Text>
     </ScrollView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -225,4 +225,4 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: C.textMuted,
   },
-});
+})

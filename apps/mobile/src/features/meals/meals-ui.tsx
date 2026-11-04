@@ -1,10 +1,10 @@
-import { Image } from "expo-image";
-import type { ReactNode } from "react";
-import { StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
+import { Image } from "expo-image"
+import type { ReactNode } from "react"
+import { StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
-import type { MealGlyph } from "./meals-store";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
+import type { MealGlyph } from "./meals-store"
 
 export const icons = {
   back: require("@/assets/images/recovery/chevron-left.svg"),
@@ -22,14 +22,14 @@ export const icons = {
   switchCamera: require("@/assets/images/meals/switch-camera.svg"),
   images: require("@/assets/images/meals/images.svg"),
   weight: require("@/assets/images/meals/weight.svg"),
-};
+}
 
 const glyphIcons: Record<MealGlyph, number> = {
   wheat: require("@/assets/images/meals/wheat.svg"),
   drumstick: require("@/assets/images/meals/drumstick.svg"),
   carrot: require("@/assets/images/meals/carrot.svg"),
   droplet: require("@/assets/images/meals/droplet.svg"),
-};
+}
 
 export function Glyph({ glyph, size = 19 }: { glyph: MealGlyph; size?: number }) {
   return (
@@ -39,7 +39,7 @@ export function Glyph({ glyph, size = 19 }: { glyph: MealGlyph; size?: number })
       style={{ width: size, height: size }}
       contentFit="contain"
     />
-  );
+  )
 }
 
 export function Field({
@@ -47,20 +47,20 @@ export function Field({
   children,
   style,
 }: {
-  label?: string;
-  children: ReactNode;
-  style?: StyleProp<ViewStyle>;
+  label?: string
+  children: ReactNode
+  style?: StyleProp<ViewStyle>
 }) {
   return (
     <View style={[styles.field, style]}>
       {label ? <Text style={styles.fieldLabel}>{label}</Text> : null}
       {children}
     </View>
-  );
+  )
 }
 
 export function Box({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
-  return <View style={[styles.box, style]}>{children}</View>;
+  return <View style={[styles.box, style]}>{children}</View>
 }
 
 export function ValueInput({
@@ -72,13 +72,13 @@ export function ValueInput({
   autoFocus,
   label,
 }: {
-  value: string;
-  onChangeText: (text: string) => void;
-  unit?: string;
-  placeholder?: string;
-  keyboardType?: "numeric" | "default";
-  autoFocus?: boolean;
-  label: string;
+  value: string
+  onChangeText: (text: string) => void
+  unit?: string
+  placeholder?: string
+  keyboardType?: "numeric" | "default"
+  autoFocus?: boolean
+  label: string
 }) {
   return (
     <View style={styles.inputRow}>
@@ -94,7 +94,7 @@ export function ValueInput({
       />
       {unit ? <Text style={styles.unit}>{unit}</Text> : null}
     </View>
-  );
+  )
 }
 
 export function SearchInput({
@@ -104,11 +104,11 @@ export function SearchInput({
   placeholder,
   size = 19,
 }: {
-  value: string;
-  onChangeText: (text: string) => void;
-  onClear: () => void;
-  placeholder: string;
-  size?: number;
+  value: string
+  onChangeText: (text: string) => void
+  onClear: () => void
+  placeholder: string
+  size?: number
 }) {
   return (
     <Box style={styles.searchBox}>
@@ -138,7 +138,7 @@ export function SearchInput({
         </Pressable>
       ) : null}
     </Box>
-  );
+  )
 }
 
 export function PrimaryButton({
@@ -147,10 +147,10 @@ export function PrimaryButton({
   disabled,
   busy,
 }: {
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-  busy?: boolean;
+  label: string
+  onPress: () => void
+  disabled?: boolean
+  busy?: boolean
 }) {
   return (
     <Pressable
@@ -161,7 +161,7 @@ export function PrimaryButton({
     >
       <Text style={styles.primaryLabel}>{label}</Text>
     </Pressable>
-  );
+  )
 }
 
 export function SecondaryButton({ label, onPress }: { label: string; onPress: () => void }) {
@@ -169,7 +169,7 @@ export function SecondaryButton({ label, onPress }: { label: string; onPress: ()
     <Pressable style={styles.secondary} onPress={onPress}>
       <Text style={styles.secondaryLabel}>{label}</Text>
     </Pressable>
-  );
+  )
 }
 
 export function SectionTitle({
@@ -177,9 +177,9 @@ export function SectionTitle({
   action,
   onPress,
 }: {
-  title: string;
-  action?: string;
-  onPress?: () => void;
+  title: string
+  action?: string
+  onPress?: () => void
 }) {
   return (
     <View style={styles.sectionRow}>
@@ -196,7 +196,7 @@ export function SectionTitle({
         )
       ) : null}
     </View>
-  );
+  )
 }
 
 /** 2×2 editable nutrient inputs used by the Database and AI Review screens. */
@@ -205,9 +205,9 @@ export function NutrientGrid({
   onChange,
   units,
 }: {
-  values: { energy: string; protein: string; carbs: string; fat: string };
-  onChange: (key: "energy" | "protein" | "carbs" | "fat", value: string) => void;
-  units: { energy: string; protein: string; carbs: string; fat: string };
+  values: { energy: string; protein: string; carbs: string; fat: string }
+  onChange: (key: "energy" | "protein" | "carbs" | "fat", value: string) => void
+  units: { energy: string; protein: string; carbs: string; fat: string }
 }) {
   return (
     <View style={styles.grid}>
@@ -256,7 +256,7 @@ export function NutrientGrid({
         </Box>
       </View>
     </View>
-  );
+  )
 }
 
 export function Header({
@@ -265,10 +265,10 @@ export function Header({
   action,
   onAction,
 }: {
-  label: string;
-  onBack: () => void;
-  action?: string;
-  onAction?: () => void;
+  label: string
+  onBack: () => void
+  action?: string
+  onAction?: () => void
 }) {
   return (
     <View style={styles.headerRow}>
@@ -292,7 +292,7 @@ export function Header({
         </Pressable>
       ) : null}
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -435,4 +435,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: C.accent,
   },
-});
+})

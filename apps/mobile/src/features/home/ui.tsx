@@ -1,17 +1,17 @@
-import { Image } from "expo-image";
-import type { ReactNode } from "react";
-import { useEffect, useRef } from "react";
-import { Animated, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { Image } from "expo-image"
+import type { ReactNode } from "react"
+import { useEffect, useRef } from "react"
+import { Animated, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
 
 const icons = {
   back: require("@/assets/images/progress/chevron-left.svg"),
-};
+}
 
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
-  return <View style={[styles.card, style]}>{children}</View>;
+  return <View style={[styles.card, style]}>{children}</View>
 }
 
 export function SectionHeading({
@@ -19,9 +19,9 @@ export function SectionHeading({
   actionLabel,
   onPress,
 }: {
-  title: string;
-  actionLabel?: string;
-  onPress?: () => void;
+  title: string
+  actionLabel?: string
+  onPress?: () => void
 }) {
   return (
     <View style={styles.headingRow}>
@@ -32,7 +32,7 @@ export function SectionHeading({
         </Pressable>
       ) : null}
     </View>
-  );
+  )
 }
 
 export function BackHeader({ label, onPress }: { label: string; onPress: () => void }) {
@@ -41,7 +41,7 @@ export function BackHeader({ label, onPress }: { label: string; onPress: () => v
       <Image source={icons.back} style={styles.backIcon} contentFit="contain" />
       <Text style={styles.backLabel}>{label}</Text>
     </Pressable>
-  );
+  )
 }
 
 export function MacroBar({
@@ -51,22 +51,22 @@ export function MacroBar({
   unit,
   note,
 }: {
-  label: string;
-  value: number;
-  target: number;
-  unit: string;
-  note?: string;
+  label: string
+  value: number
+  target: number
+  unit: string
+  note?: string
 }) {
-  const fill = Math.max(0, Math.min(1, value / target));
-  const anim = useRef(new Animated.Value(0)).current;
+  const fill = Math.max(0, Math.min(1, value / target))
+  const anim = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
-    const t = Animated.timing(anim, { toValue: fill, duration: 500, useNativeDriver: false });
-    t.start();
-    return () => t.stop();
-  }, [anim, fill]);
+    const t = Animated.timing(anim, { toValue: fill, duration: 500, useNativeDriver: false })
+    t.start()
+    return () => t.stop()
+  }, [anim, fill])
 
-  const barWidth = anim.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] });
+  const barWidth = anim.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] })
   return (
     <View style={styles.macro}>
       <View style={styles.macroRow}>
@@ -80,7 +80,7 @@ export function MacroBar({
       </View>
       {note ? <Text style={styles.macroNote}>{note}</Text> : null}
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -151,4 +151,4 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: C.textMuted,
   },
-});
+})

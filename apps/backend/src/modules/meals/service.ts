@@ -1,30 +1,30 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import { status } from "elysia";
-import { getDb, mealItems as mealItemsTable, mealLogs as mealLogsTable } from "../../db";
-import { generateId } from "../../lib/id";
-import { isDateKey, toDateKey } from "../../lib/date";
-import { sumNutrition, type NutritionTotals } from "../../lib/nutrition";
-import { deleteMealImage, saveMealImage } from "../../lib/meal-images";
-import { Targets } from "../targets/service";
+import { and, desc, eq, inArray, sql } from "drizzle-orm"
+import { status } from "elysia"
+import { getDb, mealItems as mealItemsTable, mealLogs as mealLogsTable } from "../../db"
+import { generateId } from "../../lib/id"
+import { isDateKey, toDateKey } from "../../lib/date"
+import { sumNutrition, type NutritionTotals } from "../../lib/nutrition"
+import { deleteMealImage, saveMealImage } from "../../lib/meal-images"
+import { Targets } from "../targets/service"
 import type {
   MealCreateBody,
   MealItemBody,
   MealItemUpdateBody,
   MealListQuery,
   MealUpdateBody,
-} from "./index";
+} from "./index"
 
-const DEFAULT_LIMIT = 20;
+const DEFAULT_LIMIT = 20
 
-const round1 = (value: number): number => Math.round(value * 10) / 10;
+const round1 = (value: number): number => Math.round(value * 10) / 10
 
-export type MealItemRecord = typeof mealItemsTable.$inferSelect;
-export type MealLogRecord = typeof mealLogsTable.$inferSelect;
+export type MealItemRecord = typeof mealItemsTable.$inferSelect
+export type MealLogRecord = typeof mealLogsTable.$inferSelect
 
 export type MealWithItems = MealLogRecord & {
-  items: MealItemRecord[];
-  totals: NutritionTotals;
-};
+  items: MealItemRecord[]
+  totals: NutritionTotals
+}
 
 const itemTotals = (items: MealItemRecord[]): NutritionTotals =>
   sumNutrition(
@@ -34,7 +34,7 @@ const itemTotals = (items: MealItemRecord[]): NutritionTotals =>
       carbsG: item.carbsG,
       fatG: item.fatG,
     })),
-  );
+  )
 
 const buildItemRow = (mealLogId: string, item: MealItemBody, createdAt: Date) => ({
   id: generateId(),
@@ -50,7 +50,7 @@ const buildItemRow = (mealLogId: string, item: MealItemBody, createdAt: Date) =>
   aiConfidence: item.aiConfidence ?? null,
   boundingBoxJson: item.boundingBoxJson ?? null,
   createdAt,
-});
+})
 
 export abstract class Meals {
   static async create(
@@ -58,15 +58,15 @@ export abstract class Meals {
     body: MealCreateBody,
     d1?: D1Database,
   ): Promise<MealWithItems> {
-    const db = getDb(d1);
-    const now = new Date();
-    const loggedAt = body.loggedAt === undefined ? now : new Date(body.loggedAt);
+    const db = getDb(d1)
+    const now = new Date()
+    const loggedAt = body.loggedAt === undefined ? now : new Date(body.loggedAt)
     if (body.targetDate && !isDateKey(body.targetDate)) {
-      throw status(400, { success: false, message: "targetDate must be a valid calendar date" });
+      throw status(400, { success: false, message: "targetDate must be a valid calendar date" })
     }
 
     if (Number.isNaN(loggedAt.getTime())) {
-      throw status(400, { success: false, message: "loggedAt must be a valid ISO timestamp" });
+      throw status(400, { success: false, message: "loggedAt must be a valid ISO timestamp" })
     }
 
     const mealLog = {
@@ -79,40 +79,40 @@ export abstract class Meals {
       aiConfidenceOverall: body.aiConfidenceOverall ?? null,
       loggedAt,
       createdAt: now,
-    };
-    if (body.image) mealLog.imageUrl = await saveMealImage(userId, mealLog.id, body.image);
+    }
+    if (body.image) mealLog.imageUrl = await saveMealImage(userId, mealLog.id, body.image)
 
-    const itemRows = body.items.map((item) => buildItemRow(mealLog.id, item, now));
+    const itemRows = body.items.map((item) => buildItemRow(mealLog.id, item, now))
 
     try {
       await db.batch([
         db.insert(mealLogsTable).values(mealLog),
         db.insert(mealItemsTable).values(itemRows),
-      ]);
+      ])
     } catch (error) {
       if (body.image) {
         try {
-          await deleteMealImage(userId, mealLog.id);
+          await deleteMealImage(userId, mealLog.id)
         } catch (cleanupError) {
-          console.error("Meal image rollback failed", { mealId: mealLog.id, error: cleanupError });
+          console.error("Meal image rollback failed", { mealId: mealLog.id, error: cleanupError })
         }
       }
-      throw error;
+      throw error
     }
 
-    return { ...mealLog, items: itemRows, totals: itemTotals(itemRows) };
+    return { ...mealLog, items: itemRows, totals: itemTotals(itemRows) }
   }
 
   static async list(userId: string, query: MealListQuery, d1?: D1Database) {
-    const db = getDb(d1);
+    const db = getDb(d1)
     if (query.date && !isDateKey(query.date))
-      throw status(400, { success: false, message: "date must be a valid calendar date" });
-    const limit = query.limit ?? DEFAULT_LIMIT;
-    const offset = query.offset ?? 0;
+      throw status(400, { success: false, message: "date must be a valid calendar date" })
+    const limit = query.limit ?? DEFAULT_LIMIT
+    const offset = query.offset ?? 0
 
     const where = query.date
       ? and(eq(mealLogsTable.userId, userId), eq(mealLogsTable.targetDate, query.date))
-      : eq(mealLogsTable.userId, userId);
+      : eq(mealLogsTable.userId, userId)
 
     const logs = await db
       .select()
@@ -121,10 +121,10 @@ export abstract class Meals {
       .orderBy(desc(mealLogsTable.loggedAt))
       .limit(limit)
       .offset(offset)
-      .all();
+      .all()
 
     if (logs.length === 0) {
-      return { meals: [] as MealWithItems[], count: 0 };
+      return { meals: [] as MealWithItems[], count: 0 }
     }
 
     const items = await db
@@ -136,76 +136,76 @@ export abstract class Meals {
           logs.map((log) => log.id),
         ),
       )
-      .all();
+      .all()
 
-    const grouped = new Map<string, MealItemRecord[]>();
+    const grouped = new Map<string, MealItemRecord[]>()
     for (const item of items) {
-      const bucket = grouped.get(item.mealLogId);
-      if (bucket) bucket.push(item);
-      else grouped.set(item.mealLogId, [item]);
+      const bucket = grouped.get(item.mealLogId)
+      if (bucket) bucket.push(item)
+      else grouped.set(item.mealLogId, [item])
     }
 
     const meals = logs.map((log) => {
-      const logItems = grouped.get(log.id) ?? [];
-      return { ...log, items: logItems, totals: itemTotals(logItems) };
-    });
+      const logItems = grouped.get(log.id) ?? []
+      return { ...log, items: logItems, totals: itemTotals(logItems) }
+    })
 
-    return { meals, count: meals.length };
+    return { meals, count: meals.length }
   }
 
   static async byId(userId: string, mealId: string, d1?: D1Database): Promise<MealWithItems> {
-    const db = getDb(d1);
+    const db = getDb(d1)
 
     const log = await db
       .select()
       .from(mealLogsTable)
       .where(and(eq(mealLogsTable.id, mealId), eq(mealLogsTable.userId, userId)))
-      .get();
+      .get()
 
     if (!log) {
-      throw status(404, { success: false, message: "Meal log not found" });
+      throw status(404, { success: false, message: "Meal log not found" })
     }
 
     const items = await db
       .select()
       .from(mealItemsTable)
       .where(eq(mealItemsTable.mealLogId, mealId))
-      .all();
+      .all()
 
-    return { ...log, items, totals: itemTotals(items) };
+    return { ...log, items, totals: itemTotals(items) }
   }
 
   static async update(userId: string, mealId: string, body: MealUpdateBody, d1?: D1Database) {
-    const db = getDb(d1);
-    await Meals.byId(userId, mealId, d1);
+    const db = getDb(d1)
+    await Meals.byId(userId, mealId, d1)
 
     if (Object.keys(body).length)
-      await db.update(mealLogsTable).set(body).where(eq(mealLogsTable.id, mealId)).run();
+      await db.update(mealLogsTable).set(body).where(eq(mealLogsTable.id, mealId)).run()
 
-    return Meals.byId(userId, mealId, d1);
+    return Meals.byId(userId, mealId, d1)
   }
 
   static async remove(userId: string, mealId: string, d1?: D1Database) {
-    const db = getDb(d1);
-    await Meals.byId(userId, mealId, d1);
+    const db = getDb(d1)
+    await Meals.byId(userId, mealId, d1)
 
     await db.batch([
       db.delete(mealItemsTable).where(eq(mealItemsTable.mealLogId, mealId)),
       db.delete(mealLogsTable).where(eq(mealLogsTable.id, mealId)),
-    ]);
-    await deleteMealImage(userId, mealId);
+    ])
+    await deleteMealImage(userId, mealId)
 
-    return { success: true, message: "Meal log deleted" };
+    return { success: true, message: "Meal log deleted" }
   }
 
   static async addItem(userId: string, mealId: string, item: MealItemBody, d1?: D1Database) {
-    const db = getDb(d1);
-    await Meals.byId(userId, mealId, d1);
+    const db = getDb(d1)
+    await Meals.byId(userId, mealId, d1)
 
-    const row = buildItemRow(mealId, item, new Date());
-    await db.insert(mealItemsTable).values(row).run();
+    const row = buildItemRow(mealId, item, new Date())
+    await db.insert(mealItemsTable).values(row).run()
 
-    return Meals.byId(userId, mealId, d1);
+    return Meals.byId(userId, mealId, d1)
   }
 
   static async updateItem(
@@ -215,47 +215,47 @@ export abstract class Meals {
     body: MealItemUpdateBody,
     d1?: D1Database,
   ) {
-    const db = getDb(d1);
-    await Meals.byId(userId, mealId, d1);
+    const db = getDb(d1)
+    await Meals.byId(userId, mealId, d1)
 
     const existing = await db
       .select()
       .from(mealItemsTable)
       .where(and(eq(mealItemsTable.id, itemId), eq(mealItemsTable.mealLogId, mealId)))
-      .get();
+      .get()
 
     if (!existing) {
-      throw status(404, { success: false, message: "Meal item not found" });
+      throw status(404, { success: false, message: "Meal item not found" })
     }
 
     if (Object.keys(body).length)
-      await db.update(mealItemsTable).set(body).where(eq(mealItemsTable.id, itemId)).run();
+      await db.update(mealItemsTable).set(body).where(eq(mealItemsTable.id, itemId)).run()
 
-    return Meals.byId(userId, mealId, d1);
+    return Meals.byId(userId, mealId, d1)
   }
 
   static async removeItem(userId: string, mealId: string, itemId: string, d1?: D1Database) {
-    const db = getDb(d1);
-    const meal = await Meals.byId(userId, mealId, d1);
+    const db = getDb(d1)
+    const meal = await Meals.byId(userId, mealId, d1)
 
     if (!meal.items.some((item) => item.id === itemId)) {
-      throw status(404, { success: false, message: "Meal item not found" });
+      throw status(404, { success: false, message: "Meal item not found" })
     }
 
     if (meal.items.length === 1) {
-      return Meals.remove(userId, mealId, d1);
+      return Meals.remove(userId, mealId, d1)
     }
 
-    await db.delete(mealItemsTable).where(eq(mealItemsTable.id, itemId)).run();
+    await db.delete(mealItemsTable).where(eq(mealItemsTable.id, itemId)).run()
 
-    return Meals.byId(userId, mealId, d1);
+    return Meals.byId(userId, mealId, d1)
   }
 
   static async dailySummary(userId: string, date?: string, d1?: D1Database) {
-    const targetDate = date ?? toDateKey();
+    const targetDate = date ?? toDateKey()
     if (!isDateKey(targetDate))
-      throw status(400, { success: false, message: "date must be a valid calendar date" });
-    const db = getDb(d1);
+      throw status(400, { success: false, message: "date must be a valid calendar date" })
+    const db = getDb(d1)
     const [totals, resolvedTargets] = await Promise.all([
       db
         .select({
@@ -270,8 +270,8 @@ export abstract class Meals {
         .where(and(eq(mealLogsTable.userId, userId), eq(mealLogsTable.targetDate, targetDate)))
         .get(),
       Targets.resolve(userId, targetDate, d1),
-    ]);
-    const consumed = sumNutrition([totals!]);
+    ])
+    const consumed = sumNutrition([totals!])
 
     return {
       targetDate,
@@ -284,6 +284,6 @@ export abstract class Meals {
         fatG: round1(resolvedTargets.fatTargetG - consumed.fatG),
       },
       mealCount: totals!.mealCount,
-    };
+    }
   }
 }

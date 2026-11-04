@@ -1,10 +1,10 @@
-import { Image } from "expo-image";
-import { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import { Image } from "expo-image"
+import { useEffect, useRef, useState } from "react"
+import { StyleSheet, Text, TextInput, View } from "react-native"
 
-import { Pressable } from "@/components/pressable";
-import { Sheet, SheetActions, SheetField } from "@/components/sheet";
-import { Palette as C } from "@/constants/palette";
+import { Pressable } from "@/components/pressable"
+import { Sheet, SheetActions, SheetField } from "@/components/sheet"
+import { Palette as C } from "@/constants/palette"
 import {
   createRecovery,
   dateLabel,
@@ -12,46 +12,46 @@ import {
   PERIOD_AREA,
   useHealth,
   type RecoveryPlan,
-} from "@/features/health/health-store";
+} from "@/features/health/health-store"
 
 const icons = {
   shieldCheck: require("@/assets/images/home/shield-check.svg"),
-};
+}
 
-const NONE = "None";
+const NONE = "None"
 
 export function RecoverySheet({
   visible,
   onClose,
   onDismiss,
 }: {
-  visible: boolean;
-  onClose: () => void;
-  onDismiss?: () => void;
+  visible: boolean
+  onClose: () => void
+  onDismiss?: () => void
 }) {
-  const { recovery, saveRecovery, sex, loading, error: loadError } = useHealth();
-  const [draft, setDraft] = useState<RecoveryPlan | null>(recovery);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const active = useRef(true);
-  const busy = useRef(false);
-  const dirty = useRef(false);
+  const { recovery, saveRecovery, sex, loading, error: loadError } = useHealth()
+  const [draft, setDraft] = useState<RecoveryPlan | null>(recovery)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const active = useRef(true)
+  const busy = useRef(false)
+  const dirty = useRef(false)
   useEffect(() => {
-    if (!dirty.current) setDraft(recovery);
-  }, [recovery]);
+    if (!dirty.current) setDraft(recovery)
+  }, [recovery])
   useEffect(() => {
-    active.current = true;
+    active.current = true
     return () => {
-      active.current = false;
-    };
-  }, []);
-  const options = [NONE, ...INJURY_AREAS, ...(sex === "Female" ? [PERIOD_AREA] : [])];
+      active.current = false
+    }
+  }, [])
+  const options = [NONE, ...INJURY_AREAS, ...(sex === "Female" ? [PERIOD_AREA] : [])]
   const close = () => {
-    if (!busy.current) onClose();
-  };
+    if (!busy.current) onClose()
+  }
   async function handleSave() {
-    if (busy.current || loading || loadError) return;
-    setError(null);
+    if (busy.current || loading || loadError) return
+    setError(null)
     if (
       draft &&
       (!Number.isInteger(draft.restDays) ||
@@ -61,8 +61,8 @@ export function RecoverySheet({
         draft.restDays > 365 ||
         draft.lightDays > 365)
     ) {
-      setError("Enter whole rest and light day counts between 0 and 365.");
-      return;
+      setError("Enter whole rest and light day counts between 0 and 365.")
+      return
     }
     if (
       draft &&
@@ -70,22 +70,22 @@ export function RecoverySheet({
         Number.isNaN(new Date(`${draft.startDate}T12:00:00`).getTime()) ||
         new Date(`${draft.startDate}T12:00:00`).getDate() !== Number(draft.startDate.slice(-2)))
     ) {
-      setError("Enter a valid start date in YYYY-MM-DD format.");
-      return;
+      setError("Enter a valid start date in YYYY-MM-DD format.")
+      return
     }
-    busy.current = true;
-    setPending(true);
+    busy.current = true
+    setPending(true)
     try {
-      await saveRecovery(draft);
-      if (active.current) onClose();
+      await saveRecovery(draft)
+      if (active.current) onClose()
     } catch (cause) {
       if (active.current)
         setError(
           `${cause instanceof Error ? cause.message : "Could not save recovery."} Please try again.`,
-        );
+        )
     } finally {
-      busy.current = false;
-      if (active.current) setPending(false);
+      busy.current = false
+      if (active.current) setPending(false)
     }
   }
 
@@ -102,7 +102,7 @@ export function RecoverySheet({
 
       <View style={styles.chips}>
         {options.map((area) => {
-          const active = area === (draft?.area ?? NONE);
+          const active = area === (draft?.area ?? NONE)
           return (
             <Pressable
               key={area}
@@ -112,14 +112,14 @@ export function RecoverySheet({
               style={[styles.chip, active && styles.chipActive]}
               disabled={pending || loading || !!loadError}
               onPress={() => {
-                if (active) return;
-                dirty.current = true;
-                setDraft(area === NONE ? null : createRecovery(area));
+                if (active) return
+                dirty.current = true
+                setDraft(area === NONE ? null : createRecovery(area))
               }}
             >
               <Text style={[styles.chipLabel, active && styles.chipLabelActive]}>{area}</Text>
             </Pressable>
-          );
+          )
         })}
       </View>
 
@@ -127,8 +127,8 @@ export function RecoverySheet({
         <RecoveryDetails
           draft={draft}
           onChange={(next) => {
-            dirty.current = true;
-            setDraft(next);
+            dirty.current = true
+            setDraft(next)
           }}
           disabled={pending || loading || !!loadError}
         />
@@ -147,7 +147,7 @@ export function RecoverySheet({
         busy={pending}
       />
     </Sheet>
-  );
+  )
 }
 
 function RecoveryDetails({
@@ -155,9 +155,9 @@ function RecoveryDetails({
   onChange,
   disabled,
 }: {
-  draft: RecoveryPlan;
-  onChange: (next: RecoveryPlan) => void;
-  disabled: boolean;
+  draft: RecoveryPlan
+  onChange: (next: RecoveryPlan) => void
+  disabled: boolean
 }) {
   return (
     <>
@@ -240,7 +240,7 @@ function RecoveryDetails({
         </Text>
       </View>
     </>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -350,4 +350,4 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: C.textMuted,
   },
-});
+})

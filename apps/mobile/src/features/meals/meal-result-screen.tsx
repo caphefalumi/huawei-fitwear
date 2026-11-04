@@ -1,23 +1,15 @@
-import { Image } from "expo-image";
-import { router } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Animated,
-  PanResponder,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useReducedMotion } from "react-native-reanimated";
+import { Image } from "expo-image"
+import { router } from "expo-router"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { Animated, PanResponder, ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { useReducedMotion } from "react-native-reanimated"
 
-import { FetchErrorState } from "@/components/fetch-states";
-import { Pressable } from "@/components/pressable";
-import { Sheet } from "@/components/sheet";
-import { Palette as C } from "@/constants/palette";
-import { Glyph, Header, PrimaryButton, SectionTitle, icons } from "./meals-ui";
+import { FetchErrorState } from "@/components/fetch-states"
+import { Pressable } from "@/components/pressable"
+import { Sheet } from "@/components/sheet"
+import { Palette as C } from "@/constants/palette"
+import { Glyph, Header, PrimaryButton, SectionTitle, icons } from "./meals-ui"
 import {
   rescaleItem,
   splitDetail,
@@ -26,65 +18,65 @@ import {
   type MealLog,
   type MealType,
   mealTypeLabel,
-} from "./meals-store";
-import { MealPhoto } from "./meal-photo";
+} from "./meals-store"
+import { MealPhoto } from "./meal-photo"
 
-const ACTION_WIDTH = 88;
+const ACTION_WIDTH = 88
 
-type SwipeState = "edit" | "delete" | null;
+type SwipeState = "edit" | "delete" | null
 
 export function MealResultScreen({ log }: { log?: MealLog }) {
-  const insets = useSafeAreaInsets();
-  const meals = useMeals();
-  const { removeItem, updateItem, deleteMeal, logMeal, deleteLog } = meals;
-  const mealName = log?.name ?? meals.mealName;
-  const items = log?.items ?? meals.items;
-  const totals = log ? { kcal: log.kcal, ...log.macros } : meals.totals;
-  const [optionsFor, setOptionsFor] = useState<MealItem | null>(null);
-  const [amountFor, setAmountFor] = useState<MealItem | null>(null);
-  const [amountDraft, setAmountDraft] = useState("");
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-  const active = useRef(true);
+  const insets = useSafeAreaInsets()
+  const meals = useMeals()
+  const { removeItem, updateItem, deleteMeal, logMeal, deleteLog } = meals
+  const mealName = log?.name ?? meals.mealName
+  const items = log?.items ?? meals.items
+  const totals = log ? { kcal: log.kcal, ...log.macros } : meals.totals
+  const [optionsFor, setOptionsFor] = useState<MealItem | null>(null)
+  const [amountFor, setAmountFor] = useState<MealItem | null>(null)
+  const [amountDraft, setAmountDraft] = useState("")
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+  const active = useRef(true)
   useEffect(() => {
-    active.current = true;
+    active.current = true
     return () => {
-      active.current = false;
-    };
-  }, []);
-  const photo = log?.imageUrl ?? (log ? null : meals.draftImage);
+      active.current = false
+    }
+  }, [])
+  const photo = log?.imageUrl ?? (log ? null : meals.draftImage)
   async function perform(action: () => Promise<void>, after?: () => void) {
-    if (pending) return;
-    setPending(true);
-    setActionError(null);
+    if (pending) return
+    setPending(true)
+    setActionError(null)
     try {
-      await action();
-      if (active.current) after?.();
+      await action()
+      if (active.current) after?.()
     } catch (cause) {
       if (active.current)
-        setActionError(cause instanceof Error ? cause.message : "Could not save your change.");
+        setActionError(cause instanceof Error ? cause.message : "Could not save your change.")
     } finally {
-      if (active.current) setPending(false);
+      if (active.current) setPending(false)
     }
   }
 
   function openAmount(item: MealItem) {
-    setOptionsFor(null);
-    setAmountDraft(String(splitDetail(item.detail).amount));
-    setAmountFor(item);
+    setOptionsFor(null)
+    setAmountDraft(String(splitDetail(item.detail).amount))
+    setAmountFor(item)
   }
 
   function saveAmount() {
-    if (!amountFor) return;
-    const next = Number(amountDraft);
+    if (!amountFor) return
+    const next = Number(amountDraft)
     if (!Number.isFinite(next) || next <= 0) {
-      setActionError("Enter a positive portion.");
-      return;
+      setActionError("Enter a positive portion.")
+      return
     }
     void perform(
       () => updateItem(amountFor.id, rescaleItem(amountFor, next), log?.id),
       () => setAmountFor(null),
-    );
+    )
   }
 
   return (
@@ -106,10 +98,10 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
               void perform(
                 () => deleteLog(log.id),
                 () => router.back(),
-              );
+              )
             else {
-              deleteMeal();
-              router.back();
+              deleteMeal()
+              router.back()
             }
           }}
         />
@@ -133,8 +125,8 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
             title="Couldn't save your meal"
             message={meals.actionError}
             onRetry={async () => {
-              await meals.retryAction();
-              setActionError(null);
+              await meals.retryAction()
+              setActionError(null)
             }}
           />
         ) : null}
@@ -159,8 +151,8 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
               accessibilityState={{ checked: (log?.mealType ?? meals.mealType) === type }}
               style={{ padding: 12 }}
               onPress={() => {
-                if (log) void perform(() => meals.updateMealType(log.id, type));
-                else meals.setMealType(type);
+                if (log) void perform(() => meals.updateMealType(log.id, type))
+                else meals.setMealType(type)
               }}
             >
               <Text
@@ -217,7 +209,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
                   void perform(
                     () => removeItem(item.id, log?.id),
                     log && items.length === 1 ? () => router.back() : undefined,
-                  );
+                  )
                 }}
               />
             ))
@@ -234,7 +226,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
             disabled={items.length === 0 || pending || meals.busy}
             busy={pending || meals.busy}
             onPress={() => {
-              void perform(logMeal, () => router.replace("/home"));
+              void perform(logMeal, () => router.replace("/home"))
             }}
           />
         )}
@@ -258,9 +250,9 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
         <Pressable
           style={styles.optionRow}
           onPress={() => {
-            const id = optionsFor?.id;
-            setOptionsFor(null);
-            router.push(`/review-item?id=${id ?? ""}${log ? `&log=${log.id}` : ""}`);
+            const id = optionsFor?.id
+            setOptionsFor(null)
+            router.push(`/review-item?id=${id ?? ""}${log ? `&log=${log.id}` : ""}`)
           }}
         >
           <View style={styles.optionText}>
@@ -272,8 +264,8 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
         <Pressable
           style={styles.optionRow}
           onPress={() => {
-            setOptionsFor(null);
-            router.push(`/replace-food?id=${optionsFor?.id ?? ""}${log ? `&log=${log.id}` : ""}`);
+            setOptionsFor(null)
+            router.push(`/replace-food?id=${optionsFor?.id ?? ""}${log ? `&log=${log.id}` : ""}`)
           }}
         >
           <Image
@@ -316,15 +308,15 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
         <Pressable
           style={styles.optionRow}
           onPress={() => {
-            const target = optionsFor;
+            const target = optionsFor
             if (target)
               void perform(
                 () => removeItem(target.id, log?.id),
                 () => {
-                  setOptionsFor(null);
-                  if (log && items.length === 1) router.back();
+                  setOptionsFor(null)
+                  if (log && items.length === 1) router.back()
                 },
-              );
+              )
           }}
         >
           <Image
@@ -395,8 +387,8 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
             </View>
             <Text style={styles.estimateMacros}>
               {(() => {
-                const next = rescaleItem(amountFor, Number(amountDraft) || 0);
-                return `Protein ${next.macros.protein}g · Carbs ${next.macros.carbs}g · Fat ${next.macros.fat}g`;
+                const next = rescaleItem(amountFor, Number(amountDraft) || 0)
+                return `Protein ${next.macros.protein}g · Carbs ${next.macros.carbs}g · Fat ${next.macros.fat}g`
               })()}
             </Text>
           </View>
@@ -408,7 +400,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
         </Pressable>
       </Sheet>
     </>
-  );
+  )
 }
 
 function MealRow({
@@ -418,28 +410,28 @@ function MealRow({
   onEdit,
   onDelete,
 }: {
-  item: MealItem;
-  last: boolean;
-  onPress: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
+  item: MealItem
+  last: boolean
+  onPress: () => void
+  onEdit: () => void
+  onDelete: () => void
 }) {
-  const [state, setState] = useState<SwipeState>(null);
-  const translateX = useRef(new Animated.Value(0)).current;
-  const reducedMotion = useReducedMotion();
+  const [state, setState] = useState<SwipeState>(null)
+  const translateX = useRef(new Animated.Value(0)).current
+  const reducedMotion = useReducedMotion()
 
   const settle = (next: SwipeState) => {
-    setState(next);
+    setState(next)
     if (reducedMotion) {
-      translateX.setValue(next === "edit" ? -ACTION_WIDTH : next === "delete" ? ACTION_WIDTH : 0);
-      return;
+      translateX.setValue(next === "edit" ? -ACTION_WIDTH : next === "delete" ? ACTION_WIDTH : 0)
+      return
     }
     Animated.timing(translateX, {
       toValue: next === "edit" ? -ACTION_WIDTH : next === "delete" ? ACTION_WIDTH : 0,
       duration: 160,
       useNativeDriver: true,
-    }).start();
-  };
+    }).start()
+  }
 
   const panResponder = useMemo(
     () =>
@@ -450,18 +442,18 @@ function MealRow({
         onMoveShouldSetPanResponder: (_, gesture) =>
           Math.abs(gesture.dx) > 8 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
         onPanResponderMove: (_, gesture) => {
-          translateX.setValue(Math.max(-ACTION_WIDTH, Math.min(ACTION_WIDTH, gesture.dx)));
+          translateX.setValue(Math.max(-ACTION_WIDTH, Math.min(ACTION_WIDTH, gesture.dx)))
         },
         onPanResponderRelease: (_, gesture) => {
-          if (gesture.dx < -ACTION_WIDTH / 2) settle("edit");
-          else if (gesture.dx > ACTION_WIDTH / 2) settle("delete");
-          else settle(null);
+          if (gesture.dx < -ACTION_WIDTH / 2) settle("edit")
+          else if (gesture.dx > ACTION_WIDTH / 2) settle("delete")
+          else settle(null)
         },
       }),
     // settle/translateX are stable for the lifetime of the row
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
-  );
+  )
 
   const content = (
     <>
@@ -477,7 +469,7 @@ function MealRow({
         </Text>
       </View>
     </>
-  );
+  )
 
   return (
     <View style={[styles.rowWrap, !last && styles.rowDivider]}>
@@ -489,8 +481,8 @@ function MealRow({
         <Pressable
           style={styles.deleteAction}
           onPress={() => {
-            settle(null);
-            onDelete();
+            settle(null)
+            onDelete()
           }}
         >
           <Text style={styles.deleteActionLabel}>Delete</Text>
@@ -498,8 +490,8 @@ function MealRow({
         <Pressable
           style={styles.editAction}
           onPress={() => {
-            settle(null);
-            onEdit();
+            settle(null)
+            onEdit()
           }}
         >
           <Text style={styles.editActionLabel}>Edit</Text>
@@ -519,19 +511,19 @@ function MealRow({
             { name: "delete", label: `Delete ${item.name}` },
           ]}
           onAccessibilityAction={({ nativeEvent }) => {
-            if (nativeEvent.actionName === "edit") onEdit();
-            if (nativeEvent.actionName === "delete") onDelete();
+            if (nativeEvent.actionName === "edit") onEdit()
+            if (nativeEvent.actionName === "delete") onDelete()
           }}
           onPress={() => {
-            if (state) settle(null);
-            else onPress();
+            if (state) settle(null)
+            else onPress()
           }}
         >
           {content}
         </Pressable>
       </Animated.View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -823,4 +815,4 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: C.textMuted,
   },
-});
+})

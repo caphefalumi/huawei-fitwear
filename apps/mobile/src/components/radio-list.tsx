@@ -1,20 +1,20 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
 
 type RadioListProps<T extends string> = {
-  options: readonly T[];
-  value: T;
-  onChange: (next: T) => void;
-};
+  options: readonly T[]
+  value: T
+  onChange: (next: T) => void
+}
 
 /** Label on the left, radio on the right; tapping a row selects it. */
 export function RadioList<T extends string>({ options, value, onChange }: RadioListProps<T>) {
   return (
     <View>
       {options.map((option, index) => {
-        const active = option === value;
+        const active = option === value
         return (
           <Pressable
             key={option}
@@ -29,10 +29,10 @@ export function RadioList<T extends string>({ options, value, onChange }: RadioL
               {active ? <View style={styles.dot} /> : null}
             </View>
           </Pressable>
-        );
+        )
       })}
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -71,4 +71,4 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     backgroundColor: C.accent,
   },
-});
+})
