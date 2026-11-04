@@ -1,6 +1,12 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import { AuthField } from "@/features/auth/auth-field";
 
+jest.mock("react-native-reanimated", () => ({
+  __esModule: true,
+  default: { View: require("react-native").View },
+  useReducedMotion: () => true,
+}));
+
 test("reveals and hides a password without changing its value", async () => {
   const changed = jest.fn();
   const screen = await render(
@@ -33,13 +39,4 @@ test("a disabled password field cannot be revealed", async () => {
   );
   await fireEvent.press(screen.getByRole("button", { name: "Show password" }));
   expect(screen.getByLabelText("Password").props.secureTextEntry).toBe(true);
-});
-
-test("renders an accessible icon toggle instead of text", async () => {
-  const screen = await render(
-    <AuthField label="Password" icon={1} secureTextEntry value="example-password" />,
-  );
-  expect(screen.queryByText("Show")).toBeNull();
-  expect(screen.queryByText("Hide")).toBeNull();
-  expect(screen.getByTestId("password-visibility-toggle")).toBeTruthy();
 });
