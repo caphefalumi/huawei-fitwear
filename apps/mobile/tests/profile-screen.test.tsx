@@ -1,5 +1,6 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 import { Alert } from "react-native";
+import { router } from "expo-router";
 
 import { useAuth } from "@/features/auth/auth-store";
 import { useHealth } from "@/features/health/health-store";
@@ -92,4 +93,19 @@ test("requires explicit consent before opening period recovery setup", async () 
   await act(async () => buttons?.[1]?.onPress?.());
   expect(screen.getByText("Period recovery setup")).toBeTruthy();
   alert.mockRestore();
+});
+test("shows unset height and restores account actions", async () => {
+  mockUseHealth.mockReturnValue({ ...health, heightCm: null } as never);
+  const screen = await render(<ProfileScreen />);
+
+  expect(screen.getByRole("button", { name: "Height, Not set" })).toBeTruthy();
+  expect(screen.queryByText("null cm")).toBeNull();
+
+  await fireEvent.press(screen.getByRole("button", { name: "Account data" }));
+  await fireEvent.press(screen.getByRole("button", { name: "BLE test" }));
+  await fireEvent.press(screen.getByRole("button", { name: "Sign out" }));
+
+  expect(router.push).toHaveBeenNthCalledWith(1, "/account-data");
+  expect(router.push).toHaveBeenNthCalledWith(2, "/ble-sync");
+  expect(signOut).toHaveBeenCalledTimes(1);
 });

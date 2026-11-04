@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { Image } from "expo-image";
 import { useAuth } from "@/features/auth/auth-store";
 import { useState } from "react";
@@ -65,13 +66,14 @@ type OpenSheet =
 
 export function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { weightKg, heightCm, sex, plan, recovery, saveRecovery, loading, error, refresh } =
     useHealth();
   const inPeriod = recovery?.area === PERIOD_AREA;
   const [openSheet, setOpenSheet] = useState<OpenSheet>(null);
   const sexLabel = sex ?? "Not set";
   const weightLabel = weightKg === null ? "Not set" : `${weightKg.toFixed(1)} kg`;
+  const heightLabel = heightCm === null ? "Not set" : `${heightCm} cm`;
   const targetWeightLabel =
     plan.targetWeightKg === null ? "Not set" : `${plan.targetWeightKg.toFixed(1)} kg`;
 
@@ -128,7 +130,7 @@ export function ProfileScreen() {
           <ProfileRow label="Sex / gender" value={sexLabel} onPress={() => setOpenSheet("sex")} />
           <ProfileRow
             label="Height"
-            value={`${heightCm} cm`}
+            value={heightLabel}
             onPress={() => setOpenSheet("height")}
             loading={loading}
           />
@@ -167,6 +169,26 @@ export function ProfileScreen() {
         </View>
       </Animated.View>
 
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Account</Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push("/account-data")}
+          style={styles.row}
+        >
+          <Text style={styles.rowLabel}>Account data</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push("/ble-sync")}
+          style={styles.row}
+        >
+          <Text style={styles.rowLabel}>BLE test</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={() => void signOut()} style={styles.row}>
+          <Text style={styles.rowLabel}>Sign out</Text>
+        </Pressable>
+      </View>
       {sex === "Female" ? (
         <Animated.View entering={FadeInUp.delay(150).duration(220)}>
           <Pressable
