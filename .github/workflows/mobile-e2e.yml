@@ -38,11 +38,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: 26
-
       - name: Install workspace dependencies
         run: bun install --frozen-lockfile
 
@@ -107,11 +102,6 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Node.js for reporting
-        uses: actions/setup-node@v5
-        with:
-          node-version: 26
-
       - name: Install Maestro CLI
         run: |
           export MAESTRO_VERSION=2.12.0
@@ -173,4 +163,4 @@ jobs:
           RECORDING_URL: ${{ steps.upload-recording.outputs.artifact-url }}
           ARTIFACTS_URL: ${{ steps.upload-artifacts.outputs.artifact-url }}
           MAESTRO_EXIT_CODE: ${{ env.MAESTRO_EXIT_CODE }}
-        run: node .github/scripts/generate-maestro-summary.ts
+        run: bun .github/scripts/generate-maestro-summary.ts
