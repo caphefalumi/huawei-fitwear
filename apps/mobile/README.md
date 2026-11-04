@@ -174,7 +174,9 @@ If Metro reports `Requiring unknown module` from a server-render bundle, stop th
 
 Password fields on login and sign-up have accessible Show/Hide icon controls; toggling visibility preserves the entered value and respects disabled fields. The nutrition ring uses an explicit SVG rotation around its center instead of the library's web `origin` attribute conversion.
 
-Save, add, and delete actions keep their labels unchanged while pending. Pending guards still prevent duplicate submissions, and failures remain visible. Data that is not available yet stays absent; the UI shows no loading text or spinner.
+Save, add, and delete actions keep their labels unchanged while pending. Shared sheet primary actions show a spinner, duplicate submissions are blocked, and failures remain visible. Profile health fields show skeletons while loading and a retry banner on error.
+
+The Profile tab groups identity, editable health details, plan, conditional period recovery, and account actions. Period recovery requires explicit opt-in; changing sex away from Female prompts before removing its settings. Account & data shows the signed-in email and a confirmed account deletion flow. Failed deletion keeps the local session so the user can retry; sign-out clears local state immediately.
 
 ### Accessibility
 

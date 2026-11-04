@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
+  ActivityIndicator,
   Animated,
   Easing,
   Keyboard,
@@ -142,6 +143,7 @@ export function SheetActions({
   primaryDisabled = false,
   secondaryDisabled = false,
   busy = false,
+  primaryAccessibilityLabel,
 }: {
   primaryLabel: string;
   secondaryLabel: string;
@@ -150,16 +152,21 @@ export function SheetActions({
   primaryDisabled?: boolean;
   secondaryDisabled?: boolean;
   busy?: boolean;
+  primaryAccessibilityLabel?: string;
 }) {
   return (
     <View style={styles.actions}>
       <Pressable
         style={styles.primaryButton}
         disabled={primaryDisabled}
+        accessibilityLabel={primaryAccessibilityLabel}
         accessibilityState={{ busy }}
         onPress={onPrimary}
       >
-        <Text style={styles.primaryLabel}>{primaryLabel}</Text>
+        <View style={styles.primaryContent}>
+          {busy ? <ActivityIndicator color={C.onAccent} size="small" /> : null}
+          <Text style={styles.primaryLabel}>{primaryLabel}</Text>
+        </View>
       </Pressable>
       <Pressable style={styles.secondaryButton} disabled={secondaryDisabled} onPress={onSecondary}>
         <Text style={styles.secondaryLabel}>{secondaryLabel}</Text>
@@ -234,6 +241,12 @@ const styles = StyleSheet.create({
     backgroundColor: C.accent,
     alignItems: "center",
     justifyContent: "center",
+  },
+  primaryContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
   },
   primaryLabel: {
     fontSize: 15,
