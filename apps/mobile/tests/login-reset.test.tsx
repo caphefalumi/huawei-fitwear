@@ -1,11 +1,5 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
-import {
-  AccessibilityInfo,
-  AppState,
-  Platform,
-  StyleSheet,
-  type AppStateStatus,
-} from "react-native";
+import { AccessibilityInfo, AppState, StyleSheet, type AppStateStatus } from "react-native";
 import * as Haptics from "expo-haptics";
 import { CanceledError } from "axios";
 import { ApiError } from "@/lib/api";
@@ -83,25 +77,41 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-test("shows generic credential feedback after 401 and clears it when either credential changes", async () => {
+test("shows one inline credential error and preserves entered credentials", async () => {
   const screen = await render(<LoginScreen />);
   await fireEvent.changeText(screen.getByLabelText("Email address"), "member@example.com");
   await fireEvent.changeText(screen.getByLabelText("Password"), "wrong");
   auth.signIn.mockRejectedValueOnce(new ApiError("secret-specific server text", 401));
   await fireEvent.press(screen.getByLabelText("Log in"));
-  expect(await screen.findByText("Incorrect email or password.")).toBeTruthy();
+  expect(
+    await screen.findByText(
+      "We couldn’t sign you in. Check your email and password and try again.",
+    ),
+  ).toBeTruthy();
   expect(screen.queryByText("secret-specific server text")).toBeNull();
   expect(screen.getByLabelText("Email address").props.value).toBe("member@example.com");
-  expect(screen.getByLabelText("Password").props.value).toBe("");
+  expect(screen.getByLabelText("Password").props.value).toBe("wrong");
+  expect(screen.getByLabelText("Password").props.accessibilityHint).toBeUndefined();
+  expect(screen.queryByText("Re-enter your password.")).toBeNull();
 
-  await fireEvent.changeText(screen.getByLabelText("Password"), "again");
-  expect(screen.queryByText("Incorrect email or password.")).toBeNull();
-
-  auth.signIn.mockRejectedValueOnce(new ApiError("invalid", 401));
+  await fireEvent.changeText(screen.getByLabelText("Email address"), "bad");
   await fireEvent.press(screen.getByLabelText("Log in"));
-  expect(await screen.findByText("Incorrect email or password.")).toBeTruthy();
-  await fireEvent.changeText(screen.getByLabelText("Email address"), "other@example.com");
+  expect(screen.getByText("Enter a valid email address.")).toBeTruthy();
+  expect(
+    screen.queryByText("We couldn’t sign you in. Check your email and password and try again."),
+  ).toBeNull();
+  expect(auth.signIn).toHaveBeenCalledTimes(1);
+});
+
+test("invalid email feedback appears with the email input and no credential message", async () => {
+  const screen = await render(<LoginScreen />);
+  const emailField = screen.getByLabelText("Email address");
+  await fireEvent.changeText(emailField, "not-an-email");
+  await fireEvent.changeText(screen.getByLabelText("Password"), "secret");
+  await fireEvent.press(screen.getByLabelText("Log in"));
+  expect(screen.getByText("Enter a valid email address.")).toBeTruthy();
   expect(screen.queryByText("Incorrect email or password.")).toBeNull();
+  expect(auth.signIn).not.toHaveBeenCalled();
 });
 
 test.each([
@@ -165,7 +175,11 @@ test("the third credential failure offers a reset hint and usable reset link", a
   for (let attempt = 0; attempt < 3; attempt += 1) {
     await fireEvent.changeText(screen.getByLabelText("Password"), "wrong");
     await fireEvent.press(screen.getByLabelText("Log in"));
-    expect(await screen.findByText("Incorrect email or password.")).toBeTruthy();
+    expect(
+      await screen.findByText(
+        "We couldn’t sign you in. Check your email and password and try again.",
+      ),
+    ).toBeTruthy();
     if (attempt < 2) expect(screen.queryByText(/Having trouble/)).toBeNull();
   }
   expect(screen.getByText("Having trouble? Reset your password.")).toBeTruthy();
@@ -173,22 +187,18 @@ test("the third credential failure offers a reset hint and usable reset link", a
   expect(screen.getByLabelText("Send reset code")).toBeTruthy();
 });
 
-test("password error border wins over focus, then editing restores the focus border", async () => {
+test("credential feedback leaves the password unhighlighted", async () => {
   auth.signIn.mockRejectedValueOnce(new ApiError("invalid", 401));
   const screen = await render(<LoginScreen />);
   await fireEvent.changeText(screen.getByLabelText("Email address"), "member@example.com");
   await fireEvent.changeText(screen.getByLabelText("Password"), "wrong");
   await fireEvent(screen.getByLabelText("Password"), "focus", { nativeEvent: {} });
   await fireEvent.press(screen.getByLabelText("Log in"));
-  await screen.findByText("Incorrect email or password.");
+  await screen.findByText("We couldn’t sign you in. Check your email and password and try again.");
   const input = screen.getByLabelText("Password");
-  expect(StyleSheet.flatten(input.parent?.props.style)).toEqual(
-    expect.objectContaining({ borderWidth: 2, borderColor: "#B3261D" }),
-  );
-  await fireEvent.changeText(input, "new password");
-  expect(StyleSheet.flatten(screen.getByLabelText("Password").parent?.props.style)).toEqual(
-    expect.objectContaining({ borderWidth: 2, borderColor: "#9D2332" }),
-  );
+  expect(input.props.value).toBe("wrong");
+  expect(input.props.accessibilityHint).toBeUndefined();
+  expect(screen.queryByText("Re-enter your password.")).toBeNull();
 });
 
 test("shared signup fields keep the existing palette and disabled outlines stay neutral", async () => {
@@ -312,7 +322,7 @@ describe("wall-clock lockouts and delayed focus", () => {
     await screen.unmount();
     await act(async () => {
       rejectRequest(new ApiError("invalid", 401));
-      await Promise.resolve();
+      await promise.catch(() => undefined);
       jest.advanceTimersByTime(1000);
     });
     expect(AccessibilityInfo.announceForAccessibility).not.toHaveBeenCalled();
@@ -321,63 +331,30 @@ describe("wall-clock lockouts and delayed focus", () => {
     expect(Haptics.performAndroidHapticsAsync).not.toHaveBeenCalled();
   });
 
-  test("unmount cancels an already scheduled password refocus", async () => {
+  test("unmount does not schedule credential field focus", async () => {
     auth.signIn.mockRejectedValueOnce(new ApiError("invalid", 401));
     const screen = await render(<LoginScreen />);
     await fireEvent.changeText(screen.getByLabelText("Email address"), "member@example.com");
     await fireEvent.changeText(screen.getByLabelText("Password"), "wrong");
     await fireEvent.press(screen.getByLabelText("Log in"));
-    expect(screen.getByText("Incorrect email or password.")).toBeTruthy();
+    const message = "We couldn’t sign you in. Check your email and password and try again.";
+    expect(await screen.findByText(message)).toBeTruthy();
     await screen.unmount();
-    await act(async () => {
-      jest.advanceTimersByTime(1000);
-    });
     expect(AccessibilityInfo.announceForAccessibility).not.toHaveBeenCalled();
     expect(AccessibilityInfo.setAccessibilityFocus).not.toHaveBeenCalled();
   });
 
-  test.each(["ios", "android"] as const)(
-    "credential feedback announces once on %s",
-    async (platform) => {
-      jest.replaceProperty(Platform, "OS", platform);
-      auth.signIn.mockRejectedValueOnce(new ApiError("invalid", 401));
-      const screen = await render(<LoginScreen />);
-      await fireEvent.changeText(screen.getByLabelText("Email address"), "member@example.com");
-      await fireEvent.changeText(screen.getByLabelText("Password"), "wrong");
-      await fireEvent.press(screen.getByLabelText("Log in"));
-      await act(async () => {
-        jest.advanceTimersByTime(100);
-      });
-      const feedback = screen.getByText("Incorrect email or password.");
-      expect(screen.getByLabelText("Password").props.accessibilityHint).toBe(
-        "Re-enter your password.",
-      );
-      if (Platform.OS === "ios") {
-        expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledTimes(1);
-        expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith(
-          "Incorrect email or password.",
-        );
-        expect(feedback.props.accessibilityLiveRegion).toBe("none");
-      } else {
-        expect(AccessibilityInfo.announceForAccessibility).not.toHaveBeenCalled();
-        expect(feedback.props.accessibilityLiveRegion).toBe("polite");
-      }
-    },
-  );
-
-  test("editing a credential cancels pending refocus and the stale announcement", async () => {
+  test("credential feedback leaves password intact and clears when editing", async () => {
     auth.signIn.mockRejectedValueOnce(new ApiError("invalid", 401));
     const screen = await render(<LoginScreen />);
     await fireEvent.changeText(screen.getByLabelText("Email address"), "member@example.com");
     await fireEvent.changeText(screen.getByLabelText("Password"), "wrong");
     await fireEvent.press(screen.getByLabelText("Log in"));
+    const message = "We couldn’t sign you in. Check your email and password and try again.";
+    expect(await screen.findByText(message)).toBeTruthy();
+    expect(screen.getByLabelText("Password").props.value).toBe("wrong");
     await fireEvent.changeText(screen.getByLabelText("Email address"), "other@example.com");
-    await act(async () => {
-      jest.advanceTimersByTime(100);
-    });
-    expect(screen.queryByText("Incorrect email or password.")).toBeNull();
-    expect(AccessibilityInfo.announceForAccessibility).not.toHaveBeenCalled();
-    expect(AccessibilityInfo.setAccessibilityFocus).not.toHaveBeenCalled();
+    expect(screen.queryByText(message)).toBeNull();
   });
 
   test("server-duration account locks expire without being treated as credential failures", async () => {
@@ -422,7 +399,9 @@ describe("wall-clock lockouts and delayed focus", () => {
     await fireEvent.changeText(screen.getByLabelText("Email address"), "member@example.com");
     await fireEvent.changeText(screen.getByLabelText("Password"), "wrong");
     await fireEvent.press(screen.getByLabelText("Log in"));
-    expect(screen.getByText("Incorrect email or password.")).toBeTruthy();
+    expect(
+      screen.getByText("We couldn’t sign you in. Check your email and password and try again."),
+    ).toBeTruthy();
     await fireEvent.changeText(screen.getByLabelText("Password"), "correct");
     await fireEvent.press(screen.getByLabelText("Log in"));
     expect(auth.signIn).toHaveBeenCalledTimes(2);
