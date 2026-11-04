@@ -1,123 +1,150 @@
-import type { RecoveryPlan } from "@/features/health/health-store";
-import type { Exercise } from "@/features/workout/workout-store";
+import { PERIOD_AREA, type RecoveryPlan } from '@/features/health/health-store';
 
-export type RoutineExercise = Exercise & { prescription: string };
 export type Routine = {
-  id: string;
   name: string;
   sets: number;
-  exercises: RoutineExercise[];
+  minutes: number;
+  exercises: { name: string; prescription: string }[];
 };
 
-export const RECOVERY_ROUTINE = "Recovery";
-const GROUP_ORDER = ["Chest", "Back", "Shoulders", "Arms", "Legs", "Core"];
-const EQUIPMENT_RANK = ["bodyweight", "machine", "cable", "dumbbell", "barbell"];
-const MAX_REHAB_EXERCISES = 4;
-/** Muscle groups each recovery area loads; period or unknown areas treat the whole body as loaded. */
-const AREA_GROUPS: Record<string, string[]> = {
-  "Right shoulder": ["Shoulders", "Chest", "Back", "Arms"],
-  "Left shoulder": ["Shoulders", "Chest", "Back", "Arms"],
-  "Lower back": ["Back", "Legs"],
-  "Right knee": ["Legs"],
+const CHEST: Routine = {
+  name: 'Chest',
+  sets: 9,
+  minutes: 35,
+  exercises: [
+    { name: 'Bench press', prescription: '3x10' },
+    { name: 'Incline dumbbell', prescription: '3x12' },
+    { name: 'Cable fly', prescription: '3x12' },
+  ],
 };
 
-export type RecoveryPhase = "rest" | "light" | "normal";
-
-const affectedGroups = (area: string) => AREA_GROUPS[area] ?? GROUP_ORDER;
-const sameGroup = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
-
-const dayNumber = (date: Date) =>
-  Math.round(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000);
-
-/** Rest days come first, then rehab (light) days; before the start or after the return it is normal. */
-export function recoveryPhase(recovery: RecoveryPlan, now = new Date()): RecoveryPhase {
-  const [year, month, day] = recovery.startDate.split("-").map(Number);
-  const elapsed = dayNumber(now) - dayNumber(new Date(year, month - 1, day));
-  if (!(elapsed >= 0)) return "normal";
-  if (elapsed < recovery.restDays) return "rest";
-  return elapsed < recovery.restDays + recovery.lightDays ? "light" : "normal";
-}
-
-/** Rehab: the easiest catalogue exercise per affected group at a third of its normal sets. */
-function rehabRoutine(recovery: RecoveryPlan, catalog: Exercise[]): Routine | null {
-  const rank = (exercise: Exercise) =>
-    Math.max(0, EQUIPMENT_RANK.indexOf(exercise.equipment.toLowerCase()));
-  const exercises = GROUP_ORDER.filter((group) =>
-    affectedGroups(recovery.area).some((affected) => sameGroup(affected, group)),
-  )
-    .flatMap((group) => {
-      const [easiest] = catalog
-        .filter((exercise) => sameGroup(exercise.muscleGroup, group))
-        .sort((a, b) => rank(a) - rank(b));
-      if (!easiest) return [];
-      const defaultSets = Math.max(1, Math.round(easiest.defaultSets / 3));
-      return [
-        {
-          ...easiest,
-          defaultSets,
-          prescription: `${defaultSets} × ${easiest.defaultReps} ${easiest.repetitionUnit} · easy effort`,
-        },
-      ];
-    })
-    .slice(0, MAX_REHAB_EXERCISES);
-  if (!exercises.length) return null;
-  return {
-    id: RECOVERY_ROUTINE.toLowerCase(),
-    name: RECOVERY_ROUTINE,
-    sets: exercises.reduce((total, exercise) => total + exercise.defaultSets, 0),
-    exercises,
-  };
-}
-
-/** Plans use catalogue prescriptions, never seeded personal loads or measured durations. */
-export function routineForGroup(
-  group: string,
-  catalog: Exercise[],
-  recovery: RecoveryPlan | null = null,
-): Routine | null {
-  if (group.toLowerCase() === RECOVERY_ROUTINE.toLowerCase())
-    return recovery ? rehabRoutine(recovery, catalog) : null;
-  const exercises = catalog
-    .filter((exercise) => exercise.muscleGroup.toLowerCase() === group.toLowerCase())
-    .map((exercise) => ({
-      ...exercise,
-      prescription: `${exercise.defaultSets} × ${exercise.defaultReps} ${exercise.repetitionUnit}`,
-    }));
-  if (!exercises.length) return null;
-  return {
-    id: group.toLowerCase(),
-    name: exercises[0].muscleGroup,
-    sets: exercises.reduce((total, exercise) => total + exercise.defaultSets, 0),
-    exercises,
-  };
-}
-
-export type RoutinePair = {
-  today: Routine | null;
-  next: Routine | null;
-  /** Muscle groups kept out of the routines while a recovery plan is active. */
-  avoid?: string[];
-  /** True on a rest day with nothing left to train. */
-  rest?: true;
+const BACK: Routine = {
+  name: 'Back',
+  sets: 12,
+  minutes: 40,
+  exercises: [
+    { name: 'Lat pulldown', prescription: '3x10' },
+    { name: 'Seated cable row', prescription: '3x12' },
+    { name: 'One-arm dumbbell row', prescription: '3x10' },
+    { name: 'Face pull', prescription: '3x15' },
+  ],
 };
 
-/** Normal routines come from the first unaffected groups; rehab replaces the first slot on light days. */
-export function routinesFor(
-  recovery: RecoveryPlan | null,
-  catalog: Exercise[],
-  now = new Date(),
-): RoutinePair {
-  const phase = recovery ? recoveryPhase(recovery, now) : "normal";
-  if (!recovery || phase === "normal")
-    return { today: routineForGroup("Chest", catalog), next: routineForGroup("Back", catalog) };
-  const avoid = GROUP_ORDER.filter((group) =>
-    affectedGroups(recovery.area).some((affected) => sameGroup(affected, group)),
-  );
-  const safe = GROUP_ORDER.filter((group) => !avoid.includes(group))
-    .map((group) => routineForGroup(group, catalog))
-    .filter((routine): routine is Routine => routine !== null);
-  if (phase === "light")
-    return { today: rehabRoutine(recovery, catalog), next: safe[0] ?? null, avoid };
-  const [today = null, next = null] = safe;
-  return today ? { today, next, avoid } : { today, next, avoid, rest: true };
+const LEGS: Routine = {
+  name: 'Legs',
+  sets: 12,
+  minutes: 45,
+  exercises: [
+    { name: 'Goblet squat', prescription: '3x12' },
+    { name: 'Romanian deadlift', prescription: '3x10' },
+    { name: 'Leg press', prescription: '3x12' },
+    { name: 'Calf raise', prescription: '3x15' },
+  ],
+};
+
+const CORE: Routine = {
+  name: 'Core',
+  sets: 9,
+  minutes: 20,
+  exercises: [
+    { name: 'Plank', prescription: '3x40s' },
+    { name: 'Dead bug', prescription: '3x10' },
+    { name: 'Bird dog', prescription: '3x10' },
+  ],
+};
+
+const ARMS: Routine = {
+  name: 'Arms',
+  sets: 12,
+  minutes: 30,
+  exercises: [
+    { name: 'Cable curl', prescription: '3x12' },
+    { name: 'Triceps pushdown', prescription: '3x12' },
+    { name: 'Hammer curl', prescription: '3x12' },
+    { name: 'Rope pushdown', prescription: '3x15' },
+  ],
+};
+
+const SHOULDERS: Routine = {
+  name: 'Shoulders',
+  sets: 9,
+  minutes: 30,
+  exercises: [
+    { name: 'Overhead press', prescription: '3x10' },
+    { name: 'Lateral raise', prescription: '3x15' },
+    { name: 'Face pull', prescription: '3x15' },
+  ],
+};
+
+const SEATED_CHEST: Routine = {
+  name: 'Chest · seated & supported',
+  sets: 9,
+  minutes: 30,
+  exercises: [
+    { name: 'Machine chest press', prescription: '3x12' },
+    { name: 'Seated incline press', prescription: '3x12' },
+    { name: 'Pec deck', prescription: '3x12' },
+  ],
+};
+
+const SEATED_BACK: Routine = {
+  name: 'Back · seated machines',
+  sets: 12,
+  minutes: 35,
+  exercises: [
+    { name: 'Lat pulldown', prescription: '3x10' },
+    { name: 'Seated cable row', prescription: '3x12' },
+    { name: 'Machine row', prescription: '3x12' },
+    { name: 'Face pull', prescription: '3x15' },
+  ],
+};
+
+const LIGHT_MOVEMENT: Routine = {
+  name: 'Light movement',
+  sets: 6,
+  minutes: 25,
+  exercises: [
+    { name: 'Easy walk', prescription: '15 min' },
+    { name: 'Cat-cow', prescription: '2x10' },
+    { name: 'Hip mobility', prescription: '2x8/side' },
+  ],
+};
+
+const LIGHT_FULL_BODY: Routine = {
+  name: 'Full body · light',
+  sets: 6,
+  minutes: 30,
+  exercises: [
+    { name: 'Goblet squat', prescription: '2x12' },
+    { name: 'Dumbbell press', prescription: '2x12' },
+    { name: 'Seated cable row', prescription: '2x12' },
+  ],
+};
+
+export type RoutinePair = { today: Routine; next: Routine; adjustedFor: string | null };
+
+/** Browseable plan per muscle group for the workout tab grid. */
+export const GROUP_ROUTINES: Record<string, Routine> = {
+  chest: CHEST,
+  back: BACK,
+  shoulders: SHOULDERS,
+  arms: ARMS,
+  legs: LEGS,
+  core: CORE,
+};
+/** Static routine set; swaps in routines that avoid the area recovering. */
+export function routinesFor(recovery: RecoveryPlan | null): RoutinePair {
+  if (!recovery) return { today: CHEST, next: BACK, adjustedFor: null };
+
+  const adjustedFor = recovery.area.toLowerCase();
+  switch (recovery.area) {
+    case PERIOD_AREA:
+      return { today: LIGHT_MOVEMENT, next: LIGHT_FULL_BODY, adjustedFor };
+    case 'Lower back':
+      return { today: SEATED_CHEST, next: ARMS, adjustedFor };
+    case 'Right knee':
+      return { today: SEATED_BACK, next: ARMS, adjustedFor };
+    default:
+      return { today: LEGS, next: CORE, adjustedFor };
+  }
 }

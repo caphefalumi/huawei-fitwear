@@ -1,86 +1,52 @@
-import { useQuery } from "@tanstack/react-query";
-import { router } from "expo-router";
-import { useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Pressable } from "@/components/pressable";
-import { FetchErrorState, LoadingSkeleton } from "@/components/fetch-states";
-import { Palette as C } from "@/constants/palette";
-import { useAuth } from "@/features/auth";
-import { dateLabel, useHealth } from "@/features/health/health-store";
-import { BackHeader, Card } from "@/features/home/ui";
-import { WeightChart } from "@/features/home/weight-chart";
-import { apiErrorMessage, apiRequest } from "@/lib/api";
-import {
-  progressBounds,
-  progressData,
-  RANGES,
-  type Range,
-  type WorkoutStats,
-} from "@/features/home/progress-data";
-import { workoutQueryKeys } from "@/features/workout/workout-store";
+import { Pressable } from '@/components/pressable';
+import { Palette as C } from '@/constants/palette';
+import { useHealth } from '@/features/health/health-store';
+import { BackHeader, Card } from '@/features/home/ui';
+import { progressData, RANGES, type Range } from '@/features/home/progress-data';
+import { WeightChart } from '@/features/home/weight-chart';
+
+/** Bar grows with a spring each time it appears. */
+function ActivityBar({ height, index }: { height: number; index: number }) {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const t = Animated.timing(anim, {
+      toValue: height,
+      duration: 500,
+      delay: index * 60,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      useNativeDriver: false,
+    });
+    t.start();
+    return () => t.stop();
+  }, [anim, height, index]);
+
+  return <Animated.View style={[styles.bar, { height: anim }]} />;
+}
 
 export function ProgressScreen() {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
-  const {
-    weights,
-    plan,
-    error,
-    refresh,
-    loading: healthLoading,
-    refreshing: healthRefreshing,
-  } = useHealth();
-  const [range, setRange] = useState<Range>("Month");
-  const bounds = progressBounds(range);
-  const statsQuery = useQuery({
-    queryKey: [...workoutQueryKeys.progress(user?.id ?? "signed-out"), bounds.from, bounds.to],
-    enabled: Boolean(user?.id),
-    queryFn: ({ signal }) =>
-      apiRequest<WorkoutStats>(`/workouts/stats?from=${bounds.from}&to=${bounds.to}`, { signal }),
-  });
-  const stats = statsQuery.data ?? null;
-  const statsError = statsQuery.error
-    ? apiErrorMessage(statsQuery.error, "training activity")
-    : null;
-  const statsLoading = statsQuery.isLoading;
-  const data = progressData(range, weights, stats);
+  const { weightKg, weights } = useHealth();
+  const [range, setRange] = useState<Range>('Month');
+  const data = progressData(range, weights, null);
+  const latestWeight = weightKg ?? data.weights.at(-1) ?? 0;
   const maxSessions = Math.max(1, ...data.bars.map((bar) => bar.sessions));
 
   return (
     <ScrollView
-      refreshControl={
-        <RefreshControl
-          refreshing={
-            !healthLoading && !statsLoading && (healthRefreshing || statsQuery.isFetching)
-          }
-          onRefresh={() => void Promise.all([refresh(), statsQuery.refetch()])}
-          tintColor={C.accent}
-          colors={[C.accent]}
-        />
-      }
       style={styles.screen}
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}
-    >
+      ]}>
       <BackHeader label="Overview" onPress={() => router.back()} />
 
-      <Text accessibilityRole="header" style={styles.title}>
-        Your progress.
-      </Text>
-      {error ? (
-        <FetchErrorState
-          title={weights.length ? "Couldn't refresh health data" : "Couldn't load health data"}
-          message={error}
-          onRetry={refresh}
-          retrying={healthRefreshing}
-        />
-      ) : null}
-      {healthLoading ? <LoadingSkeleton label="Loading health data" rows={4} /> : null}
-      {healthRefreshing ? <Text style={styles.cardNote}>Updating health data…</Text> : null}
+      <Text style={styles.title}>Your progress.</Text>
 
       <View style={styles.segments}>
         {RANGES.map((item) => {
@@ -88,12 +54,11 @@ export function ProgressScreen() {
           return (
             <Pressable
               key={item}
-              accessibilityLabel={item === "3 mo" ? "Last 3 months" : `Last ${item.toLowerCase()}`}
-              accessibilityState={{ selected: active }}
               style={[styles.segment, active && styles.segmentActive]}
-              onPress={() => setRange(item)}
-            >
-              <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>{item}</Text>
+              onPress={() => setRange(item)}>
+              <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>
+                {item}
+              </Text>
             </Pressable>
           );
         })}
@@ -101,82 +66,41 @@ export function ProgressScreen() {
 
       <Card>
         <View style={styles.weightHeader}>
-          <Text accessibilityRole="header" style={styles.cardTitle}>
-            Weight
-          </Text>
+          <Text style={styles.cardTitle}>Weight</Text>
           <View style={styles.pill}>
             <Text style={styles.pillText}>{data.delta}</Text>
           </View>
         </View>
 
-        <Text style={styles.bigValue}>
-          {data.weights.length ? `${data.weights[data.weights.length - 1].toFixed(1)} kg` : "—"}
-        </Text>
+        <Text style={styles.bigValue}>{latestWeight.toFixed(1)} kg</Text>
 
-        <WeightChart weights={data.weights} />
-        {!healthLoading && !data.weights.length ? (
-          <Text style={styles.cardNote}>No weight entries for this period yet.</Text>
-        ) : null}
+        <WeightChart key={range} weights={data.weights} />
 
         <View style={styles.dates}>
           {data.dates.map((date) => (
             <Text key={date} style={styles.dateLabel}>
-              {dateLabel(date)}
+              {date}
             </Text>
           ))}
         </View>
 
-        <Text style={styles.cardNote}>
-          {plan.targetWeightKg === null
-            ? "Set a target weight in Profile."
-            : `Goal ${plan.targetWeightKg.toFixed(1)} kg`}
-        </Text>
+        <Text style={styles.cardNote}>Goal 70.0 kg · Updated Oct 7</Text>
       </Card>
 
       <Card>
         <View style={styles.weightHeader}>
-          <Text accessibilityRole="header" style={styles.cardTitle}>
-            Training activity
-          </Text>
-          <Text style={styles.cardNote}>{!statsLoading ? data.sessionsNote : ""}</Text>
+          <Text style={styles.cardTitle}>Training activity</Text>
+          <Text style={styles.cardNote}>{data.sessionsNote}</Text>
         </View>
-        {statsError ? (
-          <FetchErrorState
-            title={stats ? "Couldn't refresh training activity" : "Couldn't load training activity"}
-            message={statsError}
-            onRetry={() => statsQuery.refetch()}
-            retrying={statsQuery.isFetching}
-          />
-        ) : null}
-        {statsLoading ? <LoadingSkeleton label="Loading training activity" rows={3} /> : null}
-        {statsQuery.isFetching && !statsLoading ? (
-          <Text style={styles.cardNote}>Updating training activity…</Text>
-        ) : null}
-        {stats?.completedSessionCount ? (
-          <View style={styles.bars}>
-            {data.bars.map((week) => (
-              <View
-                accessible
-                accessibilityLabel={`Period starting ${week.label}: ${week.sessions} completed sessions`}
-                key={week.label}
-                style={styles.barColumn}
-              >
-                <View
-                  style={[
-                    styles.bar,
-                    { height: week.sessions ? 12 + (week.sessions / maxSessions) * 48 : 2 },
-                  ]}
-                />
-                <Text accessible={false} style={styles.dateLabel}>
-                  {week.label}
-                </Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-        {stats && stats.completedSessionCount === 0 ? (
-          <Text style={styles.cardNote}>No completed workouts in this period yet.</Text>
-        ) : null}
+
+        <View key={range} style={styles.bars}>
+          {data.bars.map((week, i) => (
+            <View key={week.label} style={styles.barColumn}>
+              <ActivityBar height={12 + (week.sessions / maxSessions) * 48} index={i} />
+              <Text style={styles.dateLabel}>{week.label}</Text>
+            </View>
+          ))}
+        </View>
 
         <View style={styles.durationRow}>
           <Text style={styles.bigValue}>{data.duration}</Text>
@@ -184,30 +108,40 @@ export function ProgressScreen() {
         </View>
 
         <Text style={styles.cardNote}>
-          Logged sessions and total workout time. Weighted exercises are tracked separately in your
-          workout history.
+          Logged sessions and total workout time. Weighted exercises are tracked separately in
+          your workout history.
         </Text>
       </Card>
 
       <Card>
-        <Text accessibilityRole="header" style={styles.cardTitle}>
-          Body composition
-        </Text>
-        <Text style={styles.cardNote}>
-          No body-composition measurements are available. Weight logs do not measure body fat or
-          muscle mass.
-        </Text>
+        <View style={styles.weightHeader}>
+          <Text style={styles.cardTitle}>Body composition</Text>
+          <Text style={styles.cardNote}>Oct 7</Text>
+        </View>
+
+        <View style={styles.compositionRow}>
+          <View style={styles.compositionItem}>
+            <Text style={styles.compositionValue}>19.4%</Text>
+            <Text style={styles.compositionLabel}>Body fat</Text>
+            <Text style={styles.compositionDelta}>−0.6 pp / month</Text>
+          </View>
+          <View style={styles.compositionItem}>
+            <Text style={styles.compositionValue}>32.8 kg</Text>
+            <Text style={styles.compositionLabel}>Muscle mass</Text>
+            <Text style={styles.compositionDelta}>+0.3 kg / month</Text>
+          </View>
+        </View>
+
+        <Text style={styles.cardNote}>Personal-scale estimates, not a diagnosis.</Text>
       </Card>
 
       <Card>
-        <Text accessibilityRole="header" style={styles.cardTitle}>
-          Accuracy &amp; personalization
-        </Text>
+        <Text style={styles.cardTitle}>Accuracy &amp; personalization</Text>
         <Text style={styles.cardNote}>
           Basic body info gives you a starting nutrition estimate. Adding daily activity and goals
           helps personalize your plan. More details live in Profile.
         </Text>
-        <Pressable onPress={() => router.push("/profile")} hitSlop={8}>
+        <Pressable onPress={() => router.push('/profile')} hitSlop={8}>
           <Text style={styles.link}>Profile</Text>
         </Pressable>
       </Card>
@@ -226,50 +160,43 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: "400",
+    fontWeight: '400',
     color: C.text,
   },
   segments: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
     backgroundColor: C.card,
     borderRadius: 12,
     padding: 4,
     gap: 4,
   },
   segment: {
-    flexGrow: 1,
-    flexBasis: 60,
-    minHeight: 48,
-    paddingHorizontal: 4,
-    paddingVertical: 8,
+    flex: 1,
+    height: 32,
     borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   segmentActive: {
     backgroundColor: C.surface,
   },
   segmentLabel: {
     fontSize: 12,
-    textAlign: "center",
     color: C.textMuted,
   },
   segmentLabelActive: {
-    fontWeight: "600",
+    fontWeight: '600',
     color: C.accent,
   },
   weightHeader: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 8,
   },
   cardTitle: {
     fontSize: 15,
-    flexShrink: 1,
-    fontWeight: "600",
+    fontWeight: '600',
     color: C.text,
   },
   pill: {
@@ -280,19 +207,17 @@ const styles = StyleSheet.create({
   },
   pillText: {
     fontSize: 11,
-    fontWeight: "500",
+    fontWeight: '500',
     color: C.accent,
   },
   bigValue: {
     fontSize: 34,
-    fontWeight: "600",
+    fontWeight: '600',
     color: C.text,
   },
   dates: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   dateLabel: {
     fontSize: 9,
@@ -304,32 +229,55 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   bars: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
     gap: 12,
   },
   barColumn: {
     flex: 1,
-    alignItems: "center",
+    alignItems: 'center',
     gap: 6,
   },
   bar: {
-    width: "100%",
+    width: '100%',
     borderRadius: 6,
     backgroundColor: C.accentTint,
     borderWidth: 1,
     borderColor: C.border,
   },
   durationRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    alignItems: 'baseline',
     gap: 8,
+  },
+  compositionRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  compositionItem: {
+    flex: 1,
+    backgroundColor: C.previewTint,
+    borderRadius: 16,
+    padding: 12,
+    gap: 3,
+  },
+  compositionValue: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: C.text,
+  },
+  compositionLabel: {
+    fontSize: 11,
+    color: C.textMuted,
+  },
+  compositionDelta: {
+    fontSize: 10,
+    color: C.accent,
   },
   link: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
     color: C.accent,
   },
 });

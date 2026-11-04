@@ -1,42 +1,70 @@
-import { Image } from "expo-image";
-import { router, useLocalSearchParams } from "expo-router";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from 'expo-image';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
-import { useHealth } from "@/features/health/health-store";
-import { BackHeader, Card } from "@/features/home/ui";
-import { routineForGroup } from "@/features/workout/routines";
-import { WorkoutSessionPanel } from "@/features/workout/workout-session-panel";
-import { useWorkouts } from "@/features/workout/workout-store";
+import { Pressable } from '@/components/pressable';
+import { Palette as C } from '@/constants/palette';
+import { useHealth } from '@/features/health/health-store';
+import { BackHeader, Card } from '@/features/home/ui';
 
-const icons = { play: require("@/assets/images/workout/play.svg") };
+const icons = {
+  play: require('@/assets/images/workout/play.svg'),
+  lock: require('@/assets/images/recovery/lock.svg'),
+};
+
+type Exercise = {
+  key: string;
+  name: string;
+  sets: number;
+  reps: number;
+  load: number;
+  loadUnit: string;
+  step: number;
+};
+
+const EXERCISES: Exercise[] = [
+  { key: 'bench-press', name: 'Barbell bench press', sets: 3, reps: 10, load: 30, loadUnit: 'kg', step: 2.5 },
+  {
+    key: 'incline-dumbbell-press',
+    name: 'Incline dumbbell press',
+    sets: 3,
+    reps: 12,
+    load: 10,
+    loadUnit: 'kg/hand',
+    step: 2,
+  },
+  {
+    key: 'cable-chest-fly',
+    name: 'Cable chest fly',
+    sets: 3,
+    reps: 12,
+    load: 7.5,
+    loadUnit: 'kg/side',
+    step: 2.5,
+  },
+];
+
+const SUMMARY = [
+  { value: '3', label: 'exercises' },
+  { value: '9', label: 'sets' },
+  { value: '35', label: 'min' },
+];
 
 export function ChestPlanScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ group?: string; sessionId?: string }>();
   const { recovery } = useHealth();
-  const { exercises, sessions, activeSessionId, loading, refresh } = useWorkouts();
-  const savedSession = sessions.find((session) => session.id === params.sessionId);
-  const group = savedSession?.workoutSplit ?? params.group ?? "Chest";
-  const routine = routineForGroup(group, exercises, recovery);
-  const sessionExercises = savedSession?.sets?.map((set) => set.exercise) ?? [];
-  const availableExercises = [
-    ...(routine?.exercises ?? []),
-    ...sessionExercises.filter(
-      (exercise, index) =>
-        !routine?.exercises.some((entry) => entry.id === exercise.id) &&
-        sessionExercises.findIndex((entry) => entry.id === exercise.id) === index,
-    ),
-  ];
-  const currentId =
-    params.sessionId ??
-    sessions.find(
-      (session) =>
-        session.id === activeSessionId &&
-        session.workoutSplit.toLowerCase() === group.toLowerCase(),
-    )?.id;
+  const [loads, setLoads] = useState<Record<string, number>>(() =>
+    Object.fromEntries(EXERCISES.map((exercise) => [exercise.key, exercise.load])),
+  );
+
+  function adjust(exercise: Exercise, direction: -1 | 1) {
+    setLoads((prev) => ({
+      ...prev,
+      [exercise.key]: Math.max(0, Number(((prev[exercise.key] ?? 0) + direction * exercise.step).toFixed(1))),
+    }));
+  }
 
   return (
     <ScrollView
@@ -44,109 +72,102 @@ export function ChestPlanScreen() {
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}
-    >
+      ]}>
       <BackHeader label="Workouts" onPress={() => router.back()} />
+
       <View style={styles.heading}>
-        <Text accessibilityRole="header" style={styles.title}>
-          {savedSession?.sessionTitle ?? routine?.name ?? group}
-        </Text>
-        <Text style={styles.subtitle}>
-          {params.sessionId ? "Saved workout" : "Exercise plan · choose your own working weight"}
-        </Text>
+        <Text style={styles.title}>Chest</Text>
+        {recovery ? (
+          <Text style={styles.subtitle}>Tentative return · {recovery.returnDate}</Text>
+        ) : null}
       </View>
-      {group.toLowerCase() === "chest" ? (
-        <Image
-          accessible={false}
-          source={require("@/assets/images/workout/chest-hero.png")}
-          style={styles.hero}
-          contentFit="cover"
-        />
-      ) : null}
-      <Pressable
-        disabled={loading}
-        accessibilityState={{ busy: loading }}
-        onPress={() => void refresh()}
-      >
-        <Text style={styles.footnote}>Refresh workout data</Text>
-      </Pressable>
-      {routine ? (
-        <View style={styles.summary}>
-          {[
-            { value: routine.exercises.length, label: "exercises" },
-            { value: routine.sets, label: "planned sets" },
-          ].map((metric) => (
-            <View key={metric.label} style={styles.metric}>
-              <Text style={styles.metricValue}>{metric.value}</Text>
-              <Text style={styles.metricLabel}>{metric.label}</Text>
-            </View>
-          ))}
+
+      <Image
+        source={require('@/assets/images/workout/chest-hero.png')}
+        style={styles.hero}
+        contentFit="cover"
+      />
+
+      <View style={styles.summary}>
+        {SUMMARY.map((metric) => (
+          <View key={metric.label} style={styles.metric}>
+            <Text style={styles.metricValue}>{metric.value}</Text>
+            <Text style={styles.metricLabel}>{metric.label}</Text>
+          </View>
+        ))}
+      </View>
+
+      {recovery ? (
+        <View style={styles.restriction}>
+          <Image source={icons.lock} style={styles.restrictionIcon} contentFit="contain" />
+          <Text style={styles.restrictionText}>
+            View only during {recovery.area.toLowerCase()} recovery.
+          </Text>
         </View>
       ) : null}
-      <Text accessibilityRole="header" style={styles.sectionTitle}>
-        Exercises
-      </Text>
-      {availableExercises.map((exercise, index) => (
-        <Card key={exercise.id} style={styles.exerciseCard}>
+
+      <Text style={styles.sectionTitle}>Exercises</Text>
+
+      {EXERCISES.map((exercise, index) => (
+        <Card key={exercise.key} style={styles.exerciseCard}>
           <View style={styles.exerciseHeader}>
-            <Text style={styles.exerciseIndex}>{String(index + 1).padStart(2, "0")}</Text>
+            <Text style={styles.exerciseIndex}>{String(index + 1).padStart(2, '0')}</Text>
             <Pressable
-              accessibilityLabel={`View ${exercise.name} technique`}
               style={styles.exerciseIdentity}
-              onPress={() =>
-                router.push({
-                  pathname: "/exercise-guide",
-                  params: {
-                    name: exercise.id,
-                    group,
-                    ...(currentId ? { sessionId: currentId } : {}),
-                  },
-                })
-              }
-            >
+              onPress={() => router.push(`/exercise-guide?name=${exercise.key}`)}>
               <Text style={styles.exerciseName}>{exercise.name}</Text>
             </Pressable>
             <Pressable
-              accessibilityLabel={`View ${exercise.name} technique`}
               style={styles.playButton}
-              onPress={() =>
-                router.push({
-                  pathname: "/exercise-guide",
-                  params: {
-                    name: exercise.id,
-                    group,
-                    ...(currentId ? { sessionId: currentId } : {}),
-                  },
-                })
-              }
-            >
-              <Image
-                accessible={false}
-                source={icons.play}
-                style={styles.playIcon}
-                contentFit="contain"
-              />
+              onPress={() => router.push(`/exercise-guide?name=${exercise.key}`)}>
+              <Image source={icons.play} style={styles.playIcon} contentFit="contain" />
             </Pressable>
           </View>
+
           <View style={styles.prescriptionRow}>
-            <Text style={styles.prescriptionValue}>
-              {exercise.defaultSets} planned sets · {exercise.defaultReps} target{" "}
-              {exercise.repetitionUnit}
-            </Text>
+            <View style={styles.prescription}>
+              <Text style={styles.prescriptionValue}>{exercise.sets} sets</Text>
+              <Text style={styles.prescriptionLabel}>Sets</Text>
+            </View>
+            <View style={styles.prescription}>
+              <Text style={styles.prescriptionValue}>{exercise.reps} reps</Text>
+              <Text style={styles.prescriptionLabel}>Reps</Text>
+            </View>
           </View>
-          <Text style={styles.loadLabel}>
-            {exercise.equipment} · load is recorded when you log a completed set
-          </Text>
+
+          <View style={styles.exerciseFooter}>
+            <View style={styles.loadGroup}>
+              <Text style={styles.loadLabel}>Saved load</Text>
+              <View style={styles.loadInput}>
+                <Text style={styles.loadValue}>{loads[exercise.key]}</Text>
+                <Text style={styles.loadUnit}>{exercise.loadUnit}</Text>
+              </View>
+            </View>
+            <View style={styles.footerActions}>
+              <View style={styles.stepper}>
+                <Pressable style={styles.stepButton} onPress={() => adjust(exercise, -1)}>
+                  <View style={styles.minus} />
+                </Pressable>
+                <Pressable style={styles.stepButton} onPress={() => adjust(exercise, 1)}>
+                  <View style={styles.minus} />
+                  <View style={styles.plus} />
+                </Pressable>
+              </View>
+              <View style={styles.watchGroup}>
+                <Image source={icons.play} style={styles.watchIcon} contentFit="contain" />
+                <Text style={styles.watchLabel}>Watch</Text>
+              </View>
+            </View>
+          </View>
         </Card>
       ))}
-      <WorkoutSessionPanel
-        key={params.sessionId ?? group}
-        title={routine?.name ?? group}
-        split={group}
-        exercises={availableExercises}
-        sessionId={params.sessionId}
-        recovery={Boolean(recovery)}
-      />
+
+      <Pressable style={styles.primaryButton} onPress={() => router.push('/session')}>
+        <Text style={styles.primaryLabel}>Start workout</Text>
+      </Pressable>
+      {recovery ? (
+        <Text style={styles.footnote}>Resume your regular plan when you’re ready.</Text>
+      ) : null}
     </ScrollView>
   );
 }
@@ -165,7 +186,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: "400",
+    fontWeight: '400',
     color: C.text,
   },
   subtitle: {
@@ -173,13 +194,13 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   hero: {
-    width: "100%",
+    width: '100%',
     aspectRatio: 354 / 165,
     borderRadius: 18,
     backgroundColor: C.card,
   },
   summary: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 10,
   },
   metric: {
@@ -187,21 +208,39 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface,
     borderRadius: 14,
     paddingVertical: 10,
-    alignItems: "center",
+    alignItems: 'center',
     gap: 2,
   },
   metricValue: {
     fontSize: 25,
-    fontWeight: "400",
+    fontWeight: '400',
     color: C.text,
   },
   metricLabel: {
     fontSize: 11,
     color: C.textMuted,
   },
+  restriction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: C.card,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  restrictionIcon: {
+    width: 16,
+    height: 16,
+  },
+  restrictionText: {
+    flex: 1,
+    fontSize: 11,
+    color: C.textMuted,
+  },
   sectionTitle: {
     fontSize: 17,
-    fontWeight: "600",
+    fontWeight: '600',
     color: C.text,
     paddingTop: 4,
   },
@@ -210,8 +249,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   exerciseHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
   },
   exerciseIndex: {
@@ -223,32 +262,134 @@ const styles = StyleSheet.create({
   },
   exerciseName: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: '600',
     color: C.text,
   },
   playButton: {
-    width: 48,
-    height: 48,
+    width: 32,
+    height: 32,
     borderRadius: 100,
     backgroundColor: C.accentTint,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   playIcon: {
     width: 14,
     height: 14,
   },
   prescriptionRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 12,
+  },
+  prescription: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 5,
   },
   prescriptionValue: {
     fontSize: 12,
     color: C.text,
   },
+  prescriptionLabel: {
+    fontSize: 9,
+    color: C.textMuted,
+  },
+  exerciseFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  loadGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   loadLabel: {
     fontSize: 10,
     color: C.textMuted,
+  },
+  loadInput: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 3,
+  },
+  loadValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: C.text,
+  },
+  loadUnit: {
+    fontSize: 12,
+    color: C.textMuted,
+  },
+  stepper: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  stepButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: C.previewTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  minus: {
+    width: 14,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: C.text,
+  },
+  plus: {
+    position: 'absolute',
+    width: 2,
+    height: 14,
+    borderRadius: 1,
+    backgroundColor: C.text,
+  },
+  footerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  watchGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  watchIcon: {
+    width: 14,
+    height: 14,
+  },
+  watchLabel: {
+    fontSize: 10,
+    color: C.textMuted,
+  },
+  disabledAction: {
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: C.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disabledActionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: C.textMuted,
+  },
+  primaryButton: {
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: C.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: C.onAccent,
   },
   footnote: {
     fontSize: 11,
