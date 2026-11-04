@@ -1,11 +1,11 @@
-import { PERIOD_AREA, type RecoveryPlan } from "@/features/health/health-store";
+import { PERIOD_AREA, type RecoveryPlan } from "@/features/health/health-store"
 
 export type Routine = {
-  name: string;
-  sets: number;
-  minutes: number;
-  exercises: { name: string; prescription: string }[];
-};
+  name: string
+  sets: number
+  minutes: number
+  exercises: { name: string; prescription: string }[]
+}
 
 const CHEST: Routine = {
   name: "Chest",
@@ -16,7 +16,7 @@ const CHEST: Routine = {
     { name: "Incline dumbbell", prescription: "3x12" },
     { name: "Cable fly", prescription: "3x12" },
   ],
-};
+}
 
 const BACK: Routine = {
   name: "Back",
@@ -28,7 +28,7 @@ const BACK: Routine = {
     { name: "One-arm dumbbell row", prescription: "3x10" },
     { name: "Face pull", prescription: "3x15" },
   ],
-};
+}
 
 const LEGS: Routine = {
   name: "Legs",
@@ -40,7 +40,7 @@ const LEGS: Routine = {
     { name: "Leg press", prescription: "3x12" },
     { name: "Calf raise", prescription: "3x15" },
   ],
-};
+}
 
 const CORE: Routine = {
   name: "Core",
@@ -51,7 +51,7 @@ const CORE: Routine = {
     { name: "Dead bug", prescription: "3x10" },
     { name: "Bird dog", prescription: "3x10" },
   ],
-};
+}
 
 const ARMS: Routine = {
   name: "Arms",
@@ -63,7 +63,7 @@ const ARMS: Routine = {
     { name: "Hammer curl", prescription: "3x12" },
     { name: "Rope pushdown", prescription: "3x15" },
   ],
-};
+}
 
 const SHOULDERS: Routine = {
   name: "Shoulders",
@@ -74,7 +74,7 @@ const SHOULDERS: Routine = {
     { name: "Lateral raise", prescription: "3x15" },
     { name: "Face pull", prescription: "3x15" },
   ],
-};
+}
 
 const SEATED_CHEST: Routine = {
   name: "Chest · seated & supported",
@@ -85,7 +85,7 @@ const SEATED_CHEST: Routine = {
     { name: "Seated incline press", prescription: "3x12" },
     { name: "Pec deck", prescription: "3x12" },
   ],
-};
+}
 
 const SEATED_BACK: Routine = {
   name: "Back · seated machines",
@@ -97,7 +97,7 @@ const SEATED_BACK: Routine = {
     { name: "Machine row", prescription: "3x12" },
     { name: "Face pull", prescription: "3x15" },
   ],
-};
+}
 
 const LIGHT_MOVEMENT: Routine = {
   name: "Light movement",
@@ -108,7 +108,7 @@ const LIGHT_MOVEMENT: Routine = {
     { name: "Cat-cow", prescription: "2x10" },
     { name: "Hip mobility", prescription: "2x8/side" },
   ],
-};
+}
 
 const LIGHT_FULL_BODY: Routine = {
   name: "Full body · light",
@@ -119,9 +119,9 @@ const LIGHT_FULL_BODY: Routine = {
     { name: "Dumbbell press", prescription: "2x12" },
     { name: "Seated cable row", prescription: "2x12" },
   ],
-};
+}
 
-export type RoutinePair = { today: Routine; next: Routine; adjustedFor: string | null };
+export type RoutinePair = { today: Routine; next: Routine; adjustedFor: string | null }
 
 /** Browseable plan per muscle group for the workout tab grid. */
 export const GROUP_ROUTINES: Record<string, Routine> = {
@@ -131,20 +131,20 @@ export const GROUP_ROUTINES: Record<string, Routine> = {
   arms: ARMS,
   legs: LEGS,
   core: CORE,
-};
+}
 /** Static routine set; swaps in routines that avoid the area recovering. */
 export function routinesFor(recovery: RecoveryPlan | null): RoutinePair {
-  if (!recovery) return { today: CHEST, next: BACK, adjustedFor: null };
+  if (!recovery) return { today: CHEST, next: BACK, adjustedFor: null }
 
-  const adjustedFor = recovery.area.toLowerCase();
+  const adjustedFor = recovery.area.toLowerCase()
   switch (recovery.area) {
     case PERIOD_AREA:
-      return { today: LIGHT_MOVEMENT, next: LIGHT_FULL_BODY, adjustedFor };
+      return { today: LIGHT_MOVEMENT, next: LIGHT_FULL_BODY, adjustedFor }
     case "Lower back":
-      return { today: SEATED_CHEST, next: ARMS, adjustedFor };
+      return { today: SEATED_CHEST, next: ARMS, adjustedFor }
     case "Right knee":
-      return { today: SEATED_BACK, next: ARMS, adjustedFor };
+      return { today: SEATED_BACK, next: ARMS, adjustedFor }
     default:
-      return { today: LEGS, next: CORE, adjustedFor };
+      return { today: LEGS, next: CORE, adjustedFor }
   }
 }

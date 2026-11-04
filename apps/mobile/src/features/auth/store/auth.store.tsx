@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   createContext,
   useCallback,
@@ -7,11 +7,11 @@ import {
   useRef,
   useState,
   type PropsWithChildren,
-} from "react";
-import { AppState } from "react-native";
+} from "react"
+import { AppState } from "react-native"
 
-import { ApiError, onSessionExpired, setApiToken } from "@/lib/api";
-import { sessionStorage } from "../session-storage";
+import { ApiError, onSessionExpired, setApiToken } from "@/lib/api"
+import { sessionStorage } from "../session-storage"
 import {
   authQueryKeys,
   authSessionQueryOptions,
@@ -23,282 +23,282 @@ import {
   sendSignOut,
   sendSignUp,
   sendUpdateUser,
-} from "../api/auth.api";
+} from "../api/auth.api"
 import type {
   AuthUser,
   AuthenticationSession,
   AuthenticationSessionResponse,
   SignUpBody,
   UpdateUserBody,
-} from "../types";
+} from "../types"
 export type {
   AuthUser,
   AuthenticationSession,
   AuthenticationSessionResponse,
   SignUpBody,
   UpdateUserBody,
-};
-import { isLoggedIn } from "../utils/is-logged-in";
-import { useAuthUiStore } from "./auth-ui.store";
+}
+import { isLoggedIn } from "../utils/is-logged-in"
+import { useAuthUiStore } from "./auth-ui.store"
 
 export const APP_ROUTES = {
   welcome: "/",
   login: "/login",
   signUp: "/sign-up",
   home: "/home",
-} as const;
+} as const
 
 type AuthContextValue = {
-  user: AuthUser | null;
-  loading: boolean;
-  pending: boolean;
-  error: string | null;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (body: SignUpBody) => Promise<void>;
-  requestPasswordReset: (email: string) => Promise<{ message: string; resendAfterSeconds: number }>;
-  verifyPasswordReset: (email: string, code: string) => Promise<string>;
-  completePasswordReset: (resetToken: string, password: string) => Promise<string>;
-  signOut: () => Promise<void>;
-  deleteAccount: () => Promise<void>;
-  updateUser: (body: UpdateUserBody) => Promise<void>;
-};
-const AuthContext = createContext<AuthContextValue | null>(null);
+  user: AuthUser | null
+  loading: boolean
+  pending: boolean
+  error: string | null
+  signIn: (email: string, password: string) => Promise<void>
+  signUp: (body: SignUpBody) => Promise<void>
+  requestPasswordReset: (email: string) => Promise<{ message: string; resendAfterSeconds: number }>
+  verifyPasswordReset: (email: string, code: string) => Promise<string>
+  completePasswordReset: (resetToken: string, password: string) => Promise<string>
+  signOut: () => Promise<void>
+  deleteAccount: () => Promise<void>
+  updateUser: (body: UpdateUserBody) => Promise<void>
+}
+const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const sessionQuery = useQuery({ ...authSessionQueryOptions(), enabled: false });
-  const authenticated = useAuthUiStore((state) => state.authenticated);
-  const setAuthenticated = useAuthUiStore((state) => state.setAuthenticated);
-  const user = authenticated ? (sessionQuery.data?.user ?? null) : null;
-  const session = authenticated ? (sessionQuery.data?.session ?? null) : null;
-  const [loading, setLoading] = useState(true);
-  const pending = useAuthUiStore((state) => state.pending);
-  const setPending = useAuthUiStore((state) => state.setPending);
-  const error = useAuthUiStore((state) => state.error);
-  const setError = useAuthUiStore((state) => state.setError);
-  const revision = useRef(0);
-  const busy = useRef(false);
-  const queryClient = useQueryClient();
+  const sessionQuery = useQuery({ ...authSessionQueryOptions(), enabled: false })
+  const authenticated = useAuthUiStore((state) => state.authenticated)
+  const setAuthenticated = useAuthUiStore((state) => state.setAuthenticated)
+  const user = authenticated ? (sessionQuery.data?.user ?? null) : null
+  const session = authenticated ? (sessionQuery.data?.session ?? null) : null
+  const [loading, setLoading] = useState(true)
+  const pending = useAuthUiStore((state) => state.pending)
+  const setPending = useAuthUiStore((state) => state.setPending)
+  const error = useAuthUiStore((state) => state.error)
+  const setError = useAuthUiStore((state) => state.setError)
+  const revision = useRef(0)
+  const busy = useRef(false)
+  const queryClient = useQueryClient()
   const authenticateMutation = useMutation({
     mutationKey: ["auth", "authenticate"],
     mutationFn: (send: () => Promise<AuthenticationSessionResponse>) => send(),
-  });
+  })
   const passwordResetMutation = useMutation({
     mutationKey: ["auth", "password-reset"],
     mutationFn: sendPasswordReset,
-  });
+  })
   const verifyResetMutation = useMutation({
     mutationKey: ["auth", "password-reset-verify"],
     mutationFn: ({ email, code }: { email: string; code: string }) =>
       sendVerifyPasswordReset(email, code),
-  });
+  })
   const completeResetMutation = useMutation({
     mutationKey: ["auth", "password-reset-complete"],
     mutationFn: ({ resetToken, password }: { resetToken: string; password: string }) =>
       sendCompletePasswordReset(resetToken, password),
-  });
+  })
   const signOutMutation = useMutation({
     mutationKey: ["auth", "sign-out"],
     mutationFn: (request: Promise<unknown>) => request,
-  });
+  })
   const deleteAccountMutation = useMutation({
     mutationKey: ["auth", "delete-account"],
     mutationFn: sendDeleteAccount,
-  });
+  })
   const updateUserMutation = useMutation({
     mutationKey: ["auth", "update-user"],
     mutationFn: sendUpdateUser,
-  });
+  })
 
   const clearSession = useCallback(async () => {
-    revision.current += 1;
-    setApiToken(null);
-    setAuthenticated(false);
-    queryClient.clear();
-    await sessionStorage.clearToken();
-  }, [queryClient, setAuthenticated]);
+    revision.current += 1
+    setApiToken(null)
+    setAuthenticated(false)
+    queryClient.clear()
+    await sessionStorage.clearToken()
+  }, [queryClient, setAuthenticated])
   useEffect(() => {
-    useAuthUiStore.getState().reset();
-  }, []);
+    useAuthUiStore.getState().reset()
+  }, [])
 
   useEffect(() => {
-    let active = true;
-    const hydrateRevision = revision.current;
+    let active = true
+    const hydrateRevision = revision.current
     async function hydrate() {
       try {
-        const token = await sessionStorage.getToken();
-        if (!active || revision.current !== hydrateRevision || !token) return;
-        setApiToken(token);
+        const token = await sessionStorage.getToken()
+        if (!active || revision.current !== hydrateRevision || !token) return
+        setApiToken(token)
         const result = await queryClient.fetchQuery({
           ...authSessionQueryOptions(),
           staleTime: 0,
-        });
-        if (!active || revision.current !== hydrateRevision) return;
+        })
+        if (!active || revision.current !== hydrateRevision) return
         if (!isLoggedIn(result.session)) {
-          await clearSession();
-          setError("Your session expired. Please sign in again.");
-          return;
+          await clearSession()
+          setError("Your session expired. Please sign in again.")
+          return
         }
-        setAuthenticated(true);
+        setAuthenticated(true)
       } catch (cause) {
         if (active) {
-          setApiToken(null);
-          setAuthenticated(false);
+          setApiToken(null)
+          setAuthenticated(false)
           setError(
             cause instanceof Error
               ? cause.message
               : "Unable to restore your session. Please sign in again.",
-          );
+          )
         }
       } finally {
-        if (active) setLoading(false);
+        if (active) setLoading(false)
       }
     }
     const unsubscribe = onSessionExpired(() => {
-      if (!active) return;
-      setError("Your session expired. Please sign in again.");
+      if (!active) return
+      setError("Your session expired. Please sign in again.")
       void clearSession().catch(() =>
         setError(
           "Session expired, but saved credentials could not be removed. Please sign in again.",
         ),
-      );
-    });
-    void hydrate();
+      )
+    })
+    void hydrate()
     return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, [clearSession, queryClient, setAuthenticated, setError]);
+      active = false
+      unsubscribe()
+    }
+  }, [clearSession, queryClient, setAuthenticated, setError])
 
   useEffect(() => {
-    if (!session) return;
-    let timer: ReturnType<typeof setTimeout>;
+    if (!session) return
+    let timer: ReturnType<typeof setTimeout>
     const checkExpiration = () => {
-      const remaining = Date.parse(session.expiresAt) - Date.now();
+      const remaining = Date.parse(session.expiresAt) - Date.now()
       if (remaining <= 0) {
-        setError("Your session expired. Please sign in again.");
+        setError("Your session expired. Please sign in again.")
         void clearSession().catch(() =>
           setError("Could not remove expired saved credentials. Please sign in again."),
-        );
+        )
       } else {
-        clearTimeout(timer);
-        timer = setTimeout(checkExpiration, Math.min(remaining, 2_147_483_647));
+        clearTimeout(timer)
+        timer = setTimeout(checkExpiration, Math.min(remaining, 2_147_483_647))
       }
-    };
-    checkExpiration();
+    }
+    checkExpiration()
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") checkExpiration();
-    });
+      if (state === "active") checkExpiration()
+    })
     return () => {
-      clearTimeout(timer);
-      subscription.remove();
-    };
-  }, [session, clearSession]);
+      clearTimeout(timer)
+      subscription.remove()
+    }
+  }, [session, clearSession])
 
   const authenticate = useCallback(
     async (sendRequest: () => Promise<AuthenticationSessionResponse>) => {
-      if (busy.current) throw new Error("An authentication request is already running.");
-      busy.current = true;
-      setPending(true);
-      setError(null);
-      const currentRevision = ++revision.current;
+      if (busy.current) throw new Error("An authentication request is already running.")
+      busy.current = true
+      setPending(true)
+      setError(null)
+      const currentRevision = ++revision.current
       try {
-        const result = await authenticateMutation.mutateAsync(sendRequest);
+        const result = await authenticateMutation.mutateAsync(sendRequest)
         if (!isLoggedIn(result.session)) {
-          throw new ApiError("The server returned an invalid session.", 0, "INVALID_SESSION");
+          throw new ApiError("The server returned an invalid session.", 0, "INVALID_SESSION")
         }
-        await sessionStorage.setToken(result.session.token);
-        if (currentRevision !== revision.current) return;
-        queryClient.removeQueries();
-        setApiToken(result.session.token);
-        queryClient.setQueryData(authQueryKeys.session, result);
-        setAuthenticated(true);
+        await sessionStorage.setToken(result.session.token)
+        if (currentRevision !== revision.current) return
+        queryClient.removeQueries()
+        setApiToken(result.session.token)
+        queryClient.setQueryData(authQueryKeys.session, result)
+        setAuthenticated(true)
       } catch (cause) {
         setError(
           cause instanceof Error ? cause.message : "Authentication failed. Please try again.",
-        );
-        throw cause;
+        )
+        throw cause
       } finally {
-        busy.current = false;
-        setPending(false);
+        busy.current = false
+        setPending(false)
       }
     },
     [authenticateMutation.mutateAsync, queryClient, setAuthenticated],
-  );
+  )
 
   const signIn = useCallback(
     (email: string, password: string) => authenticate(() => sendSignIn({ email, password })),
     [authenticate],
-  );
+  )
   const signUp = useCallback(
     (body: SignUpBody) => authenticate(() => sendSignUp(body)),
     [authenticate],
-  );
+  )
 
-  const requestPasswordReset = (email: string) => passwordResetMutation.mutateAsync(email);
+  const requestPasswordReset = (email: string) => passwordResetMutation.mutateAsync(email)
   const verifyPasswordReset = (email: string, code: string) =>
-    verifyResetMutation.mutateAsync({ email, code });
+    verifyResetMutation.mutateAsync({ email, code })
   const completePasswordReset = (resetToken: string, password: string) =>
-    completeResetMutation.mutateAsync({ resetToken, password });
+    completeResetMutation.mutateAsync({ resetToken, password })
 
   const signOut = useCallback(() => {
-    setError(null);
-    revision.current += 1;
-    const localRevision = revision.current;
+    setError(null)
+    revision.current += 1
+    const localRevision = revision.current
     void signOutMutation.mutateAsync(sendSignOut()).catch((cause) => {
-      if (revision.current !== localRevision) return;
+      if (revision.current !== localRevision) return
       if (!(cause instanceof ApiError && cause.status === 401)) {
         setError(
           "Signed out on this device. The server session could not be revoked; check your connection.",
-        );
+        )
       }
-    });
+    })
     return clearSession().catch(() => {
       if (revision.current === localRevision)
-        setError("Signed out on this device, but saved credentials could not be removed.");
-    });
-  }, [clearSession, signOutMutation.mutateAsync]);
+        setError("Signed out on this device, but saved credentials could not be removed.")
+    })
+  }, [clearSession, signOutMutation.mutateAsync])
   const deleteAccount = useCallback(async () => {
-    if (busy.current) return;
-    busy.current = true;
-    setError(null);
-    setPending(true);
+    if (busy.current) return
+    busy.current = true
+    setError(null)
+    setPending(true)
     try {
-      await deleteAccountMutation.mutateAsync();
-      await clearSession();
+      await deleteAccountMutation.mutateAsync()
+      await clearSession()
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) {
-        await clearSession();
-        return;
+        await clearSession()
+        return
       }
       setError(
         cause instanceof Error ? cause.message : "Unable to delete your account. Please try again.",
-      );
-      throw cause;
+      )
+      throw cause
     } finally {
-      busy.current = false;
-      setPending(false);
+      busy.current = false
+      setPending(false)
     }
-  }, [clearSession, deleteAccountMutation.mutateAsync]);
+  }, [clearSession, deleteAccountMutation.mutateAsync])
 
   const updateUser = useCallback(
     async (body: UpdateUserBody) => {
-      const currentRevision = revision.current;
+      const currentRevision = revision.current
       try {
-        const result = await updateUserMutation.mutateAsync(body);
+        const result = await updateUserMutation.mutateAsync(body)
         if (currentRevision === revision.current) {
           queryClient.setQueryData<AuthenticationSessionResponse>(
             authQueryKeys.session,
             (previous) => (previous ? { ...previous, user: result } : previous),
-          );
+          )
         }
-        await queryClient.invalidateQueries({ queryKey: ["meals", result.id, "summary"] });
+        await queryClient.invalidateQueries({ queryKey: ["meals", result.id, "summary"] })
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Unable to update your profile.");
-        throw cause;
+        setError(cause instanceof Error ? cause.message : "Unable to update your profile.")
+        throw cause
       }
     },
     [queryClient, updateUserMutation.mutateAsync],
-  );
+  )
 
   return (
     <AuthContext.Provider
@@ -319,11 +319,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     >
       {children}
     </AuthContext.Provider>
-  );
+  )
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used within AuthProvider.");
-  return context;
+  const context = useContext(AuthContext)
+  if (!context) throw new Error("useAuth must be used within AuthProvider.")
+  return context
 }

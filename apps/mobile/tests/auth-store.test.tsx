@@ -1,19 +1,19 @@
-import { type AxiosResponse } from "axios";
-import { act, renderHook, waitFor } from "@testing-library/react-native";
-import type { QueryClient } from "@tanstack/react-query";
+import { type AxiosResponse } from "axios"
+import { act, renderHook, waitFor } from "@testing-library/react-native"
+import type { QueryClient } from "@tanstack/react-query"
 import {
   AuthProvider,
   useAuth,
   type AuthUser,
   type AuthenticationSessionResponse,
-} from "@/features/auth/auth-store";
-import { sessionStorage } from "@/features/auth/session-storage";
-import { setApiToken } from "@/lib/api";
-import { createQueryWrapper } from "./query-wrapper";
+} from "@/features/auth/auth-store"
+import { sessionStorage } from "@/features/auth/session-storage"
+import { setApiToken } from "@/lib/api"
+import { createQueryWrapper } from "./query-wrapper"
 
 jest.mock("@/features/auth/session-storage", () => ({
   sessionStorage: { getToken: jest.fn(), setToken: jest.fn(), clearToken: jest.fn() },
-}));
+}))
 
 const mockAuthenticationUser: AuthUser = {
   id: "member-a",
@@ -31,7 +31,7 @@ const mockAuthenticationUser: AuthUser = {
   weeklySessions: 3,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
-};
+}
 
 function mockAuthenticationSession(
   expiresAt = new Date(Date.now() + 86_400_000).toISOString(),
@@ -44,134 +44,134 @@ function mockAuthenticationSession(
       userId: mockAuthenticationUser.id,
       expiresAt,
     },
-  };
+  }
 }
 
 jest.mock("axios", () => {
-  const actual = jest.requireActual("axios");
-  actual.default.defaults.adapter = jest.requireActual("./http-adapter").httpAdapter;
-  return actual;
-});
-import { request } from "./http-adapter";
-const saved = jest.mocked(sessionStorage);
-const user = mockAuthenticationUser;
-const authenticated = () => mockAuthenticationSession();
-const json = (status: number, data: unknown) => ({ status, data }) as AxiosResponse<unknown>;
+  const actual = jest.requireActual("axios")
+  actual.default.defaults.adapter = jest.requireActual("./http-adapter").httpAdapter
+  return actual
+})
+import { request } from "./http-adapter"
+const saved = jest.mocked(sessionStorage)
+const user = mockAuthenticationUser
+const authenticated = () => mockAuthenticationSession()
+const json = (status: number, data: unknown) => ({ status, data }) as AxiosResponse<unknown>
 
 beforeEach(() => {
-  request.mockReset();
-  saved.getToken.mockResolvedValue(null);
-  saved.setToken.mockResolvedValue(undefined);
-  saved.clearToken.mockResolvedValue(undefined);
-  setApiToken(null);
-});
+  request.mockReset()
+  saved.getToken.mockResolvedValue(null)
+  saved.setToken.mockResolvedValue(undefined)
+  saved.clearToken.mockResolvedValue(undefined)
+  setApiToken(null)
+})
 
 afterEach(() => {
-  setApiToken(null);
-});
+  setApiToken(null)
+})
 
 test("restores a saved session only after the server validates it", async () => {
-  saved.getToken.mockResolvedValue("secret-a");
-  request.mockResolvedValue(json(200, authenticated()));
+  saved.getToken.mockResolvedValue("secret-a")
+  request.mockResolvedValue(json(200, authenticated()))
   const { result } = await renderHook(() => useAuth(), {
     wrapper: createQueryWrapper(AuthProvider),
-  });
-  await waitFor(() => expect(result.current.loading).toBe(false));
-  expect(result.current.user?.id).toBe("member-a");
-  expect(request.mock.calls[0][0]?.headers).toHaveProperty("Authorization", "Bearer secret-a");
-});
+  })
+  await waitFor(() => expect(result.current.loading).toBe(false))
+  expect(result.current.user?.id).toBe("member-a")
+  expect(request.mock.calls[0][0]?.headers).toHaveProperty("Authorization", "Bearer secret-a")
+})
 
 test("revoked credentials cannot restore private account state", async () => {
-  saved.getToken.mockResolvedValue("revoked-token");
-  request.mockResolvedValue(json(401, { message: "Session expired" }));
+  saved.getToken.mockResolvedValue("revoked-token")
+  request.mockResolvedValue(json(401, { message: "Session expired" }))
   const { result } = await renderHook(() => useAuth(), {
     wrapper: createQueryWrapper(AuthProvider),
-  });
-  await waitFor(() => expect(result.current.loading).toBe(false));
-  expect(result.current.user).toBeNull();
-  expect(saved.clearToken).toHaveBeenCalled();
-});
+  })
+  await waitFor(() => expect(result.current.loading).toBe(false))
+  expect(result.current.user).toBeNull()
+  expect(saved.clearToken).toHaveBeenCalled()
+})
 
 test("failed login stays signed out and surfaces server error", async () => {
   const { result } = await renderHook(() => useAuth(), {
     wrapper: createQueryWrapper(AuthProvider),
-  });
-  await waitFor(() => expect(result.current.loading).toBe(false));
-  request.mockResolvedValue(json(401, { message: "Invalid email or password" }));
+  })
+  await waitFor(() => expect(result.current.loading).toBe(false))
+  request.mockResolvedValue(json(401, { message: "Invalid email or password" }))
   await act(async () => {
     await expect(result.current.signIn("member@example.com", "wrong")).rejects.toMatchObject({
       status: 401,
-    });
-  });
-  expect(result.current.user).toBeNull();
-  expect(result.current.error).toBe("Invalid email or password");
-  expect(saved.setToken).not.toHaveBeenCalled();
-});
+    })
+  })
+  expect(result.current.user).toBeNull()
+  expect(result.current.error).toBe("Invalid email or password")
+  expect(saved.setToken).not.toHaveBeenCalled()
+})
 
 test("sign-out clears local private state before server revocation completes", async () => {
-  const client = { current: null as QueryClient | null };
+  const client = { current: null as QueryClient | null }
   const wrapper = createQueryWrapper(AuthProvider, (queryClient) => {
-    client.current = queryClient;
-  });
-  const { result } = await renderHook(() => useAuth(), { wrapper });
-  await waitFor(() => expect(result.current.loading).toBe(false));
-  request.mockResolvedValueOnce(json(200, authenticated()));
+    client.current = queryClient
+  })
+  const { result } = await renderHook(() => useAuth(), { wrapper })
+  await waitFor(() => expect(result.current.loading).toBe(false))
+  request.mockResolvedValueOnce(json(200, authenticated()))
   await act(async () => {
-    await result.current.signIn("member@example.com", "correct");
-  });
-  expect(result.current.user?.id).toBe(user.id);
+    await result.current.signIn("member@example.com", "correct")
+  })
+  expect(result.current.user?.id).toBe(user.id)
   const { promise: revocation, resolve: resolveRevocation } =
-    Promise.withResolvers<AxiosResponse<unknown>>();
-  request.mockReturnValueOnce(revocation);
+    Promise.withResolvers<AxiosResponse<unknown>>()
+  request.mockReturnValueOnce(revocation)
   await act(async () => {
-    await result.current.signOut();
-  });
-  expect(result.current.user).toBeNull();
-  expect(saved.clearToken).toHaveBeenCalled();
+    await result.current.signOut()
+  })
+  expect(result.current.user).toBeNull()
+  expect(saved.clearToken).toHaveBeenCalled()
   await act(async () => {
-    resolveRevocation(json(200, {}));
-    await revocation;
-    const { promise: notification, resolve } = Promise.withResolvers<void>();
-    setTimeout(resolve, 0);
-    await notification;
-  });
-  expect(request.mock.calls[1][0]?.headers).toHaveProperty("Authorization", "Bearer secret-a");
-});
+    resolveRevocation(json(200, {}))
+    await revocation
+    const { promise: notification, resolve } = Promise.withResolvers<void>()
+    setTimeout(resolve, 0)
+    await notification
+  })
+  expect(request.mock.calls[1][0]?.headers).toHaveProperty("Authorization", "Bearer secret-a")
+})
 
 test("deleteAccount deletes user on server and clears local private state", async () => {
   const { result } = await renderHook(() => useAuth(), {
     wrapper: createQueryWrapper(AuthProvider),
-  });
-  await waitFor(() => expect(result.current.loading).toBe(false));
-  request.mockResolvedValueOnce(json(200, authenticated()));
+  })
+  await waitFor(() => expect(result.current.loading).toBe(false))
+  request.mockResolvedValueOnce(json(200, authenticated()))
   await act(async () => {
-    await result.current.signIn("member@example.com", "correct");
-  });
-  expect(result.current.user?.id).toBe(user.id);
-  request.mockResolvedValueOnce(json(200, { success: true }));
+    await result.current.signIn("member@example.com", "correct")
+  })
+  expect(result.current.user?.id).toBe(user.id)
+  request.mockResolvedValueOnce(json(200, { success: true }))
   await act(async () => {
-    await result.current.deleteAccount();
-  });
-  expect(result.current.user).toBeNull();
-  expect(saved.clearToken).toHaveBeenCalled();
-});
+    await result.current.deleteAccount()
+  })
+  expect(result.current.user).toBeNull()
+  expect(saved.clearToken).toHaveBeenCalled()
+})
 
 test("failed account deletion keeps the signed-in user and local session", async () => {
   const { result } = await renderHook(() => useAuth(), {
     wrapper: createQueryWrapper(AuthProvider),
-  });
-  await waitFor(() => expect(result.current.loading).toBe(false));
-  request.mockResolvedValueOnce(json(200, authenticated()));
+  })
+  await waitFor(() => expect(result.current.loading).toBe(false))
+  request.mockResolvedValueOnce(json(200, authenticated()))
   await act(async () => {
-    await result.current.signIn("member@example.com", "correct");
-  });
-  request.mockResolvedValueOnce(json(500, { message: "Server unavailable" }));
+    await result.current.signIn("member@example.com", "correct")
+  })
+  request.mockResolvedValueOnce(json(500, { message: "Server unavailable" }))
 
   await act(async () => {
-    await expect(result.current.deleteAccount()).rejects.toMatchObject({ status: 500 });
-  });
+    await expect(result.current.deleteAccount()).rejects.toMatchObject({ status: 500 })
+  })
 
-  expect(result.current.user?.id).toBe(user.id);
-  expect(saved.clearToken).not.toHaveBeenCalled();
-  expect(result.current.pending).toBe(false);
-});
+  expect(result.current.user?.id).toBe(user.id)
+  expect(saved.clearToken).not.toHaveBeenCalled()
+  expect(result.current.pending).toBe(false)
+})

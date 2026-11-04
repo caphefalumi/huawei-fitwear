@@ -1,41 +1,41 @@
-import { useQuery } from "@tanstack/react-query";
-import { FetchErrorState, LoadingSkeleton } from "@/components/fetch-states";
-import { Text, View } from "react-native";
+import { useQuery } from "@tanstack/react-query"
+import { FetchErrorState, LoadingSkeleton } from "@/components/fetch-states"
+import { Text, View } from "react-native"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
-import { useAuth } from "@/features/auth/store/auth.store";
-import { apiErrorMessage, apiRequest } from "@/lib/api";
-import { MealResultScreen } from "@/features/meals/meal-result-screen";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
+import { useAuth } from "@/features/auth/store/auth.store"
+import { apiErrorMessage, apiRequest } from "@/lib/api"
+import { MealResultScreen } from "@/features/meals/meal-result-screen"
 import {
   fromApiMeal,
   mealsQueryKeys,
   useMeals,
   type ApiMealItem,
   type MealType,
-} from "@/features/meals/meals-store";
+} from "@/features/meals/meals-store"
 
 export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: () => void }) {
-  const { user } = useAuth();
-  const { history, loading } = useMeals();
-  const saved = history.find((item) => item.id === logId);
+  const { user } = useAuth()
+  const { history, loading } = useMeals()
+  const saved = history.find((item) => item.id === logId)
   const detailQuery = useQuery({
     queryKey: mealsQueryKeys.detail(user?.id ?? "signed-out", logId ?? "missing"),
     enabled: Boolean(logId && user?.id && !saved && !loading),
     queryFn: async ({ signal }) => {
       const meal = await apiRequest<{
-        id: string;
-        mealType: MealType;
-        targetDate: string;
-        loggedAt: string;
-        imageUrl: string | null;
-        items: ApiMealItem[];
-      }>(`/meals/${encodeURIComponent(logId!)}`, { signal });
-      return fromApiMeal(meal);
+        id: string
+        mealType: MealType
+        targetDate: string
+        loggedAt: string
+        imageUrl: string | null
+        items: ApiMealItem[]
+      }>(`/meals/${encodeURIComponent(logId!)}`, { signal })
+      return fromApiMeal(meal)
     },
-  });
-  const loaded = detailQuery.data;
-  const error = detailQuery.error ? apiErrorMessage(detailQuery.error, "this meal") : null;
+  })
+  const loaded = detailQuery.data
+  const error = detailQuery.error ? apiErrorMessage(detailQuery.error, "this meal") : null
 
   if (logId && !saved && !loaded) {
     return (
@@ -78,7 +78,7 @@ export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: ()
           <Text style={{ color: C.accent }}>Back</Text>
         </Pressable>
       </View>
-    );
+    )
   }
 
   return (
@@ -95,5 +95,5 @@ export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: ()
       ) : null}
       <MealResultScreen log={saved ?? loaded ?? undefined} />
     </>
-  );
+  )
 }

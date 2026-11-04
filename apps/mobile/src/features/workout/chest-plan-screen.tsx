@@ -1,28 +1,28 @@
-import { Image } from "expo-image";
-import { router } from "expo-router";
-import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from "expo-image"
+import { router } from "expo-router"
+import { useState } from "react"
+import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
-import { useHealth } from "@/features/health/health-store";
-import { BackHeader, Card } from "@/features/home/ui";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
+import { useHealth } from "@/features/health/health-store"
+import { BackHeader, Card } from "@/features/home/ui"
 
 const icons = {
   play: require("@/assets/images/workout/play.svg"),
   lock: require("@/assets/images/recovery/lock.svg"),
-};
+}
 
 type Exercise = {
-  key: string;
-  name: string;
-  sets: number;
-  reps: number;
-  load: number;
-  loadUnit: string;
-  step: number;
-};
+  key: string
+  name: string
+  sets: number
+  reps: number
+  load: number
+  loadUnit: string
+  step: number
+}
 
 const EXERCISES: Exercise[] = [
   {
@@ -52,20 +52,20 @@ const EXERCISES: Exercise[] = [
     loadUnit: "kg/side",
     step: 2.5,
   },
-];
+]
 
 const SUMMARY = [
   { value: "3", label: "exercises" },
   { value: "9", label: "sets" },
   { value: "35", label: "min" },
-];
+]
 
 export function ChestPlanScreen() {
-  const insets = useSafeAreaInsets();
-  const { recovery } = useHealth();
+  const insets = useSafeAreaInsets()
+  const { recovery } = useHealth()
   const [loads, setLoads] = useState<Record<string, number>>(() =>
     Object.fromEntries(EXERCISES.map((exercise) => [exercise.key, exercise.load])),
-  );
+  )
 
   function adjust(exercise: Exercise, direction: -1 | 1) {
     setLoads((prev) => ({
@@ -74,7 +74,7 @@ export function ChestPlanScreen() {
         0,
         Number(((prev[exercise.key] ?? 0) + direction * exercise.step).toFixed(1)),
       ),
-    }));
+    }))
   }
 
   return (
@@ -183,7 +183,7 @@ export function ChestPlanScreen() {
         <Text style={styles.footnote}>Resume your regular plan when you’re ready.</Text>
       ) : null}
     </ScrollView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -409,4 +409,4 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: C.textMuted,
   },
-});
+})

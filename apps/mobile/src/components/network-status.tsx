@@ -1,11 +1,11 @@
-import { useNetworkState } from "expo-network";
-import { Text, View } from "react-native";
+import { useNetworkState } from "expo-network"
+import { Text, View } from "react-native"
 
-import { Palette as C } from "@/constants/palette";
+import { Palette as C } from "@/constants/palette"
 
 export function NetworkStatusBanner() {
-  const state = useNetworkState();
-  if (state.isInternetReachable !== false && state.isConnected !== false) return null;
+  const state = useNetworkState()
+  if (state.isInternetReachable !== false && state.isConnected !== false) return null
 
   return (
     <View
@@ -27,5 +27,5 @@ export function NetworkStatusBanner() {
         You're offline. Saved information may be out of date.
       </Text>
     </View>
-  );
+  )
 }

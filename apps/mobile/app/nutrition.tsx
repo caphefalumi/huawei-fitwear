@@ -1,1 +1,1 @@
-export { NutritionScreen as default } from "@/features/home";
+export { NutritionScreen as default } from "@/features/home"

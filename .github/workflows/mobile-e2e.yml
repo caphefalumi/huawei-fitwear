@@ -38,11 +38,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: 26
-
       - name: Install workspace dependencies
         run: bun install --frozen-lockfile
 
@@ -88,6 +83,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Download Android release APK
         uses: actions/download-artifact@v8
         with:
@@ -106,11 +106,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-
-      - name: Setup Node.js for reporting
-        uses: actions/setup-node@v5
-        with:
-          node-version: 26
 
       - name: Install Maestro CLI
         run: |
@@ -173,4 +168,4 @@ jobs:
           RECORDING_URL: ${{ steps.upload-recording.outputs.artifact-url }}
           ARTIFACTS_URL: ${{ steps.upload-artifacts.outputs.artifact-url }}
           MAESTRO_EXIT_CODE: ${{ env.MAESTRO_EXIT_CODE }}
-        run: node .github/scripts/generate-maestro-summary.mjs
+        run: bun .github/scripts/generate-maestro-summary.ts

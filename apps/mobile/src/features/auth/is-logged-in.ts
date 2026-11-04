@@ -1,1 +1,1 @@
-export * from "./utils/is-logged-in";
+export * from "./utils/is-logged-in"

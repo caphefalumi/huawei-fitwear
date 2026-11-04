@@ -1,6 +1,6 @@
-import { Elysia, t, type Static } from "elysia";
-import { authGuard } from "../auth/service";
-import { Foods } from "./service";
+import { Elysia, t, type Static } from "elysia"
+import { authGuard } from "../auth/service"
+import { Foods } from "./service"
 
 const FoodModel = {
   searchQuery: t.Object({
@@ -11,10 +11,10 @@ const FoodModel = {
   portionQuery: t.Object({
     weightG: t.Numeric({ minimum: 0 }),
   }),
-} as const;
+} as const
 
-export type FoodSearchQuery = Static<typeof FoodModel.searchQuery>;
-export type FoodPortionQuery = Static<typeof FoodModel.portionQuery>;
+export type FoodSearchQuery = Static<typeof FoodModel.searchQuery>
+export type FoodPortionQuery = Static<typeof FoodModel.portionQuery>
 export const foods = new Elysia({
   prefix: "/foods",
   detail: { tags: ["Foods"] },
@@ -43,4 +43,4 @@ export const foods = new Elysia({
         description: "Returns calories and macros for the requested gram weight of the food.",
       },
     },
-  );
+  )

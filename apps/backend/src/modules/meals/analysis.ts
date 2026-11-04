@@ -1,16 +1,16 @@
-import { Elysia, status, t, type Static } from "elysia";
-import { Value } from "@sinclair/typebox/value";
-import { getAi, getKv } from "../../db";
-import { consumeTokenBucket } from "../../lib/token-bucket";
-import { authGuard } from "../auth/service";
-import { decodeMealImage, readMealImage } from "../../lib/meal-images";
-import { Meals } from "./service";
+import { Elysia, status, t, type Static } from "elysia"
+import { Value } from "@sinclair/typebox/value"
+import { getAi, getKv } from "../../db"
+import { consumeTokenBucket } from "../../lib/token-bucket"
+import { authGuard } from "../auth/service"
+import { decodeMealImage, readMealImage } from "../../lib/meal-images"
+import { Meals } from "./service"
 
 const analysisBody = t.Object({
   image: t.String({ minLength: 16, maxLength: 8_000_000, pattern: "^[A-Za-z0-9+/]+={0,2}$" }),
   mimeType: t.Union([t.Literal("image/jpeg"), t.Literal("image/png")]),
   description: t.Optional(t.String({ maxLength: 2000 })),
-});
+})
 
 export const mealAnalysisResult = t.Object({
   items: t.Array(
@@ -26,29 +26,29 @@ export const mealAnalysisResult = t.Object({
     { maxItems: 30 },
   ),
   aiConfidenceOverall: t.Optional(t.Number({ minimum: 0, maximum: 1 })),
-});
+})
 
 export function parseMealAnalysis(text: string): Static<typeof mealAnalysisResult> {
   const cleaned = text
     .trim()
     .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```$/, "");
-  let parsed: unknown;
+    .replace(/\s*```$/, "")
+  let parsed: unknown
   try {
-    parsed = JSON.parse(cleaned);
+    parsed = JSON.parse(cleaned)
   } catch {
     throw status(502, {
       success: false,
       message: "Image analysis returned unreadable data. Please retry or enter food manually.",
-    });
+    })
   }
   if (!Value.Check(mealAnalysisResult, parsed)) {
     throw status(502, {
       success: false,
       message: "Image analysis returned invalid nutrition data. Please enter food manually.",
-    });
+    })
   }
-  return parsed;
+  return parsed
 }
 
 function completionText(output: unknown): string {
@@ -58,23 +58,23 @@ function completionText(output: unknown): string {
     "choices" in output &&
     Array.isArray(output.choices)
   ) {
-    const choice: unknown = output.choices[0];
+    const choice: unknown = output.choices[0]
     if (choice && typeof choice === "object" && "message" in choice) {
-      const message = choice.message;
+      const message = choice.message
       if (
         message &&
         typeof message === "object" &&
         "content" in message &&
         typeof message.content === "string"
       ) {
-        return message.content;
+        return message.content
       }
     }
   }
   throw status(502, {
     success: false,
     message: "Image analysis did not return a result. Please retry.",
-  });
+  })
 }
 
 export const mealAnalysis = new Elysia({ prefix: "/meals", detail: { tags: ["Meals"] } })
@@ -82,37 +82,37 @@ export const mealAnalysis = new Elysia({ prefix: "/meals", detail: { tags: ["Mea
   .get(
     "/:mealId/photo",
     async ({ user, params, set }) => {
-      await Meals.byId(user.id, params.mealId);
-      set.headers["Cache-Control"] = "private, no-store";
-      return readMealImage(user.id, params.mealId);
+      await Meals.byId(user.id, params.mealId)
+      set.headers["Cache-Control"] = "private, no-store"
+      return readMealImage(user.id, params.mealId)
     },
     { auth: true, detail: { summary: "Read the authenticated user’s private meal photo" } },
   )
   .post(
     "/analyze",
     async ({ user, body, set }) => {
-      const ai = getAi();
+      const ai = getAi()
       if (!ai)
         throw status(503, {
           success: false,
           message: "Cloud image analysis is not configured. Manual food entry is available.",
-        });
-      const kv = getKv();
+        })
+      const kv = getKv()
       if (kv) {
         const allowance = await consumeTokenBucket(kv, `rl:meal-analysis:${user.id}`, {
           capacity: 10,
           refillPerSecond: 10 / 3600,
-        });
+        })
         if (!allowance.allowed) {
-          set.headers["Retry-After"] = String(allowance.retryAfterSec);
+          set.headers["Retry-After"] = String(allowance.retryAfterSec)
           throw status(429, {
             success: false,
             message: "Image analysis limit reached. Please try later or enter food manually.",
-          });
+          })
         }
       }
-      decodeMealImage({ data: body.image, mimeType: body.mimeType });
-      let output: unknown;
+      decodeMealImage({ data: body.image, mimeType: body.mimeType })
+      let output: unknown
       try {
         output = await ai.run("@cf/google/gemma-4-26b-a4b-it", {
           messages: [
@@ -139,18 +139,18 @@ export const mealAnalysis = new Elysia({ prefix: "/meals", detail: { tags: ["Mea
           max_completion_tokens: 1500,
           temperature: 0.1,
           chat_template_kwargs: { enable_thinking: false },
-        });
+        })
       } catch {
         throw status(502, {
           success: false,
           message: "Cloud image analysis is unavailable. Please retry or enter food manually.",
-        });
+        })
       }
-      return parseMealAnalysis(completionText(output));
+      return parseMealAnalysis(completionText(output))
     },
     {
       auth: true,
       body: analysisBody,
       detail: { summary: "Estimate photographed meal nutrition with Workers AI for user review" },
     },
-  );
+  )

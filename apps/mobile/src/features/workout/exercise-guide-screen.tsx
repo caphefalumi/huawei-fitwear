@@ -1,28 +1,28 @@
-import { Image } from "expo-image";
-import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from "expo-image"
+import { router, useLocalSearchParams } from "expo-router"
+import { useState } from "react"
+import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
-import { useHealth } from "@/features/health/health-store";
-import { BackHeader, Card } from "@/features/home/ui";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
+import { useHealth } from "@/features/health/health-store"
+import { BackHeader, Card } from "@/features/home/ui"
 
 const icons = {
   play: require("@/assets/images/workout/play.svg"),
   shieldCheck: require("@/assets/images/home/shield-check.svg"),
-};
+}
 
 type Guide = {
-  name: string;
-  sets: number;
-  reps: number;
-  load: number;
-  loadUnit: string;
-  step: number;
-  cues: { title: string; detail: string }[];
-};
+  name: string
+  sets: number
+  reps: number
+  load: number
+  loadUnit: string
+  step: number
+  cues: { title: string; detail: string }[]
+}
 
 const GUIDES: Record<string, Guide> = {
   "bench-press": {
@@ -76,17 +76,17 @@ const GUIDES: Record<string, Guide> = {
       { title: "Slow return", detail: "Let the cables pull back over two seconds." },
     ],
   },
-};
+}
 
 export function ExerciseGuideScreen() {
-  const insets = useSafeAreaInsets();
-  const { name } = useLocalSearchParams<{ name?: string }>();
-  const { recovery } = useHealth();
-  const guide = GUIDES[name ?? "bench-press"] ?? GUIDES["bench-press"];
-  const [load, setLoad] = useState(guide.load);
+  const insets = useSafeAreaInsets()
+  const { name } = useLocalSearchParams<{ name?: string }>()
+  const { recovery } = useHealth()
+  const guide = GUIDES[name ?? "bench-press"] ?? GUIDES["bench-press"]
+  const [load, setLoad] = useState(guide.load)
 
   function adjust(direction: -1 | 1) {
-    setLoad((prev) => Math.max(0, Number((prev + direction * guide.step).toFixed(1))));
+    setLoad((prev) => Math.max(0, Number((prev + direction * guide.step).toFixed(1))))
   }
 
   return (
@@ -183,7 +183,7 @@ export function ExerciseGuideScreen() {
         <Text style={styles.primaryLabel}>Start workout</Text>
       </Pressable>
     </ScrollView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -411,4 +411,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: C.onAccent,
   },
-});
+})

@@ -11,7 +11,7 @@ export const Palette = {
   accentTint: "#F5E8E8",
   previewTint: "#F7F5F2",
   onAccent: "#FFFFFF",
-} as const;
+} as const
 
 export const tokens = {
   colors: Palette,
@@ -28,4 +28,4 @@ export const tokens = {
     lg: 16,
     full: 9999,
   },
-} as const;
+} as const

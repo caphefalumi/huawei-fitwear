@@ -23,7 +23,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react"
 import {
   Animated,
   StyleSheet,
@@ -35,44 +35,44 @@ import {
   type ScrollViewInstance,
   type StyleProp,
   type ViewStyle,
-} from "react-native";
+} from "react-native"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
 
-const VISIBLE_ROWS = 5;
-const MAX_STEP = Math.trunc((VISIBLE_ROWS + 2) / 2);
-const STEP_DEGREES = 90 / MAX_STEP;
-const DEGREES = Array.from({ length: MAX_STEP }, (_, index) => (index + 1) * STEP_DEGREES);
+const VISIBLE_ROWS = 5
+const MAX_STEP = Math.trunc((VISIBLE_ROWS + 2) / 2)
+const STEP_DEGREES = 90 / MAX_STEP
+const DEGREES = Array.from({ length: MAX_STEP }, (_, index) => (index + 1) * STEP_DEGREES)
 
 type WheelPickerProps = {
-  values: number[];
-  value: number;
-  onChange: (next: number) => void;
-  format: (value: number) => string;
-  label?: string;
-  showActions?: boolean;
-  style?: StyleProp<ViewStyle>;
-  isUnavailable?: (value: number) => boolean;
-};
+  values: number[]
+  value: number
+  onChange: (next: number) => void
+  format: (value: number) => string
+  label?: string
+  showActions?: boolean
+  style?: StyleProp<ViewStyle>
+  isUnavailable?: (value: number) => boolean
+}
 
-type Face = { index: number; degree: number; offsetY: number; opacity: number };
+type Face = { index: number; degree: number; offsetY: number; opacity: number }
 
 function createFaces(itemHeight: number): Face[] {
-  const heights = DEGREES.map((degree) => itemHeight * Math.cos((degree * Math.PI) / 180));
+  const heights = DEGREES.map((degree) => itemHeight * Math.cos((degree * Math.PI) / 180))
   const offsets = heights.map((height, index) => {
-    const freeSpace = itemHeight - height;
+    const freeSpace = itemHeight - height
     return heights
       .slice(0, index)
-      .reduce((sum, previous) => sum + itemHeight - previous, freeSpace / 2);
-  });
-  const opacity = (index: number) => [0, 0.2, 0.35, 0.45, 0.5][index] ?? 1;
+      .reduce((sum, previous) => sum + itemHeight - previous, freeSpace / 2)
+  })
+  const opacity = (index: number) => [0, 0.2, 0.35, 0.45, 0.5][index] ?? 1
   const outer = DEGREES.map((degree, index) => ({
     index: -(index + 1),
     degree,
     offsetY: -offsets[index],
     opacity: opacity(DEGREES.length - 1 - index),
-  })).reverse();
+  })).reverse()
   return [
     ...outer,
     { index: 0, degree: 0, offsetY: 0, opacity: 1 },
@@ -82,7 +82,7 @@ function createFaces(itemHeight: number): Face[] {
       offsetY: offsets[index],
       opacity: opacity(DEGREES.length - 1 - index),
     })),
-  ];
+  ]
 }
 
 /** Perspective wheel adapted from Quidone's animated face interpolation. */
@@ -96,39 +96,39 @@ export function WheelPicker({
   style,
   isUnavailable,
 }: WheelPickerProps) {
-  const scrollRef = useRef<ScrollViewInstance>(null);
-  const { fontScale } = useWindowDimensions();
-  const itemHeight = Math.max(48, Math.ceil(44 * fontScale));
-  const pickerHeight = itemHeight * VISIBLE_ROWS;
-  const selectedIndex = Math.max(0, values.indexOf(value));
-  const scrollY = useRef(new Animated.Value(selectedIndex * itemHeight)).current;
-  const faces = useMemo(() => createFaces(itemHeight), [itemHeight]);
+  const scrollRef = useRef<ScrollViewInstance>(null)
+  const { fontScale } = useWindowDimensions()
+  const itemHeight = Math.max(48, Math.ceil(44 * fontScale))
+  const pickerHeight = itemHeight * VISIBLE_ROWS
+  const selectedIndex = Math.max(0, values.indexOf(value))
+  const scrollY = useRef(new Animated.Value(selectedIndex * itemHeight)).current
+  const faces = useMemo(() => createFaces(itemHeight), [itemHeight])
   const onScroll = useMemo(
     () =>
       Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
         useNativeDriver: true,
       }),
     [scrollY],
-  );
+  )
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ y: selectedIndex * itemHeight, animated: false });
-  }, [selectedIndex, itemHeight]);
+    scrollRef.current?.scrollTo({ y: selectedIndex * itemHeight, animated: false })
+  }, [selectedIndex, itemHeight])
 
   function indexFrom(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    const raw = Math.round(event.nativeEvent.contentOffset.y / itemHeight);
-    return Math.max(0, Math.min(values.length - 1, raw));
+    const raw = Math.round(event.nativeEvent.contentOffset.y / itemHeight)
+    return Math.max(0, Math.min(values.length - 1, raw))
   }
 
   function commit(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    if (values.length > 0) onChange(values[indexFrom(event)]);
+    if (values.length > 0) onChange(values[indexFrom(event)])
   }
 
   function adjust(offset: number) {
-    const next = Math.max(0, Math.min(values.length - 1, selectedIndex + offset));
-    if (next === selectedIndex || values.length === 0) return;
-    scrollRef.current?.scrollTo({ y: next * itemHeight, animated: false });
-    onChange(values[next]);
+    const next = Math.max(0, Math.min(values.length - 1, selectedIndex + offset))
+    if (next === selectedIndex || values.length === 0) return
+    scrollRef.current?.scrollTo({ y: next * itemHeight, animated: false })
+    onChange(values[next])
   }
 
   return (
@@ -145,8 +145,8 @@ export function WheelPicker({
         }}
         accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
         onAccessibilityAction={({ nativeEvent }) => {
-          if (nativeEvent.actionName === "increment") adjust(1);
-          if (nativeEvent.actionName === "decrement") adjust(-1);
+          if (nativeEvent.actionName === "increment") adjust(1)
+          if (nativeEvent.actionName === "decrement") adjust(-1)
         }}
         style={{ height: pickerHeight }}
       >
@@ -170,28 +170,28 @@ export function WheelPicker({
           onScroll={onScroll}
           onMomentumScrollEnd={commit}
           onScrollEndDrag={(event) => {
-            const index = indexFrom(event);
-            if (!event.nativeEvent.velocity?.y || isUnavailable?.(values[index])) commit(event);
+            const index = indexFrom(event)
+            if (!event.nativeEvent.velocity?.y || isUnavailable?.(values[index])) commit(event)
           }}
         >
           {values.map((item, index) => {
-            const inputRange = faces.map((face) => itemHeight * (index + face.index));
+            const inputRange = faces.map((face) => itemHeight * (index + face.index))
             const opacity = scrollY.interpolate({
               inputRange,
               outputRange: faces.map((face) => face.opacity),
               extrapolate: "clamp",
-            });
+            })
             const rotateX = scrollY.interpolate({
               inputRange,
               outputRange: faces.map((face) => `${face.degree}deg`),
               extrapolate: "extend",
-            });
+            })
             const translateY = scrollY.interpolate({
               inputRange,
               outputRange: faces.map((face) => face.offsetY),
               extrapolate: "extend",
-            });
-            const unavailable = isUnavailable?.(item) ?? false;
+            })
+            const unavailable = isUnavailable?.(item) ?? false
 
             return (
               <Animated.View
@@ -216,7 +216,7 @@ export function WheelPicker({
                   {format(item)}
                 </Text>
               </Animated.View>
-            );
+            )
           })}
         </Animated.ScrollView>
       </View>
@@ -241,7 +241,7 @@ export function WheelPicker({
         </View>
       ) : null}
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -285,4 +285,4 @@ const styles = StyleSheet.create({
   itemLabelUnavailable: {
     color: C.border,
   },
-});
+})

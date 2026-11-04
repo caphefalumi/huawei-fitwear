@@ -1,10 +1,10 @@
-import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router, useLocalSearchParams } from "expo-router"
+import { useEffect, useRef, useState } from "react"
+import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
 import {
   Box,
   Field,
@@ -16,69 +16,69 @@ import {
   SectionTitle,
   ValueInput,
   icons,
-} from "./meals-ui";
-import { Image } from "expo-image";
+} from "./meals-ui"
+import { Image } from "expo-image"
 import {
   useFoodSearch,
   estimatePortion,
   useMeals,
   type FoodEntry,
   type MealEstimate,
-} from "./meals-store";
+} from "./meals-store"
 
-type NutrientKey = "energy" | "protein" | "carbs" | "fat";
+type NutrientKey = "energy" | "protein" | "carbs" | "fat"
 
 const toDraft = (estimate: MealEstimate) => ({
   energy: String(estimate.kcal),
   protein: String(estimate.protein),
   carbs: String(estimate.carbs),
   fat: String(estimate.fat),
-});
+})
 
 export function AddItemScreen() {
-  const insets = useSafeAreaInsets();
-  const { addItem } = useMeals();
-  const { log: mealId } = useLocalSearchParams<{ log?: string }>();
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const active = useRef(true);
+  const insets = useSafeAreaInsets()
+  const { addItem } = useMeals()
+  const { log: mealId } = useLocalSearchParams<{ log?: string }>()
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const active = useRef(true)
   useEffect(() => {
-    active.current = true;
+    active.current = true
     return () => {
-      active.current = false;
-    };
-  }, []);
-  const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<FoodEntry | null>(null);
-  const [amount, setAmount] = useState("180");
+      active.current = false
+    }
+  }, [])
+  const [query, setQuery] = useState("")
+  const [selected, setSelected] = useState<FoodEntry | null>(null)
+  const [amount, setAmount] = useState("180")
   const [draft, setDraft] = useState<Record<NutrientKey, string>>({
     energy: "",
     protein: "",
     carbs: "",
     fat: "",
-  });
-  const [description, setDescription] = useState("");
+  })
+  const [description, setDescription] = useState("")
 
-  const { matches, error: searchError, loading } = useFoodSearch(query);
-  const noMatch = query.trim().length > 0 && !loading && !searchError && matches.length === 0;
+  const { matches, error: searchError, loading } = useFoodSearch(query)
+  const noMatch = query.trim().length > 0 && !loading && !searchError && matches.length === 0
 
   function selectFood(food: FoodEntry) {
-    const estimate = estimatePortion(food, Number(amount) || 100);
-    setSelected(food);
-    setDraft(toDraft(estimate));
+    const estimate = estimatePortion(food, Number(amount) || 100)
+    setSelected(food)
+    setDraft(toDraft(estimate))
   }
 
   function handleAmount(next: string) {
-    setAmount(next);
-    if (!selected) return;
-    const grams = Number(next);
-    if (!Number.isFinite(grams) || grams <= 0) return;
-    setDraft(toDraft(estimatePortion(selected, grams)));
+    setAmount(next)
+    if (!selected) return
+    const grams = Number(next)
+    if (!Number.isFinite(grams) || grams <= 0) return
+    setDraft(toDraft(estimatePortion(selected, grams)))
   }
 
   async function handleAdd() {
-    if (!selected || saving) return;
-    setError(null);
+    if (!selected || saving) return
+    setError(null)
     if (
       !amount.trim() ||
       Number(amount) <= 0 ||
@@ -86,10 +86,10 @@ export function AddItemScreen() {
         (value) => !value.trim() || !Number.isFinite(Number(value)) || Number(value) < 0,
       )
     ) {
-      setError("Enter a positive portion and all nutrition values (zero is allowed).");
-      return;
+      setError("Enter a positive portion and all nutrition values (zero is allowed).")
+      return
     }
-    setSaving(true);
+    setSaving(true)
     try {
       await addItem(
         {
@@ -105,12 +105,12 @@ export function AddItemScreen() {
           glyph: selected.glyph,
         },
         mealId,
-      );
-      if (active.current) router.back();
+      )
+      if (active.current) router.back()
     } catch (cause) {
-      if (active.current) setError(cause instanceof Error ? cause.message : "Could not add item.");
+      if (active.current) setError(cause instanceof Error ? cause.message : "Could not add item.")
     } finally {
-      if (active.current) setSaving(false);
+      if (active.current) setSaving(false)
     }
   }
 
@@ -295,7 +295,7 @@ export function AddItemScreen() {
         </>
       ) : null}
     </ScrollView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -409,4 +409,4 @@ const styles = StyleSheet.create({
     color: C.textMuted,
     textAlign: "center",
   },
-});
+})

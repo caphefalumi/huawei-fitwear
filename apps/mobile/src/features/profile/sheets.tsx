@@ -1,72 +1,66 @@
-import { useEffect, useRef, useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useRef, useState } from "react"
+import { Alert, StyleSheet, Text, TextInput, View } from "react-native"
 
-import { RadioList } from "@/components/radio-list";
-import { Sheet, SheetActions, SheetField } from "@/components/sheet";
-import { WheelPicker } from "@/components/wheel-picker";
-import { Palette as C } from "@/constants/palette";
-import {
-  ACTIVITIES,
-  GOALS,
-  PERIOD_AREA,
-  useHealth,
-  type Sex,
-} from "@/features/health/health-store";
+import { RadioList } from "@/components/radio-list"
+import { Sheet, SheetActions, SheetField } from "@/components/sheet"
+import { WheelPicker } from "@/components/wheel-picker"
+import { Palette as C } from "@/constants/palette"
+import { ACTIVITIES, GOALS, PERIOD_AREA, useHealth, type Sex } from "@/features/health/health-store"
 
-const ACTIVITY_OPTIONS = Object.values(ACTIVITIES);
-const GOAL_OPTIONS = Object.values(GOALS);
-const SEX_OPTIONS: readonly Sex[] = ["Male", "Female", "Rather not say"];
-const SESSION_VALUES = [1, 2, 3, 4, 5, 6, 7];
-const HEIGHT_VALUES = Array.from({ length: 221 }, (_, index) => index + 80);
-type SheetProps = { visible: boolean; onClose: () => void; onDismiss?: () => void };
+const ACTIVITY_OPTIONS = Object.values(ACTIVITIES)
+const GOAL_OPTIONS = Object.values(GOALS)
+const SEX_OPTIONS: readonly Sex[] = ["Male", "Female", "Rather not say"]
+const SESSION_VALUES = [1, 2, 3, 4, 5, 6, 7]
+const HEIGHT_VALUES = Array.from({ length: 221 }, (_, index) => index + 80)
+type SheetProps = { visible: boolean; onClose: () => void; onDismiss?: () => void }
 
 function useSave(onClose: () => void) {
-  const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-  const active = useRef(true);
-  const busy = useRef(false);
+  const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+  const active = useRef(true)
+  const busy = useRef(false)
   useEffect(() => {
-    active.current = true;
+    active.current = true
     return () => {
-      active.current = false;
-    };
-  }, []);
+      active.current = false
+    }
+  }, [])
   const save = async (mutation: () => Promise<void>) => {
-    if (busy.current) return;
-    busy.current = true;
-    setPending(true);
-    setError(null);
+    if (busy.current) return
+    busy.current = true
+    setPending(true)
+    setError(null)
     try {
-      await mutation();
-      if (active.current) onClose();
+      await mutation()
+      if (active.current) onClose()
     } catch (cause) {
       if (active.current)
-        setError(`${cause instanceof Error ? cause.message : "Could not save."} Please try again.`);
+        setError(`${cause instanceof Error ? cause.message : "Could not save."} Please try again.`)
     } finally {
-      busy.current = false;
-      if (active.current) setPending(false);
+      busy.current = false
+      if (active.current) setPending(false)
     }
-  };
+  }
   return {
     error,
     pending,
     save,
     close: () => {
-      if (!busy.current) onClose();
+      if (!busy.current) onClose()
     },
-  };
+  }
 }
 
 function positiveNumber(value: string, maximum: number, minimum = 0) {
-  const number = Number(value.trim().replace(",", "."));
+  const number = Number(value.trim().replace(",", "."))
   if (!Number.isFinite(number) || number <= 0 || number < minimum || number > maximum) {
     throw new Error(
       minimum > 0
         ? `Enter a number from ${minimum} to ${maximum}.`
         : `Enter a number greater than 0 and no more than ${maximum}.`,
-    );
+    )
   }
-  return number;
+  return number
 }
 
 function NumberField({
@@ -74,9 +68,9 @@ function NumberField({
   onChange,
   unit,
 }: {
-  value: string;
-  onChange: (next: string) => void;
-  unit: string;
+  value: string
+  onChange: (next: string) => void
+  unit: string
 }) {
   return (
     <View style={styles.inputRow}>
@@ -90,13 +84,13 @@ function NumberField({
       />
       <Text style={styles.unit}>{unit}</Text>
     </View>
-  );
+  )
 }
 
 export function HeightSheet({ visible, onClose, onDismiss }: SheetProps) {
-  const { heightCm, saveHeight } = useHealth();
-  const [draft, setDraft] = useState(heightCm ?? 170);
-  const action = useSave(onClose);
+  const { heightCm, saveHeight } = useHealth()
+  const [draft, setDraft] = useState(heightCm ?? 170)
+  const action = useSave(onClose)
   return (
     <Sheet visible={visible} title="Height" onClose={action.close} onDismiss={onDismiss}>
       <View style={styles.heightPicker}>
@@ -118,18 +112,18 @@ export function HeightSheet({ visible, onClose, onDismiss }: SheetProps) {
         primaryLabel="OK"
         secondaryLabel="Cancel"
         onPrimary={() => {
-          void action.save(async () => saveHeight(draft));
+          void action.save(async () => saveHeight(draft))
         }}
         onSecondary={action.close}
       />
     </Sheet>
-  );
+  )
 }
 
 export function WeightSheet({ visible, onClose, onDismiss }: SheetProps) {
-  const { weightKg, weights, saveWeight } = useHealth();
-  const [draft, setDraft] = useState(weightKg?.toFixed(1) ?? "");
-  const action = useSave(onClose);
+  const { weightKg, weights, saveWeight } = useHealth()
+  const [draft, setDraft] = useState(weightKg?.toFixed(1) ?? "")
+  const action = useSave(onClose)
   return (
     <Sheet visible={visible} title="Update weight" onClose={action.close} onDismiss={onDismiss}>
       <Text style={styles.body}>Log your weight to keep your nutrition guidance current.</Text>
@@ -154,20 +148,20 @@ export function WeightSheet({ visible, onClose, onDismiss }: SheetProps) {
         primaryLabel="Save update"
         secondaryLabel="Cancel"
         onPrimary={() => {
-          void action.save(async () => saveWeight(positiveNumber(draft, 500, 20)));
+          void action.save(async () => saveWeight(positiveNumber(draft, 500, 20)))
         }}
         onSecondary={action.close}
       />
     </Sheet>
-  );
+  )
 }
 
 export function SexSheet({ visible, onClose, onDismiss }: SheetProps) {
-  const { sex, recovery, saveSex } = useHealth();
-  const action = useSave(onClose);
+  const { sex, recovery, saveSex } = useHealth()
+  const action = useSave(onClose)
   const changeSex = (next: Sex) => {
-    void action.save(() => saveSex(next));
-  };
+    void action.save(() => saveSex(next))
+  }
   return (
     <Sheet visible={visible} title="Sex" onClose={action.close} onDismiss={onDismiss}>
       <RadioList
@@ -182,55 +176,55 @@ export function SexSheet({ visible, onClose, onDismiss }: SheetProps) {
                 { text: "Cancel", style: "cancel" },
                 { text: "Change and remove", onPress: () => changeSex(next) },
               ],
-            );
-            return;
+            )
+            return
           }
-          changeSex(next);
+          changeSex(next)
         }}
       />
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
     </Sheet>
-  );
+  )
 }
 
 export function GoalSheet({ visible, onClose, onDismiss }: SheetProps) {
-  const { plan, savePlan } = useHealth();
-  const action = useSave(onClose);
+  const { plan, savePlan } = useHealth()
+  const action = useSave(onClose)
   return (
     <Sheet visible={visible} title="Goal / target" onClose={action.close} onDismiss={onDismiss}>
       <RadioList
         options={GOAL_OPTIONS}
         value={plan.goal as (typeof GOAL_OPTIONS)[number]}
         onChange={(goal) => {
-          void action.save(() => savePlan({ ...plan, goal }));
+          void action.save(() => savePlan({ ...plan, goal }))
         }}
       />
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
     </Sheet>
-  );
+  )
 }
 
 export function ActivitySheet({ visible, onClose, onDismiss }: SheetProps) {
-  const { plan, savePlan } = useHealth();
-  const action = useSave(onClose);
+  const { plan, savePlan } = useHealth()
+  const action = useSave(onClose)
   return (
     <Sheet visible={visible} title="Daily activity" onClose={action.close} onDismiss={onDismiss}>
       <RadioList
         options={ACTIVITY_OPTIONS}
         value={plan.activity as (typeof ACTIVITY_OPTIONS)[number]}
         onChange={(activity) => {
-          void action.save(() => savePlan({ ...plan, activity }));
+          void action.save(() => savePlan({ ...plan, activity }))
         }}
       />
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
     </Sheet>
-  );
+  )
 }
 
 export function FrequencySheet({ visible, onClose, onDismiss }: SheetProps) {
-  const { plan, savePlan } = useHealth();
-  const [draft, setDraft] = useState(plan.sessions ?? SESSION_VALUES[0]);
-  const action = useSave(onClose);
+  const { plan, savePlan } = useHealth()
+  const [draft, setDraft] = useState(plan.sessions ?? SESSION_VALUES[0])
+  const action = useSave(onClose)
   return (
     <Sheet visible={visible} title="Workout frequency" onClose={action.close} onDismiss={onDismiss}>
       <WheelPicker
@@ -248,18 +242,18 @@ export function FrequencySheet({ visible, onClose, onDismiss }: SheetProps) {
         primaryLabel="OK"
         secondaryLabel="Cancel"
         onPrimary={() => {
-          void action.save(() => savePlan({ ...plan, sessions: draft }));
+          void action.save(() => savePlan({ ...plan, sessions: draft }))
         }}
         onSecondary={action.close}
       />
     </Sheet>
-  );
+  )
 }
 
 export function TargetWeightSheet({ visible, onClose, onDismiss }: SheetProps) {
-  const { plan, savePlan } = useHealth();
-  const [draft, setDraft] = useState(plan.targetWeightKg?.toFixed(1) ?? "");
-  const action = useSave(onClose);
+  const { plan, savePlan } = useHealth()
+  const [draft, setDraft] = useState(plan.targetWeightKg?.toFixed(1) ?? "")
+  const action = useSave(onClose)
   return (
     <Sheet visible={visible} title="Target weight" onClose={action.close} onDismiss={onDismiss}>
       <SheetField label="Target weight">
@@ -275,12 +269,12 @@ export function TargetWeightSheet({ visible, onClose, onDismiss }: SheetProps) {
         onPrimary={() => {
           void action.save(async () =>
             savePlan({ ...plan, targetWeightKg: positiveNumber(draft, 1000) }),
-          );
+          )
         }}
         onSecondary={action.close}
       />
     </Sheet>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -321,4 +315,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: C.textMuted,
   },
-});
+})

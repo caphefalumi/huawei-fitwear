@@ -1,20 +1,20 @@
-import { Image } from "expo-image";
-import { router } from "expo-router";
-import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import Animated, { FadeInUp } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from "expo-image"
+import { router } from "expo-router"
+import { useState } from "react"
+import { ScrollView, StyleSheet, Text, View } from "react-native"
+import Animated, { FadeInUp } from "react-native-reanimated"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
-import { Card, SectionHeading } from "@/features/home/ui";
-import { recoveryRanges, useHealth } from "@/features/health/health-store";
-import { routinesFor, type Routine } from "@/features/workout/routines";
-import { RecoverySheet } from "@/features/recovery/recovery-sheet";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
+import { Card, SectionHeading } from "@/features/home/ui"
+import { recoveryRanges, useHealth } from "@/features/health/health-store"
+import { routinesFor, type Routine } from "@/features/workout/routines"
+import { RecoverySheet } from "@/features/recovery/recovery-sheet"
 
 const icons = {
   shieldCheck: require("@/assets/images/home/shield-check.svg"),
-};
+}
 
 const WEEK = [
   { day: "Mon", date: "05" },
@@ -24,7 +24,7 @@ const WEEK = [
   { day: "Fri", date: "09" },
   { day: "Sat", date: "10" },
   { day: "Sun", date: "11" },
-];
+]
 
 const MUSCLE_GROUPS = [
   {
@@ -57,21 +57,21 @@ const MUSCLE_GROUPS = [
     label: "Core",
     icon: require("@/assets/images/recovery/body-core.svg"),
   },
-];
+]
 
 export function WorkoutPlanScreen() {
-  const insets = useSafeAreaInsets();
-  const { plan, recovery } = useHealth();
-  const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const insets = useSafeAreaInsets()
+  const { plan, recovery } = useHealth()
+  const [recoveryOpen, setRecoveryOpen] = useState(false)
 
-  const { today, next, adjustedFor } = routinesFor(recovery);
-  const ranges = recovery ? recoveryRanges(recovery) : null;
+  const { today, next, adjustedFor } = routinesFor(recovery)
+  const ranges = recovery ? recoveryRanges(recovery) : null
   const recoveryLine =
     recovery && ranges
       ? `Rest ${ranges.rest} · light ${ranges.light}\nReturn ${recovery.returnDate}, if ready`
-      : "";
+      : ""
   const summary = (routine: Routine) =>
-    `${routine.name} · ${routine.exercises.length} exercises · ${routine.sets} sets · ${routine.minutes} min`;
+    `${routine.name} · ${routine.exercises.length} exercises · ${routine.sets} sets · ${routine.minutes} min`
 
   return (
     <ScrollView
@@ -91,13 +91,13 @@ export function WorkoutPlanScreen() {
 
       <View style={styles.week}>
         {WEEK.map((day) => {
-          const active = day.date === "08";
+          const active = day.date === "08"
           return (
             <View key={day.date} style={[styles.day, active && styles.dayActive]}>
               <Text style={[styles.dayLabel, active && styles.dayLabelActive]}>{day.day}</Text>
               <Text style={[styles.dayDate, active && styles.dayDateActive]}>{day.date}</Text>
             </View>
-          );
+          )
         })}
       </View>
 
@@ -195,7 +195,7 @@ export function WorkoutPlanScreen() {
 
       {recoveryOpen ? <RecoverySheet visible onClose={() => setRecoveryOpen(false)} /> : null}
     </ScrollView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -390,4 +390,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: C.onAccent,
   },
-});
+})

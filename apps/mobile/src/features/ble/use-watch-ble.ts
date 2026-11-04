@@ -1,25 +1,25 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react"
 
-import { encodeUtf8Bytes } from "./codec";
-import { FITWEAR_CHAR_MESSAGE_UUID, FITWEAR_SERVICE_UUID } from "./constants";
-import { WatchBleClient, type BleDirection, type WatchBleStatus } from "./WatchBleClient";
+import { encodeUtf8Bytes } from "./codec"
+import { FITWEAR_CHAR_MESSAGE_UUID, FITWEAR_SERVICE_UUID } from "./constants"
+import { WatchBleClient, type BleDirection, type WatchBleStatus } from "./WatchBleClient"
 
-export { FITWEAR_CHAR_MESSAGE_UUID, FITWEAR_SERVICE_UUID };
-export type { BleDirection };
+export { FITWEAR_CHAR_MESSAGE_UUID, FITWEAR_SERVICE_UUID }
+export type { BleDirection }
 
 export type BleConnectionMode =
   | "disconnected"
   | "scanning"
   | "connecting"
   | "ble-hardware"
-  | "ble-simulated";
+  | "ble-simulated"
 
 export interface BleSyncMessage {
-  id: string;
-  direction: BleDirection;
-  text: string;
-  byteLength: number;
-  timestamp: string;
+  id: string
+  direction: BleDirection
+  text: string
+  byteLength: number
+  timestamp: string
 }
 
 export interface UseWatchBleOptions {
@@ -27,30 +27,30 @@ export interface UseWatchBleOptions {
    * When true, exposes a local GATT simulator for Expo Go / web.
    * Leave false (default) for production hardware paths.
    */
-  enableSimulator?: boolean;
+  enableSimulator?: boolean
 }
 
 function nowTimeLabel(): string {
-  return new Date().toTimeString().slice(0, 8);
+  return new Date().toTimeString().slice(0, 8)
 }
 
 function statusToMode(status: WatchBleStatus): BleConnectionMode {
-  if (status === "connected") return "ble-hardware";
-  return status;
+  if (status === "connected") return "ble-hardware"
+  return status
 }
 
 /** React adapter over WatchBleClient. Simulator is opt-in. */
 export function useWatchBle(options: UseWatchBleOptions = {}) {
-  const enableSimulator = options.enableSimulator === true;
+  const enableSimulator = options.enableSimulator === true
 
-  const [mode, setMode] = useState<BleConnectionMode>("disconnected");
-  const [deviceName, setDeviceName] = useState("None");
-  const [errorText, setErrorText] = useState<string | null>(null);
-  const [messages, setMessages] = useState<BleSyncMessage[]>([]);
+  const [mode, setMode] = useState<BleConnectionMode>("disconnected")
+  const [deviceName, setDeviceName] = useState("None")
+  const [errorText, setErrorText] = useState<string | null>(null)
+  const [messages, setMessages] = useState<BleSyncMessage[]>([])
 
-  const clientRef = useRef<WatchBleClient | null>(null);
-  const simModeRef = useRef(false);
-  const ackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clientRef = useRef<WatchBleClient | null>(null)
+  const simModeRef = useRef(false)
+  const ackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const appendMessage = useCallback((direction: BleDirection, text: string, byteLength: number) => {
     setMessages((prev) => [
@@ -62,95 +62,95 @@ export function useWatchBle(options: UseWatchBleOptions = {}) {
         timestamp: nowTimeLabel(),
       },
       ...prev.slice(0, 49),
-    ]);
-  }, []);
+    ])
+  }, [])
 
   useEffect(() => {
     const client = new WatchBleClient({
       onStatus: (status) => {
         if (simModeRef.current && status === "disconnected") {
-          return;
+          return
         }
-        simModeRef.current = false;
-        setMode(statusToMode(status));
+        simModeRef.current = false
+        setMode(statusToMode(status))
       },
       onDeviceName: (name) => {
         if (!simModeRef.current) {
-          setDeviceName(name);
+          setDeviceName(name)
         }
       },
       onError: (message) => {
-        setErrorText(message);
+        setErrorText(message)
       },
       onMessage: (direction, text, byteLength) => {
-        appendMessage(direction, text, byteLength);
+        appendMessage(direction, text, byteLength)
       },
-    });
-    clientRef.current = client;
+    })
+    clientRef.current = client
     return () => {
       if (ackTimeoutRef.current) {
-        clearTimeout(ackTimeoutRef.current);
-        ackTimeoutRef.current = null;
+        clearTimeout(ackTimeoutRef.current)
+        ackTimeoutRef.current = null
       }
-      client.destroy();
-      clientRef.current = null;
-    };
-  }, [appendMessage]);
+      client.destroy()
+      clientRef.current = null
+    }
+  }, [appendMessage])
 
   const connect = useCallback(async () => {
-    simModeRef.current = false;
-    await clientRef.current?.connect();
-  }, []);
+    simModeRef.current = false
+    await clientRef.current?.connect()
+  }, [])
 
   const connectSimulatedWatch = useCallback(() => {
-    if (!enableSimulator) return;
-    void clientRef.current?.disconnect();
-    simModeRef.current = true;
-    setErrorText(null);
-    setDeviceName("VoocHealth Watch (Simulator)");
-    setMode("ble-simulated");
-    const ready = "VoocHealth Watch Ready";
-    appendMessage("watch-to-phone", ready, encodeUtf8Bytes(ready).byteLength);
-  }, [appendMessage, enableSimulator]);
+    if (!enableSimulator) return
+    void clientRef.current?.disconnect()
+    simModeRef.current = true
+    setErrorText(null)
+    setDeviceName("VoocHealth Watch (Simulator)")
+    setMode("ble-simulated")
+    const ready = "VoocHealth Watch Ready"
+    appendMessage("watch-to-phone", ready, encodeUtf8Bytes(ready).byteLength)
+  }, [appendMessage, enableSimulator])
 
   const disconnect = useCallback(async () => {
     if (simModeRef.current) {
-      simModeRef.current = false;
-      setMode("disconnected");
-      setDeviceName("None");
-      setErrorText(null);
-      return;
+      simModeRef.current = false
+      setMode("disconnected")
+      setDeviceName("None")
+      setErrorText(null)
+      return
     }
-    await clientRef.current?.disconnect();
-  }, []);
+    await clientRef.current?.disconnect()
+  }, [])
 
   const sendTextToWatch = useCallback(
     async (rawText: string) => {
-      const clean = rawText.trim();
-      if (!clean) return false;
+      const clean = rawText.trim()
+      if (!clean) return false
 
       if (enableSimulator && simModeRef.current && mode === "ble-simulated") {
-        setErrorText(null);
-        const bytes = encodeUtf8Bytes(clean);
-        appendMessage("phone-to-watch", clean, bytes.byteLength);
-        if (ackTimeoutRef.current) clearTimeout(ackTimeoutRef.current);
+        setErrorText(null)
+        const bytes = encodeUtf8Bytes(clean)
+        appendMessage("phone-to-watch", clean, bytes.byteLength)
+        if (ackTimeoutRef.current) clearTimeout(ackTimeoutRef.current)
         ackTimeoutRef.current = setTimeout(() => {
-          ackTimeoutRef.current = null;
-          const ack = `ACK from Watch: "${clean}"`;
-          appendMessage("watch-to-phone", ack, encodeUtf8Bytes(ack).byteLength);
-        }, 350);
-        return true;
+          ackTimeoutRef.current = null
+          const ack = `ACK from Watch: "${clean}"`
+          appendMessage("watch-to-phone", ack, encodeUtf8Bytes(ack).byteLength)
+        }, 350)
+        return true
       }
 
-      const result = await clientRef.current?.sendText(clean);
-      return result?.ok === true;
+      const result = await clientRef.current?.sendText(clean)
+      return result?.ok === true
     },
     [appendMessage, enableSimulator, mode],
-  );
+  )
 
   const simulateWatchNotification = useCallback(
     (rawText?: string) => {
-      if (!enableSimulator) return;
+      if (!enableSimulator) return
       const clean =
         (rawText ?? "").trim() ||
         JSON.stringify({
@@ -163,20 +163,20 @@ export function useWatchBle(options: UseWatchBleOptions = {}) {
           gy: -0.02,
           gz: 0.0,
           ts: Date.now(),
-        });
+        })
       if (mode === "disconnected") {
-        simModeRef.current = true;
-        setDeviceName("VoocHealth Watch (Simulator)");
-        setMode("ble-simulated");
+        simModeRef.current = true
+        setDeviceName("VoocHealth Watch (Simulator)")
+        setMode("ble-simulated")
       }
-      appendMessage("watch-to-phone", clean, encodeUtf8Bytes(clean).byteLength);
+      appendMessage("watch-to-phone", clean, encodeUtf8Bytes(clean).byteLength)
     },
     [appendMessage, enableSimulator, mode],
-  );
+  )
 
   const clearMessages = useCallback(() => {
-    setMessages([]);
-  }, []);
+    setMessages([])
+  }, [])
 
   return {
     mode,
@@ -194,5 +194,5 @@ export function useWatchBle(options: UseWatchBleOptions = {}) {
     sendTextToWatch,
     simulateWatchNotification: enableSimulator ? simulateWatchNotification : undefined,
     clearMessages,
-  };
+  }
 }

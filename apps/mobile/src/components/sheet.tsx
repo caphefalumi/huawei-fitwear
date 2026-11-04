@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import {
   ActivityIndicator,
   Animated,
@@ -10,60 +10,60 @@ import {
   StyleSheet,
   Text,
   View,
-} from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useReducedMotion } from "react-native-reanimated";
+} from "react-native"
+import { KeyboardAvoidingView } from "react-native-keyboard-controller"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { useReducedMotion } from "react-native-reanimated"
 
-import { CloseButton } from "@/components/close-button";
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
+import { CloseButton } from "@/components/close-button"
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
 
 type SheetProps = {
-  visible: boolean;
-  title: string;
-  onClose: () => void;
-  onDismiss?: () => void;
-  children: ReactNode;
-};
+  visible: boolean
+  title: string
+  onClose: () => void
+  onDismiss?: () => void
+  children: ReactNode
+}
 
 /** Bottom overlay matching the Figma "Input sheet" frames (scrim + white card). */
 export function Sheet({ visible, title, onClose, onDismiss, children }: SheetProps) {
-  const insets = useSafeAreaInsets();
-  const reducedMotion = useReducedMotion();
-  const [appearance] = useState(() => new Animated.Value(reducedMotion ? 1 : 0));
-  const [presented, setPresented] = useState(visible);
-  const dismissCallback = useRef(onDismiss);
-  const content = useRef({ title, children });
+  const insets = useSafeAreaInsets()
+  const reducedMotion = useReducedMotion()
+  const [appearance] = useState(() => new Animated.Value(reducedMotion ? 1 : 0))
+  const [presented, setPresented] = useState(visible)
+  const dismissCallback = useRef(onDismiss)
+  const content = useRef({ title, children })
   useEffect(() => {
-    dismissCallback.current = onDismiss;
-    if (visible) content.current = { title, children };
-  }, [onDismiss, visible, title, children]);
+    dismissCallback.current = onDismiss
+    if (visible) content.current = { title, children }
+  }, [onDismiss, visible, title, children])
 
   useEffect(() => {
-    if (visible) setPresented(true);
+    if (visible) setPresented(true)
     const animation = Animated.timing(appearance, {
       toValue: visible ? 1 : 0,
       duration: reducedMotion ? 0 : visible ? 220 : 160,
       easing: visible ? Easing.out(Easing.cubic) : Easing.in(Easing.quad),
       useNativeDriver: true,
-    });
+    })
     animation.start(({ finished }) => {
       if (finished && !visible) {
-        setPresented(false);
-        dismissCallback.current?.();
+        setPresented(false)
+        dismissCallback.current?.()
       }
-    });
-    return () => animation.stop();
-  }, [appearance, reducedMotion, visible]);
+    })
+    return () => animation.stop()
+  }, [appearance, reducedMotion, visible])
 
-  const displayed = visible ? { title, children } : content.current;
+  const displayed = visible ? { title, children } : content.current
 
   useEffect(() => {
-    if (!visible) return;
-    if (Keyboard.isVisible()) Keyboard.dismiss();
-    return () => Keyboard.dismiss();
-  }, [visible]);
+    if (!visible) return
+    if (Keyboard.isVisible()) Keyboard.dismiss()
+    return () => Keyboard.dismiss()
+  }, [visible])
 
   return (
     <Modal
@@ -71,7 +71,7 @@ export function Sheet({ visible, title, onClose, onDismiss, children }: SheetPro
       transparent
       animationType="none"
       onRequestClose={() => {
-        if (visible) onClose();
+        if (visible) onClose()
       }}
     >
       <View style={styles.backdrop} pointerEvents={visible ? "auto" : "none"}>
@@ -123,7 +123,7 @@ export function Sheet({ visible, title, onClose, onDismiss, children }: SheetPro
         </KeyboardAvoidingView>
       </View>
     </Modal>
-  );
+  )
 }
 
 export function SheetField({ label, children }: { label: string; children: ReactNode }) {
@@ -132,7 +132,7 @@ export function SheetField({ label, children }: { label: string; children: React
       <Text style={styles.fieldLabel}>{label}</Text>
       {children}
     </View>
-  );
+  )
 }
 
 export function SheetActions({
@@ -145,14 +145,14 @@ export function SheetActions({
   busy = false,
   primaryAccessibilityLabel,
 }: {
-  primaryLabel: string;
-  secondaryLabel: string;
-  onPrimary: () => void;
-  onSecondary: () => void;
-  primaryDisabled?: boolean;
-  secondaryDisabled?: boolean;
-  busy?: boolean;
-  primaryAccessibilityLabel?: string;
+  primaryLabel: string
+  secondaryLabel: string
+  onPrimary: () => void
+  onSecondary: () => void
+  primaryDisabled?: boolean
+  secondaryDisabled?: boolean
+  busy?: boolean
+  primaryAccessibilityLabel?: string
 }) {
   return (
     <View style={styles.actions}>
@@ -172,7 +172,7 @@ export function SheetActions({
         <Text style={styles.secondaryLabel}>{secondaryLabel}</Text>
       </Pressable>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -267,4 +267,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: C.text,
   },
-});
+})

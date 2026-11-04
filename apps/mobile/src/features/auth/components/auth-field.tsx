@@ -1,5 +1,5 @@
-import { Image } from "expo-image";
-import { useState } from "react";
+import { Image } from "expo-image"
+import { useState } from "react"
 import {
   AccessibilityInfo,
   Platform,
@@ -9,34 +9,34 @@ import {
   View,
   type TextInputInstance,
   type TextInputProps,
-} from "react-native";
-import Animated, { useReducedMotion } from "react-native-reanimated";
-import Svg, { Circle, Path } from "react-native-svg";
+} from "react-native"
+import Animated, { useReducedMotion } from "react-native-reanimated"
+import Svg, { Circle, Path } from "react-native-svg"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as AuthColors } from "@/constants/palette";
+import { Pressable } from "@/components/pressable"
+import { Palette as AuthColors } from "@/constants/palette"
 
-const defaultColors = { ...AuthColors, error: "#B3261D" };
+const defaultColors = { ...AuthColors, error: "#B3261D" }
 
 type AuthFieldColors = {
-  surface: string;
-  text: string;
-  textMuted: string;
-  border: string;
-  accent: string;
-  error: string;
-};
+  surface: string
+  text: string
+  textMuted: string
+  border: string
+  accent: string
+  error: string
+}
 
 type AuthFieldProps = {
-  label: string;
-  icon?: number;
-  helper?: string;
-  error?: boolean;
-  inputRef?: React.Ref<TextInputInstance>;
-  errorMessage?: string;
-  colors?: AuthFieldColors;
-  style?: TextInputProps["style"];
-} & Omit<TextInputProps, "style">;
+  label: string
+  icon?: number
+  helper?: string
+  error?: boolean
+  inputRef?: React.Ref<TextInputInstance>
+  errorMessage?: string
+  colors?: AuthFieldColors
+  style?: TextInputProps["style"]
+} & Omit<TextInputProps, "style">
 
 function EyeIcon({ color = AuthColors.textMuted, size = 24 }: { color?: string; size?: number }) {
   return (
@@ -53,15 +53,15 @@ function EyeIcon({ color = AuthColors.textMuted, size = 24 }: { color?: string; 
       <Path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
       <Circle cx="12" cy="12" r="3" />
     </Svg>
-  );
+  )
 }
 
 function EyeOffIcon({
   color = AuthColors.textMuted,
   size = 24,
 }: {
-  color?: string;
-  size?: number;
+  color?: string
+  size?: number
 }) {
   return (
     <Svg
@@ -79,7 +79,7 @@ function EyeOffIcon({
       <Path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" />
       <Path d="m2 2 20 20" />
     </Svg>
-  );
+  )
 }
 
 export function AuthField({
@@ -93,10 +93,10 @@ export function AuthField({
   style,
   ...inputProps
 }: AuthFieldProps) {
-  const reducedMotion = useReducedMotion();
-  const [passwordVisible, setPasswordVisible] = useState(false);
-  const [focused, setFocused] = useState(false);
-  const disabled = inputProps.editable === false;
+  const reducedMotion = useReducedMotion()
+  const [passwordVisible, setPasswordVisible] = useState(false)
+  const [focused, setFocused] = useState(false)
+  const disabled = inputProps.editable === false
   return (
     <View style={[styles.field, disabled && { opacity: 0.38 }]}>
       <Text style={[styles.label, { color: colors.textMuted }]}>{label}</Text>
@@ -127,12 +127,12 @@ export function AuthField({
           aria-invalid={error || undefined}
           {...inputProps}
           onFocus={(event) => {
-            setFocused(true);
-            inputProps.onFocus?.(event);
+            setFocused(true)
+            inputProps.onFocus?.(event)
           }}
           onBlur={(event) => {
-            setFocused(false);
-            inputProps.onBlur?.(event);
+            setFocused(false)
+            inputProps.onBlur?.(event)
           }}
           secureTextEntry={inputProps.secureTextEntry && !passwordVisible}
           style={[styles.input, { color: colors.text }, style]}
@@ -147,11 +147,11 @@ export function AuthField({
             }}
             disabled={inputProps.editable === false}
             onPress={() => {
-              const visible = !passwordVisible;
-              setPasswordVisible(visible);
+              const visible = !passwordVisible
+              setPasswordVisible(visible)
               AccessibilityInfo.announceForAccessibility(
                 visible ? "Password is visible" : "Password is hidden",
-              );
+              )
             }}
             style={styles.visibilityButton}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -169,7 +169,7 @@ export function AuthField({
       </Animated.View>
       {helper ? <Text style={[styles.helper, { color: colors.textMuted }]}>{helper}</Text> : null}
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -216,4 +216,4 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: AuthColors.textMuted,
   },
-});
+})

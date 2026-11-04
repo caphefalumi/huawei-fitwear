@@ -1,1 +1,1 @@
-export * from "./components/sign-up-screen";
+export * from "./components/sign-up-screen"

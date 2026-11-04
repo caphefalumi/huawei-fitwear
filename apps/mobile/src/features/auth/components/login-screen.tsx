@@ -1,10 +1,10 @@
-import { isCancel } from "axios";
-import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
-import { useIsFocused } from "expo-router/react-navigation";
-import { StatusBar } from "expo-status-bar";
-import { SymbolView } from "expo-symbols";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { isCancel } from "axios"
+import * as Haptics from "expo-haptics"
+import { router } from "expo-router"
+import { useIsFocused } from "expo-router/react-navigation"
+import { StatusBar } from "expo-status-bar"
+import { SymbolView } from "expo-symbols"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -18,16 +18,16 @@ import {
   useWindowDimensions,
   View,
   type TextInputInstance,
-} from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import Animated, { FadeIn, FadeOut, useReducedMotion } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+} from "react-native"
+import { KeyboardAvoidingView } from "react-native-keyboard-controller"
+import Animated, { FadeIn, FadeOut, useReducedMotion } from "react-native-reanimated"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable";
-import { Palette } from "@/constants/palette";
-import { ApiError } from "@/lib/api";
-import { useAuth } from "../store/auth.store";
-import { AuthField } from "./auth-field";
+import { Pressable } from "@/components/pressable"
+import { Palette } from "@/constants/palette"
+import { ApiError } from "@/lib/api"
+import { useAuth } from "../store/auth.store"
+import { AuthField } from "./auth-field"
 
 const AuthColors = {
   ...Palette,
@@ -39,26 +39,26 @@ const AuthColors = {
   error: "#B3261D",
   errorContainer: "#F9DEDC",
   onErrorContainer: "#410E0B",
-};
-type AuthColorPalette = typeof AuthColors;
+}
+type AuthColorPalette = typeof AuthColors
 
-const credentialMessage = "Incorrect email or password.";
+const credentialMessage = "Incorrect email or password."
 const shake = {
   "0%": { transform: [{ translateX: 0 }] },
   "25%": { transform: [{ translateX: -4 }] },
   "75%": { transform: [{ translateX: 4 }] },
   "100%": { transform: [{ translateX: 0 }] },
-};
+}
 
 async function errorHaptic() {
   try {
     if (Platform.OS === "ios") {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
     } else if (Platform.OS === "android") {
       try {
-        await Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Reject);
+        await Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Reject)
       } catch {
-        await Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Long_Press);
+        await Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Long_Press)
       }
     }
   } catch {
@@ -67,40 +67,40 @@ async function errorHaptic() {
 }
 
 export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void } = {}) {
-  const insets = useSafeAreaInsets();
-  const isFocused = useIsFocused();
-  const styles = useMemo(() => createStyles(AuthColors), []);
-  const reducedMotion = useReducedMotion();
-  const { fontScale } = useWindowDimensions();
+  const insets = useSafeAreaInsets()
+  const isFocused = useIsFocused()
+  const styles = useMemo(() => createStyles(AuthColors), [])
+  const reducedMotion = useReducedMotion()
+  const { fontScale } = useWindowDimensions()
   const { signIn, requestPasswordReset, verifyPasswordReset, completePasswordReset, pending } =
-    useAuth();
-  const handleCreateAccount = onCreateAccount ?? (() => router.replace("/(auth)/sign-up"));
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [resetCode, setResetCode] = useState("");
-  const [resetToken, setResetToken] = useState<string | null>(null);
-  const [newPassword, setNewPassword] = useState("");
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const [fieldError, setFieldError] = useState<string | null>(null);
-  const [failedAttempts, setFailedAttempts] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
-  const mounted = useRef(true);
-  const submittingRef = useRef(false);
-  const focusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const emailInput = useRef<TextInputInstance>(null);
-  const passwordInput = useRef<TextInputInstance>(null);
-  const [resetMode, setResetMode] = useState(false);
-  const [resetStep, setResetStep] = useState<"email" | "code" | "password" | "done">("email");
-  const [resetPending, setResetPending] = useState(false);
-  const [resetMessage, setResetMessage] = useState<string | null>(null);
-  const [resetError, setResetError] = useState<string | null>(null);
-  const [resendDeadline, setResendDeadline] = useState<number | null>(null);
-  const [resendSeconds, setResendSeconds] = useState(0);
-  const [lockoutDeadline, setLockoutDeadline] = useState<number | null>(null);
-  const [lockoutSeconds, setLockoutSeconds] = useState(0);
-  const [lockoutKind, setLockoutKind] = useState<"rate" | "locked" | null>(null);
-  const loginPending = pending || submitting;
-  const loginDisabled = loginPending || lockoutKind !== null;
+    useAuth()
+  const handleCreateAccount = onCreateAccount ?? (() => router.replace("/(auth)/sign-up"))
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [resetCode, setResetCode] = useState("")
+  const [resetToken, setResetToken] = useState<string | null>(null)
+  const [newPassword, setNewPassword] = useState("")
+  const [validationError, setValidationError] = useState<string | null>(null)
+  const [fieldError, setFieldError] = useState<string | null>(null)
+  const [failedAttempts, setFailedAttempts] = useState(0)
+  const [submitting, setSubmitting] = useState(false)
+  const mounted = useRef(true)
+  const submittingRef = useRef(false)
+  const focusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const emailInput = useRef<TextInputInstance>(null)
+  const passwordInput = useRef<TextInputInstance>(null)
+  const [resetMode, setResetMode] = useState(false)
+  const [resetStep, setResetStep] = useState<"email" | "code" | "password" | "done">("email")
+  const [resetPending, setResetPending] = useState(false)
+  const [resetMessage, setResetMessage] = useState<string | null>(null)
+  const [resetError, setResetError] = useState<string | null>(null)
+  const [resendDeadline, setResendDeadline] = useState<number | null>(null)
+  const [resendSeconds, setResendSeconds] = useState(0)
+  const [lockoutDeadline, setLockoutDeadline] = useState<number | null>(null)
+  const [lockoutSeconds, setLockoutSeconds] = useState(0)
+  const [lockoutKind, setLockoutKind] = useState<"rate" | "locked" | null>(null)
+  const loginPending = pending || submitting
+  const loginDisabled = loginPending || lockoutKind !== null
   const lockoutMessage =
     lockoutKind === null
       ? null
@@ -108,238 +108,238 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
         ? `${lockoutKind === "locked" ? "Account temporarily locked" : "Too many attempts"}. Try again in ${Math.floor(lockoutSeconds / 60)}:${String(lockoutSeconds % 60).padStart(2, "0")}.`
         : lockoutKind === "locked"
           ? "Account locked. Reset your password to regain access."
-          : "Too many attempts. Reset your password or try again later.";
+          : "Too many attempts. Reset your password or try again later."
 
   useEffect(() => {
-    if (resendDeadline === null) return;
+    if (resendDeadline === null) return
     const updateRemaining = () =>
-      setResendSeconds(Math.max(0, Math.ceil((resendDeadline - Date.now()) / 1000)));
-    updateRemaining();
-    const timer = setInterval(updateRemaining, 1000);
-    const foregroundListener = AppState.addEventListener("change", updateRemaining);
+      setResendSeconds(Math.max(0, Math.ceil((resendDeadline - Date.now()) / 1000)))
+    updateRemaining()
+    const timer = setInterval(updateRemaining, 1000)
+    const foregroundListener = AppState.addEventListener("change", updateRemaining)
     return () => {
-      clearInterval(timer);
-      foregroundListener.remove();
-    };
-  }, [resendDeadline]);
+      clearInterval(timer)
+      foregroundListener.remove()
+    }
+  }, [resendDeadline])
 
   useEffect(() => {
-    if (lockoutDeadline === null) return;
+    if (lockoutDeadline === null) return
     const update = () => {
-      const remaining = Math.max(0, Math.ceil((lockoutDeadline - Date.now()) / 1000));
-      setLockoutSeconds(remaining);
+      const remaining = Math.max(0, Math.ceil((lockoutDeadline - Date.now()) / 1000))
+      setLockoutSeconds(remaining)
       if (remaining === 0) {
-        setLockoutDeadline(null);
-        setLockoutKind(null);
+        setLockoutDeadline(null)
+        setLockoutKind(null)
       }
-    };
-    update();
-    const timer = setInterval(update, 1000);
+    }
+    update()
+    const timer = setInterval(update, 1000)
     const foregroundListener = AppState.addEventListener("change", (state) => {
-      if (state === "active") update();
-    });
+      if (state === "active") update()
+    })
     return () => {
-      clearInterval(timer);
-      foregroundListener.remove();
-    };
-  }, [lockoutDeadline]);
+      clearInterval(timer)
+      foregroundListener.remove()
+    }
+  }, [lockoutDeadline])
 
   useEffect(() => {
-    mounted.current = true;
+    mounted.current = true
     return () => {
-      mounted.current = false;
-      clearTimeout(focusTimer.current);
-    };
-  }, []);
+      mounted.current = false
+      clearTimeout(focusTimer.current)
+    }
+  }, [])
 
   function clearLoginError() {
-    setFieldError(null);
-    setValidationError(null);
-    clearTimeout(focusTimer.current);
-    focusTimer.current = undefined;
+    setFieldError(null)
+    setValidationError(null)
+    clearTimeout(focusTimer.current)
+    focusTimer.current = undefined
   }
 
   function startPasswordReset() {
-    setResetMode(true);
-    setResetStep("email");
-    setResetCode("");
-    setResetToken(null);
-    setNewPassword("");
-    setResetError(null);
-    setResetMessage(null);
-    clearLoginError();
+    setResetMode(true)
+    setResetStep("email")
+    setResetCode("")
+    setResetToken(null)
+    setNewPassword("")
+    setResetError(null)
+    setResetMessage(null)
+    clearLoginError()
   }
 
   function focusEmail() {
-    emailInput.current?.focus();
+    emailInput.current?.focus()
     if (Platform.OS !== "web") {
-      const handle = findNodeHandle(emailInput.current);
-      if (typeof handle === "number") AccessibilityInfo.setAccessibilityFocus(handle);
+      const handle = findNodeHandle(emailInput.current)
+      if (typeof handle === "number") AccessibilityInfo.setAccessibilityFocus(handle)
     }
   }
 
   function showFieldError(message: string) {
-    setFieldError(message);
-    void errorHaptic();
-    clearTimeout(focusTimer.current);
+    setFieldError(message)
+    void errorHaptic()
+    clearTimeout(focusTimer.current)
     focusTimer.current = setTimeout(() => {
-      focusTimer.current = undefined;
-      if (!mounted.current) return;
-      passwordInput.current?.focus();
+      focusTimer.current = undefined
+      if (!mounted.current) return
+      passwordInput.current?.focus()
       if (Platform.OS !== "web") {
-        const handle = findNodeHandle(passwordInput.current);
-        if (typeof handle === "number") AccessibilityInfo.setAccessibilityFocus(handle);
+        const handle = findNodeHandle(passwordInput.current)
+        if (typeof handle === "number") AccessibilityInfo.setAccessibilityFocus(handle)
       }
-      if (Platform.OS === "ios") AccessibilityInfo.announceForAccessibility(message);
-    }, 100);
+      if (Platform.OS === "ios") AccessibilityInfo.announceForAccessibility(message)
+    }, 100)
   }
   async function submit() {
-    if (submittingRef.current || pending || lockoutKind !== null) return;
+    if (submittingRef.current || pending || lockoutKind !== null) return
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      clearLoginError();
-      setValidationError("Enter a valid email address.");
-      focusEmail();
-      return;
+      clearLoginError()
+      setValidationError("Enter a valid email address.")
+      focusEmail()
+      return
     }
     if (!password) {
-      setValidationError(null);
-      showFieldError("Enter your password.");
-      return;
+      setValidationError(null)
+      showFieldError("Enter your password.")
+      return
     }
-    submittingRef.current = true;
-    setSubmitting(true);
-    clearLoginError();
+    submittingRef.current = true
+    setSubmitting(true)
+    clearLoginError()
     try {
-      await signIn(email.trim(), password);
+      await signIn(email.trim(), password)
     } catch (cause) {
-      if (!mounted.current || isCancel(cause)) return;
+      if (!mounted.current || isCancel(cause)) return
       if (cause instanceof ApiError && (cause.code === "ACCOUNT_LOCKED" || cause.status === 429)) {
-        setLockoutKind(cause.code === "ACCOUNT_LOCKED" ? "locked" : "rate");
-        const seconds = cause.retryAfterSec;
-        setLockoutSeconds(seconds ?? 0);
-        setLockoutDeadline(seconds === undefined ? null : Date.now() + seconds * 1000);
+        setLockoutKind(cause.code === "ACCOUNT_LOCKED" ? "locked" : "rate")
+        const seconds = cause.retryAfterSec
+        setLockoutSeconds(seconds ?? 0)
+        setLockoutDeadline(seconds === undefined ? null : Date.now() + seconds * 1000)
       } else if (cause instanceof ApiError && cause.status === 401) {
-        setFailedAttempts((attempts) => attempts + 1);
-        setFieldError(null);
-        setValidationError("We couldn’t sign you in. Check your email and password and try again.");
+        setFailedAttempts((attempts) => attempts + 1)
+        setFieldError(null)
+        setValidationError("We couldn’t sign you in. Check your email and password and try again.")
       } else if (cause instanceof ApiError && (cause.status === 400 || cause.status === 422)) {
-        setValidationError("Check your email address and try again.");
+        setValidationError("Check your email address and try again.")
       } else {
         setValidationError(
           cause instanceof ApiError && cause.status >= 500
             ? "Something went wrong on our end. Try again."
             : "Can't connect. Check your connection and try again.",
-        );
+        )
       }
     } finally {
-      submittingRef.current = false;
-      if (mounted.current) setSubmitting(false);
+      submittingRef.current = false
+      if (mounted.current) setSubmitting(false)
     }
   }
   async function verifyResetCode(code: string) {
-    if (resetPending) return;
+    if (resetPending) return
     if (!/^\d{4}$/.test(code)) {
-      setResetError("Enter the 4-digit code from your email.");
-      return;
+      setResetError("Enter the 4-digit code from your email.")
+      return
     }
-    setResetPending(true);
-    setResetError(null);
+    setResetPending(true)
+    setResetError(null)
     try {
-      const token = await verifyPasswordReset(email, code);
-      if (!mounted.current) return;
-      setResetToken(token);
-      setResetStep("password");
+      const token = await verifyPasswordReset(email, code)
+      if (!mounted.current) return
+      setResetToken(token)
+      setResetStep("password")
     } catch (cause) {
-      if (!mounted.current) return;
-      setResetCode("");
+      if (!mounted.current) return
+      setResetCode("")
       setResetError(
         cause instanceof Error ? cause.message : "This reset code is invalid or expired.",
-      );
+      )
     } finally {
-      if (mounted.current) setResetPending(false);
+      if (mounted.current) setResetPending(false)
     }
   }
   async function resendResetCode() {
-    if (resetPending || resendSeconds > 0) return;
-    setResetPending(true);
-    setResetError(null);
+    if (resetPending || resendSeconds > 0) return
+    setResetPending(true)
+    setResetError(null)
     try {
-      const result = await requestPasswordReset(email);
-      if (!mounted.current) return;
-      setResetMessage(result.message);
-      setResendDeadline(Date.now() + result.resendAfterSeconds * 1000);
-      setResetCode("");
+      const result = await requestPasswordReset(email)
+      if (!mounted.current) return
+      setResetMessage(result.message)
+      setResendDeadline(Date.now() + result.resendAfterSeconds * 1000)
+      setResetCode("")
     } catch (cause) {
-      if (!mounted.current) return;
-      setResetError(cause instanceof Error ? cause.message : "Unable to resend the reset code.");
+      if (!mounted.current) return
+      setResetError(cause instanceof Error ? cause.message : "Unable to resend the reset code.")
     } finally {
-      if (mounted.current) setResetPending(false);
+      if (mounted.current) setResetPending(false)
     }
   }
 
   async function submitPasswordReset() {
-    if (resetPending) return;
+    if (resetPending) return
     if (!email.trim()) {
-      setResetError("Enter your email address.");
-      return;
+      setResetError("Enter your email address.")
+      return
     }
     if (resetStep === "email") {
-      setResetPending(true);
-      setResetError(null);
-      setResetMessage(null);
+      setResetPending(true)
+      setResetError(null)
+      setResetMessage(null)
       try {
-        const result = await requestPasswordReset(email);
-        if (!mounted.current) return;
-        setResetMessage(result.message);
-        setResendDeadline(Date.now() + result.resendAfterSeconds * 1000);
-        setResetStep("code");
+        const result = await requestPasswordReset(email)
+        if (!mounted.current) return
+        setResetMessage(result.message)
+        setResendDeadline(Date.now() + result.resendAfterSeconds * 1000)
+        setResetStep("code")
       } catch (cause) {
-        if (!mounted.current) return;
+        if (!mounted.current) return
         setResetError(
           cause instanceof Error ? cause.message : "Unable to request a password reset.",
-        );
+        )
       } finally {
-        if (mounted.current) setResetPending(false);
+        if (mounted.current) setResetPending(false)
       }
-      return;
+      return
     }
     if (resetStep === "code") {
-      void verifyResetCode(resetCode);
-      return;
+      void verifyResetCode(resetCode)
+      return
     }
     if (Array.from(newPassword).length < 8) {
-      setResetError("Password must contain at least 8 characters.");
-      return;
+      setResetError("Password must contain at least 8 characters.")
+      return
     }
-    const passwordBytes = encodeURIComponent(newPassword).replace(/%[0-9A-F]{2}/gi, "x").length;
+    const passwordBytes = encodeURIComponent(newPassword).replace(/%[0-9A-F]{2}/gi, "x").length
     if (passwordBytes > 72) {
-      setResetError("Password must not exceed 72 UTF-8 bytes.");
-      return;
+      setResetError("Password must not exceed 72 UTF-8 bytes.")
+      return
     }
     if (!resetToken) {
-      setResetError("Verify your reset code before choosing a new password.");
-      return;
+      setResetError("Verify your reset code before choosing a new password.")
+      return
     }
-    setResetPending(true);
-    setResetError(null);
+    setResetPending(true)
+    setResetError(null)
     try {
-      const message = await completePasswordReset(resetToken, newPassword);
-      if (!mounted.current) return;
-      setResetMessage(message);
-      setLockoutKind(null);
-      setLockoutDeadline(null);
-      setLockoutSeconds(0);
-      setFailedAttempts(0);
-      setPassword("");
-      setNewPassword("");
-      setResetToken(null);
-      setResetCode("");
-      setResetStep("done");
+      const message = await completePasswordReset(resetToken, newPassword)
+      if (!mounted.current) return
+      setResetMessage(message)
+      setLockoutKind(null)
+      setLockoutDeadline(null)
+      setLockoutSeconds(0)
+      setFailedAttempts(0)
+      setPassword("")
+      setNewPassword("")
+      setResetToken(null)
+      setResetCode("")
+      setResetStep("done")
     } catch (cause) {
-      if (!mounted.current) return;
-      setResetError(cause instanceof Error ? cause.message : "Unable to reset your password.");
+      if (!mounted.current) return
+      setResetError(cause instanceof Error ? cause.message : "Unable to reset your password.")
     } finally {
-      if (mounted.current) setResetPending(false);
+      if (mounted.current) setResetPending(false)
     }
   }
 
@@ -409,8 +409,8 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
                 editable={resetMode ? !resetPending : !loginDisabled}
                 submitBehavior="submit"
                 onChangeText={(value) => {
-                  clearLoginError();
-                  setEmail(value);
+                  clearLoginError()
+                  setEmail(value)
                 }}
                 onSubmitEditing={() => passwordInput.current?.focus()}
               />
@@ -456,11 +456,11 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
                 aria-describedby={fieldError ? "login-password-error" : undefined}
                 editable={!loginDisabled}
                 onChangeText={(value) => {
-                  clearLoginError();
-                  setPassword(value);
+                  clearLoginError()
+                  setPassword(value)
                 }}
                 onSubmitEditing={() => {
-                  void submit();
+                  void submit()
                 }}
               />
               <View style={[styles.errorSpace, { minHeight: 32 * fontScale + 4 }]}>
@@ -519,9 +519,9 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
                   accessibilityLabel="4-digit reset code"
                   value={resetCode}
                   onChangeText={(value) => {
-                    const code = value.replace(/\D/g, "").slice(0, 4);
-                    setResetCode(code);
-                    if (code.length === 4) void verifyResetCode(code);
+                    const code = value.replace(/\D/g, "").slice(0, 4)
+                    setResetCode(code)
+                    if (code.length === 4) void verifyResetCode(code)
                   }}
                   keyboardType="number-pad"
                   inputMode="numeric"
@@ -537,12 +537,12 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
                 accessibilityRole="button"
                 accessibilityLabel="Change email address"
                 onPress={() => {
-                  setResetStep("email");
-                  setResetToken(null);
-                  setResetCode("");
-                  setResetError(null);
-                  setResendDeadline(null);
-                  setResendSeconds(0);
+                  setResetStep("email")
+                  setResetToken(null)
+                  setResetCode("")
+                  setResetError(null)
+                  setResendDeadline(null)
+                  setResendSeconds(0)
                 }}
               >
                 <Text style={styles.footerLink}>Change email address</Text>
@@ -557,7 +557,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
                 accessibilityState={{ disabled: resetPending || resendSeconds > 0 }}
                 disabled={resetPending || resendSeconds > 0}
                 onPress={() => {
-                  void resendResetCode();
+                  void resendResetCode()
                 }}
               >
                 <Text style={styles.footerLink}>
@@ -650,7 +650,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
             disabled={resetPending || resetCode.length !== 4}
             style={[styles.primaryButton, resetCode.length !== 4 && styles.disabled]}
             onPress={() => {
-              void submitPasswordReset();
+              void submitPasswordReset()
             }}
           >
             <Text style={styles.primaryLabel}>Continue</Text>
@@ -672,7 +672,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
               (resetMode ? resetPending : loginDisabled) && styles.disabled,
             ]}
             onPress={() => {
-              void (resetMode ? submitPasswordReset() : submit());
+              void (resetMode ? submitPasswordReset() : submit())
             }}
           >
             <View style={styles.buttonContents}>
@@ -718,12 +718,12 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
                 accessibilityRole="button"
                 accessibilityLabel="Back to log in"
                 onPress={() => {
-                  setResetMode(false);
-                  setResetStep("email");
-                  setResetCode("");
-                  setResetToken(null);
-                  setNewPassword("");
-                  setResetMessage(null);
+                  setResetMode(false)
+                  setResetStep("email")
+                  setResetCode("")
+                  setResetToken(null)
+                  setNewPassword("")
+                  setResetMessage(null)
                 }}
                 hitSlop={8}
               >
@@ -747,7 +747,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
-  );
+  )
 }
 
 const createStyles = (AuthColors: AuthColorPalette) =>
@@ -835,4 +835,4 @@ const createStyles = (AuthColors: AuthColorPalette) =>
     },
     footerText: { fontSize: 14, color: AuthColors.textMuted },
     footerLink: { fontSize: 14, fontWeight: "700", color: AuthColors.accent },
-  });
+  })

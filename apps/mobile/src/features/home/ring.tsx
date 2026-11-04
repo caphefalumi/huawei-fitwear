@@ -1,31 +1,31 @@
-import { useEffect, useRef } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
-import Svg, { Circle } from "react-native-svg";
+import { useEffect, useRef } from "react"
+import { Animated, StyleSheet, Text, View } from "react-native"
+import Svg, { Circle } from "react-native-svg"
 
-import { Palette as C } from "@/constants/palette";
+import { Palette as C } from "@/constants/palette"
 
 /** Ring frame size from Figma (node 4:3836, "Nutrition" body). */
-const SIZE = 112;
-const R = 46;
-const LEN = 2 * Math.PI * R;
+const SIZE = 112
+const R = 46
+const LEN = 2 * Math.PI * R
 
-const ACircle = Animated.createAnimatedComponent(Circle);
+const ACircle = Animated.createAnimatedComponent(Circle)
 
 export function NutritionRing({ kcalLeft, progress }: { kcalLeft: number; progress: number }) {
-  const anim = useRef(new Animated.Value(0)).current;
-  const fill = Math.max(0, Math.min(1, progress));
+  const anim = useRef(new Animated.Value(0)).current
+  const fill = Math.max(0, Math.min(1, progress))
 
   useEffect(() => {
-    anim.setValue(0);
-    const t = Animated.timing(anim, { toValue: 1, duration: 900, useNativeDriver: false });
-    t.start();
-    return () => t.stop();
-  }, [anim, fill]);
+    anim.setValue(0)
+    const t = Animated.timing(anim, { toValue: 1, duration: 900, useNativeDriver: false })
+    t.start()
+    return () => t.stop()
+  }, [anim, fill])
 
   const dashOffset = anim.interpolate({
     inputRange: [0, 1],
     outputRange: [LEN, LEN * (1 - fill)],
-  });
+  })
 
   return (
     <View style={styles.ring}>
@@ -50,7 +50,7 @@ export function NutritionRing({ kcalLeft, progress }: { kcalLeft: number; progre
         <Text style={styles.label}>kcal left</Text>
       </View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -78,4 +78,4 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: C.textMuted,
   },
-});
+})

@@ -20,7 +20,7 @@
     "lint": "bun run lint:mobile && bun run lint:backend",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
-    "prepare": "node scripts/install-pre-commit.js",
+    "prepare": "bun scripts/install-pre-commit.ts",
     "precommit:format": "lint-staged",
     "backend:dev": "bun run --cwd apps/backend dev",
     "backend:build": "bun run --cwd apps/backend build",

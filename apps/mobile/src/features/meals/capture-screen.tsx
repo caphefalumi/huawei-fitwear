@@ -1,89 +1,89 @@
-import { useMutation } from "@tanstack/react-query";
-import { Image } from "expo-image";
-import { router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useMutation } from "@tanstack/react-query"
+import { Image } from "expo-image"
+import { router } from "expo-router"
+import { useEffect, useRef, useState } from "react"
+import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { pickImage } from "@/features/camera/image-picker";
+import { pickImage } from "@/features/camera/image-picker"
 
-import { Pressable } from "@/components/pressable";
-import { Sheet } from "@/components/sheet";
-import { Palette as C } from "@/constants/palette";
-import { Header, icons, PrimaryButton, SecondaryButton } from "./meals-ui";
-import { useMeals, type ApiMealItem } from "./meals-store";
-import { apiRequest } from "@/lib/api";
+import { Pressable } from "@/components/pressable"
+import { Sheet } from "@/components/sheet"
+import { Palette as C } from "@/constants/palette"
+import { Header, icons, PrimaryButton, SecondaryButton } from "./meals-ui"
+import { useMeals, type ApiMealItem } from "./meals-store"
+import { apiRequest } from "@/lib/api"
 
 const TUTORIAL_STEPS = [
   { title: "Add a ruler", detail: "Place a 15 cm ruler beside the plate or cup." },
   { title: "Shoot from above", detail: "Keep the whole meal in frame and hold steady." },
-];
+]
 
 export function MealCaptureScreen() {
-  const insets = useSafeAreaInsets();
-  const { tutorialSeen, dismissTutorial, setAnalysis, setDraftPhoto, items } = useMeals();
-  const [description, setDescription] = useState("");
+  const insets = useSafeAreaInsets()
+  const { tutorialSeen, dismissTutorial, setAnalysis, setDraftPhoto, items } = useMeals()
+  const [description, setDescription] = useState("")
   const [image, setImage] = useState<{
-    uri: string;
-    base64: string;
-    mimeType: "image/jpeg" | "image/png";
-  } | null>(null);
+    uri: string
+    base64: string
+    mimeType: "image/jpeg" | "image/png"
+  } | null>(null)
   const analyzeMutation = useMutation({
     mutationFn: (body: { image: string; mimeType: string; description?: string }) =>
       apiRequest<{ items: ApiMealItem[] }>("/meals/analyze", { method: "POST", body }),
-  });
-  const [error, setError] = useState<string | null>(null);
-  const active = useRef(true);
-  const request = useRef(0);
-  const busy = analyzeMutation.isPending;
+  })
+  const [error, setError] = useState<string | null>(null)
+  const active = useRef(true)
+  const request = useRef(0)
+  const busy = analyzeMutation.isPending
   useEffect(() => {
-    active.current = true;
+    active.current = true
     return () => {
-      active.current = false;
-      request.current++;
-    };
-  }, []);
+      active.current = false
+      request.current++
+    }
+  }, [])
 
   async function selectImage(camera: boolean) {
-    if (busy) return;
-    setError(null);
+    if (busy) return
+    setError(null)
     try {
-      const image = await pickImage(camera);
-      if (image && active.current) setImage(image);
+      const image = await pickImage(camera)
+      if (image && active.current) setImage(image)
     } catch (cause) {
       if (active.current)
-        setError(cause instanceof Error ? cause.message : "Could not open image picker.");
+        setError(cause instanceof Error ? cause.message : "Could not open image picker.")
     }
   }
   async function analyze() {
-    if (!image || busy) return;
+    if (!image || busy) return
     if (items.length) {
       setError(
         "Your current meal draft has items. Review or clear that draft before analyzing another meal.",
-      );
-      return;
+      )
+      return
     }
-    const current = ++request.current;
-    setError(null);
-    analyzeMutation.reset();
+    const current = ++request.current
+    setError(null)
+    analyzeMutation.reset()
     try {
       const result = await analyzeMutation.mutateAsync({
         image: image.base64,
         mimeType: image.mimeType,
         ...(description.trim() ? { description: description.trim() } : {}),
-      });
-      if (!active.current || current !== request.current) return;
+      })
+      if (!active.current || current !== request.current) return
       if (!result.items.length)
-        throw new Error("No food was identified. Try another photo or enter items manually.");
-      setAnalysis(result.items, image.uri, { data: image.base64, mimeType: image.mimeType });
-      router.push("/meal");
+        throw new Error("No food was identified. Try another photo or enter items manually.")
+      setAnalysis(result.items, image.uri, { data: image.base64, mimeType: image.mimeType })
+      router.push("/meal")
     } catch (cause) {
       if (active.current && current === request.current)
         setError(
           cause instanceof Error
             ? cause.message
             : "Photo analysis is unavailable. You can enter nutrition manually.",
-        );
+        )
     }
   }
 
@@ -170,8 +170,8 @@ export function MealCaptureScreen() {
         <SecondaryButton
           label="Enter meal manually"
           onPress={() => {
-            if (image) setDraftPhoto(image.uri, { data: image.base64, mimeType: image.mimeType });
-            router.push("/meal");
+            if (image) setDraftPhoto(image.uri, { data: image.base64, mimeType: image.mimeType })
+            router.push("/meal")
           }}
         />
 
@@ -217,7 +217,7 @@ export function MealCaptureScreen() {
         </Pressable>
       </Sheet>
     </>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -453,4 +453,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: C.onAccent,
   },
-});
+})
