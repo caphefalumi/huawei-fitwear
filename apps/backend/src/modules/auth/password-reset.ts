@@ -63,19 +63,17 @@ export async function requestPasswordReset(email: string): Promise<void> {
   const otpHash = await digestToken(otp);
   const expiresAt = new Date(Date.now() + OTP_LIFETIME_MS);
   const recordId = generateId();
-  await db
-    .delete(verification)
-    .where(
-      or(
-        eq(verification.identifier, identifier),
-        eq(verification.identifier, `${TOKEN_IDENTIFIER_PREFIX}${account.id}`),
+  await db.batch([
+    db
+      .delete(verification)
+      .where(
+        or(
+          eq(verification.identifier, identifier),
+          eq(verification.identifier, `${TOKEN_IDENTIFIER_PREFIX}${account.id}`),
+        ),
       ),
-    )
-    .run();
-  await db
-    .insert(verification)
-    .values({ id: recordId, identifier, value: otpHash, expiresAt })
-    .run();
+    db.insert(verification).values({ id: recordId, identifier, value: otpHash, expiresAt }),
+  ]);
 
   try {
     await enqueueEmail({
