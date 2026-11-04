@@ -37,13 +37,13 @@
     "test:e2e": "bun run mobile:test:e2e"
   },
   "dependencies": {
-    "expo": "~58.0.22",
+    "expo": "~58.0.23",
     "react": "19.3.0",
     "react-native": "0.88.1"
   },
   "devDependencies": {
-    "oxfmt": "^0.75.0",
-    "oxlint": "^1.90.0"
+    "oxfmt": "^0.76.0",
+    "oxlint": "^1.91.0"
   },
   "overrides": {
     "flow-parser": "0.338.0"
