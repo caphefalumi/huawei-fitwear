@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Pressable } from "@/components/pressable";
 import { Palette as C } from "@/constants/palette";
-import { createRecovery, PERIOD_AREA, useHealth } from "@/features/health/health-store";
+import { PERIOD_AREA, useHealth } from "@/features/health/health-store";
 import { useAuth } from "@/features/auth/auth-store";
 import {
   ActivitySheet,
@@ -137,7 +137,7 @@ export function ProfileScreen() {
     }
     Alert.alert("Period recovery", "Used only to adjust your plan. You can turn it off any time.", [
       { text: "Not now", style: "cancel" },
-      { text: "Turn on", onPress: () => setOpenSheet("period") },
+      { text: "Turn on", onPress: () => setOpenSheet("recovery") },
     ]);
   };
 
@@ -315,14 +315,6 @@ export function ProfileScreen() {
         </Pressable>
       </View>
 
-      {mountedSheet === "period" ? (
-        <RecoverySheet
-          visible={openSheet === "period"}
-          initialArea={PERIOD_AREA}
-          onClose={close}
-          onDismiss={didDismiss}
-        />
-      ) : null}
       {mountedSheet === "height" ? (
         <HeightSheet visible={openSheet === "height"} onClose={close} onDismiss={didDismiss} />
       ) : null}
