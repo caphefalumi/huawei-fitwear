@@ -8,6 +8,7 @@ import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
+import { NetworkStatusBanner } from "@/components/network-status";
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import { APP_ROUTES, AuthProvider, useAuth } from "@/features/auth";
 import { HealthProvider } from "@/features/health";
@@ -24,6 +25,7 @@ export default function RootLayout() {
         <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
           <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
+              <NetworkStatusBanner />
               <RootNavigator />
             </KeyboardProvider>
           </GestureHandlerRootView>

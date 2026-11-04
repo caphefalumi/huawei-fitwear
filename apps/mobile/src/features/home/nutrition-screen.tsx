@@ -1,11 +1,11 @@
 import { router } from "expo-router";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Palette as C } from "@/constants/palette";
-import { Pressable } from "@/components/pressable";
 import { useMeals } from "@/features/meals/meals-store";
 import { NutritionRing } from "@/features/home/ring";
+import { FetchErrorState, LoadingSkeleton } from "@/components/fetch-states";
 import { BackHeader, Card, MacroBar } from "@/features/home/ui";
 
 export function NutritionScreen() {
@@ -17,6 +17,14 @@ export function NutritionScreen() {
 
   return (
     <ScrollView
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => void refresh()}
+          tintColor={C.accent}
+          colors={[C.accent]}
+        />
+      }
       style={styles.screen}
       contentContainerStyle={[
         styles.content,
@@ -38,19 +46,15 @@ export function NutritionScreen() {
         </Text>
       </View>
       {error ? (
-        <Pressable onPress={() => void refresh()}>
-          <Text accessibilityRole="alert">
-            {summary ? `Could not refresh. Showing saved nutrition. ${error}` : error} Tap to retry.
-          </Text>
-        </Pressable>
+        <FetchErrorState
+          title={summary ? "Couldn't refresh nutrition" : "Couldn't load nutrition"}
+          message={error}
+          onRetry={refresh}
+          retrying={refreshing}
+        />
       ) : null}
-      {loading ? <Text style={styles.noteBody}>Loading today’s nutrition…</Text> : null}
+      {loading ? <LoadingSkeleton label="Loading nutrition" rows={4} /> : null}
       {refreshing ? <Text style={styles.noteBody}>Updating nutrition…</Text> : null}
-      {!summary && !loading ? (
-        <Text style={styles.noteBody}>
-          Nutrition summary is unavailable. Retry to load your targets and logged meals.
-        </Text>
-      ) : null}
       {summary && targets && consumed && left !== undefined ? (
         <>
           <Card style={styles.center}>

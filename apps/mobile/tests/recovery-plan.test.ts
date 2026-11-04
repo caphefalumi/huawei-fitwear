@@ -6,7 +6,10 @@ import {
 } from "@/features/health/health-store";
 import type { RecoveryPlan } from "@/features/health/health-store";
 
-jest.mock("@/lib/api", () => ({ apiRequest: jest.fn() }));
+jest.mock("@/lib/api", () => ({
+  ...jest.requireActual("@/lib/api"),
+  apiRequest: jest.fn(),
+}));
 jest.mock("@/features/auth/auth-store", () => ({ useAuth: jest.fn() }));
 
 const plan = (restDays: number, lightDays: number): RecoveryPlan => ({

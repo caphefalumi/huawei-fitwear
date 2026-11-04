@@ -1,3 +1,4 @@
+import { apiErrorMessage } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 
@@ -151,9 +152,10 @@ export function HealthProvider({ children }: { children: ReactNode }) {
   const recovery = recoveryQuery.data ? recoveryFromRow(recoveryQuery.data) : null;
   const loading = weightsQuery.isLoading || recoveryQuery.isLoading;
   const refreshing = (weightsQuery.isFetching || recoveryQuery.isFetching) && !loading;
-  const error =
-    [weightsQuery.error, recoveryQuery.error].find((cause) => cause instanceof Error)?.message ??
-    null;
+  const errorCause = [weightsQuery.error, recoveryQuery.error].find(
+    (cause) => cause instanceof Error,
+  );
+  const error = errorCause ? apiErrorMessage(errorCause, "your health data") : null;
   const saveWeightMutation = useMutation({
     mutationKey: [...healthQueryKeys.all(userId ?? "signed-out"), "save-weight"],
     mutationFn: async (weightKg: number) =>

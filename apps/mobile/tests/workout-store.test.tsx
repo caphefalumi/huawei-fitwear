@@ -11,7 +11,10 @@ import { createQueryWrapper } from "./query-wrapper";
 
 let serverSessions: WorkoutSession[];
 
-jest.mock("@/lib/api", () => ({ apiRequest: jest.fn() }));
+jest.mock("@/lib/api", () => ({
+  ...jest.requireActual("@/lib/api"),
+  apiRequest: jest.fn(),
+}));
 jest.mock("@/features/auth/auth-store", () => ({
   useAuth: () => ({ user: { id: "member-a" } }),
 }));

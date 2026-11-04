@@ -1,10 +1,11 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Pressable } from "@/components/pressable";
+import { FetchErrorState, LoadingSkeleton } from "@/components/fetch-states";
 import { Palette as C } from "@/constants/palette";
 import { Card, SectionHeading } from "@/features/home/ui";
 import { recoveryRanges, useHealth } from "@/features/health/health-store";
@@ -26,8 +27,18 @@ const icons = {
 export function WorkoutPlanScreen() {
   const insets = useSafeAreaInsets();
   const { plan, recovery } = useHealth();
-  const { exercises, sessions, loading, refreshing, error, refresh, hasMore, loadMore } =
-    useWorkouts();
+  const {
+    exercises,
+    sessions,
+    loading,
+    refreshing,
+    error,
+    actionError,
+    retryAction,
+    refresh,
+    hasMore,
+    loadMore,
+  } = useWorkouts();
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [recoveryClosing, setRecoveryClosing] = useState(false);
   const { today, next, avoid, rest } = routinesFor(recovery, exercises);
@@ -92,6 +103,14 @@ export function WorkoutPlanScreen() {
 
   return (
     <ScrollView
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => void refresh()}
+          tintColor={C.accent}
+          colors={[C.accent]}
+        />
+      }
       style={styles.screen}
       contentContainerStyle={[
         styles.content,
@@ -129,14 +148,26 @@ export function WorkoutPlanScreen() {
         })}
       </View>
       {error ? (
-        <Text accessibilityRole="alert" style={styles.subtitle}>
-          {sessions.length || exercises.length
-            ? `Could not refresh. Showing saved workouts. ${error}`
-            : error}
-        </Text>
+        <FetchErrorState
+          title={
+            sessions.length || exercises.length
+              ? "Couldn't refresh workouts"
+              : "Couldn't load workouts"
+          }
+          message={error}
+          onRetry={refresh}
+          retrying={refreshing}
+        />
       ) : null}
-      {loading ? <Text style={styles.subtitle}>Loading workouts…</Text> : null}
-      {refreshing ? <Text style={styles.subtitle}>Updating workouts…</Text> : null}
+      {actionError ? (
+        <FetchErrorState
+          title="Couldn't save your workout"
+          message={actionError}
+          onRetry={retryAction}
+        />
+      ) : null}
+      {loading ? <LoadingSkeleton label="Loading workouts" rows={5} /> : null}
+      {refreshing && !loading ? <Text style={styles.subtitle}>Updating workouts…</Text> : null}
       <Pressable
         disabled={loading}
         accessibilityState={{ busy: loading }}

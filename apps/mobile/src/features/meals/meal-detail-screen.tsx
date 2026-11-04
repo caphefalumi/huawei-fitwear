@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
+import { FetchErrorState, LoadingSkeleton } from "@/components/fetch-states";
 import { Text, View } from "react-native";
 
 import { Pressable } from "@/components/pressable";
 import { Palette as C } from "@/constants/palette";
 import { useAuth } from "@/features/auth/store/auth.store";
-import { apiRequest } from "@/lib/api";
+import { apiErrorMessage, apiRequest } from "@/lib/api";
 import { MealResultScreen } from "@/features/meals/meal-result-screen";
 import {
   fromApiMeal,
@@ -34,7 +35,7 @@ export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: ()
     },
   });
   const loaded = detailQuery.data;
-  const error = detailQuery.error instanceof Error ? detailQuery.error.message : null;
+  const error = detailQuery.error ? apiErrorMessage(detailQuery.error, "this meal") : null;
 
   if (logId && !saved && !loaded) {
     return (
@@ -50,16 +51,28 @@ export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: ()
         <Text accessibilityRole="header" style={{ color: C.text, fontSize: 20, fontWeight: "600" }}>
           Meal
         </Text>
-        {detailQuery.isLoading ? <Text style={{ color: C.textMuted }}>Loading meal…</Text> : null}
+        {detailQuery.isLoading ? <LoadingSkeleton label="Loading meal" rows={3} /> : null}
         {error ? (
-          <Text style={{ color: C.text }} accessibilityRole="alert">
-            {error}
-          </Text>
+          <FetchErrorState
+            title={
+              detailQuery.error instanceof Error &&
+              "status" in detailQuery.error &&
+              detailQuery.error.status === 404
+                ? "Meal not found"
+                : "Couldn't load this meal"
+            }
+            message={error}
+            onRetry={() => detailQuery.refetch()}
+            retrying={detailQuery.isFetching}
+            onBack={onBack}
+          />
         ) : null}
-        {error ? (
-          <Pressable onPress={() => void detailQuery.refetch()}>
-            <Text style={{ color: C.accent }}>Retry</Text>
-          </Pressable>
+        {!error && !detailQuery.isLoading ? (
+          <FetchErrorState
+            title="Meal unavailable"
+            message="This meal couldn't be found."
+            onBack={onBack}
+          />
         ) : null}
         <Pressable onPress={onBack}>
           <Text style={{ color: C.accent }}>Back</Text>

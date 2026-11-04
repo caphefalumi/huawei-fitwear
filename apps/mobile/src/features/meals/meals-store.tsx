@@ -1,3 +1,4 @@
+import { apiErrorMessage, apiRequest } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createContext,
@@ -10,7 +11,6 @@ import {
 } from "react";
 import { AppState } from "react-native";
 import { useAuth } from "@/features/auth/auth-store";
-import { apiRequest } from "@/lib/api";
 import { useMealClientStore } from "./meal-client.store";
 
 export type Macros = { protein: number; carbs: number; fat: number };
@@ -191,6 +191,8 @@ type MealsContextValue = {
   refreshing: boolean;
   busy: boolean;
   error: string | null;
+  actionError: string | null;
+  retryAction: () => Promise<void>;
   refresh: () => Promise<void>;
   tutorialSeen: boolean;
   dismissTutorial: () => void;
@@ -201,6 +203,12 @@ type MealsContextValue = {
   logMeal: () => Promise<void>;
   deleteLog: (id: string) => Promise<void>;
   updateMealType: (id: string, type: MealType) => Promise<void>;
+};
+type WriteMutationInput = {
+  path: string;
+  method: string;
+  body?: unknown;
+  onSuccess?: () => void;
 };
 const MealsContext = createContext<MealsContextValue | null>(null);
 export const mealsQueryKeys = {
@@ -291,7 +299,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
   };
   const writeMutation = useMutation({
     mutationKey: [...mealsQueryKeys.all(userId ?? "signed-out"), "write"],
-    mutationFn: ({ path, method, body }: { path: string; method: string; body?: unknown }) =>
+    mutationFn: ({ path, method, body }: WriteMutationInput) =>
       apiRequest<unknown>(path, { method, ...(body === undefined ? {} : { body }) }),
     onMutate: async ({ path, method, body }) => {
       if (!userId) return undefined;
@@ -319,15 +327,32 @@ export function MealsProvider({ children }: { children: ReactNode }) {
     onError: (_error, _variables, context) => {
       if (context?.previous) queryClient.setQueryData(context.key, context.previous);
     },
-    onSuccess: invalidateMeals,
+    onSuccess: async (result, variables) => {
+      await invalidateMeals(result, variables);
+      variables.onSuccess?.();
+    },
   });
-  const error =
-    [historyQuery.error, summaryQuery.error, writeMutation.error].find(
-      (cause) => cause instanceof Error,
-    )?.message ?? null;
+  const error = [historyQuery.error, summaryQuery.error].find((cause) => cause instanceof Error);
+  const errorMessage = error ? apiErrorMessage(error, "your meals") : null;
+  const actionError = writeMutation.error
+    ? apiErrorMessage(writeMutation.error, "that change")
+    : null;
+  const retryAction = async () => {
+    if (writeMutation.variables) await writeMutation.mutateAsync(writeMutation.variables);
+  };
   const busy = writeMutation.isPending;
-  const runWrite = async <T,>(path: string, method: string, body?: unknown): Promise<T> =>
-    (await writeMutation.mutateAsync({ path, method, body })) as T;
+  const runWrite = async <T,>(
+    path: string,
+    method: string,
+    body?: unknown,
+    onSuccess?: () => void,
+  ): Promise<T> =>
+    (await writeMutation.mutateAsync({
+      path,
+      method,
+      body,
+      ...(onSuccess ? { onSuccess } : {}),
+    })) as T;
   useEffect(() => {
     if (user?.updatedAt) void summaryQuery.refetch();
   }, [user?.updatedAt, summaryQuery.refetch]);
@@ -387,15 +412,19 @@ export function MealsProvider({ children }: { children: ReactNode }) {
   const logMeal = async () => {
     if (!items.length) throw new Error("Add at least one item before logging.");
     items.forEach(validateItem);
-    await runWrite<ApiMeal>("/meals", "POST", {
-      mealType,
-      targetDate: localDate(),
-      loggedAt: new Date().toISOString(),
-      scaleReferenceType: "none",
-      items: items.map(toApiItem),
-      ...(draftImageData ? { image: draftImageData } : {}),
-    });
-    deleteMeal();
+    await runWrite<ApiMeal>(
+      "/meals",
+      "POST",
+      {
+        mealType,
+        targetDate: localDate(),
+        loggedAt: new Date().toISOString(),
+        scaleReferenceType: "none",
+        items: items.map(toApiItem),
+        ...(draftImageData ? { image: draftImageData } : {}),
+      },
+      deleteMeal,
+    );
   };
   const deleteLog = async (id: string) => {
     await runWrite(`/meals/${id}`, "DELETE");
@@ -421,7 +450,9 @@ export function MealsProvider({ children }: { children: ReactNode }) {
         loading,
         refreshing,
         busy,
-        error,
+        error: errorMessage,
+        actionError,
+        retryAction,
         refresh,
         loggedKcal: summary?.consumed.caloriesKcal ?? 0,
         loggedMacros: {
@@ -493,7 +524,7 @@ export function useFoodSearch(query: string) {
   const matches = debounced === normalized ? (searchQuery.data ?? []) : [];
   return {
     matches,
-    error: searchQuery.error instanceof Error ? searchQuery.error.message : null,
+    error: searchQuery.error ? apiErrorMessage(searchQuery.error, "food search") : null,
     loading: Boolean(normalized && (debounced !== normalized || searchQuery.isLoading)),
     refreshing: searchQuery.isFetching && !searchQuery.isLoading,
     empty: Boolean(
