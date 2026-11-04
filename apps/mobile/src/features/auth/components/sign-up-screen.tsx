@@ -5,31 +5,15 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Pressable } from "@/components/pressable";
-import { WheelPicker } from "@/components/wheel-picker";
 import { Palette as AuthColors } from "@/constants/palette";
 import { APP_ROUTES, useAuth } from "../store/auth.store";
-import { resolveBirthdaySelection } from "../utils/birth-date";
 import { AuthField } from "./auth-field";
+import { DateOfBirthField } from "./date-of-birth-field";
 
 const icons = {
-  chevronLeft: require("@/assets/images/auth/chevron-left.svg"),
-  user: require("@/assets/images/auth/user-round.svg"),
-  eyeOff: require("@/assets/images/auth/eye-off.svg"),
   check: require("@/assets/images/auth/check.svg"),
   lock: require("@/assets/images/auth/lock-keyhole.svg"),
 };
-
-const DATE_COLUMN_ORDER = new Intl.DateTimeFormat(undefined, {
-  day: "numeric",
-  month: "numeric",
-  year: "numeric",
-})
-  .formatToParts(new Date())
-  .flatMap(({ type }) => (type === "day" || type === "month" || type === "year" ? [type] : []));
-
-const MONTH_NAMES = Array.from({ length: 12 }, (_, index) =>
-  new Intl.DateTimeFormat(undefined, { month: "short" }).format(new Date(2000, index, 1)),
-);
 
 export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
   const insets = useSafeAreaInsets();
@@ -38,27 +22,9 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const today = new Date();
-  const initialBirthDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
-  const [birthYear, setBirthYear] = useState(initialBirthDate.getFullYear());
-  const [birthMonth, setBirthMonth] = useState(initialBirthDate.getMonth() + 1);
-  const [birthDay, setBirthDay] = useState(initialBirthDate.getDate());
-  const birthDate = `${birthYear}-${String(birthMonth).padStart(2, "0")}-${String(birthDay).padStart(2, "0")}`;
+  const [birthDate, setBirthDate] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const yearValues = Array.from({ length: 201 }, (_, index) => today.getFullYear() - 100 + index);
-
-  function selectBirthday(year: number, month: number, day: number) {
-    const { date } = resolveBirthdaySelection(year, month, day);
-    setBirthYear(date.getFullYear());
-    setBirthMonth(date.getMonth() + 1);
-    setBirthDay(date.getDate());
-  }
-
-  function isFutureDate(year: number, month: number, day: number) {
-    return resolveBirthdaySelection(year, month, day).isFuture;
-  }
-
   async function submit() {
     const date = new Date(`${birthDate}T00:00:00Z`);
     if (!name.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
@@ -74,13 +40,32 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
       setValidationError("Password must not exceed 72 UTF-8 bytes.");
       return;
     }
-    if (
-      !/^\d{4}-\d{2}-\d{2}$/.test(birthDate) ||
-      !Number.isFinite(date.getTime()) ||
-      date.toISOString().slice(0, 10) !== birthDate ||
-      date > new Date()
-    ) {
-      setValidationError("Select a valid date of birth, not in the future.");
+    const validDate =
+      /^\d{4}-\d{2}-\d{2}$/.test(birthDate) &&
+      Number.isFinite(date.getTime()) &&
+      date.toISOString().slice(0, 10) === birthDate;
+    if (!validDate) {
+      setValidationError("Enter a valid date");
+      return;
+    }
+    if (birthDate > new Date().toISOString().slice(0, 10)) {
+      setValidationError("Date can't be in the future");
+      return;
+    }
+    const today = new Date();
+    const age =
+      today.getUTCFullYear() -
+      date.getUTCFullYear() -
+      (today.getUTCMonth() < date.getUTCMonth() ||
+      (today.getUTCMonth() === date.getUTCMonth() && today.getUTCDate() < date.getUTCDate())
+        ? 1
+        : 0);
+    if (age < 13) {
+      setValidationError("You must be at least 13 years old to create an account.");
+      return;
+    }
+    if (date.getUTCFullYear() < today.getUTCFullYear() - 120) {
+      setValidationError("Enter a valid date");
       return;
     }
     if (!agreed) {
@@ -94,52 +79,6 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
       // Keep input values and display the server error from the auth store.
     }
   }
-  const dateWheels = {
-    month: (
-      <WheelPicker
-        label="Birth month"
-        values={Array.from({ length: 12 }, (_, index) => index + 1)}
-        value={birthMonth}
-        onChange={(month) => selectBirthday(birthYear, month, birthDay)}
-        format={(month) => MONTH_NAMES[month - 1]}
-        isUnavailable={(month) => isFutureDate(birthYear, month, birthDay)}
-        showActions={false}
-        style={styles.monthColumn}
-      />
-    ),
-    day: (
-      <WheelPicker
-        label="Birth day"
-        values={Array.from(
-          { length: new Date(birthYear, birthMonth, 0).getDate() },
-          (_, index) => index + 1,
-        )}
-        value={birthDay}
-        onChange={(day) => selectBirthday(birthYear, birthMonth, day)}
-        format={(day) => String(day)}
-        isUnavailable={(day) => isFutureDate(birthYear, birthMonth, day)}
-        showActions={false}
-        style={styles.dayColumn}
-      />
-    ),
-    year: (
-      <WheelPicker
-        label="Birth year"
-        values={yearValues}
-        value={birthYear}
-        onChange={(year) => selectBirthday(year, birthMonth, birthDay)}
-        format={(year) => String(year)}
-        isUnavailable={(year) => isFutureDate(year, birthMonth, birthDay)}
-        showActions={false}
-        style={styles.yearColumn}
-      />
-    ),
-  };
-  const dateColumnStyles = {
-    day: styles.dayColumn,
-    month: styles.monthColumn,
-    year: styles.yearColumn,
-  };
 
   return (
     <ScrollView
@@ -148,55 +87,66 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
       ]}
-      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Sign in"
+        accessibilityLabel="Back"
         disabled={pending}
         style={styles.back}
-        onPress={handleSignIn}
+        onPress={() => router.replace("/(auth)")}
         hitSlop={8}
       >
-        <Image
-          accessible={false}
-          source={icons.chevronLeft}
-          style={styles.backIcon}
-          contentFit="contain"
-        />
-        <Text style={styles.backLabel}>Sign in</Text>
+        <Text style={styles.backLabel}>‹ Back</Text>
       </Pressable>
 
       <Text accessibilityRole="header" style={styles.title}>
-        Start your journey.
+        Create account
       </Text>
 
       <View style={styles.form}>
         <AuthField
-          label="Name"
-          icon={icons.user}
+          label="Username"
           value={name}
           onChangeText={setName}
-          autoCapitalize="words"
-          textContentType="name"
-          autoComplete="name"
+          placeholder="Your username"
+          autoCapitalize="none"
+          autoCorrect={false}
+          textContentType="username"
+          autoComplete="username"
+          returnKeyType="next"
           editable={!pending}
         />
         <AuthField
           label="Email"
-          icon={icons.user}
           value={email}
           onChangeText={setEmail}
+          placeholder="Your email"
           keyboardType="email-address"
+          returnKeyType="next"
           autoCapitalize="none"
           autoCorrect={false}
           textContentType="emailAddress"
           autoComplete="email"
           editable={!pending}
         />
+        <DateOfBirthField
+          value={birthDate}
+          onChange={(value) => {
+            setBirthDate(value);
+            setValidationError(null);
+          }}
+          error={
+            validationError?.includes("date") ||
+            validationError?.includes("Date") ||
+            validationError?.includes("years old")
+              ? validationError
+              : null
+          }
+          editable={!pending}
+        />
         <AuthField
           label="Password"
-          icon={icons.eyeOff}
           helper="At least 8 characters. Maximum 72 UTF-8 bytes."
           maxLength={72}
           value={password}
@@ -204,27 +154,16 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
           secureTextEntry
           textContentType="newPassword"
           autoComplete="new-password"
+          returnKeyType="done"
+          autoCorrect={false}
           editable={!pending}
+          onSubmitEditing={() => void submit()}
         />
-        <View style={styles.dateField}>
-          <Text style={styles.dateLabel}>Date of birth</Text>
-          <View style={styles.dateColumns}>
-            {DATE_COLUMN_ORDER.map((column) => (
-              <View key={column} style={dateColumnStyles[column]}>
-                {dateWheels[column]}
-              </View>
-            ))}
-          </View>
-          <Text style={styles.dateHelper}>
-            Future dates appear dimmed and snap back to today when released.
-          </Text>
-        </View>
       </View>
 
       <Pressable
         accessibilityRole="checkbox"
-        accessibilityLabel="I agree to the Terms of Service and User Agreement."
-        aria-checked={agreed}
+        accessibilityLabel="I accept the terms and privacy policy."
         accessibilityState={{ checked: agreed, disabled: pending }}
         disabled={pending}
         style={styles.consent}
@@ -235,10 +174,7 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
             <Image source={icons.check} style={styles.checkIcon} contentFit="contain" />
           ) : null}
         </View>
-        <Text style={styles.consentText}>
-          I agree to the <Text style={styles.link}>Terms of Service</Text> and{" "}
-          <Text style={styles.link}>User Agreement</Text>.
-        </Text>
+        <Text style={styles.consentText}>I accept the terms and privacy policy.</Text>
       </Pressable>
 
       {validationError || error ? (
@@ -250,12 +186,36 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Create account"
-        accessibilityState={{ disabled: pending }}
-        disabled={pending}
+        accessibilityState={{
+          disabled:
+            pending ||
+            name.trim().length === 0 ||
+            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
+            Array.from(password).length < 8 ||
+            !birthDate ||
+            !agreed,
+        }}
+        disabled={
+          pending ||
+          name.trim().length === 0 ||
+          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
+          Array.from(password).length < 8 ||
+          !birthDate ||
+          !agreed
+        }
         onPress={() => {
           void submit();
         }}
-        style={[styles.primaryButton, pending && styles.disabled]}
+        style={[
+          styles.primaryButton,
+          (pending ||
+            name.trim().length === 0 ||
+            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
+            Array.from(password).length < 8 ||
+            !birthDate ||
+            !agreed) &&
+            styles.disabled,
+        ]}
       >
         <Text style={styles.primaryLabel}>Create account</Text>
       </Pressable>
@@ -269,12 +229,12 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
         <Text style={styles.footerText}>Already have an account?</Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Sign in"
+          accessibilityLabel="Log in"
           disabled={pending}
           onPress={pending ? undefined : handleSignIn}
           hitSlop={8}
         >
-          <Text style={styles.footerLink}>Sign in</Text>
+          <Text style={styles.footerLink}>Log in</Text>
         </Pressable>
       </View>
     </ScrollView>
@@ -297,56 +257,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
-  backIcon: {
-    width: 18,
-    height: 18,
-  },
   backLabel: {
     fontSize: 13,
     fontWeight: "500",
     color: AuthColors.accent,
   },
   title: {
-    fontSize: 28,
-    lineHeight: 32,
-    fontWeight: "400",
+    fontSize: 30,
+    lineHeight: 38,
+    fontWeight: "700",
     color: AuthColors.text,
   },
   form: {
-    gap: 18,
+    gap: 24,
     paddingTop: 18,
-  },
-  dateField: {
-    gap: 8,
-  },
-  dateLabel: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: AuthColors.text,
-  },
-  dateColumns: {
-    flexDirection: "row",
-    gap: 4,
-    overflow: "hidden",
-    paddingHorizontal: 8,
-    borderWidth: 1,
-    borderColor: AuthColors.border,
-    borderRadius: 14,
-    backgroundColor: AuthColors.surface,
-  },
-  monthColumn: {
-    flex: 1.1,
-  },
-  dayColumn: {
-    flex: 0.7,
-  },
-  yearColumn: {
-    flex: 1.2,
-  },
-  dateHelper: {
-    fontSize: 11,
-    lineHeight: 16,
-    color: AuthColors.textMuted,
   },
   consent: {
     flexDirection: "row",
@@ -355,11 +279,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   checkbox: {
-    width: 22,
-    height: 22,
+    width: 24,
+    height: 24,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 6,
+    borderRadius: 12,
     backgroundColor: AuthColors.accent,
   },
   checkboxUnchecked: {
@@ -373,15 +297,12 @@ const styles = StyleSheet.create({
   },
   consentText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 14,
     lineHeight: 20,
     color: AuthColors.textMuted,
   },
-  link: {
-    color: AuthColors.accent,
-  },
   primaryButton: {
-    minHeight: 52,
+    minHeight: 54,
     padding: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -391,7 +312,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   primaryLabel: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
     color: AuthColors.onAccent,
   },
