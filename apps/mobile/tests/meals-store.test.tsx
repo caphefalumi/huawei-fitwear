@@ -194,8 +194,16 @@ test("failed logging preserves the editable draft and surfaces the error", async
   expect(result.current.items).toEqual([item]);
   expect(result.current.actionError).toBe("Couldn't save your change. Try again.");
   expect(result.current.busy).toBe(false);
-});
 
+  await act(async () => {
+    await result.current.retryAction();
+  });
+
+  expect(result.current.items).toEqual([]);
+  expect(result.current.actionError).toBeNull();
+  expect(request.mock.calls.filter(([path]) => path === "/meals")).toHaveLength(2);
+
+});
 test("persisted correction uses the item endpoint and awaits the new server result", async () => {
   request.mockImplementation(async (path) =>
     path.startsWith("/meals/summary") ? summary : { meals: [savedMeal] },
