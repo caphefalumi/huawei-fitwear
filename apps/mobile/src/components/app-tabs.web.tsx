@@ -5,17 +5,17 @@ import {
   TabTriggerSlotProps,
   Tabs,
   type TabListProps,
-} from "expo-router/ui";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+} from "expo-router/ui"
+import { Pressable, StyleSheet, Text, View } from "react-native"
 
-import { Palette as C } from "@/constants/palette";
+import { Palette as C } from "@/constants/palette"
 
 const TABS = [
   { name: "home", label: "Home" },
   { name: "meals", label: "Meals" },
   { name: "workout", label: "Workout" },
   { name: "profile", label: "Profile" },
-] as const;
+] as const
 
 export default function AppTabs() {
   return (
@@ -31,7 +31,7 @@ export default function AppTabs() {
         </TabBar>
       </TabList>
     </Tabs>
-  );
+  )
 }
 
 function TabButton({ children, isFocused, ref: _ref, ...props }: TabTriggerSlotProps) {
@@ -40,7 +40,7 @@ function TabButton({ children, isFocused, ref: _ref, ...props }: TabTriggerSlotP
       <Text style={[styles.label, isFocused && styles.labelActive]}>{children}</Text>
       {isFocused && <View style={styles.dot} />}
     </Pressable>
-  );
+  )
 }
 
 function TabBar(props: TabListProps) {
@@ -48,7 +48,7 @@ function TabBar(props: TabListProps) {
     <View {...props} style={styles.bar}>
       {props.children}
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -87,4 +87,4 @@ const styles = StyleSheet.create({
     backgroundColor: C.accent,
     marginTop: 3,
   },
-});
+})

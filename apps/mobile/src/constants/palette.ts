@@ -1,1 +1,1 @@
-export { Palette } from "@/theme/tokens";
+export { Palette } from "@/theme/tokens"

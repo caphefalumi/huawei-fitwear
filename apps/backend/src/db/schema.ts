@@ -1,6 +1,6 @@
-import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { relations } from "drizzle-orm";
-import { generateId } from "../lib/id";
+import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core"
+import { relations } from "drizzle-orm"
+import { generateId } from "../lib/id"
 
 export const user = sqliteTable("user", {
   id: text("id")
@@ -25,7 +25,7 @@ export const user = sqliteTable("user", {
   updatedAt: integer("updatedAt", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
-});
+})
 
 export const session = sqliteTable(
   "session",
@@ -48,7 +48,7 @@ export const session = sqliteTable(
       .$defaultFn(() => new Date()),
   },
   (table) => [index("session_userId_idx").on(table.userId)],
-);
+)
 
 export const verification = sqliteTable(
   "verification",
@@ -65,7 +65,7 @@ export const verification = sqliteTable(
   (table) => [
     uniqueIndex("verification_identifier_value_unique").on(table.identifier, table.value),
   ],
-);
+)
 
 export const dailyTargets = sqliteTable(
   "daily_targets",
@@ -92,7 +92,7 @@ export const dailyTargets = sqliteTable(
     uniqueIndex("daily_targets_userId_targetDate_unique").on(table.userId, table.targetDate),
     index("daily_targets_userId_targetDate_idx").on(table.userId, table.targetDate),
   ],
-);
+)
 
 export const mealLogs = sqliteTable(
   "meal_logs",
@@ -116,7 +116,7 @@ export const mealLogs = sqliteTable(
       .$defaultFn(() => new Date()),
   },
   (table) => [index("meal_logs_userId_targetDate_idx").on(table.userId, table.targetDate)],
-);
+)
 
 export const mealItems = sqliteTable(
   "meal_items",
@@ -144,7 +144,7 @@ export const mealItems = sqliteTable(
       .$defaultFn(() => new Date()),
   },
   (table) => [index("meal_items_mealLogId_idx").on(table.mealLogId)],
-);
+)
 
 export const foods = sqliteTable("foods", {
   id: text("id")
@@ -157,7 +157,7 @@ export const foods = sqliteTable("foods", {
   proteinPer100G: real("proteinPer100G").notNull(),
   carbsPer100G: real("carbsPer100G").notNull(),
   fatPer100G: real("fatPer100G").notNull(),
-});
+})
 
 export const weightLogs = sqliteTable(
   "weight_logs",
@@ -178,7 +178,7 @@ export const weightLogs = sqliteTable(
     uniqueIndex("weight_logs_userId_loggedDate_unique").on(table.userId, table.loggedDate),
     index("weight_logs_userId_loggedDate_idx").on(table.userId, table.loggedDate),
   ],
-);
+)
 
 export const recoveryPlans = sqliteTable(
   "recovery_plans",
@@ -199,7 +199,7 @@ export const recoveryPlans = sqliteTable(
       .$defaultFn(() => new Date()),
   },
   (table) => [uniqueIndex("recovery_plans_userId_unique").on(table.userId)],
-);
+)
 
 export const exercises = sqliteTable("exercises", {
   id: text("id")
@@ -215,7 +215,7 @@ export const exercises = sqliteTable("exercises", {
   repetitionUnit: text("repetitionUnit", { enum: ["reps", "seconds", "minutes"] })
     .notNull()
     .default("reps"),
-});
+})
 
 export const workoutSessions = sqliteTable(
   "workout_sessions",
@@ -237,7 +237,7 @@ export const workoutSessions = sqliteTable(
       .$defaultFn(() => new Date()),
   },
   (table) => [index("workout_sessions_userId_startedAt_idx").on(table.userId, table.startedAt)],
-);
+)
 
 export const workoutSets = sqliteTable(
   "workout_sets",
@@ -266,7 +266,7 @@ export const workoutSets = sqliteTable(
     uniqueIndex("workout_sets_session_setIndex_unique").on(table.workoutSessionId, table.setIndex),
     index("workout_sets_workoutSessionId_idx").on(table.workoutSessionId),
   ],
-);
+)
 
 export const userRelations = relations(user, ({ many, one }) => ({
   sessions: many(session),
@@ -275,35 +275,35 @@ export const userRelations = relations(user, ({ many, one }) => ({
   workoutSessions: many(workoutSessions),
   weightLogs: many(weightLogs),
   recoveryPlan: one(recoveryPlans),
-}));
+}))
 
 export const weightLogsRelations = relations(weightLogs, ({ one }) => ({
   user: one(user, {
     fields: [weightLogs.userId],
     references: [user.id],
   }),
-}));
+}))
 
 export const recoveryPlansRelations = relations(recoveryPlans, ({ one }) => ({
   user: one(user, {
     fields: [recoveryPlans.userId],
     references: [user.id],
   }),
-}));
+}))
 
 export const sessionRelations = relations(session, ({ one }) => ({
   user: one(user, {
     fields: [session.userId],
     references: [user.id],
   }),
-}));
+}))
 
 export const dailyTargetsRelations = relations(dailyTargets, ({ one }) => ({
   user: one(user, {
     fields: [dailyTargets.userId],
     references: [user.id],
   }),
-}));
+}))
 
 export const mealLogsRelations = relations(mealLogs, ({ one, many }) => ({
   user: one(user, {
@@ -311,18 +311,18 @@ export const mealLogsRelations = relations(mealLogs, ({ one, many }) => ({
     references: [user.id],
   }),
   items: many(mealItems),
-}));
+}))
 
 export const mealItemsRelations = relations(mealItems, ({ one }) => ({
   mealLog: one(mealLogs, {
     fields: [mealItems.mealLogId],
     references: [mealLogs.id],
   }),
-}));
+}))
 
 export const exercisesRelations = relations(exercises, ({ many }) => ({
   sets: many(workoutSets),
-}));
+}))
 
 export const workoutSessionsRelations = relations(workoutSessions, ({ one, many }) => ({
   user: one(user, {
@@ -330,7 +330,7 @@ export const workoutSessionsRelations = relations(workoutSessions, ({ one, many 
     references: [user.id],
   }),
   sets: many(workoutSets),
-}));
+}))
 
 export const workoutSetsRelations = relations(workoutSets, ({ one }) => ({
   workoutSession: one(workoutSessions, {
@@ -341,29 +341,29 @@ export const workoutSetsRelations = relations(workoutSets, ({ one }) => ({
     fields: [workoutSets.exerciseId],
     references: [exercises.id],
   }),
-}));
+}))
 
-export type User = typeof user.$inferSelect;
-export type NewUser = typeof user.$inferInsert;
-export type Session = typeof session.$inferSelect;
-export type NewSession = typeof session.$inferInsert;
-export type Verification = typeof verification.$inferSelect;
-export type NewVerification = typeof verification.$inferInsert;
-export type DailyTarget = typeof dailyTargets.$inferSelect;
-export type NewDailyTarget = typeof dailyTargets.$inferInsert;
-export type MealLog = typeof mealLogs.$inferSelect;
-export type NewMealLog = typeof mealLogs.$inferInsert;
-export type MealItem = typeof mealItems.$inferSelect;
-export type NewMealItem = typeof mealItems.$inferInsert;
-export type Exercise = typeof exercises.$inferSelect;
-export type NewExercise = typeof exercises.$inferInsert;
-export type Food = typeof foods.$inferSelect;
-export type NewFood = typeof foods.$inferInsert;
-export type WeightLog = typeof weightLogs.$inferSelect;
-export type NewWeightLog = typeof weightLogs.$inferInsert;
-export type RecoveryPlan = typeof recoveryPlans.$inferSelect;
-export type NewRecoveryPlan = typeof recoveryPlans.$inferInsert;
-export type WorkoutSession = typeof workoutSessions.$inferSelect;
-export type NewWorkoutSession = typeof workoutSessions.$inferInsert;
-export type WorkoutSet = typeof workoutSets.$inferSelect;
-export type NewWorkoutSet = typeof workoutSets.$inferInsert;
+export type User = typeof user.$inferSelect
+export type NewUser = typeof user.$inferInsert
+export type Session = typeof session.$inferSelect
+export type NewSession = typeof session.$inferInsert
+export type Verification = typeof verification.$inferSelect
+export type NewVerification = typeof verification.$inferInsert
+export type DailyTarget = typeof dailyTargets.$inferSelect
+export type NewDailyTarget = typeof dailyTargets.$inferInsert
+export type MealLog = typeof mealLogs.$inferSelect
+export type NewMealLog = typeof mealLogs.$inferInsert
+export type MealItem = typeof mealItems.$inferSelect
+export type NewMealItem = typeof mealItems.$inferInsert
+export type Exercise = typeof exercises.$inferSelect
+export type NewExercise = typeof exercises.$inferInsert
+export type Food = typeof foods.$inferSelect
+export type NewFood = typeof foods.$inferInsert
+export type WeightLog = typeof weightLogs.$inferSelect
+export type NewWeightLog = typeof weightLogs.$inferInsert
+export type RecoveryPlan = typeof recoveryPlans.$inferSelect
+export type NewRecoveryPlan = typeof recoveryPlans.$inferInsert
+export type WorkoutSession = typeof workoutSessions.$inferSelect
+export type NewWorkoutSession = typeof workoutSessions.$inferInsert
+export type WorkoutSet = typeof workoutSets.$inferSelect
+export type NewWorkoutSet = typeof workoutSets.$inferInsert

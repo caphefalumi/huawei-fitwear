@@ -1,24 +1,24 @@
-import { create } from "zustand";
+import { create } from "zustand"
 
-import type { MealImage, MealItem, MealType } from "./meals-store";
+import type { MealImage, MealItem, MealType } from "./meals-store"
 
 type MealClientState = {
-  accountId: string | null;
-  items: MealItem[];
-  mealType: MealType;
-  draftImage: string | null;
-  draftImageData: MealImage | null;
-  tutorialSeen: boolean;
-  summaryDate: string;
-  setAccountId: (accountId: string | null, date: string) => void;
-  setItems: (update: MealItem[] | ((items: MealItem[]) => MealItem[])) => void;
-  setMealType: (mealType: MealType) => void;
-  setDraftPhoto: (imageUri: string, image: MealImage) => void;
-  setAnalysis: (items: MealItem[], imageUri: string, image: MealImage) => void;
-  clearDraft: () => void;
-  setSummaryDate: (date: string) => void;
-  dismissTutorial: () => void;
-};
+  accountId: string | null
+  items: MealItem[]
+  mealType: MealType
+  draftImage: string | null
+  draftImageData: MealImage | null
+  tutorialSeen: boolean
+  summaryDate: string
+  setAccountId: (accountId: string | null, date: string) => void
+  setItems: (update: MealItem[] | ((items: MealItem[]) => MealItem[])) => void
+  setMealType: (mealType: MealType) => void
+  setDraftPhoto: (imageUri: string, image: MealImage) => void
+  setAnalysis: (items: MealItem[], imageUri: string, image: MealImage) => void
+  clearDraft: () => void
+  setSummaryDate: (date: string) => void
+  dismissTutorial: () => void
+}
 
 export const useMealClientStore = create<MealClientState>((set) => ({
   accountId: null,
@@ -51,4 +51,4 @@ export const useMealClientStore = create<MealClientState>((set) => ({
   clearDraft: () => set({ items: [], draftImage: null, draftImageData: null }),
   setSummaryDate: (summaryDate) => set({ summaryDate }),
   dismissTutorial: () => set({ tutorialSeen: true }),
-}));
+}))

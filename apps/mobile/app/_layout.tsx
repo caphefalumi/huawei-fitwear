@@ -1,24 +1,24 @@
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query"
 
-import { queryClient } from "@/lib/query-client";
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import { type PropsWithChildren } from "react";
-import { useColorScheme } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { KeyboardProvider } from "react-native-keyboard-controller";
+import { queryClient } from "@/lib/query-client"
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router"
+import * as SplashScreen from "expo-splash-screen"
+import { type PropsWithChildren } from "react"
+import { useColorScheme } from "react-native"
+import { GestureHandlerRootView } from "react-native-gesture-handler"
+import { KeyboardProvider } from "react-native-keyboard-controller"
 
-import { NetworkStatusBanner } from "@/components/network-status";
-import { AnimatedSplashOverlay } from "@/components/animated-icon";
-import { APP_ROUTES, AuthProvider, useAuth } from "@/features/auth";
-import { HealthProvider } from "@/features/health";
-import { MealsProvider } from "@/features/meals";
-import { WorkoutProvider } from "@/features/workout";
+import { NetworkStatusBanner } from "@/components/network-status"
+import { AnimatedSplashOverlay } from "@/components/animated-icon"
+import { APP_ROUTES, AuthProvider, useAuth } from "@/features/auth"
+import { HealthProvider } from "@/features/health"
+import { MealsProvider } from "@/features/meals"
+import { WorkoutProvider } from "@/features/workout"
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync()
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme()
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -32,7 +32,7 @@ export default function RootLayout() {
         </ThemeProvider>
       </AuthProvider>
     </QueryClientProvider>
-  );
+  )
 }
 
 function AccountProviders({ children }: PropsWithChildren) {
@@ -42,12 +42,12 @@ function AccountProviders({ children }: PropsWithChildren) {
         <WorkoutProvider>{children}</WorkoutProvider>
       </MealsProvider>
     </HealthProvider>
-  );
+  )
 }
 
 function RootNavigator() {
-  const { user, loading } = useAuth();
-  if (loading) return null;
+  const { user, loading } = useAuth()
+  if (loading) return null
   const navigation = (
     <>
       <AnimatedSplashOverlay />
@@ -71,6 +71,6 @@ function RootNavigator() {
         </Stack.Protected>
       </Stack>
     </>
-  );
-  return user ? <AccountProviders key={user.id}>{navigation}</AccountProviders> : navigation;
+  )
+  return user ? <AccountProviders key={user.id}>{navigation}</AccountProviders> : navigation
 }

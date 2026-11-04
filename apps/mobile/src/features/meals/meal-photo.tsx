@@ -1,13 +1,13 @@
-import { Image, type ImageProps } from "expo-image";
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Text, View } from "react-native";
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
-import { useAuth } from "@/features/auth";
-import { mealsQueryKeys } from "@/features/meals/meals-store";
-import { apiErrorMessage, apiRequest } from "@/lib/api";
-import { icons } from "./meals-ui";
+import { Image, type ImageProps } from "expo-image"
+import { useEffect, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { Text, View } from "react-native"
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
+import { useAuth } from "@/features/auth"
+import { mealsQueryKeys } from "@/features/meals/meals-store"
+import { apiErrorMessage, apiRequest } from "@/lib/api"
+import { icons } from "./meals-ui"
 
 export function MealPhoto({
   mealId,
@@ -15,13 +15,13 @@ export function MealPhoto({
   style,
   compact = false,
 }: {
-  mealId?: string;
-  imageUrl: string | null;
-  style: ImageProps["style"];
-  compact?: boolean;
+  mealId?: string
+  imageUrl: string | null
+  style: ImageProps["style"]
+  compact?: boolean
 }) {
-  const { user } = useAuth();
-  const remotePhoto = Boolean(mealId && imageUrl?.startsWith("/meals/"));
+  const { user } = useAuth()
+  const remotePhoto = Boolean(mealId && imageUrl?.startsWith("/meals/"))
   const photoQuery = useQuery({
     queryKey: mealsQueryKeys.photo(user?.id ?? "signed-out", mealId ?? "missing"),
     enabled: Boolean(remotePhoto && user?.id),
@@ -31,12 +31,12 @@ export function MealPhoto({
           signal,
         })
       ).imageUrl,
-  });
-  const [imageError, setImageError] = useState<string | null>(null);
-  useEffect(() => setImageError(null), [imageUrl]);
+  })
+  const [imageError, setImageError] = useState<string | null>(null)
+  useEffect(() => setImageError(null), [imageUrl])
   const error =
-    imageError ?? (photoQuery.error ? apiErrorMessage(photoQuery.error, "your meal photo") : null);
-  const uri = remotePhoto ? photoQuery.data : imageUrl;
+    imageError ?? (photoQuery.error ? apiErrorMessage(photoQuery.error, "your meal photo") : null)
+  const uri = remotePhoto ? photoQuery.data : imageUrl
   if (!imageUrl)
     return compact ? (
       <Image
@@ -45,7 +45,7 @@ export function MealPhoto({
         contentFit="contain"
         accessibilityLabel="Meal without a photo"
       />
-    ) : null;
+    ) : null
   if (imageError || (photoQuery.error && !uri))
     return (
       <View style={[style, { alignItems: "center", justifyContent: "center", padding: 8, gap: 8 }]}>
@@ -59,15 +59,15 @@ export function MealPhoto({
         <Pressable
           accessibilityLabel="Retry meal photo"
           onPress={() => {
-            setImageError(null);
-            void photoQuery.refetch();
+            setImageError(null)
+            void photoQuery.refetch()
           }}
           style={{ padding: 8 }}
         >
           <Text style={{ color: C.accent, fontSize: 12 }}>Retry</Text>
         </Pressable>
       </View>
-    );
+    )
   if (photoQuery.isLoading)
     return (
       <View
@@ -76,8 +76,8 @@ export function MealPhoto({
       >
         <Text style={{ color: C.textMuted }}>Loading photo…</Text>
       </View>
-    );
-  if (!uri) return null;
+    )
+  if (!uri) return null
   return (
     <View style={style}>
       <Image
@@ -93,5 +93,5 @@ export function MealPhoto({
         </Text>
       ) : null}
     </View>
-  );
+  )
 }

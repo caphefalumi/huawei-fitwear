@@ -1,27 +1,27 @@
-import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { useState } from "react"
+import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { router } from "expo-router"
 
-import { Pressable } from "@/components/pressable";
-import { Sheet, SheetActions } from "@/components/sheet";
-import { Palette as C } from "@/constants/palette";
-import { useAuth } from "@/features/auth/auth-store";
+import { Pressable } from "@/components/pressable"
+import { Sheet, SheetActions } from "@/components/sheet"
+import { Palette as C } from "@/constants/palette"
+import { useAuth } from "@/features/auth/auth-store"
 
 export function AccountDataScreen() {
-  const insets = useSafeAreaInsets();
-  const { user, deleteAccount, pending } = useAuth();
-  const [confirming, setConfirming] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const insets = useSafeAreaInsets()
+  const { user, deleteAccount, pending } = useAuth()
+  const [confirming, setConfirming] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const removeAccount = async () => {
-    setDeleteError(null);
+    setDeleteError(null)
     try {
-      await deleteAccount();
+      await deleteAccount()
     } catch {
-      setDeleteError("Couldn't delete your account. Try again.");
+      setDeleteError("Couldn't delete your account. Try again.")
     }
-  };
+  }
 
   return (
     <View style={styles.screen}>
@@ -91,7 +91,7 @@ export function AccountDataScreen() {
         />
       </Sheet>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -179,4 +179,4 @@ const styles = StyleSheet.create({
     color: "#8B1E2D",
     fontSize: 14,
   },
-});
+})

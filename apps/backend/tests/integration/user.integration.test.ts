@@ -1,13 +1,13 @@
-import { describe, expect, it, beforeEach } from "bun:test";
-import { app, setTestDatabaseBinding } from "../helpers/test-app";
-import { createTestDatabase } from "../helpers/test-db";
-import { createTestKv } from "../helpers/test-kv";
+import { describe, expect, it, beforeEach } from "bun:test"
+import { app, setTestDatabaseBinding } from "../helpers/test-app"
+import { createTestDatabase } from "../helpers/test-db"
+import { createTestKv } from "../helpers/test-kv"
 
 describe("Integration Test: User API Endpoints", () => {
   beforeEach(() => {
-    const { d1 } = createTestDatabase();
-    setTestDatabaseBinding({ DB: d1, fitwear_kv: createTestKv() });
-  });
+    const { d1 } = createTestDatabase()
+    setTestDatabaseBinding({ DB: d1, fitwear_kv: createTestKv() })
+  })
 
   it("GET /user/me should return current user when authenticated", async () => {
     const signUpRes = await app.handle(
@@ -20,23 +20,23 @@ describe("Integration Test: User API Endpoints", () => {
           name: "Profile Tester",
         }),
       }),
-    );
-    const { session } = await signUpRes.json();
+    )
+    const { session } = await signUpRes.json()
 
     const meRes = await app.handle(
       new Request("http://localhost/user/me", {
         headers: { Authorization: `Bearer ${session.token}` },
       }),
-    );
+    )
 
-    expect(meRes.status).toBe(200);
-    const user = await meRes.json();
-    expect(user.email).toBe("profile@fitwear.dev");
-    expect(user.name).toBe("Profile Tester");
-  });
+    expect(meRes.status).toBe(200)
+    const user = await meRes.json()
+    expect(user.email).toBe("profile@fitwear.dev")
+    expect(user.name).toBe("Profile Tester")
+  })
 
   it("GET /user/me should return 401 when unauthenticated", async () => {
-    const res = await app.handle(new Request("http://localhost/user/me"));
-    expect(res.status).toBe(401);
-  });
-});
+    const res = await app.handle(new Request("http://localhost/user/me"))
+    expect(res.status).toBe(401)
+  })
+})

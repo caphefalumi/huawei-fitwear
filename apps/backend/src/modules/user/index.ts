@@ -1,5 +1,5 @@
-import { Elysia } from "elysia";
-import { authGuard } from "../auth/service";
+import { Elysia } from "elysia"
+import { authGuard } from "../auth/service"
 
 export const user = new Elysia({
   prefix: "/user",
@@ -11,4 +11,4 @@ export const user = new Elysia({
     detail: {
       summary: "Get current authenticated user profile",
     },
-  });
+  })

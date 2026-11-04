@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useRef, useState } from "react"
+import { StyleSheet, Text, TextInput, View } from "react-native"
 
-import { Pressable } from "@/components/pressable";
-import { Sheet, SheetField } from "@/components/sheet";
-import { Palette as C } from "@/constants/palette";
-import { Card } from "@/features/home/ui";
-import { useWorkouts, type Exercise, type WorkoutSet } from "@/features/workout/workout-store";
+import { Pressable } from "@/components/pressable"
+import { Sheet, SheetField } from "@/components/sheet"
+import { Palette as C } from "@/constants/palette"
+import { Card } from "@/features/home/ui"
+import { useWorkouts, type Exercise, type WorkoutSet } from "@/features/workout/workout-store"
 
 export function WorkoutSessionPanel({
   title,
@@ -14,11 +14,11 @@ export function WorkoutSessionPanel({
   sessionId,
   recovery = false,
 }: {
-  title: string;
-  split: string;
-  exercises: Exercise[];
-  sessionId?: string;
-  recovery?: boolean;
+  title: string
+  split: string
+  exercises: Exercise[]
+  sessionId?: string
+  recovery?: boolean
 }) {
   const {
     sessions,
@@ -29,71 +29,71 @@ export function WorkoutSessionPanel({
     cancelSession,
     saveSet,
     deleteSet,
-  } = useWorkouts();
+  } = useWorkouts()
   const active = sessions.find(
     (session) =>
       session.id === activeSessionId && session.workoutSplit.toLowerCase() === split.toLowerCase(),
-  );
-  const [selectedId, setSelectedId] = useState(sessionId);
-  const id = selectedId ?? active?.id;
-  const session = sessions.find((entry) => entry.id === id);
-  const [loading, setLoading] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [editor, setEditor] = useState<{ exercise: Exercise; set?: WorkoutSet } | null>(null);
-  const [weight, setWeight] = useState("");
-  const [reps, setReps] = useState("");
-  const [confirmCancel, setConfirmCancel] = useState(false);
-  const inFlight = useRef(false);
+  )
+  const [selectedId, setSelectedId] = useState(sessionId)
+  const id = selectedId ?? active?.id
+  const session = sessions.find((entry) => entry.id === id)
+  const [loading, setLoading] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [editor, setEditor] = useState<{ exercise: Exercise; set?: WorkoutSet } | null>(null)
+  const [weight, setWeight] = useState("")
+  const [reps, setReps] = useState("")
+  const [confirmCancel, setConfirmCancel] = useState(false)
+  const inFlight = useRef(false)
 
   useEffect(() => {
-    setSelectedId(sessionId);
-  }, [sessionId]);
+    setSelectedId(sessionId)
+  }, [sessionId])
   useEffect(() => {
-    if (!id) return;
-    let current = true;
-    setLoading(true);
-    setError(null);
+    if (!id) return
+    let current = true
+    setLoading(true)
+    setError(null)
     loadSession(id)
       .catch((cause: unknown) => {
         if (current)
-          setError(cause instanceof Error ? cause.message : "Unable to load this workout.");
+          setError(cause instanceof Error ? cause.message : "Unable to load this workout.")
       })
       .finally(() => {
-        if (current) setLoading(false);
-      });
+        if (current) setLoading(false)
+      })
     return () => {
-      current = false;
-    };
-  }, [id, loadSession]);
+      current = false
+    }
+  }, [id, loadSession])
 
   async function perform(action: () => Promise<void>) {
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setBusy(true);
-    setError(null);
+    if (inFlight.current) return
+    inFlight.current = true
+    setBusy(true)
+    setError(null)
     try {
-      await action();
+      await action()
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to save this workout.");
+      setError(cause instanceof Error ? cause.message : "Unable to save this workout.")
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      inFlight.current = false
+      setBusy(false)
     }
   }
 
   function openEditor(exercise: Exercise, set?: WorkoutSet) {
-    setError(null);
-    setWeight(set ? String(set.weightKg) : exercise.repetitionUnit === "reps" ? "" : "0");
-    setReps(set ? String(set.userConfirmedReps) : "");
-    setEditor({ exercise, set });
+    setError(null)
+    setWeight(set ? String(set.weightKg) : exercise.repetitionUnit === "reps" ? "" : "0")
+    setReps(set ? String(set.userConfirmedReps) : "")
+    setEditor({ exercise, set })
   }
 
   async function submitSet() {
-    if (!editor || !id) return;
+    if (!editor || !id) return
     const weightKg =
-      editor.exercise.repetitionUnit === "reps" ? Number(weight.trim().replace(",", ".")) : 0;
-    const userConfirmedReps = Number(reps.trim());
+      editor.exercise.repetitionUnit === "reps" ? Number(weight.trim().replace(",", ".")) : 0
+    const userConfirmedReps = Number(reps.trim())
     if (
       !weight.trim() ||
       !Number.isFinite(weightKg) ||
@@ -102,10 +102,8 @@ export function WorkoutSessionPanel({
       !Number.isSafeInteger(userConfirmedReps) ||
       userConfirmedReps < 0
     ) {
-      setError(
-        "Enter a weight of 0 kg or more and a whole-number completed quantity of 0 or more.",
-      );
-      return;
+      setError("Enter a weight of 0 kg or more and a whole-number completed quantity of 0 or more.")
+      return
     }
     await perform(async () => {
       await saveSet(
@@ -117,14 +115,14 @@ export function WorkoutSessionPanel({
           targetReps: editor.set?.targetReps ?? editor.exercise.defaultReps,
         },
         editor.set?.id,
-      );
-      setEditor(null);
-    });
+      )
+      setEditor(null)
+    })
   }
 
   const visibleSets =
     session?.sets?.filter((set) => exercises.some((exercise) => exercise.id === set.exerciseId)) ??
-    [];
+    []
 
   return (
     <View style={styles.section}>
@@ -151,7 +149,7 @@ export function WorkoutSessionPanel({
           accessibilityState={{ busy }}
           onPress={() =>
             void perform(async () => {
-              await loadSession(id);
+              await loadSession(id)
             })
           }
         >
@@ -182,7 +180,7 @@ export function WorkoutSessionPanel({
                 disabled={busy}
                 onPress={() =>
                   void perform(async () => {
-                    if (id) await deleteSet(id, set.id);
+                    if (id) await deleteSet(id, set.id)
                   })
                 }
               >
@@ -211,8 +209,8 @@ export function WorkoutSessionPanel({
           accessibilityState={{ busy }}
           onPress={() =>
             void perform(async () => {
-              const started = await startSession(title, split);
-              setSelectedId(started.id);
+              const started = await startSession(title, split)
+              setSelectedId(started.id)
             })
           }
         >
@@ -233,7 +231,7 @@ export function WorkoutSessionPanel({
             accessibilityState={{ busy }}
             onPress={() =>
               void perform(async () => {
-                await finishSession(session.id);
+                await finishSession(session.id)
               })
             }
           >
@@ -243,8 +241,8 @@ export function WorkoutSessionPanel({
             style={styles.secondary}
             disabled={busy}
             onPress={() => {
-              setError(null);
-              setConfirmCancel(true);
+              setError(null)
+              setConfirmCancel(true)
             }}
           >
             <Text style={styles.error}>Cancel and delete workout</Text>
@@ -264,7 +262,7 @@ export function WorkoutSessionPanel({
         visible={editor !== null}
         title={editor?.set ? "Edit logged set" : "Log completed set"}
         onClose={() => {
-          if (!busy) setEditor(null);
+          if (!busy) setEditor(null)
         }}
       >
         <Text style={styles.text}>{editor?.exercise.name}</Text>
@@ -317,7 +315,7 @@ export function WorkoutSessionPanel({
         visible={confirmCancel}
         title="Delete this workout?"
         onClose={() => {
-          if (!busy) setConfirmCancel(false);
+          if (!busy) setConfirmCancel(false)
         }}
       >
         <Text style={styles.text}>
@@ -334,10 +332,10 @@ export function WorkoutSessionPanel({
           accessibilityState={{ busy }}
           onPress={() =>
             void perform(async () => {
-              if (!id) return;
-              await cancelSession(id);
-              setConfirmCancel(false);
-              setSelectedId(undefined);
+              if (!id) return
+              await cancelSession(id)
+              setConfirmCancel(false)
+              setSelectedId(undefined)
             })
           }
         >
@@ -348,7 +346,7 @@ export function WorkoutSessionPanel({
         </Pressable>
       </Sheet>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -377,4 +375,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-});
+})

@@ -1,14 +1,14 @@
-import { router } from "expo-router";
-import { Image } from "expo-image";
-import { useAuth } from "@/features/auth/auth-store";
-import { useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
-import Animated, { FadeInUp } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router } from "expo-router"
+import { Image } from "expo-image"
+import { useAuth } from "@/features/auth/auth-store"
+import { useState } from "react"
+import { Alert, ScrollView, StyleSheet, Text, View } from "react-native"
+import Animated, { FadeInUp } from "react-native-reanimated"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
-import { PERIOD_AREA, useHealth } from "@/features/health/health-store";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
+import { PERIOD_AREA, useHealth } from "@/features/health/health-store"
 import {
   ActivitySheet,
   FrequencySheet,
@@ -17,19 +17,19 @@ import {
   SexSheet,
   TargetWeightSheet,
   WeightSheet,
-} from "@/features/profile/sheets";
-import { RecoverySheet } from "@/features/recovery/recovery-sheet";
+} from "@/features/profile/sheets"
+import { RecoverySheet } from "@/features/recovery/recovery-sheet"
 
 const icons = {
   chevronRight: require("@/assets/images/profile/chevron-right.svg"),
-};
+}
 
 type RowProps = {
-  label: string;
-  value: string;
-  onPress?: () => void;
-  loading?: boolean;
-};
+  label: string
+  value: string
+  onPress?: () => void
+  loading?: boolean
+}
 
 function ProfileRow({ label, value, onPress, loading = false }: RowProps) {
   return (
@@ -50,7 +50,7 @@ function ProfileRow({ label, value, onPress, loading = false }: RowProps) {
         <Image source={icons.chevronRight} style={styles.chevron} contentFit="contain" />
       </View>
     </Pressable>
-  );
+  )
 }
 
 type OpenSheet =
@@ -62,22 +62,22 @@ type OpenSheet =
   | "activity"
   | "target"
   | "recovery"
-  | null;
+  | null
 
 export function ProfileScreen() {
-  const insets = useSafeAreaInsets();
-  const { user, signOut } = useAuth();
+  const insets = useSafeAreaInsets()
+  const { user, signOut } = useAuth()
   const { weightKg, heightCm, sex, plan, recovery, saveRecovery, loading, error, refresh } =
-    useHealth();
-  const inPeriod = recovery?.area === PERIOD_AREA;
-  const [openSheet, setOpenSheet] = useState<OpenSheet>(null);
-  const sexLabel = sex ?? "Not set";
-  const weightLabel = weightKg === null ? "Not set" : `${weightKg.toFixed(1)} kg`;
-  const heightLabel = heightCm === null ? "Not set" : `${heightCm} cm`;
+    useHealth()
+  const inPeriod = recovery?.area === PERIOD_AREA
+  const [openSheet, setOpenSheet] = useState<OpenSheet>(null)
+  const sexLabel = sex ?? "Not set"
+  const weightLabel = weightKg === null ? "Not set" : `${weightKg.toFixed(1)} kg`
+  const heightLabel = heightCm === null ? "Not set" : `${heightCm} cm`
   const targetWeightLabel =
-    plan.targetWeightKg === null ? "Not set" : `${plan.targetWeightKg.toFixed(1)} kg`;
+    plan.targetWeightKg === null ? "Not set" : `${plan.targetWeightKg.toFixed(1)} kg`
 
-  const close = () => setOpenSheet(null);
+  const close = () => setOpenSheet(null)
 
   return (
     <ScrollView
@@ -197,7 +197,7 @@ export function ProfileScreen() {
             style={[styles.periodButton, inPeriod && styles.periodButtonActive]}
             onPress={() => {
               if (inPeriod) {
-                void saveRecovery(null);
+                void saveRecovery(null)
               } else {
                 Alert.alert(
                   "Period recovery",
@@ -206,7 +206,7 @@ export function ProfileScreen() {
                     { text: "Not now", style: "cancel" },
                     { text: "Turn on", onPress: () => setOpenSheet("recovery") },
                   ],
-                );
+                )
               }
             }}
           >
@@ -226,7 +226,7 @@ export function ProfileScreen() {
       {openSheet === "target" ? <TargetWeightSheet visible onClose={close} /> : null}
       {openSheet === "recovery" ? <RecoverySheet visible onClose={close} /> : null}
     </ScrollView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -340,4 +340,4 @@ const styles = StyleSheet.create({
   periodLabelActive: {
     color: C.accent,
   },
-});
+})

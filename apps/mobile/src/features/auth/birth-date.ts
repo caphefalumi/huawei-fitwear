@@ -1,1 +1,1 @@
-export * from "./utils/birth-date";
+export * from "./utils/birth-date"

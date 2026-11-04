@@ -1,4 +1,4 @@
-import { Pressable as RNPressable, StyleSheet, type PressableProps } from "react-native";
+import { Pressable as RNPressable, StyleSheet, type PressableProps } from "react-native"
 
 /** Pressable with shared press feedback and a web-only hover state. */
 export function Pressable({
@@ -9,7 +9,7 @@ export function Pressable({
   accessibilityState,
   ...props
 }: PressableProps) {
-  const interactive = !disabled && !!onPress;
+  const interactive = !disabled && !!onPress
 
   return (
     <RNPressable
@@ -28,7 +28,7 @@ export function Pressable({
         interactive && state.pressed && styles.pressed,
       ]}
     />
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -43,4 +43,4 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.7,
   },
-});
+})

@@ -1,1 +1,1 @@
-export { ExerciseGuideScreen as default } from "@/features/workout";
+export { ExerciseGuideScreen as default } from "@/features/workout"

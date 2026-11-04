@@ -1,6 +1,6 @@
-import { Elysia, t, type Static } from "elysia";
-import { authGuard } from "../auth/service";
-import { Exercises } from "./service";
+import { Elysia, t, type Static } from "elysia"
+import { authGuard } from "../auth/service"
+import { Exercises } from "./service"
 
 const ExerciseListQuerySchema = t.Object({
   muscleGroup: t.Optional(t.String()),
@@ -8,13 +8,13 @@ const ExerciseListQuerySchema = t.Object({
   q: t.Optional(t.String()),
   limit: t.Optional(t.Numeric({ minimum: 1, maximum: 200, multipleOf: 1 })),
   offset: t.Optional(t.Numeric({ minimum: 0, multipleOf: 1 })),
-});
+})
 
-export type ExerciseListQuery = Static<typeof ExerciseListQuerySchema>;
+export type ExerciseListQuery = Static<typeof ExerciseListQuerySchema>
 
 const exerciseModels = new Elysia().model({
   "exercises.listQuery": ExerciseListQuerySchema,
-});
+})
 
 export const exercises = new Elysia({
   prefix: "/exercises",
@@ -33,4 +33,4 @@ export const exercises = new Elysia({
   .get("/:exerciseId", ({ params }) => Exercises.byId(params.exerciseId), {
     auth: true,
     detail: { summary: "Get a single exercise with its cadence animation" },
-  });
+  })

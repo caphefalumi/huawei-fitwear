@@ -173,4 +173,4 @@ jobs:
           RECORDING_URL: ${{ steps.upload-recording.outputs.artifact-url }}
           ARTIFACTS_URL: ${{ steps.upload-artifacts.outputs.artifact-url }}
           MAESTRO_EXIT_CODE: ${{ env.MAESTRO_EXIT_CODE }}
-        run: node .github/scripts/generate-maestro-summary.mjs
+        run: bun .github/scripts/generate-maestro-summary.ts

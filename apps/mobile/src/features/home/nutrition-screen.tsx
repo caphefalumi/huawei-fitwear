@@ -1,21 +1,21 @@
-import { router } from "expo-router";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router } from "expo-router"
+import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Palette as C } from "@/constants/palette";
-import { useHealth } from "@/features/health/health-store";
-import { useMeals } from "@/features/meals/meals-store";
-import { NutritionRing } from "@/features/home/ring";
-import { BackHeader, Card, MacroBar } from "@/features/home/ui";
+import { Palette as C } from "@/constants/palette"
+import { useHealth } from "@/features/health/health-store"
+import { useMeals } from "@/features/meals/meals-store"
+import { NutritionRing } from "@/features/home/ring"
+import { BackHeader, Card, MacroBar } from "@/features/home/ui"
 
 export function NutritionScreen() {
-  const insets = useSafeAreaInsets();
-  const { weightUpdated } = useHealth();
-  const { loggedKcal, loggedMacros } = useMeals();
+  const insets = useSafeAreaInsets()
+  const { weightUpdated } = useHealth()
+  const { loggedKcal, loggedMacros } = useMeals()
 
-  const targetKcal = weightUpdated ? 2160 : 2200;
-  const consumedKcal = 1320 + loggedKcal;
-  const left = targetKcal - consumedKcal;
+  const targetKcal = weightUpdated ? 2160 : 2200
+  const consumedKcal = 1320 + loggedKcal
+  const left = targetKcal - consumedKcal
 
   return (
     <ScrollView
@@ -86,7 +86,7 @@ export function NutritionScreen() {
         </Text>
       </View>
     </ScrollView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -155,4 +155,4 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: C.textMuted,
   },
-});
+})

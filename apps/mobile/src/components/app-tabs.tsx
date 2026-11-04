@@ -1,39 +1,39 @@
-import { Image } from "expo-image";
-import { router, Tabs } from "expo-router";
-import type { ComponentProps } from "react";
-import { useEffect, useState } from "react";
-import { StyleSheet, View, type LayoutChangeEvent } from "react-native";
+import { Image } from "expo-image"
+import { router, Tabs } from "expo-router"
+import type { ComponentProps } from "react"
+import { useEffect, useState } from "react"
+import { StyleSheet, View, type LayoutChangeEvent } from "react-native"
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSequence,
   withSpring,
   withTiming,
-} from "react-native-reanimated";
+} from "react-native-reanimated"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
 
-type TabBarRenderer = NonNullable<ComponentProps<typeof Tabs>["tabBar"]>;
-type TabBarProps = Parameters<TabBarRenderer>[0];
+type TabBarRenderer = NonNullable<ComponentProps<typeof Tabs>["tabBar"]>
+type TabBarProps = Parameters<TabBarRenderer>[0]
 
 const LEFT_TABS = [
   { name: "home", label: "Home", icon: require("@/assets/images/home/tab-house.svg") },
   { name: "meals", label: "Meals", icon: require("@/assets/images/home/tab-utensils.svg") },
-];
+]
 
 const RIGHT_TABS = [
   { name: "workout", label: "Workout", icon: require("@/assets/images/home/tab-dumbbell.svg") },
   { name: "profile", label: "Profile", icon: require("@/assets/images/home/tab-user-round.svg") },
-];
+]
 
-type TabDef = (typeof LEFT_TABS)[number];
+type TabDef = (typeof LEFT_TABS)[number]
 
-const BUBBLE_DURATION = 250;
-const CONTENT_DURATION = 200;
-const LABEL_HEIGHT = 15;
-const BUBBLE_INSET_X = 8;
-const BUBBLE_HEIGHT = 44;
+const BUBBLE_DURATION = 250
+const CONTENT_DURATION = 200
+const LABEL_HEIGHT = 15
+const BUBBLE_INSET_X = 8
+const BUBBLE_HEIGHT = 44
 
 function TabButton({
   tab,
@@ -41,29 +41,29 @@ function TabButton({
   onPress,
   onLayout,
 }: {
-  tab: TabDef;
-  active: boolean;
-  onPress: () => void;
-  onLayout: (e: LayoutChangeEvent) => void;
+  tab: TabDef
+  active: boolean
+  onPress: () => void
+  onLayout: (e: LayoutChangeEvent) => void
 }) {
-  const color = active ? C.accent : C.textMuted;
-  const progress = useSharedValue(active ? 1 : 0);
+  const color = active ? C.accent : C.textMuted
+  const progress = useSharedValue(active ? 1 : 0)
 
   useEffect(() => {
-    progress.value = withTiming(active ? 1 : 0, { duration: CONTENT_DURATION });
-  }, [active, progress]);
+    progress.value = withTiming(active ? 1 : 0, { duration: CONTENT_DURATION })
+  }, [active, progress])
 
   const contentStyle = useAnimatedStyle(() => ({
     opacity: 0.55 + 0.45 * progress.value,
     transform: [{ scale: 0.96 + 0.04 * progress.value }],
-  }));
+  }))
 
   const labelStyle = useAnimatedStyle(() => ({
     opacity: progress.value,
     height: progress.value * LABEL_HEIGHT,
     marginTop: progress.value * 4,
     transform: [{ scale: 0.9 + 0.1 * progress.value }],
-  }));
+  }))
 
   return (
     <Pressable style={styles.tab} onPress={onPress} onLayout={onLayout}>
@@ -72,69 +72,69 @@ function TabButton({
         <Animated.Text style={[styles.label, { color }, labelStyle]}>{tab.label}</Animated.Text>
       </Animated.View>
     </Pressable>
-  );
+  )
 }
 
 function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
-  const activeName = state.routes[state.index]?.name;
-  const [layouts, setLayouts] = useState<Record<string, { x: number; width: number }>>({});
-  const bubbleX = useSharedValue(0);
-  const bubbleW = useSharedValue(0);
-  const pop = useSharedValue(1);
-  const ripple = useSharedValue(0);
+  const activeName = state.routes[state.index]?.name
+  const [layouts, setLayouts] = useState<Record<string, { x: number; width: number }>>({})
+  const bubbleX = useSharedValue(0)
+  const bubbleW = useSharedValue(0)
+  const pop = useSharedValue(1)
+  const ripple = useSharedValue(0)
 
-  const target = activeName ? layouts[activeName] : undefined;
-  const targetX = target ? target.x + BUBBLE_INSET_X : null;
-  const targetW = target ? target.width - BUBBLE_INSET_X * 2 : null;
+  const target = activeName ? layouts[activeName] : undefined
+  const targetX = target ? target.x + BUBBLE_INSET_X : null
+  const targetW = target ? target.width - BUBBLE_INSET_X * 2 : null
 
   useEffect(() => {
     if (targetX !== null && targetW !== null) {
-      bubbleX.value = withTiming(targetX, { duration: BUBBLE_DURATION });
-      bubbleW.value = withTiming(targetW, { duration: BUBBLE_DURATION });
+      bubbleX.value = withTiming(targetX, { duration: BUBBLE_DURATION })
+      bubbleW.value = withTiming(targetW, { duration: BUBBLE_DURATION })
     }
-  }, [targetX, targetW, bubbleX, bubbleW]);
+  }, [targetX, targetW, bubbleX, bubbleW])
 
   const bubbleStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: bubbleX.value }],
     width: bubbleW.value,
-  }));
+  }))
 
   const popStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pop.value }],
-  }));
+  }))
 
   const rippleStyle = useAnimatedStyle(() => ({
     transform: [{ scale: 1 + ripple.value * 0.8 }],
     opacity: 0.45 * (1 - ripple.value),
-  }));
+  }))
 
   function handleCapture() {
     pop.value = withSequence(
       withTiming(0.88, { duration: 90 }),
       withSpring(1, { damping: 11, stiffness: 320 }),
-    );
-    ripple.value = 0;
-    ripple.value = withTiming(1, { duration: 450 });
-    router.push("/capture");
+    )
+    ripple.value = 0
+    ripple.value = withTiming(1, { duration: 450 })
+    router.push("/capture")
   }
 
   function renderTab(tab: TabDef) {
-    const route = state.routes.find((item) => item.name === tab.name);
-    const active = activeName === tab.name;
+    const route = state.routes.find((item) => item.name === tab.name)
+    const active = activeName === tab.name
 
     function handlePress() {
-      if (!route) return;
-      const event = emitter.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
-      if (!active && !event.defaultPrevented) navigateToTab(route.key);
+      if (!route) return
+      const event = emitter.emit({ type: "tabPress", target: route.key, canPreventDefault: true })
+      if (!active && !event.defaultPrevented) navigateToTab(route.key)
     }
 
     function handleLayout(e: LayoutChangeEvent) {
-      const { x, width } = e.nativeEvent.layout;
+      const { x, width } = e.nativeEvent.layout
       setLayouts((prev) => {
-        const prevLayout = prev[tab.name];
-        if (prevLayout?.x === x && prevLayout?.width === width) return prev;
-        return { ...prev, [tab.name]: { x, width } };
-      });
+        const prevLayout = prev[tab.name]
+        if (prevLayout?.x === x && prevLayout?.width === width) return prev
+        return { ...prev, [tab.name]: { x, width } }
+      })
     }
 
     return (
@@ -145,7 +145,7 @@ function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
         onPress={handlePress}
         onLayout={handleLayout}
       />
-    );
+    )
   }
 
   return (
@@ -170,7 +170,7 @@ function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
       </View>
       {RIGHT_TABS.map(renderTab)}
     </View>
-  );
+  )
 }
 
 export default function AppTabs() {
@@ -181,7 +181,7 @@ export default function AppTabs() {
       <Tabs.Screen name="workout" />
       <Tabs.Screen name="profile" />
     </Tabs>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -264,4 +264,4 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: C.onAccent,
   },
-});
+})

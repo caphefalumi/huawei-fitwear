@@ -1,4 +1,4 @@
-import { Palette } from "@/constants/palette";
+import { Palette } from "@/constants/palette"
 const light = {
   ...Palette,
   background: "#FFFFFF",
@@ -9,10 +9,10 @@ const light = {
   error: "#B3261D",
   errorContainer: "#F9DEDC",
   onErrorContainer: "#410E0B",
-};
+}
 
-export type AuthColorPalette = typeof light;
+export type AuthColorPalette = typeof light
 
 export function useAuthColors(): AuthColorPalette {
-  return light;
+  return light
 }

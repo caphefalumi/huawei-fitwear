@@ -1,80 +1,80 @@
-import { Image } from "expo-image";
-import { router } from "expo-router";
-import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from "expo-image"
+import { router } from "expo-router"
+import { useState } from "react"
+import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as AuthColors } from "@/constants/palette";
-import { APP_ROUTES, useAuth } from "../store/auth.store";
-import { AuthField } from "./auth-field";
-import { DateOfBirthField } from "./date-of-birth-field";
+import { Pressable } from "@/components/pressable"
+import { Palette as AuthColors } from "@/constants/palette"
+import { APP_ROUTES, useAuth } from "../store/auth.store"
+import { AuthField } from "./auth-field"
+import { DateOfBirthField } from "./date-of-birth-field"
 
 const icons = {
   check: require("@/assets/images/auth/check.svg"),
   lock: require("@/assets/images/auth/lock-keyhole.svg"),
-};
+}
 
 export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
-  const insets = useSafeAreaInsets();
-  const { signUp, pending, error } = useAuth();
-  const handleSignIn = onSignIn ?? (() => router.replace(APP_ROUTES.login));
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  const [agreed, setAgreed] = useState(false);
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const insets = useSafeAreaInsets()
+  const { signUp, pending, error } = useAuth()
+  const handleSignIn = onSignIn ?? (() => router.replace(APP_ROUTES.login))
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [birthDate, setBirthDate] = useState("")
+  const [agreed, setAgreed] = useState(false)
+  const [validationError, setValidationError] = useState<string | null>(null)
   async function submit() {
-    const date = new Date(`${birthDate}T00:00:00Z`);
+    const date = new Date(`${birthDate}T00:00:00Z`)
     if (!name.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setValidationError("Enter your name and a valid email address.");
-      return;
+      setValidationError("Enter your name and a valid email address.")
+      return
     }
     if (Array.from(password).length < 8) {
-      setValidationError("Password must contain at least 8 characters.");
-      return;
+      setValidationError("Password must contain at least 8 characters.")
+      return
     }
-    const passwordBytes = encodeURIComponent(password).replace(/%[0-9A-F]{2}/gi, "x").length;
+    const passwordBytes = encodeURIComponent(password).replace(/%[0-9A-F]{2}/gi, "x").length
     if (passwordBytes > 72) {
-      setValidationError("Password must not exceed 72 UTF-8 bytes.");
-      return;
+      setValidationError("Password must not exceed 72 UTF-8 bytes.")
+      return
     }
     const validDate =
       /^\d{4}-\d{2}-\d{2}$/.test(birthDate) &&
       Number.isFinite(date.getTime()) &&
-      date.toISOString().slice(0, 10) === birthDate;
+      date.toISOString().slice(0, 10) === birthDate
     if (!validDate) {
-      setValidationError("Enter a valid date");
-      return;
+      setValidationError("Enter a valid date")
+      return
     }
     if (birthDate > new Date().toISOString().slice(0, 10)) {
-      setValidationError("Date can't be in the future");
-      return;
+      setValidationError("Date can't be in the future")
+      return
     }
-    const today = new Date();
+    const today = new Date()
     const age =
       today.getUTCFullYear() -
       date.getUTCFullYear() -
       (today.getUTCMonth() < date.getUTCMonth() ||
       (today.getUTCMonth() === date.getUTCMonth() && today.getUTCDate() < date.getUTCDate())
         ? 1
-        : 0);
+        : 0)
     if (age < 13) {
-      setValidationError("You must be at least 13 years old to create an account.");
-      return;
+      setValidationError("You must be at least 13 years old to create an account.")
+      return
     }
     if (date.getUTCFullYear() < today.getUTCFullYear() - 120) {
-      setValidationError("Enter a valid date");
-      return;
+      setValidationError("Enter a valid date")
+      return
     }
     if (!agreed) {
-      setValidationError("Please agree to the terms before creating an account.");
-      return;
+      setValidationError("Please agree to the terms before creating an account.")
+      return
     }
-    setValidationError(null);
+    setValidationError(null)
     try {
-      await signUp({ name, email, password, birthDate });
+      await signUp({ name, email, password, birthDate })
     } catch {
       // Keep input values and display the server error from the auth store.
     }
@@ -133,8 +133,8 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
         <DateOfBirthField
           value={birthDate}
           onChange={(value) => {
-            setBirthDate(value);
-            setValidationError(null);
+            setBirthDate(value)
+            setValidationError(null)
           }}
           error={
             validationError?.includes("date") ||
@@ -204,7 +204,7 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
           !agreed
         }
         onPress={() => {
-          void submit();
+          void submit()
         }}
         style={[
           styles.primaryButton,
@@ -238,7 +238,7 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
         </Pressable>
       </View>
     </ScrollView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -349,4 +349,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: AuthColors.accent,
   },
-});
+})

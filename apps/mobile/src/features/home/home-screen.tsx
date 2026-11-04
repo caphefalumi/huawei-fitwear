@@ -1,69 +1,69 @@
-import { Image } from "expo-image";
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import Animated, { FadeInUp } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from "expo-image"
+import { router, useFocusEffect } from "expo-router"
+import { useCallback, useEffect, useState } from "react"
+import { ScrollView, StyleSheet, Text, View } from "react-native"
+import Animated, { FadeInUp } from "react-native-reanimated"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
-import { recoveryTitle, useHealth } from "@/features/health/health-store";
-import { routinesFor } from "@/features/workout/routines";
-import { RecoverySheet } from "@/features/recovery/recovery-sheet";
-import { useMeals } from "@/features/meals/meals-store";
-import { NutritionRing } from "@/features/home/ring";
-import { WeightChart } from "@/features/home/weight-chart";
-import { Card, MacroBar, SectionHeading } from "@/features/home/ui";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
+import { recoveryTitle, useHealth } from "@/features/health/health-store"
+import { routinesFor } from "@/features/workout/routines"
+import { RecoverySheet } from "@/features/recovery/recovery-sheet"
+import { useMeals } from "@/features/meals/meals-store"
+import { NutritionRing } from "@/features/home/ring"
+import { WeightChart } from "@/features/home/weight-chart"
+import { Card, MacroBar, SectionHeading } from "@/features/home/ui"
 
-const DEMO_WEIGHTS = [72.8, 72.5, 72.3, 72.1, 71.9, 71.7, 71.5];
-const WEEK_ACTIVE = [true, true, false, true, true, false, true];
+const DEMO_WEIGHTS = [72.8, 72.5, 72.3, 72.1, 71.9, 71.7, 71.5]
+const WEEK_ACTIVE = [true, true, false, true, true, false, true]
 
 const icons = {
   chevronRight: require("@/assets/images/home/chevron-right.svg"),
   previousLog: require("@/assets/images/home/previous-log.svg"),
   shieldCheck: require("@/assets/images/home/shield-check.svg"),
   check: require("@/assets/images/home/check.svg"),
-};
+}
 
 /** Ease-out count-up for hero numbers. */
 function useCountUp(target: number, duration = 600) {
-  const [val, setVal] = useState(0);
+  const [val, setVal] = useState(0)
   useEffect(() => {
-    let raf = 0;
-    const start = Date.now();
+    let raf = 0
+    const start = Date.now()
     const tick = () => {
-      const p = Math.min(1, (Date.now() - start) / duration);
-      setVal(Math.round(target * (1 - Math.pow(1 - p, 3))));
-      if (p < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, duration]);
-  return val;
+      const p = Math.min(1, (Date.now() - start) / duration)
+      setVal(Math.round(target * (1 - Math.pow(1 - p, 3))))
+      if (p < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [target, duration])
+  return val
 }
 
 export function HomeScreen() {
-  const insets = useSafeAreaInsets();
-  const { weightKg, weightUpdated, recovery } = useHealth();
-  const { loggedKcal, loggedMacros } = useMeals();
-  const [bannerDismissed, setBannerDismissed] = useState(false);
-  const [recoveryOpen, setRecoveryOpen] = useState(false);
-  const [visit, setVisit] = useState(0);
+  const insets = useSafeAreaInsets()
+  const { weightKg, weightUpdated, recovery } = useHealth()
+  const { loggedKcal, loggedMacros } = useMeals()
+  const [bannerDismissed, setBannerDismissed] = useState(false)
+  const [recoveryOpen, setRecoveryOpen] = useState(false)
+  const [visit, setVisit] = useState(0)
 
-  useFocusEffect(useCallback(() => setVisit((v) => v + 1), []));
+  useFocusEffect(useCallback(() => setVisit((v) => v + 1), []))
 
-  useEffect(() => setBannerDismissed(false), [weightKg]);
+  useEffect(() => setBannerDismissed(false), [weightKg])
 
-  const targetKcal = weightUpdated ? 2160 : 2200;
-  const consumedKcal = 1320 + loggedKcal;
-  const kcalLeft = targetKcal - consumedKcal;
-  const kcalShown = useCountUp(kcalLeft);
-  const today = routinesFor(recovery).today;
-  const latestWeightKg = weightKg ?? DEMO_WEIGHTS[DEMO_WEIGHTS.length - 1];
+  const targetKcal = weightUpdated ? 2160 : 2200
+  const consumedKcal = 1320 + loggedKcal
+  const kcalLeft = targetKcal - consumedKcal
+  const kcalShown = useCountUp(kcalLeft)
+  const today = routinesFor(recovery).today
+  const latestWeightKg = weightKg ?? DEMO_WEIGHTS[DEMO_WEIGHTS.length - 1]
   const weights =
     latestWeightKg >= 70 && latestWeightKg <= 74
       ? [...DEMO_WEIGHTS.slice(0, -1), latestWeightKg]
-      : DEMO_WEIGHTS;
+      : DEMO_WEIGHTS
 
   return (
     <ScrollView
@@ -201,7 +201,7 @@ export function HomeScreen() {
         <Text style={styles.footnote}>Demo personal targets · estimates, not medical advice.</Text>
       ) : null}
     </ScrollView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -386,4 +386,4 @@ const styles = StyleSheet.create({
     color: C.textMuted,
     textAlign: "center",
   },
-});
+})

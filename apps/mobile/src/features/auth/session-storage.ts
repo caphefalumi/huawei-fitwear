@@ -1,1 +1,1 @@
-export { secureStorage as sessionStorage } from "@/lib/storage/secure";
+export { secureStorage as sessionStorage } from "@/lib/storage/secure"

@@ -1,52 +1,52 @@
-import { useEffect, useRef, useState } from "react";
-import { Animated, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
-import Svg, { Circle, Polyline } from "react-native-svg";
+import { useEffect, useRef, useState } from "react"
+import { Animated, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native"
+import Svg, { Circle, Polyline } from "react-native-svg"
 
-import { Palette as C } from "@/constants/palette";
+import { Palette as C } from "@/constants/palette"
 
-const APolyline = Animated.createAnimatedComponent(Polyline);
-const ACircle = Animated.createAnimatedComponent(Circle);
+const APolyline = Animated.createAnimatedComponent(Polyline)
+const ACircle = Animated.createAnimatedComponent(Circle)
 
-const CHART_HEIGHT = 124;
-const GRID_INSET = 12;
-const PLOT_HEIGHT = CHART_HEIGHT - GRID_INSET * 2;
-const X_PADDING = 8;
+const CHART_HEIGHT = 124
+const GRID_INSET = 12
+const PLOT_HEIGHT = CHART_HEIGHT - GRID_INSET * 2
+const X_PADDING = 8
 
 /** Weight line over three gridlines; the y-axis rounds to whole kilograms around the data. */
 export function WeightChart({ weights }: { weights: number[] }) {
-  const [width, setWidth] = useState(0);
-  const draw = useRef(new Animated.Value(0)).current;
-  const pulse = useRef(new Animated.Value(0)).current;
+  const [width, setWidth] = useState(0)
+  const draw = useRef(new Animated.Value(0)).current
+  const pulse = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
-    const t = Animated.timing(draw, { toValue: 1, duration: 900, useNativeDriver: false });
-    t.start();
+    const t = Animated.timing(draw, { toValue: 1, duration: 900, useNativeDriver: false })
+    t.start()
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1, duration: 1200, useNativeDriver: false }),
         Animated.timing(pulse, { toValue: 0, duration: 0, useNativeDriver: false }),
       ]),
-    );
-    loop.start();
+    )
+    loop.start()
     return () => {
-      t.stop();
-      loop.stop();
-    };
-  }, [draw, pulse]);
+      t.stop()
+      loop.stop()
+    }
+  }, [draw, pulse])
 
-  const dashOffset = draw.interpolate({ inputRange: [0, 1], outputRange: [800, 0] });
-  const pulseR = pulse.interpolate({ inputRange: [0, 1], outputRange: [5, 12] });
-  const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0] });
+  const dashOffset = draw.interpolate({ inputRange: [0, 1], outputRange: [800, 0] })
+  const pulseR = pulse.interpolate({ inputRange: [0, 1], outputRange: [5, 12] })
+  const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0] })
 
-  const top = Math.ceil(Math.max(...weights));
-  const bottom = Math.min(Math.floor(Math.min(...weights)), top - 1);
-  const axis = [top, (top + bottom) / 2, bottom];
+  const top = Math.ceil(Math.max(...weights))
+  const bottom = Math.min(Math.floor(Math.min(...weights)), top - 1)
+  const axis = [top, (top + bottom) / 2, bottom]
 
   const points = weights.map((weight, index) => ({
     x: X_PADDING + (index * (width - X_PADDING * 2)) / Math.max(1, weights.length - 1),
     y: GRID_INSET + ((top - weight) / (top - bottom)) * PLOT_HEIGHT,
-  }));
-  const last = points[points.length - 1];
+  }))
+  const last = points[points.length - 1]
 
   return (
     <View style={styles.row}>
@@ -101,7 +101,7 @@ export function WeightChart({ weights }: { weights: number[] }) {
         ))}
       </View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -137,4 +137,4 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: C.textMuted,
   },
-});
+})

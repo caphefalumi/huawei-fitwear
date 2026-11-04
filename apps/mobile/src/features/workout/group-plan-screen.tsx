@@ -1,16 +1,16 @@
-import { router, useLocalSearchParams } from "expo-router";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router, useLocalSearchParams } from "expo-router"
+import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
-import { BackHeader, Card, SectionHeading } from "@/features/home/ui";
-import { GROUP_ROUTINES } from "@/features/workout/routines";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
+import { BackHeader, Card, SectionHeading } from "@/features/home/ui"
+import { GROUP_ROUTINES } from "@/features/workout/routines"
 
 export function GroupPlanScreen() {
-  const insets = useSafeAreaInsets();
-  const { group } = useLocalSearchParams<{ group?: string }>();
-  const routine = GROUP_ROUTINES[group ?? ""] ?? GROUP_ROUTINES.chest;
+  const insets = useSafeAreaInsets()
+  const { group } = useLocalSearchParams<{ group?: string }>()
+  const routine = GROUP_ROUTINES[group ?? ""] ?? GROUP_ROUTINES.chest
 
   return (
     <ScrollView
@@ -48,7 +48,7 @@ export function GroupPlanScreen() {
         <Text style={styles.primaryLabel}>Start workout</Text>
       </Pressable>
     </ScrollView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -108,4 +108,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: C.onAccent,
   },
-});
+})

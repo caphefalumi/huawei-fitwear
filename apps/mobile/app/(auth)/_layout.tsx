@@ -1,8 +1,8 @@
-import { Slot, Stack } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { Platform, View } from "react-native";
+import { Slot, Stack } from "expo-router"
+import { StatusBar } from "expo-status-bar"
+import { Platform, View } from "react-native"
 
-import { Palette as AuthColors } from "@/constants/palette";
+import { Palette as AuthColors } from "@/constants/palette"
 
 export default function AuthLayout() {
   if (Platform.OS === "web") {
@@ -11,7 +11,7 @@ export default function AuthLayout() {
         <StatusBar style="dark" />
         <Slot />
       </View>
-    );
+    )
   }
 
   return (
@@ -24,5 +24,5 @@ export default function AuthLayout() {
         }}
       />
     </>
-  );
+  )
 }

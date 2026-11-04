@@ -1,37 +1,37 @@
-import { router } from "expo-router";
-import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router } from "expo-router"
+import { useEffect, useState } from "react"
+import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable";
-import { Palette as C } from "@/constants/palette";
-import { useHealth } from "@/features/health/health-store";
-import { BackHeader, Card } from "@/features/home/ui";
-import { routinesFor } from "@/features/workout/routines";
+import { Pressable } from "@/components/pressable"
+import { Palette as C } from "@/constants/palette"
+import { useHealth } from "@/features/health/health-store"
+import { BackHeader, Card } from "@/features/home/ui"
+import { routinesFor } from "@/features/workout/routines"
 
 function formatElapsed(totalSeconds: number) {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
 }
 
 export function SessionScreen() {
-  const insets = useSafeAreaInsets();
-  const { recovery } = useHealth();
-  const { today } = routinesFor(recovery);
-  const [done, setDone] = useState<Record<string, boolean>>({});
-  const [seconds, setSeconds] = useState(0);
+  const insets = useSafeAreaInsets()
+  const { recovery } = useHealth()
+  const { today } = routinesFor(recovery)
+  const [done, setDone] = useState<Record<string, boolean>>({})
+  const [seconds, setSeconds] = useState(0)
 
   useEffect(() => {
-    const id = setInterval(() => setSeconds((value) => value + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
+    const id = setInterval(() => setSeconds((value) => value + 1), 1000)
+    return () => clearInterval(id)
+  }, [])
 
-  const doneCount = today.exercises.filter((exercise) => done[exercise.name]).length;
-  const allDone = doneCount === today.exercises.length;
+  const doneCount = today.exercises.filter((exercise) => done[exercise.name]).length
+  const allDone = doneCount === today.exercises.length
 
   function toggle(name: string) {
-    setDone((prev) => ({ ...prev, [name]: !prev[name] }));
+    setDone((prev) => ({ ...prev, [name]: !prev[name] }))
   }
 
   return (
@@ -54,7 +54,7 @@ export function SessionScreen() {
       <Card>
         <View style={styles.exerciseList}>
           {today.exercises.map((exercise) => {
-            const checked = !!done[exercise.name];
+            const checked = !!done[exercise.name]
             return (
               <Pressable
                 key={exercise.name}
@@ -69,7 +69,7 @@ export function SessionScreen() {
                 </Text>
                 <Text style={styles.exercisePrescription}>{exercise.prescription}</Text>
               </Pressable>
-            );
+            )
           })}
         </View>
       </Card>
@@ -82,7 +82,7 @@ export function SessionScreen() {
       </Pressable>
       {/* ponytail: session completion is not persisted; wire to a store when history matters. */}
     </ScrollView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -165,4 +165,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: C.onAccent,
   },
-});
+})

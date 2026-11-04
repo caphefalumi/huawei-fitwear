@@ -1,48 +1,48 @@
-import { enqueueEmail } from "../email/queue";
-import { and, eq } from "drizzle-orm";
-import { Elysia, status } from "elysia";
-import { getDb, user as userTable, session as sessionTable } from "../../db";
+import { enqueueEmail } from "../email/queue"
+import { and, eq } from "drizzle-orm"
+import { Elysia, status } from "elysia"
+import { getDb, user as userTable, session as sessionTable } from "../../db"
 import {
   hashPassword,
   isPasswordWithinBcryptLimit,
   needsPasswordRehash,
   verifyPassword,
-} from "../../lib/password";
-import { generateId, generateToken } from "../../lib/id";
+} from "../../lib/password"
+import { generateId, generateToken } from "../../lib/id"
 
-import type { SignUpBody, SignInBody, UpdateUserBody } from "./index";
+import type { SignUpBody, SignInBody, UpdateUserBody } from "./index"
 
 // Public dummy verifier, never an account credential. Match the current bcrypt cost
 // so unknown accounts do not bypass the expensive password check.
-const DUMMY_PASSWORD_HASH = "$2b$12$YvbRQhIG1u3QZLvSTX/wRO50bqc8xV6U.fFNPpEdrGjGJfQ6OVacq";
+const DUMMY_PASSWORD_HASH = "$2b$12$YvbRQhIG1u3QZLvSTX/wRO50bqc8xV6U.fFNPpEdrGjGJfQ6OVacq"
 
 export abstract class Auth {
   static async signUp(data: SignUpBody, d1?: D1Database) {
-    const db = getDb(d1);
-    const email = data.email.toLowerCase();
+    const db = getDb(d1)
+    const email = data.email.toLowerCase()
 
     const existing = await db
       .select({ id: userTable.id })
       .from(userTable)
       .where(eq(userTable.email, email))
-      .get();
+      .get()
 
     if (existing) {
       throw status(400, {
         success: false,
         message: "A user with this email address already exists",
-      });
+      })
     }
     if (!isPasswordWithinBcryptLimit(data.password)) {
-      throw status(422, { success: false, message: "Password must not exceed 72 UTF-8 bytes." });
+      throw status(422, { success: false, message: "Password must not exceed 72 UTF-8 bytes." })
     }
 
-    const hashedPassword = await hashPassword(data.password);
-    const userId = generateId();
-    const sessionId = generateId();
-    const token = generateToken();
-    const now = new Date();
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const hashedPassword = await hashPassword(data.password)
+    const userId = generateId()
+    const sessionId = generateId()
+    const token = generateToken()
+    const now = new Date()
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
     const newUser = {
       id: userId,
@@ -60,7 +60,7 @@ export abstract class Auth {
       weeklySessions: data.weeklySessions ?? 3,
       createdAt: now,
       updatedAt: now,
-    };
+    }
 
     const newSession = {
       id: sessionId,
@@ -69,20 +69,20 @@ export abstract class Auth {
       expiresAt,
       createdAt: now,
       updatedAt: now,
-    };
+    }
 
     await db.batch([
       db.insert(userTable).values(newUser),
       db.insert(sessionTable).values(newSession),
-    ]);
+    ])
 
     try {
-      await enqueueEmail({ type: "welcome", to: newUser.email, name: newUser.name });
+      await enqueueEmail({ type: "welcome", to: newUser.email, name: newUser.name })
     } catch {
-      console.error(JSON.stringify({ event: "welcome_email_enqueue_failed", userId }));
+      console.error(JSON.stringify({ event: "welcome_email_enqueue_failed", userId }))
     }
 
-    const { password: _, ...safeUser } = newUser;
+    const { password: _, ...safeUser } = newUser
 
     return {
       user: safeUser,
@@ -92,32 +92,32 @@ export abstract class Auth {
         expiresAt: newSession.expiresAt.toISOString(),
         userId: newSession.userId,
       },
-    };
+    }
   }
 
   static async signIn(data: SignInBody, d1?: D1Database) {
-    const db = getDb(d1);
-    const email = data.email.toLowerCase();
+    const db = getDb(d1)
+    const email = data.email.toLowerCase()
 
-    const foundUser = await db.select().from(userTable).where(eq(userTable.email, email)).get();
+    const foundUser = await db.select().from(userTable).where(eq(userTable.email, email)).get()
 
-    const isValid = await verifyPassword(data.password, foundUser?.password ?? DUMMY_PASSWORD_HASH);
+    const isValid = await verifyPassword(data.password, foundUser?.password ?? DUMMY_PASSWORD_HASH)
     if (!foundUser || !isValid) {
-      throw status(401, { success: false, message: "Email or password is incorrect." });
+      throw status(401, { success: false, message: "Email or password is incorrect." })
     }
     if (needsPasswordRehash(foundUser.password) && isPasswordWithinBcryptLimit(data.password)) {
-      const upgradedHash = await hashPassword(data.password);
+      const upgradedHash = await hashPassword(data.password)
       await db
         .update(userTable)
         .set({ password: upgradedHash })
         .where(and(eq(userTable.id, foundUser.id), eq(userTable.password, foundUser.password)))
-        .run();
+        .run()
     }
 
-    const sessionId = generateId();
-    const token = generateToken();
-    const now = new Date();
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const sessionId = generateId()
+    const token = generateToken()
+    const now = new Date()
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
     const newSession = {
       id: sessionId,
@@ -126,11 +126,11 @@ export abstract class Auth {
       expiresAt,
       createdAt: now,
       updatedAt: now,
-    };
+    }
 
-    await db.insert(sessionTable).values(newSession).run();
+    await db.insert(sessionTable).values(newSession).run()
 
-    const { password: _, ...safeUser } = foundUser;
+    const { password: _, ...safeUser } = foundUser
 
     return {
       user: safeUser,
@@ -140,11 +140,11 @@ export abstract class Auth {
         expiresAt: newSession.expiresAt.toISOString(),
         userId: newSession.userId,
       },
-    };
+    }
   }
 
   static async validateSession(token: string, d1?: D1Database) {
-    const db = getDb(d1);
+    const db = getDb(d1)
 
     const record = await db
       .select({
@@ -170,35 +170,35 @@ export abstract class Auth {
       .from(sessionTable)
       .innerJoin(userTable, eq(sessionTable.userId, userTable.id))
       .where(eq(sessionTable.token, token))
-      .get();
+      .get()
 
-    if (!record) return null;
+    if (!record) return null
 
     if (new Date(record.session.expiresAt).getTime() <= Date.now()) {
-      await db.delete(sessionTable).where(eq(sessionTable.id, record.session.id)).run();
-      return null;
+      await db.delete(sessionTable).where(eq(sessionTable.id, record.session.id)).run()
+      return null
     }
 
     return {
       user: record.user,
       session: record.session,
-    };
+    }
   }
 
   static async signOut(token: string, d1?: D1Database) {
-    const db = getDb(d1);
-    await db.delete(sessionTable).where(eq(sessionTable.token, token)).run();
-    return { success: true, message: "Signed out successfully" };
+    const db = getDb(d1)
+    await db.delete(sessionTable).where(eq(sessionTable.token, token)).run()
+    return { success: true, message: "Signed out successfully" }
   }
   static async deleteAccount(userId: string, d1?: D1Database) {
-    const db = getDb(d1);
-    await db.delete(sessionTable).where(eq(sessionTable.userId, userId)).run();
-    await db.delete(userTable).where(eq(userTable.id, userId)).run();
-    return { success: true, message: "Account deleted successfully" };
+    const db = getDb(d1)
+    await db.delete(sessionTable).where(eq(sessionTable.userId, userId)).run()
+    await db.delete(userTable).where(eq(userTable.id, userId)).run()
+    return { success: true, message: "Account deleted successfully" }
   }
 
   static async updateUser(userId: string, data: UpdateUserBody, d1?: D1Database) {
-    const db = getDb(d1);
+    const db = getDb(d1)
 
     await db
       .update(userTable)
@@ -207,7 +207,7 @@ export abstract class Auth {
         updatedAt: new Date(),
       })
       .where(eq(userTable.id, userId))
-      .run();
+      .run()
 
     const updatedUser = await db
       .select({
@@ -229,53 +229,53 @@ export abstract class Auth {
       })
       .from(userTable)
       .where(eq(userTable.id, userId))
-      .get();
+      .get()
 
     if (!updatedUser) {
-      throw status(404, { success: false, message: "User not found" });
+      throw status(404, { success: false, message: "User not found" })
     }
 
-    return updatedUser;
+    return updatedUser
   }
 }
 
 export const authGuard = new Elysia({ name: "authGuard" }).macro({
   auth: (enabled: boolean) => {
-    if (!enabled) return {};
+    if (!enabled) return {}
     return {
       detail: {
         security: [{ bearerAuth: [] }],
       },
       async resolve({ request, cookie: { session_token }, status: setStatus }) {
-        let token: string | null = null;
-        const authHeader = request.headers.get("authorization");
+        let token: string | null = null
+        const authHeader = request.headers.get("authorization")
         if (authHeader && authHeader.startsWith("Bearer ")) {
-          token = authHeader.substring(7).trim();
+          token = authHeader.substring(7).trim()
         } else if (session_token?.value) {
-          token = session_token.value as string;
+          token = session_token.value as string
         }
 
         if (!token) {
           throw setStatus(401, {
             success: false,
             message: "Unauthorized: missing authentication token",
-          });
+          })
         }
 
-        const authData = await Auth.validateSession(token);
+        const authData = await Auth.validateSession(token)
         if (!authData) {
           throw setStatus(401, {
             success: false,
             message: "Unauthorized: invalid or expired session",
-          });
+          })
         }
 
         return {
           user: authData.user,
           session: authData.session,
           token,
-        };
+        }
       },
-    };
+    }
   },
-});
+})
