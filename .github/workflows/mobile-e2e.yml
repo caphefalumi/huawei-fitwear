@@ -83,6 +83,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Download Android release APK
         uses: actions/download-artifact@v8
         with:
