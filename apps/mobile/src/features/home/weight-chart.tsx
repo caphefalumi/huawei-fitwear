@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
-import Svg, { Circle, Polyline } from 'react-native-svg';
+import { useEffect, useRef, useState } from "react";
+import { Animated, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
+import Svg, { Circle, Polyline } from "react-native-svg";
 
-import { Palette as C } from '@/constants/palette';
+import { Palette as C } from "@/constants/palette";
 
 const APolyline = Animated.createAnimatedComponent(Polyline);
 const ACircle = Animated.createAnimatedComponent(Circle);
@@ -52,7 +52,8 @@ export function WeightChart({ weights }: { weights: number[] }) {
     <View style={styles.row}>
       <View
         style={styles.chart}
-        onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)}>
+        onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)}
+      >
         <View style={styles.grid}>
           {axis.map((value) => (
             <View key={value} style={styles.gridLine} />
@@ -61,7 +62,7 @@ export function WeightChart({ weights }: { weights: number[] }) {
         {width > 0 ? (
           <Svg width={width} height={CHART_HEIGHT} style={StyleSheet.absoluteFill}>
             <APolyline
-              points={points.map((point) => `${point.x},${point.y}`).join(' ')}
+              points={points.map((point) => `${point.x},${point.y}`).join(" ")}
               fill="none"
               stroke={C.accent}
               strokeWidth={2}
@@ -73,8 +74,21 @@ export function WeightChart({ weights }: { weights: number[] }) {
             {points.slice(0, -1).map((point) => (
               <Circle key={`${point.x}`} cx={point.x} cy={point.y} r={3} fill={C.accentBorder} />
             ))}
-            <ACircle cx={last.x} cy={last.y} r={pulseR} fill={C.accentBorder} opacity={pulseOpacity} />
-            <Circle cx={last.x} cy={last.y} r={5} fill={C.accentBorder} stroke={C.surface} strokeWidth={2} />
+            <ACircle
+              cx={last.x}
+              cy={last.y}
+              r={pulseR}
+              fill={C.accentBorder}
+              opacity={pulseOpacity}
+            />
+            <Circle
+              cx={last.x}
+              cy={last.y}
+              r={5}
+              fill={C.accentBorder}
+              stroke={C.surface}
+              strokeWidth={2}
+            />
           </Svg>
         ) : null}
       </View>
@@ -92,8 +106,8 @@ export function WeightChart({ weights }: { weights: number[] }) {
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
+    flexDirection: "row",
+    alignItems: "stretch",
     gap: 6,
   },
   chart: {
@@ -101,12 +115,12 @@ const styles = StyleSheet.create({
     height: CHART_HEIGHT,
   },
   grid: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     top: GRID_INSET,
     bottom: GRID_INSET,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   gridLine: {
     height: 1,
@@ -115,8 +129,8 @@ const styles = StyleSheet.create({
   axis: {
     width: 30,
     height: CHART_HEIGHT,
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    justifyContent: "space-between",
+    alignItems: "flex-end",
     paddingVertical: GRID_INSET - 6,
   },
   axisLabel: {

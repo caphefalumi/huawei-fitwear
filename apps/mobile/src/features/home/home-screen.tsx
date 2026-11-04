@@ -1,28 +1,28 @@
-import { Image } from 'expo-image';
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from "expo-image";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, { FadeInUp } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Pressable } from '@/components/pressable';
-import { Palette as C } from '@/constants/palette';
-import { recoveryTitle, useHealth } from '@/features/health/health-store';
-import { routinesFor } from '@/features/workout/routines';
-import { RecoverySheet } from '@/features/recovery/recovery-sheet';
-import { useMeals } from '@/features/meals/meals-store';
-import { NutritionRing } from '@/features/home/ring';
-import { WeightChart } from '@/features/home/weight-chart';
-import { Card, MacroBar, SectionHeading } from '@/features/home/ui';
+import { Pressable } from "@/components/pressable";
+import { Palette as C } from "@/constants/palette";
+import { recoveryTitle, useHealth } from "@/features/health/health-store";
+import { routinesFor } from "@/features/workout/routines";
+import { RecoverySheet } from "@/features/recovery/recovery-sheet";
+import { useMeals } from "@/features/meals/meals-store";
+import { NutritionRing } from "@/features/home/ring";
+import { WeightChart } from "@/features/home/weight-chart";
+import { Card, MacroBar, SectionHeading } from "@/features/home/ui";
 
 const DEMO_WEIGHTS = [72.8, 72.5, 72.3, 72.1, 71.9, 71.7, 71.5];
 const WEEK_ACTIVE = [true, true, false, true, true, false, true];
 
 const icons = {
-  chevronRight: require('@/assets/images/home/chevron-right.svg'),
-  previousLog: require('@/assets/images/home/previous-log.svg'),
-  shieldCheck: require('@/assets/images/home/shield-check.svg'),
-  check: require('@/assets/images/home/check.svg'),
+  chevronRight: require("@/assets/images/home/chevron-right.svg"),
+  previousLog: require("@/assets/images/home/previous-log.svg"),
+  shieldCheck: require("@/assets/images/home/shield-check.svg"),
+  check: require("@/assets/images/home/check.svg"),
 };
 
 /** Ease-out count-up for hero numbers. */
@@ -71,7 +71,8 @@ export function HomeScreen() {
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}>
+      ]}
+    >
       <View style={styles.topRow}>
         <Text style={styles.date}>THU, OCT 8</Text>
         <Text style={styles.name}>Sam N.</Text>
@@ -88,7 +89,7 @@ export function HomeScreen() {
             {kcalShown} kcal left
           </Text>
           <Text style={styles.focusMuted} numberOfLines={1}>
-            {recovery ? recoveryTitle(recovery) : 'Watch connected'}
+            {recovery ? recoveryTitle(recovery) : "Watch connected"}
           </Text>
           <View style={styles.weekDots}>
             {WEEK_ACTIVE.map((active, index) => (
@@ -113,41 +114,42 @@ export function HomeScreen() {
       ) : null}
 
       <Animated.View key={visit} entering={FadeInUp.delay(60).duration(250)}>
-        <Pressable onPress={() => router.push('/nutrition')}>
+        <Pressable onPress={() => router.push("/nutrition")}>
           <Card>
-          <Text style={styles.cardHeaderText}>Nutrition</Text>
+            <Text style={styles.cardHeaderText}>Nutrition</Text>
 
-          <View style={styles.nutritionBody}>
-            <NutritionRing kcalLeft={kcalShown} progress={consumedKcal / targetKcal} />
+            <View style={styles.nutritionBody}>
+              <NutritionRing kcalLeft={kcalShown} progress={consumedKcal / targetKcal} />
 
-            <View style={styles.macros}>
-              <MacroBar label="Protein" value={92 + loggedMacros.protein} target={140} unit="g" />
-              <MacroBar
-                label="Carbs"
-                value={152 + loggedMacros.carbs}
-                target={weightUpdated ? 265 : 275}
-                unit="g"
-              />
-              <MacroBar label="Fat" value={38 + loggedMacros.fat} target={60} unit="g" />
+              <View style={styles.macros}>
+                <MacroBar label="Protein" value={92 + loggedMacros.protein} target={140} unit="g" />
+                <MacroBar
+                  label="Carbs"
+                  value={152 + loggedMacros.carbs}
+                  target={weightUpdated ? 265 : 275}
+                  unit="g"
+                />
+                <MacroBar label="Fat" value={38 + loggedMacros.fat} target={60} unit="g" />
+              </View>
             </View>
-          </View>
 
-          {weightUpdated ? (
-            <Text style={styles.consumedLine}>
-              {consumedKcal.toLocaleString('en-US')} consumed · {kcalShown} kcal left of{' '}
-              {targetKcal.toLocaleString('en-US')}
-            </Text>
-          ) : null}
-        </Card>
+            {weightUpdated ? (
+              <Text style={styles.consumedLine}>
+                {consumedKcal.toLocaleString("en-US")} consumed · {kcalShown} kcal left of{" "}
+                {targetKcal.toLocaleString("en-US")}
+              </Text>
+            ) : null}
+          </Card>
         </Pressable>
       </Animated.View>
 
       <Animated.View
         key={`progress-${visit}`}
         entering={FadeInUp.delay(120).duration(250)}
-        style={styles.section}>
+        style={styles.section}
+      >
         <SectionHeading title="Progress" />
-        <Pressable onPress={() => router.push('/progress')}>
+        <Pressable onPress={() => router.push("/progress")}>
           <Card>
             <View style={styles.weightText}>
               <Text style={styles.weightLabel} numberOfLines={1}>
@@ -160,19 +162,22 @@ export function HomeScreen() {
                 <Text style={styles.weightUnit}>kg</Text>
               </View>
               <Text style={styles.weightSub} numberOfLines={1}>
-                {weightUpdated ? 'Logged Oct 8' : '−1.2 kg in 4 weeks'}
+                {weightUpdated ? "Logged Oct 8" : "−1.2 kg in 4 weeks"}
               </Text>
             </View>
             <WeightChart weights={weights} />
 
             {weightUpdated ? (
               <View style={styles.previousRow}>
-                <Image source={icons.previousLog} style={styles.previousChart} contentFit="contain" />
+                <Image
+                  source={icons.previousLog}
+                  style={styles.previousChart}
+                  contentFit="contain"
+                />
                 <Text style={styles.previousText}>Previous · Oct 7</Text>
                 <Text style={styles.previousValue}>72.0 kg</Text>
               </View>
             ) : null}
-
           </Card>
         </Pressable>
       </Animated.View>
@@ -209,9 +214,9 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   date: {
     fontSize: 12,
@@ -219,18 +224,18 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.accent,
   },
   title: {
     fontSize: 28,
-    fontWeight: '400',
+    fontWeight: "400",
     color: C.text,
     marginTop: -6,
   },
   banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     backgroundColor: C.accentTint,
     borderRadius: 12,
@@ -244,22 +249,22 @@ const styles = StyleSheet.create({
   bannerText: {
     flex: 1,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.accent,
   },
   bannerClose: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.accent,
   },
   cardHeaderText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   nutritionBody: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 20,
   },
   macros: {
@@ -276,7 +281,7 @@ const styles = StyleSheet.create({
   },
   focusLine: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   focusMuted: {
@@ -284,7 +289,7 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   weekDots: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     marginTop: 6,
   },
@@ -311,13 +316,13 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   weightValueRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
     gap: 4,
   },
   weightValue: {
     fontSize: 27,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   weightUnit: {
@@ -329,8 +334,8 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   previousRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   previousChart: {
@@ -344,12 +349,12 @@ const styles = StyleSheet.create({
   },
   previousValue: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   recovery: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     backgroundColor: C.card,
     borderRadius: 12,
@@ -365,7 +370,7 @@ const styles = StyleSheet.create({
   },
   recoveryTitle: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   recoverySub: {
@@ -379,6 +384,6 @@ const styles = StyleSheet.create({
   footnote: {
     fontSize: 10,
     color: C.textMuted,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

@@ -1,17 +1,17 @@
-import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from "expo-image";
+import { router } from "expo-router";
+import { useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Pressable } from '@/components/pressable';
-import { Palette as C } from '@/constants/palette';
-import { useHealth } from '@/features/health/health-store';
-import { BackHeader, Card } from '@/features/home/ui';
+import { Pressable } from "@/components/pressable";
+import { Palette as C } from "@/constants/palette";
+import { useHealth } from "@/features/health/health-store";
+import { BackHeader, Card } from "@/features/home/ui";
 
 const icons = {
-  play: require('@/assets/images/workout/play.svg'),
-  lock: require('@/assets/images/recovery/lock.svg'),
+  play: require("@/assets/images/workout/play.svg"),
+  lock: require("@/assets/images/recovery/lock.svg"),
 };
 
 type Exercise = {
@@ -25,31 +25,39 @@ type Exercise = {
 };
 
 const EXERCISES: Exercise[] = [
-  { key: 'bench-press', name: 'Barbell bench press', sets: 3, reps: 10, load: 30, loadUnit: 'kg', step: 2.5 },
   {
-    key: 'incline-dumbbell-press',
-    name: 'Incline dumbbell press',
+    key: "bench-press",
+    name: "Barbell bench press",
+    sets: 3,
+    reps: 10,
+    load: 30,
+    loadUnit: "kg",
+    step: 2.5,
+  },
+  {
+    key: "incline-dumbbell-press",
+    name: "Incline dumbbell press",
     sets: 3,
     reps: 12,
     load: 10,
-    loadUnit: 'kg/hand',
+    loadUnit: "kg/hand",
     step: 2,
   },
   {
-    key: 'cable-chest-fly',
-    name: 'Cable chest fly',
+    key: "cable-chest-fly",
+    name: "Cable chest fly",
     sets: 3,
     reps: 12,
     load: 7.5,
-    loadUnit: 'kg/side',
+    loadUnit: "kg/side",
     step: 2.5,
   },
 ];
 
 const SUMMARY = [
-  { value: '3', label: 'exercises' },
-  { value: '9', label: 'sets' },
-  { value: '35', label: 'min' },
+  { value: "3", label: "exercises" },
+  { value: "9", label: "sets" },
+  { value: "35", label: "min" },
 ];
 
 export function ChestPlanScreen() {
@@ -62,7 +70,10 @@ export function ChestPlanScreen() {
   function adjust(exercise: Exercise, direction: -1 | 1) {
     setLoads((prev) => ({
       ...prev,
-      [exercise.key]: Math.max(0, Number(((prev[exercise.key] ?? 0) + direction * exercise.step).toFixed(1))),
+      [exercise.key]: Math.max(
+        0,
+        Number(((prev[exercise.key] ?? 0) + direction * exercise.step).toFixed(1)),
+      ),
     }));
   }
 
@@ -72,7 +83,8 @@ export function ChestPlanScreen() {
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}>
+      ]}
+    >
       <BackHeader label="Workouts" onPress={() => router.back()} />
 
       <View style={styles.heading}>
@@ -83,7 +95,7 @@ export function ChestPlanScreen() {
       </View>
 
       <Image
-        source={require('@/assets/images/workout/chest-hero.png')}
+        source={require("@/assets/images/workout/chest-hero.png")}
         style={styles.hero}
         contentFit="cover"
       />
@@ -111,15 +123,17 @@ export function ChestPlanScreen() {
       {EXERCISES.map((exercise, index) => (
         <Card key={exercise.key} style={styles.exerciseCard}>
           <View style={styles.exerciseHeader}>
-            <Text style={styles.exerciseIndex}>{String(index + 1).padStart(2, '0')}</Text>
+            <Text style={styles.exerciseIndex}>{String(index + 1).padStart(2, "0")}</Text>
             <Pressable
               style={styles.exerciseIdentity}
-              onPress={() => router.push(`/exercise-guide?name=${exercise.key}`)}>
+              onPress={() => router.push(`/exercise-guide?name=${exercise.key}`)}
+            >
               <Text style={styles.exerciseName}>{exercise.name}</Text>
             </Pressable>
             <Pressable
               style={styles.playButton}
-              onPress={() => router.push(`/exercise-guide?name=${exercise.key}`)}>
+              onPress={() => router.push(`/exercise-guide?name=${exercise.key}`)}
+            >
               <Image source={icons.play} style={styles.playIcon} contentFit="contain" />
             </Pressable>
           </View>
@@ -162,7 +176,7 @@ export function ChestPlanScreen() {
         </Card>
       ))}
 
-      <Pressable style={styles.primaryButton} onPress={() => router.push('/session')}>
+      <Pressable style={styles.primaryButton} onPress={() => router.push("/session")}>
         <Text style={styles.primaryLabel}>Start workout</Text>
       </Pressable>
       {recovery ? (
@@ -186,7 +200,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '400',
+    fontWeight: "400",
     color: C.text,
   },
   subtitle: {
@@ -194,13 +208,13 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   hero: {
-    width: '100%',
+    width: "100%",
     aspectRatio: 354 / 165,
     borderRadius: 18,
     backgroundColor: C.card,
   },
   summary: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
   },
   metric: {
@@ -208,12 +222,12 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface,
     borderRadius: 14,
     paddingVertical: 10,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 2,
   },
   metricValue: {
     fontSize: 25,
-    fontWeight: '400',
+    fontWeight: "400",
     color: C.text,
   },
   metricLabel: {
@@ -221,8 +235,8 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   restriction: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     backgroundColor: C.card,
     borderRadius: 14,
@@ -240,7 +254,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 17,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
     paddingTop: 4,
   },
@@ -249,8 +263,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   exerciseHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   exerciseIndex: {
@@ -262,7 +276,7 @@ const styles = StyleSheet.create({
   },
   exerciseName: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   playButton: {
@@ -270,21 +284,21 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 100,
     backgroundColor: C.accentTint,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   playIcon: {
     width: 14,
     height: 14,
   },
   prescriptionRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   prescription: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
     gap: 5,
   },
   prescriptionValue: {
@@ -296,14 +310,14 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   exerciseFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 10,
   },
   loadGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   loadLabel: {
@@ -311,13 +325,13 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   loadInput: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
     gap: 3,
   },
   loadValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   loadUnit: {
@@ -325,7 +339,7 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   stepper: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   stepButton: {
@@ -333,8 +347,8 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 12,
     backgroundColor: C.previewTint,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   minus: {
     width: 14,
@@ -343,20 +357,20 @@ const styles = StyleSheet.create({
     backgroundColor: C.text,
   },
   plus: {
-    position: 'absolute',
+    position: "absolute",
     width: 2,
     height: 14,
     borderRadius: 1,
     backgroundColor: C.text,
   },
   footerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
   watchGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 5,
   },
   watchIcon: {
@@ -371,24 +385,24 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 16,
     backgroundColor: C.card,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   disabledActionLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.textMuted,
   },
   primaryButton: {
     height: 52,
     borderRadius: 16,
     backgroundColor: C.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   primaryLabel: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.onAccent,
   },
   footnote: {

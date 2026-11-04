@@ -1,18 +1,18 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Pressable } from '@/components/pressable';
-import { Palette as C } from '@/constants/palette';
-import { useHealth } from '@/features/health/health-store';
-import { BackHeader, Card } from '@/features/home/ui';
-import { routinesFor } from '@/features/workout/routines';
+import { Pressable } from "@/components/pressable";
+import { Palette as C } from "@/constants/palette";
+import { useHealth } from "@/features/health/health-store";
+import { BackHeader, Card } from "@/features/home/ui";
+import { routinesFor } from "@/features/workout/routines";
 
 function formatElapsed(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
 export function SessionScreen() {
@@ -40,7 +40,8 @@ export function SessionScreen() {
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}>
+      ]}
+    >
       <BackHeader label="Workout plan" onPress={() => router.back()} />
 
       <View style={styles.heading}>
@@ -58,7 +59,8 @@ export function SessionScreen() {
               <Pressable
                 key={exercise.name}
                 style={styles.exerciseRow}
-                onPress={() => toggle(exercise.name)}>
+                onPress={() => toggle(exercise.name)}
+              >
                 <View style={[styles.check, checked && styles.checkDone]}>
                   {checked ? <View style={styles.checkMark} /> : null}
                 </View>
@@ -74,8 +76,9 @@ export function SessionScreen() {
 
       <Pressable
         style={[styles.primaryButton, !allDone && styles.primaryButtonIdle]}
-        onPress={() => router.replace('/workout')}>
-        <Text style={styles.primaryLabel}>{allDone ? 'Finish workout' : 'End session'}</Text>
+        onPress={() => router.replace("/workout")}
+      >
+        <Text style={styles.primaryLabel}>{allDone ? "Finish workout" : "End session"}</Text>
       </Pressable>
       {/* ponytail: session completion is not persisted; wire to a store when history matters. */}
     </ScrollView>
@@ -96,7 +99,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '400',
+    fontWeight: "400",
     color: C.text,
   },
   subtitle: {
@@ -107,8 +110,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   exerciseRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     paddingVertical: 10,
   },
@@ -118,8 +121,8 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     borderWidth: 1,
     borderColor: C.border,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   checkDone: {
     backgroundColor: C.accent,
@@ -131,17 +134,17 @@ const styles = StyleSheet.create({
     borderLeftWidth: 2,
     borderBottomWidth: 2,
     borderColor: C.onAccent,
-    transform: [{ rotate: '-45deg' }, { translateY: -1 }],
+    transform: [{ rotate: "-45deg" }, { translateY: -1 }],
   },
   exerciseName: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   exerciseDone: {
     color: C.textMuted,
-    textDecorationLine: 'line-through',
+    textDecorationLine: "line-through",
   },
   exercisePrescription: {
     fontSize: 12,
@@ -151,15 +154,15 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 16,
     backgroundColor: C.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   primaryButtonIdle: {
     opacity: 0.85,
   },
   primaryLabel: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.onAccent,
   },
 });

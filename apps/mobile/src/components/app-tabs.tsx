@@ -1,24 +1,30 @@
-import { Image } from 'expo-image';
-import { router, Tabs } from 'expo-router';
-import type { ComponentProps } from 'react';
-import { useEffect, useState } from 'react';
-import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import { Image } from "expo-image";
+import { router, Tabs } from "expo-router";
+import type { ComponentProps } from "react";
+import { useEffect, useState } from "react";
+import { StyleSheet, View, type LayoutChangeEvent } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 
-import { Pressable } from '@/components/pressable';
-import { Palette as C } from '@/constants/palette';
+import { Pressable } from "@/components/pressable";
+import { Palette as C } from "@/constants/palette";
 
-type TabBarRenderer = NonNullable<ComponentProps<typeof Tabs>['tabBar']>;
+type TabBarRenderer = NonNullable<ComponentProps<typeof Tabs>["tabBar"]>;
 type TabBarProps = Parameters<TabBarRenderer>[0];
 
 const LEFT_TABS = [
-  { name: 'home', label: 'Home', icon: require('@/assets/images/home/tab-house.svg') },
-  { name: 'meals', label: 'Meals', icon: require('@/assets/images/home/tab-utensils.svg') },
+  { name: "home", label: "Home", icon: require("@/assets/images/home/tab-house.svg") },
+  { name: "meals", label: "Meals", icon: require("@/assets/images/home/tab-utensils.svg") },
 ];
 
 const RIGHT_TABS = [
-  { name: 'workout', label: 'Workout', icon: require('@/assets/images/home/tab-dumbbell.svg') },
-  { name: 'profile', label: 'Profile', icon: require('@/assets/images/home/tab-user-round.svg') },
+  { name: "workout", label: "Workout", icon: require("@/assets/images/home/tab-dumbbell.svg") },
+  { name: "profile", label: "Profile", icon: require("@/assets/images/home/tab-user-round.svg") },
 ];
 
 type TabDef = (typeof LEFT_TABS)[number];
@@ -109,7 +115,7 @@ function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
     );
     ripple.value = 0;
     ripple.value = withTiming(1, { duration: 450 });
-    router.push('/capture');
+    router.push("/capture");
   }
 
   function renderTab(tab: TabDef) {
@@ -118,7 +124,7 @@ function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
 
     function handlePress() {
       if (!route) return;
-      const event = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+      const event = emitter.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
       if (!active && !event.defaultPrevented) navigateToTab(route.key);
     }
 
@@ -132,7 +138,13 @@ function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
     }
 
     return (
-      <TabButton key={tab.name} tab={tab} active={active} onPress={handlePress} onLayout={handleLayout} />
+      <TabButton
+        key={tab.name}
+        tab={tab}
+        active={active}
+        onPress={handlePress}
+        onLayout={handleLayout}
+      />
     );
   }
 
@@ -149,7 +161,8 @@ function AppTabBar({ state, emitter, navigateToTab, insets }: TabBarProps) {
           <Pressable
             style={styles.capture}
             accessibilityLabel="Capture meal"
-            onPress={handleCapture}>
+            onPress={handleCapture}
+          >
             <View style={styles.plusHorizontal} />
             <View style={styles.plusVertical} />
           </Pressable>
@@ -173,8 +186,8 @@ export default function AppTabs() {
 
 const styles = StyleSheet.create({
   bar: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: C.surface,
     borderTopWidth: 1,
     borderTopColor: C.border,
@@ -182,12 +195,12 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1,
     height: 58,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   tabInner: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   icon: {
     width: 22,
@@ -195,24 +208,24 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 11,
-    fontWeight: '500',
-    overflow: 'hidden',
+    fontWeight: "500",
+    overflow: "hidden",
   },
   bubble: {
-    position: 'absolute',
+    position: "absolute",
     top: (58 - BUBBLE_HEIGHT) / 2,
     left: 0,
     height: BUBBLE_HEIGHT,
     borderRadius: 100,
-    backgroundColor: 'rgba(157,35,50,0.12)',
+    backgroundColor: "rgba(157,35,50,0.12)",
   },
   centerSlot: {
     width: 72,
     height: 58,
-    alignItems: 'center',
+    alignItems: "center",
   },
   ripple: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     width: 60,
@@ -224,8 +237,8 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     marginTop: -24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   capture: {
     width: 60,
@@ -234,18 +247,18 @@ const styles = StyleSheet.create({
     backgroundColor: C.accent,
     borderWidth: 4,
     borderColor: C.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   plusHorizontal: {
-    position: 'absolute',
+    position: "absolute",
     width: 22,
     height: 3,
     borderRadius: 2,
     backgroundColor: C.onAccent,
   },
   plusVertical: {
-    position: 'absolute',
+    position: "absolute",
     width: 3,
     height: 22,
     borderRadius: 2,

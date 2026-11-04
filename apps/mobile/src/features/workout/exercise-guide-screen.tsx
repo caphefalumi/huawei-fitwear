@@ -1,17 +1,17 @@
-import { Image } from 'expo-image';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from "expo-image";
+import { router, useLocalSearchParams } from "expo-router";
+import { useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Pressable } from '@/components/pressable';
-import { Palette as C } from '@/constants/palette';
-import { useHealth } from '@/features/health/health-store';
-import { BackHeader, Card } from '@/features/home/ui';
+import { Pressable } from "@/components/pressable";
+import { Palette as C } from "@/constants/palette";
+import { useHealth } from "@/features/health/health-store";
+import { BackHeader, Card } from "@/features/home/ui";
 
 const icons = {
-  play: require('@/assets/images/workout/play.svg'),
-  shieldCheck: require('@/assets/images/home/shield-check.svg'),
+  play: require("@/assets/images/workout/play.svg"),
+  shieldCheck: require("@/assets/images/home/shield-check.svg"),
 };
 
 type Guide = {
@@ -25,46 +25,55 @@ type Guide = {
 };
 
 const GUIDES: Record<string, Guide> = {
-  'bench-press': {
-    name: 'Barbell bench press',
+  "bench-press": {
+    name: "Barbell bench press",
     sets: 3,
     reps: 10,
     load: 30,
-    loadUnit: 'kg',
+    loadUnit: "kg",
     step: 2.5,
     cues: [
-      { title: 'Stable feet & back', detail: 'Feet on floor, hips and upper back on bench.' },
+      { title: "Stable feet & back", detail: "Feet on floor, hips and upper back on bench." },
       {
-        title: 'Straight wrists',
-        detail: 'Grip wider than shoulders, squeeze scapula before lowering.',
+        title: "Straight wrists",
+        detail: "Grip wider than shoulders, squeeze scapula before lowering.",
       },
-      { title: 'Controlled lowering', detail: 'Lower slowly to chest, exhale on press. No bounce.' },
+      {
+        title: "Controlled lowering",
+        detail: "Lower slowly to chest, exhale on press. No bounce.",
+      },
     ],
   },
-  'incline-dumbbell-press': {
-    name: 'Incline dumbbell press',
+  "incline-dumbbell-press": {
+    name: "Incline dumbbell press",
     sets: 3,
     reps: 12,
     load: 10,
-    loadUnit: 'kg/hand',
+    loadUnit: "kg/hand",
     step: 2,
     cues: [
-      { title: 'Bench at 30°', detail: 'Steep enough for upper chest, low enough to protect shoulders.' },
-      { title: 'Elbows at 45°', detail: 'Keep elbows slightly tucked, wrists stacked over elbows.' },
-      { title: 'Even press', detail: 'Press both dumbbells together, stop before they touch.' },
+      {
+        title: "Bench at 30°",
+        detail: "Steep enough for upper chest, low enough to protect shoulders.",
+      },
+      {
+        title: "Elbows at 45°",
+        detail: "Keep elbows slightly tucked, wrists stacked over elbows.",
+      },
+      { title: "Even press", detail: "Press both dumbbells together, stop before they touch." },
     ],
   },
-  'cable-chest-fly': {
-    name: 'Cable chest fly',
+  "cable-chest-fly": {
+    name: "Cable chest fly",
     sets: 3,
     reps: 12,
     load: 7.5,
-    loadUnit: 'kg/side',
+    loadUnit: "kg/side",
     step: 2.5,
     cues: [
-      { title: 'Slight forward lean', detail: 'Step forward, keep a soft bend in the elbows.' },
-      { title: 'Arc, don’t press', detail: 'Bring hands together in a wide arc, not a press.' },
-      { title: 'Slow return', detail: 'Let the cables pull back over two seconds.' },
+      { title: "Slight forward lean", detail: "Step forward, keep a soft bend in the elbows." },
+      { title: "Arc, don’t press", detail: "Bring hands together in a wide arc, not a press." },
+      { title: "Slow return", detail: "Let the cables pull back over two seconds." },
     ],
   },
 };
@@ -73,7 +82,7 @@ export function ExerciseGuideScreen() {
   const insets = useSafeAreaInsets();
   const { name } = useLocalSearchParams<{ name?: string }>();
   const { recovery } = useHealth();
-  const guide = GUIDES[name ?? 'bench-press'] ?? GUIDES['bench-press'];
+  const guide = GUIDES[name ?? "bench-press"] ?? GUIDES["bench-press"];
   const [load, setLoad] = useState(guide.load);
 
   function adjust(direction: -1 | 1) {
@@ -86,7 +95,8 @@ export function ExerciseGuideScreen() {
       contentContainerStyle={[
         styles.content,
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}>
+      ]}
+    >
       <BackHeader label="Chest plan" onPress={() => router.back()} />
 
       <View style={styles.heading}>
@@ -96,7 +106,7 @@ export function ExerciseGuideScreen() {
 
       <View style={styles.demoWrap}>
         <Image
-          source={require('@/assets/images/workout/bench-demo.svg')}
+          source={require("@/assets/images/workout/bench-demo.svg")}
           style={styles.demo}
           contentFit="cover"
         />
@@ -163,8 +173,13 @@ export function ExerciseGuideScreen() {
         </View>
       ) : null}
 
-      <Pressable style={styles.primaryButton} onPress={() => router.push('/session')}>
-        <Image source={icons.play} style={styles.actionIcon} contentFit="contain" tintColor={C.onAccent} />
+      <Pressable style={styles.primaryButton} onPress={() => router.push("/session")}>
+        <Image
+          source={icons.play}
+          style={styles.actionIcon}
+          contentFit="contain"
+          tintColor={C.onAccent}
+        />
         <Text style={styles.primaryLabel}>Start workout</Text>
       </Pressable>
     </ScrollView>
@@ -185,7 +200,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '400',
+    fontWeight: "400",
     color: C.text,
   },
   subtitle: {
@@ -194,32 +209,32 @@ const styles = StyleSheet.create({
   },
   demoWrap: {
     borderRadius: 18,
-    overflow: 'hidden',
+    overflow: "hidden",
     backgroundColor: C.card,
   },
   demo: {
-    width: '100%',
+    width: "100%",
     aspectRatio: 354 / 160,
   },
   demoPlay: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
+    position: "absolute",
+    top: "50%",
+    left: "50%",
     marginTop: -22,
     marginLeft: -22,
     width: 44,
     height: 44,
     borderRadius: 100,
     backgroundColor: C.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   demoPlayIcon: {
     width: 18,
     height: 18,
   },
   demoBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: 10,
     right: 10,
     paddingHorizontal: 8,
@@ -236,13 +251,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   prescriptionRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   prescription: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
     gap: 5,
   },
   prescriptionValue: {
@@ -254,14 +269,14 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   loadRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 8,
   },
   loadGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   loadLabel: {
@@ -269,13 +284,13 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   loadInput: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
     gap: 3,
   },
   loadValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   loadUnit: {
@@ -283,7 +298,7 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   stepper: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   stepButton: {
@@ -291,8 +306,8 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 12,
     backgroundColor: C.previewTint,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   minus: {
     width: 14,
@@ -301,7 +316,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.text,
   },
   plus: {
-    position: 'absolute',
+    position: "absolute",
     width: 2,
     height: 14,
     borderRadius: 1,
@@ -312,11 +327,11 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 17,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   cue: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
   },
   cueMarker: {
@@ -324,12 +339,12 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 100,
     backgroundColor: C.card,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   cueMarkerLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   cueCopy: {
@@ -338,7 +353,7 @@ const styles = StyleSheet.create({
   },
   cueTitle: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.text,
   },
   cueDetail: {
@@ -347,8 +362,8 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   warning: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     backgroundColor: C.accentTint,
     borderRadius: 14,
@@ -365,13 +380,13 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   disabledAction: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     height: 52,
     borderRadius: 16,
     backgroundColor: C.card,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   actionIcon: {
     width: 14,
@@ -379,21 +394,21 @@ const styles = StyleSheet.create({
   },
   disabledActionLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.textMuted,
   },
   primaryButton: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     height: 52,
     borderRadius: 16,
     backgroundColor: C.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   primaryLabel: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
     color: C.onAccent,
   },
 });
