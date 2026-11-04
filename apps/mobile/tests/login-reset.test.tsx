@@ -1,11 +1,5 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
-import {
-  AccessibilityInfo,
-  AppState,
-  Platform,
-  StyleSheet,
-  type AppStateStatus,
-} from "react-native";
+import { AccessibilityInfo, AppState, StyleSheet, type AppStateStatus } from "react-native";
 import * as Haptics from "expo-haptics";
 import { CanceledError } from "axios";
 import { ApiError } from "@/lib/api";
@@ -83,7 +77,7 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-test("shows generic credential feedback after 401 and clears it when either credential changes", async () => {
+test("shows generic credential feedback in a snackbar and preserves entered credentials", async () => {
   const screen = await render(<LoginScreen />);
   await fireEvent.changeText(screen.getByLabelText("Email address"), "member@example.com");
   await fireEvent.changeText(screen.getByLabelText("Password"), "wrong");
@@ -92,7 +86,9 @@ test("shows generic credential feedback after 401 and clears it when either cred
   expect(await screen.findByText("Incorrect email or password.")).toBeTruthy();
   expect(screen.queryByText("secret-specific server text")).toBeNull();
   expect(screen.getByLabelText("Email address").props.value).toBe("member@example.com");
-  expect(screen.getByLabelText("Password").props.value).toBe("");
+  expect(screen.getByLabelText("Password").props.value).toBe("wrong");
+  expect(screen.getByLabelText("Password").props.accessibilityHint).toBeUndefined();
+  expect(screen.queryByText("Re-enter your password.")).toBeNull();
 
   await fireEvent.changeText(screen.getByLabelText("Password"), "again");
   expect(screen.queryByText("Incorrect email or password.")).toBeNull();
@@ -102,6 +98,40 @@ test("shows generic credential feedback after 401 and clears it when either cred
   expect(await screen.findByText("Incorrect email or password.")).toBeTruthy();
   await fireEvent.changeText(screen.getByLabelText("Email address"), "other@example.com");
   expect(screen.queryByText("Incorrect email or password.")).toBeNull();
+});
+
+test("invalid email focuses the email field without requesting sign-in or showing a snackbar", async () => {
+  const screen = await render(<LoginScreen />);
+  await fireEvent.changeText(screen.getByLabelText("Email address"), "not-an-email");
+  await fireEvent.changeText(screen.getByLabelText("Password"), "secret");
+  await fireEvent.press(screen.getByLabelText("Log in"));
+  expect(screen.getByText("Enter a valid email address.")).toBeTruthy();
+  expect(screen.queryByText("Incorrect email or password.")).toBeNull();
+  expect(auth.signIn).not.toHaveBeenCalled();
+});
+test("switches rejected credentials to invalid-email feedback and back", async () => {
+  const screen = await render(<LoginScreen />);
+  const emailInput = screen.getByLabelText("Email address");
+  await fireEvent.changeText(emailInput, "member@example.com");
+  await fireEvent.changeText(screen.getByLabelText("Password"), "wrong");
+  auth.signIn.mockRejectedValueOnce(new ApiError("invalid", 401));
+  await fireEvent.press(screen.getByLabelText("Log in"));
+  expect(await screen.findByText("Incorrect email or password.")).toBeTruthy();
+
+  await fireEvent.changeText(emailInput, "not-an-email");
+  await fireEvent.press(screen.getByLabelText("Log in"));
+  expect(screen.getByText("Enter a valid email address.")).toBeTruthy();
+  expect(screen.queryByText("Incorrect email or password.")).toBeNull();
+  expect(screen.queryByText("Check your email address and try again.")).toBeNull();
+  expect(auth.signIn).toHaveBeenCalledTimes(1);
+
+  await fireEvent.changeText(emailInput, "member@example.com");
+  auth.signIn.mockRejectedValueOnce(new ApiError("invalid", 401));
+  await fireEvent.press(screen.getByLabelText("Log in"));
+  expect(await screen.findByText("Incorrect email or password.")).toBeTruthy();
+  expect(screen.queryByText("Enter a valid email address.")).toBeNull();
+  expect(screen.getByLabelText("Password").props.value).toBe("wrong");
+  expect(screen.getByLabelText("Password").props.accessibilityHint).toBeUndefined();
 });
 
 test.each([
@@ -173,7 +203,7 @@ test("the third credential failure offers a reset hint and usable reset link", a
   expect(screen.getByLabelText("Send reset code")).toBeTruthy();
 });
 
-test("password error border wins over focus, then editing restores the focus border", async () => {
+test("credential feedback does not highlight or alter the password field", async () => {
   auth.signIn.mockRejectedValueOnce(new ApiError("invalid", 401));
   const screen = await render(<LoginScreen />);
   await fireEvent.changeText(screen.getByLabelText("Email address"), "member@example.com");
@@ -182,13 +212,9 @@ test("password error border wins over focus, then editing restores the focus bor
   await fireEvent.press(screen.getByLabelText("Log in"));
   await screen.findByText("Incorrect email or password.");
   const input = screen.getByLabelText("Password");
-  expect(StyleSheet.flatten(input.parent?.props.style)).toEqual(
-    expect.objectContaining({ borderWidth: 2, borderColor: "#B3261D" }),
-  );
-  await fireEvent.changeText(input, "new password");
-  expect(StyleSheet.flatten(screen.getByLabelText("Password").parent?.props.style)).toEqual(
-    expect.objectContaining({ borderWidth: 2, borderColor: "#9D2332" }),
-  );
+  expect(input.props.value).toBe("wrong");
+  expect(input.props.accessibilityHint).toBeUndefined();
+  expect(screen.queryByText("Re-enter your password.")).toBeNull();
 });
 
 test("shared signup fields keep the existing palette and disabled outlines stay neutral", async () => {
@@ -336,34 +362,18 @@ describe("wall-clock lockouts and delayed focus", () => {
     expect(AccessibilityInfo.setAccessibilityFocus).not.toHaveBeenCalled();
   });
 
-  test.each(["ios", "android"] as const)(
-    "credential feedback announces once on %s",
-    async (platform) => {
-      jest.replaceProperty(Platform, "OS", platform);
-      auth.signIn.mockRejectedValueOnce(new ApiError("invalid", 401));
-      const screen = await render(<LoginScreen />);
-      await fireEvent.changeText(screen.getByLabelText("Email address"), "member@example.com");
-      await fireEvent.changeText(screen.getByLabelText("Password"), "wrong");
-      await fireEvent.press(screen.getByLabelText("Log in"));
-      await act(async () => {
-        jest.advanceTimersByTime(100);
-      });
-      const feedback = screen.getByText("Incorrect email or password.");
-      expect(screen.getByLabelText("Password").props.accessibilityHint).toBe(
-        "Re-enter your password.",
-      );
-      if (Platform.OS === "ios") {
-        expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledTimes(1);
-        expect(AccessibilityInfo.announceForAccessibility).toHaveBeenCalledWith(
-          "Incorrect email or password.",
-        );
-        expect(feedback.props.accessibilityLiveRegion).toBe("none");
-      } else {
-        expect(AccessibilityInfo.announceForAccessibility).not.toHaveBeenCalled();
-        expect(feedback.props.accessibilityLiveRegion).toBe("polite");
-      }
-    },
-  );
+  test("credential snackbar preserves password without field error announcement", async () => {
+    auth.signIn.mockRejectedValueOnce(new ApiError("invalid", 401));
+    const screen = await render(<LoginScreen />);
+    await fireEvent.changeText(screen.getByLabelText("Email address"), "member@example.com");
+    await fireEvent.changeText(screen.getByLabelText("Password"), "wrong");
+    await fireEvent.press(screen.getByLabelText("Log in"));
+    const feedback = await screen.findByText("Incorrect email or password.");
+    expect(screen.getByLabelText("Password").props.value).toBe("wrong");
+    expect(screen.getByLabelText("Password").props.accessibilityHint).toBeUndefined();
+    expect(screen.queryByText("Re-enter your password.")).toBeNull();
+    expect(feedback.parent?.props.accessibilityLiveRegion).toBe("assertive");
+  });
 
   test("editing a credential cancels pending refocus and the stale announcement", async () => {
     auth.signIn.mockRejectedValueOnce(new ApiError("invalid", 401));

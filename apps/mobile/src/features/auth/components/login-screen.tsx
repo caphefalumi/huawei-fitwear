@@ -70,11 +70,14 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
   const [newPassword, setNewPassword] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const mounted = useRef(true);
   const submittingRef = useRef(false);
   const focusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const snackbarTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const emailInput = useRef<TextInputInstance>(null);
   const passwordInput = useRef<TextInputInstance>(null);
   const [resetMode, setResetMode] = useState(false);
   const [resetStep, setResetStep] = useState<"email" | "code" | "password" | "done">("email");
@@ -136,14 +139,18 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
     return () => {
       mounted.current = false;
       clearTimeout(focusTimer.current);
+      clearTimeout(snackbarTimer.current);
     };
   }, []);
 
   function clearLoginError() {
     setFieldError(null);
     setValidationError(null);
+    setSnackbarMessage(null);
     clearTimeout(focusTimer.current);
+    clearTimeout(snackbarTimer.current);
     focusTimer.current = undefined;
+    snackbarTimer.current = undefined;
   }
 
   function startPasswordReset() {
@@ -157,6 +164,23 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
     clearLoginError();
   }
 
+  function focusEmail() {
+    emailInput.current?.focus();
+    if (Platform.OS !== "web") {
+      const handle = findNodeHandle(emailInput.current);
+      if (typeof handle === "number") AccessibilityInfo.setAccessibilityFocus(handle);
+    }
+  }
+
+  function showSnackbar(message: string) {
+    setFieldError(null);
+    setValidationError(null);
+    setSnackbarMessage(message);
+    clearTimeout(focusTimer.current);
+    focusTimer.current = undefined;
+    clearTimeout(snackbarTimer.current);
+    snackbarTimer.current = setTimeout(() => setSnackbarMessage(null), 4000);
+  }
   function showFieldError(message: string) {
     setFieldError(message);
     void errorHaptic();
@@ -175,13 +199,15 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
 
   async function submit() {
     if (submittingRef.current || pending || lockoutKind !== null) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      clearLoginError();
+      setValidationError("Enter a valid email address.");
+      focusEmail();
+      return;
+    }
     if (!password) {
       setValidationError(null);
       showFieldError("Enter your password.");
-      return;
-    }
-    if (!email.trim()) {
-      setValidationError("Enter your email address.");
       return;
     }
     submittingRef.current = true;
@@ -198,8 +224,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
         setLockoutDeadline(seconds === undefined ? null : Date.now() + seconds * 1000);
       } else if (cause instanceof ApiError && cause.status === 401) {
         setFailedAttempts((attempts) => attempts + 1);
-        setPassword("");
-        showFieldError(credentialMessage);
+        showSnackbar(credentialMessage);
       } else if (cause instanceof ApiError && (cause.status === 400 || cause.status === 422)) {
         setValidationError("Check your email address and try again.");
       } else {
@@ -360,6 +385,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
             <AuthField
               colors={AuthColors}
               label="Email address"
+              inputRef={emailInput}
               value={email}
               onChangeText={(value) => {
                 clearLoginError();
@@ -697,6 +723,11 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
           )}
         </View>
       </ScrollView>
+      {snackbarMessage ? (
+        <View accessibilityRole="alert" accessibilityLiveRegion="assertive" style={styles.snackbar}>
+          <Text style={styles.snackbarText}>{snackbarMessage}</Text>
+        </View>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
@@ -773,6 +804,16 @@ const createStyles = (AuthColors: AuthColorPalette) =>
       color: "transparent",
       backgroundColor: "transparent",
     },
+    snackbar: {
+      position: "absolute",
+      bottom: 24,
+      left: 24,
+      right: 24,
+      padding: 14,
+      borderRadius: 10,
+      backgroundColor: AuthColors.text,
+    },
+    snackbarText: { color: AuthColors.background, fontSize: 14, lineHeight: 20 },
     passwordRequirement: { fontSize: 12, lineHeight: 18, color: AuthColors.textMuted },
     terms: { fontSize: 13, lineHeight: 19, color: AuthColors.textMuted, textAlign: "center" },
     footer: { alignItems: "center", gap: 15, paddingTop: 20 },
