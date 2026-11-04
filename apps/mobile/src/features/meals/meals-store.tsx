@@ -347,7 +347,12 @@ export function MealsProvider({ children }: { children: ReactNode }) {
     body?: unknown,
     onSuccess?: () => void,
   ): Promise<T> =>
-    (await writeMutation.mutateAsync({ path, method, body, ...(onSuccess ? { onSuccess } : {}) })) as T;
+    (await writeMutation.mutateAsync({
+      path,
+      method,
+      body,
+      ...(onSuccess ? { onSuccess } : {}),
+    })) as T;
   useEffect(() => {
     if (user?.updatedAt) void summaryQuery.refetch();
   }, [user?.updatedAt, summaryQuery.refetch]);
