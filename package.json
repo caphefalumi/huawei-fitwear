@@ -20,6 +20,8 @@
     "lint": "bun run lint:mobile && bun run lint:backend",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
+    "prepare": "node scripts/install-pre-commit.js",
+    "precommit:format": "lint-staged",
     "backend:dev": "bun run --cwd apps/backend dev",
     "backend:build": "bun run --cwd apps/backend build",
     "backend:deploy": "bun run --cwd apps/backend deploy",
@@ -42,11 +44,19 @@
     "react-native": "0.88.1"
   },
   "devDependencies": {
+    "lint-staged": "^17.6.0",
     "oxfmt": "^0.76.0",
-    "oxlint": "^1.91.0"
+    "oxlint": "^1.91.0",
+    "pre-commit": "^2.0.0"
   },
   "overrides": {
     "flow-parser": "0.338.0"
   },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,jsonc,md,mdx,yaml,yml,css,html}": "oxfmt --write"
+  },
+  "pre-commit": [
+    "precommit:format"
+  ],
   "packageManager": "bun@1.4.4"
 }
