@@ -8,6 +8,10 @@ env:
 - evalScript: ${output.email = 'maestro_' + Date.now() + '_' + Math.floor(Math.random() * 1000000) + '@fitwear.dev'}
 - launchApp:
     clearState: true
+- startRecording:
+    path: "fitness_e2e"
+    label: "Capture fitness end-to-end test execution"
+    optional: true
 
 # 1. Register a new user
 - assertVisible: "Welcome back."
@@ -212,3 +216,4 @@ env:
 - extendedWaitUntil:
     visible: "Welcome back."
     timeout: 30000
+- stopRecording
