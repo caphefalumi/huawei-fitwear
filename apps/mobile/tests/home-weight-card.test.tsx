@@ -6,7 +6,10 @@ import { useMeals } from "@/features/meals/meals-store";
 import { useWorkouts } from "@/features/workout/workout-store";
 
 jest.mock("expo-router", () => ({ router: { push: jest.fn() } }));
-jest.mock("@/lib/api", () => ({ apiRequest: jest.fn() }));
+jest.mock("@/lib/api", () => ({
+  ...jest.requireActual("@/lib/api"),
+  apiRequest: jest.fn(),
+}));
 jest.mock("@/features/auth/auth-store", () => ({ useAuth: () => ({ user: { name: "Vooc" } }) }));
 jest.mock("@/features/health/health-store", () => ({
   ...jest.requireActual("@/features/health/health-store"),

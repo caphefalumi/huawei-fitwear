@@ -1,17 +1,12 @@
 name: Format
 
 on:
-  pull_request:
+  push:
     branches:
       - main
-  merge_group:
-    types:
-      - checks_requested
-  workflow_dispatch:
 
 permissions:
   contents: write
-  actions: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -25,7 +20,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.sha }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -43,38 +38,16 @@ jobs:
       - name: Install workspace dependencies
         run: bun install --frozen-lockfile
 
-      - name: Autoformat and commit pull request changes
-        id: format
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      - name: Autoformat and commit changes on main
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          BRANCH: ${{ github.head_ref }}
         run: |
           bun run fmt
           if git diff --quiet; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -u
           git commit -m "style: format with oxfmt"
-          git push origin "HEAD:refs/heads/$BRANCH"
-          echo "changed=true" >> "$GITHUB_OUTPUT"
-
-      - name: Check formatting when the bot cannot push
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
-        run: bun run fmt:check
-
-      - name: Dispatch PR checks for the formatted commit
-        if: steps.format.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          BRANCH: ${{ github.head_ref }}
-        run: |
-          gh workflow run format.yml --ref "$BRANCH"
-          gh workflow run backend-ci.yml --ref "$BRANCH"
-          gh workflow run mobile-ci.yml --ref "$BRANCH"
-          gh workflow run lint.yml --ref "$BRANCH"
+          git push origin HEAD:refs/heads/main

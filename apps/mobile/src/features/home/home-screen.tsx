@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CloseButton } from "@/components/close-button";
@@ -16,6 +16,7 @@ import { RecoveryTracker } from "@/features/recovery/recovery-stages";
 import { useMeals } from "@/features/meals/meals-store";
 import { NutritionRing } from "@/features/home/ring";
 import { Card, MacroBar, SectionHeading } from "@/features/home/ui";
+import { FetchErrorState } from "@/components/fetch-states";
 
 const icons = {
   check: require("@/assets/images/home/check.svg"),
@@ -30,13 +31,24 @@ export function HomeScreen() {
     weightUpdated,
     recovery,
     error: healthError,
+    refreshing: healthRefreshing,
     refresh: refreshHealth,
   } = useHealth();
-  const { summary, error: mealsError, refresh: refreshMeals } = useMeals();
+  const {
+    summary,
+    error: mealsError,
+    refreshing: mealsRefreshing,
+    actionError: mealsActionError,
+    retryAction: retryMealAction,
+    refresh: refreshMeals,
+  } = useMeals();
   const {
     sessions,
     loading: workoutsLoading,
     error: workoutsError,
+    refreshing: workoutsRefreshing,
+    actionError: workoutActionError,
+    retryAction: retryWorkoutAction,
     refresh: refreshWorkouts,
   } = useWorkouts();
   const [bannerDismissed, setBannerDismissed] = useState(false);
@@ -50,6 +62,14 @@ export function HomeScreen() {
 
   return (
     <ScrollView
+      refreshControl={
+        <RefreshControl
+          refreshing={healthRefreshing || mealsRefreshing || workoutsRefreshing}
+          onRefresh={() => void Promise.all([refreshHealth(), refreshMeals(), refreshWorkouts()])}
+          tintColor={C.accent}
+          colors={[C.accent]}
+        />
+      }
       style={styles.screen}
       contentContainerStyle={[
         styles.content,
@@ -69,22 +89,25 @@ export function HomeScreen() {
         Today
       </Text>
       {healthError ? (
-        <Pressable
-          onPress={() => {
-            void refreshHealth();
-          }}
-        >
-          <Text accessibilityRole="alert">{healthError} Tap to retry health data.</Text>
-        </Pressable>
+        <FetchErrorState
+          title={weights.length ? "Couldn't refresh health data" : "Couldn't load health data"}
+          message={healthError}
+          onRetry={refreshHealth}
+        />
       ) : null}
       {mealsError ? (
-        <Pressable
-          onPress={() => {
-            void refreshMeals();
-          }}
-        >
-          <Text accessibilityRole="alert">{mealsError} Tap to retry nutrition.</Text>
-        </Pressable>
+        <FetchErrorState
+          title={summary ? "Couldn't refresh nutrition" : "Couldn't load nutrition"}
+          message={mealsError}
+          onRetry={refreshMeals}
+        />
+      ) : null}
+      {mealsActionError ? (
+        <FetchErrorState
+          title="Couldn't save your meal"
+          message={mealsActionError}
+          onRetry={retryMealAction}
+        />
       ) : null}
 
       {weightUpdated && !bannerDismissed ? (
@@ -214,13 +237,18 @@ export function HomeScreen() {
         />
         <Card>
           {workoutsError ? (
-            <Pressable
-              onPress={() => {
-                void refreshWorkouts();
-              }}
-            >
-              <Text accessibilityRole="alert">{workoutsError} Tap to retry.</Text>
-            </Pressable>
+            <FetchErrorState
+              title={sessions.length ? "Couldn't refresh workouts" : "Couldn't load workouts"}
+              message={workoutsError}
+              onRetry={refreshWorkouts}
+            />
+          ) : null}
+          {workoutActionError ? (
+            <FetchErrorState
+              title="Couldn't save your workout"
+              message={workoutActionError}
+              onRetry={retryWorkoutAction}
+            />
           ) : null}
           {completed.map((session) => (
             <View key={session.id}>

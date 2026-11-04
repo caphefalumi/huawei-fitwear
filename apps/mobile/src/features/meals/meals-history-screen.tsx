@@ -1,9 +1,10 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { FetchErrorState, LoadingSkeleton } from "@/components/fetch-states";
 import { Pressable } from "@/components/pressable";
 import { Palette as C } from "@/constants/palette";
 import { icons } from "./meals-ui";
@@ -25,7 +26,7 @@ const metricOf = (item: MealLog, key: Exclude<SortKey, "newest">) =>
 
 export function MealsHistoryScreen() {
   const insets = useSafeAreaInsets();
-  const { history, loading, refreshing, error, refresh } = useMeals();
+  const { history, loading, refreshing, error, actionError, retryAction, refresh } = useMeals();
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("newest");
   const [descending, setDescending] = useState(true);
@@ -48,6 +49,14 @@ export function MealsHistoryScreen() {
 
   return (
     <ScrollView
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => void refresh()}
+          tintColor={C.accent}
+          colors={[C.accent]}
+        />
+      }
       style={styles.screen}
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={[
@@ -69,21 +78,30 @@ export function MealsHistoryScreen() {
         <Text style={{ color: C.accent }}>Add meal</Text>
       </Pressable>
       {error ? (
-        <View>
-          <Text accessibilityRole="alert" style={styles.subtitle}>
-            {history.length ? `Could not refresh. Showing saved meals. ${error}` : error}
-          </Text>
-          <Pressable
-            onPress={() => {
-              void refresh();
-            }}
-            style={{ paddingVertical: 12 }}
-          >
-            <Text style={{ color: C.accent }}>Retry</Text>
-          </Pressable>
-        </View>
+        history.length ? (
+          <FetchErrorState
+            title="Couldn't refresh meals"
+            message={error}
+            onRetry={refresh}
+            retrying={refreshing}
+          />
+        ) : (
+          <FetchErrorState
+            title="Couldn't load meals"
+            message={error}
+            onRetry={refresh}
+            retrying={refreshing}
+          />
+        )
       ) : null}
-      {loading ? <Text style={styles.subtitle}>Loading meals…</Text> : null}
+      {actionError ? (
+        <FetchErrorState
+          title="Couldn't save your meal"
+          message={actionError}
+          onRetry={retryAction}
+        />
+      ) : null}
+      {loading ? <LoadingSkeleton label="Loading meals" rows={5} /> : null}
       {refreshing ? <Text style={styles.subtitle}>Updating meals…</Text> : null}
 
       <View style={styles.search}>

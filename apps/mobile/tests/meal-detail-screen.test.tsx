@@ -16,7 +16,10 @@ jest.mock("@/features/meals/meals-store", () => ({
 jest.mock("@/features/auth/store/auth.store", () => ({
   useAuth: () => ({ user: { id: "member-a" } }),
 }));
-jest.mock("@/lib/api", () => ({ apiRequest: jest.fn() }));
+jest.mock("@/lib/api", () => ({
+  ...jest.requireActual("@/lib/api"),
+  apiRequest: jest.fn(),
+}));
 jest.mock("@/features/meals/meal-result-screen", () => {
   const React = require("react");
   const { Text } = require("react-native");
@@ -45,19 +48,18 @@ test("loads a meal by encoded route ID and retries a failed request", async () =
   });
 
   expect(screen.getByRole("header", { name: "Meal" })).toBeTruthy();
-  expect(screen.getByText(/loading meal/i)).toBeTruthy();
+  await waitFor(() => expect(screen.getByLabelText(/loading meal/i)).toBeTruthy());
   await act(async () => {
     initialRequest.reject(new Error("Could not reach meal service."));
   });
-  await waitFor(() => expect(screen.getByText("Could not reach meal service.")).toBeTruthy());
-  expect(screen.getByRole("alert")).toBeTruthy();
+  await waitFor(() => expect(screen.getByText("Couldn't load this meal. Try again.")).toBeTruthy());
   expect(request).toHaveBeenNthCalledWith(
     1,
     "/meals/meal%2F42",
     expect.objectContaining({ signal: expect.any(AbortSignal) }),
   );
 
-  await fireEvent.press(screen.getByRole("button", { name: "Retry" }));
+  await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
   await waitFor(() => expect(screen.getByText("Saved meal")).toBeTruthy());
   expect(request).toHaveBeenNthCalledWith(
     2,

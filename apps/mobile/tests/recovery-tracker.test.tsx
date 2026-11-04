@@ -4,7 +4,10 @@ import { Palette } from "@/constants/palette";
 import type { RecoveryPlan } from "@/features/health/health-store";
 import { RecoveryTracker } from "@/features/recovery/recovery-stages";
 
-jest.mock("@/lib/api", () => ({ apiRequest: jest.fn() }));
+jest.mock("@/lib/api", () => ({
+  ...jest.requireActual("@/lib/api"),
+  apiRequest: jest.fn(),
+}));
 jest.mock("@/features/auth/auth-store", () => ({ useAuth: jest.fn() }));
 
 const recovery: RecoveryPlan = {

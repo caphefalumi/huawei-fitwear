@@ -1,16 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Pressable } from "@/components/pressable";
+import { FetchErrorState, LoadingSkeleton } from "@/components/fetch-states";
 import { Palette as C } from "@/constants/palette";
 import { useAuth } from "@/features/auth";
 import { dateLabel, useHealth } from "@/features/health/health-store";
 import { BackHeader, Card } from "@/features/home/ui";
 import { WeightChart } from "@/features/home/weight-chart";
-import { apiRequest } from "@/lib/api";
+import { apiErrorMessage, apiRequest } from "@/lib/api";
 import {
   progressBounds,
   progressData,
@@ -40,13 +41,25 @@ export function ProgressScreen() {
       apiRequest<WorkoutStats>(`/workouts/stats?from=${bounds.from}&to=${bounds.to}`, { signal }),
   });
   const stats = statsQuery.data ?? null;
-  const statsError = statsQuery.error instanceof Error ? statsQuery.error.message : null;
+  const statsError = statsQuery.error
+    ? apiErrorMessage(statsQuery.error, "training activity")
+    : null;
   const statsLoading = statsQuery.isLoading;
   const data = progressData(range, weights, stats);
   const maxSessions = Math.max(1, ...data.bars.map((bar) => bar.sessions));
 
   return (
     <ScrollView
+      refreshControl={
+        <RefreshControl
+          refreshing={
+            !healthLoading && !statsLoading && (healthRefreshing || statsQuery.isFetching)
+          }
+          onRefresh={() => void Promise.all([refresh(), statsQuery.refetch()])}
+          tintColor={C.accent}
+          colors={[C.accent]}
+        />
+      }
       style={styles.screen}
       contentContainerStyle={[
         styles.content,
@@ -59,14 +72,14 @@ export function ProgressScreen() {
         Your progress.
       </Text>
       {error ? (
-        <Pressable onPress={() => void refresh()}>
-          <Text accessibilityRole="alert">
-            {weights.length ? `Could not refresh health data. Showing saved data. ${error}` : error}{" "}
-            Tap to retry.
-          </Text>
-        </Pressable>
+        <FetchErrorState
+          title={weights.length ? "Couldn't refresh health data" : "Couldn't load health data"}
+          message={error}
+          onRetry={refresh}
+          retrying={healthRefreshing}
+        />
       ) : null}
-      {healthLoading ? <Text style={styles.cardNote}>Loading health data…</Text> : null}
+      {healthLoading ? <LoadingSkeleton label="Loading health data" rows={4} /> : null}
       {healthRefreshing ? <Text style={styles.cardNote}>Updating health data…</Text> : null}
 
       <View style={styles.segments}>
@@ -128,15 +141,14 @@ export function ProgressScreen() {
           <Text style={styles.cardNote}>{!statsLoading ? data.sessionsNote : ""}</Text>
         </View>
         {statsError ? (
-          <Pressable onPress={() => void statsQuery.refetch()}>
-            <Text accessibilityRole="alert">
-              {stats
-                ? `Could not refresh training activity. Showing saved data. ${statsError} Tap to retry.`
-                : `${statsError} Tap to retry.`}
-            </Text>
-          </Pressable>
+          <FetchErrorState
+            title={stats ? "Couldn't refresh training activity" : "Couldn't load training activity"}
+            message={statsError}
+            onRetry={() => statsQuery.refetch()}
+            retrying={statsQuery.isFetching}
+          />
         ) : null}
-        {statsLoading ? <Text style={styles.cardNote}>Loading training activity…</Text> : null}
+        {statsLoading ? <LoadingSkeleton label="Loading training activity" rows={3} /> : null}
         {statsQuery.isFetching && !statsLoading ? (
           <Text style={styles.cardNote}>Updating training activity…</Text>
         ) : null}
