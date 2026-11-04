@@ -1,3 +1,4 @@
+import { apiErrorMessage, apiRequest } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createContext,
@@ -10,7 +11,6 @@ import {
 } from "react";
 import { AppState } from "react-native";
 import { useAuth } from "@/features/auth/auth-store";
-import { apiRequest } from "@/lib/api";
 import { useMealClientStore } from "./meal-client.store";
 
 export type Macros = { protein: number; carbs: number; fat: number };
@@ -191,6 +191,8 @@ type MealsContextValue = {
   refreshing: boolean;
   busy: boolean;
   error: string | null;
+  actionError: string | null;
+  retryAction: () => Promise<void>;
   refresh: () => Promise<void>;
   tutorialSeen: boolean;
   dismissTutorial: () => void;
@@ -321,10 +323,16 @@ export function MealsProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: invalidateMeals,
   });
-  const error =
-    [historyQuery.error, summaryQuery.error, writeMutation.error].find(
-      (cause) => cause instanceof Error,
-    )?.message ?? null;
+  const error = [historyQuery.error, summaryQuery.error].find(
+    (cause) => cause instanceof Error,
+  );
+  const errorMessage = error ? apiErrorMessage(error, "your meals") : null;
+  const actionError = writeMutation.error
+    ? apiErrorMessage(writeMutation.error, "that change")
+    : null;
+  const retryAction = async () => {
+    if (writeMutation.variables) await writeMutation.mutateAsync(writeMutation.variables);
+  };
   const busy = writeMutation.isPending;
   const runWrite = async <T,>(path: string, method: string, body?: unknown): Promise<T> =>
     (await writeMutation.mutateAsync({ path, method, body })) as T;
@@ -421,7 +429,9 @@ export function MealsProvider({ children }: { children: ReactNode }) {
         loading,
         refreshing,
         busy,
-        error,
+        error: errorMessage,
+        actionError,
+        retryAction,
         refresh,
         loggedKcal: summary?.consumed.caloriesKcal ?? 0,
         loggedMacros: {
@@ -493,7 +503,7 @@ export function useFoodSearch(query: string) {
   const matches = debounced === normalized ? (searchQuery.data ?? []) : [];
   return {
     matches,
-    error: searchQuery.error instanceof Error ? searchQuery.error.message : null,
+    error: searchQuery.error ? apiErrorMessage(searchQuery.error, "food search") : null,
     loading: Boolean(normalized && (debounced !== normalized || searchQuery.isLoading)),
     refreshing: searchQuery.isFetching && !searchQuery.isLoading,
     empty: Boolean(

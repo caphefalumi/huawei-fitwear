@@ -6,7 +6,7 @@ import { Pressable } from "@/components/pressable";
 import { Palette as C } from "@/constants/palette";
 import { useAuth } from "@/features/auth";
 import { mealsQueryKeys } from "@/features/meals/meals-store";
-import { apiRequest } from "@/lib/api";
+import { apiErrorMessage, apiRequest } from "@/lib/api";
 import { icons } from "./meals-ui";
 
 export function MealPhoto({
@@ -34,7 +34,9 @@ export function MealPhoto({
   });
   const [imageError, setImageError] = useState<string | null>(null);
   useEffect(() => setImageError(null), [imageUrl]);
-  const error = imageError ?? (photoQuery.error instanceof Error ? photoQuery.error.message : null);
+  const error =
+    imageError ??
+    (photoQuery.error ? apiErrorMessage(photoQuery.error, "your meal photo") : null);
   const uri = remotePhoto ? photoQuery.data : imageUrl;
   if (!imageUrl)
     return compact ? (

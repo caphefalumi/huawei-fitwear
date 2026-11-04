@@ -19,7 +19,10 @@ import { createQueryWrapper } from "./query-wrapper";
 import { useMealClientStore } from "@/features/meals/meal-client.store";
 let mockUserId = "member-a";
 
-jest.mock("@/lib/api", () => ({ apiRequest: jest.fn() }));
+jest.mock("@/lib/api", () => ({
+  ...jest.requireActual("@/lib/api"),
+  apiRequest: jest.fn(),
+}));
 jest.mock("@/features/auth/auth-store", () => ({
   useAuth: () => ({ user: { id: mockUserId, updatedAt: "2026-11-01T00:00:00Z" } }),
 }));
@@ -189,7 +192,7 @@ test("failed logging preserves the editable draft and surfaces the error", async
     await expect(result.current.logMeal()).rejects.toThrow("Network unavailable");
   });
   expect(result.current.items).toEqual([item]);
-  expect(result.current.error).toBe("Network unavailable");
+  expect(result.current.actionError).toBe("Couldn't save your change. Try again.");
   expect(result.current.busy).toBe(false);
 });
 
@@ -283,7 +286,7 @@ test("failed history deletion leaves the saved meal available", async () => {
     await expect(result.current.deleteLog("meal-a")).rejects.toThrow("Delete unavailable");
   });
   expect(result.current.history.map((meal) => meal.id)).toEqual(["meal-a"]);
-  await waitFor(() => expect(result.current.error).toBe("Delete unavailable"));
+  await waitFor(() => expect(result.current.actionError).toBe("Couldn't save your change. Try again."));
 });
 
 test("food search maps backend catalogue units and nutrients", async () => {

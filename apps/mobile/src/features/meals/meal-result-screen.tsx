@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useReducedMotion } from "react-native-reanimated";
 
+import { FetchErrorState } from "@/components/fetch-states";
 import { Pressable } from "@/components/pressable";
 import { Sheet } from "@/components/sheet";
 import { Palette as C } from "@/constants/palette";
@@ -122,10 +123,25 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           </Text>
         </View>
 
-        {actionError || meals.error ? (
-          <Text accessibilityRole="alert" style={styles.footnote}>
-            {actionError ?? meals.error}
-          </Text>
+        {actionError && !meals.actionError ? (
+          <Text accessibilityRole="alert" style={styles.footnote}>{actionError}</Text>
+        ) : null}
+        {meals.actionError ? (
+          <FetchErrorState
+            title="Couldn't save your meal"
+            message={meals.actionError}
+            onRetry={async () => {
+              await meals.retryAction();
+              setActionError(null);
+            }}
+          />
+        ) : null}
+        {meals.error ? (
+          <FetchErrorState
+            title="Couldn't refresh meal data"
+            message={meals.error}
+            onRetry={meals.refresh}
+          />
         ) : null}
         <MealPhoto mealId={log?.id} imageUrl={photo} style={styles.photo} />
         <View

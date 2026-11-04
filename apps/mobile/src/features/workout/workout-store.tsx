@@ -2,6 +2,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { createContext, useContext, type ReactNode } from "react";
 
 import { useAuth } from "@/features/auth/auth-store";
+import { apiErrorMessage } from "@/lib/api";
 import { apiRequest } from "@/lib/api";
 
 export type Exercise = {
@@ -54,6 +55,8 @@ export type WorkoutState = {
   loading: boolean;
   refreshing: boolean;
   error: string | null;
+  actionError: string | null;
+  retryAction: () => Promise<void>;
   hasMore: boolean;
   activeSessionId: string | null;
   refresh: () => Promise<void>;
@@ -219,17 +222,25 @@ function useWorkoutState(): WorkoutState {
       "DELETE",
     );
   const loading = catalogQuery.isLoading || historyQuery.isLoading;
-  const error =
-    [catalogQuery.error, historyQuery.error, writeMutation.error].find(
-      (cause) => cause instanceof Error,
-    )?.message ?? null;
+  const errorCause = [catalogQuery.error, historyQuery.error].find(
+    (cause) => cause instanceof Error,
+  );
+  const error = errorCause ? apiErrorMessage(errorCause, "your workouts") : null;
+  const actionError = writeMutation.error
+    ? apiErrorMessage(writeMutation.error, "that change")
+    : null;
+  const retryAction = async () => {
+    if (writeMutation.variables) await writeMutation.mutateAsync(writeMutation.variables);
+  };
   return {
     exercises: catalogQuery.data ?? [],
     sessions,
     loading,
+    refresh,
     refreshing: (catalogQuery.isFetching || historyQuery.isFetching) && !loading,
     error,
-    refresh,
+    actionError,
+    retryAction,
     loadMore,
     hasMore: sessions.length < count,
     activeSessionId,
