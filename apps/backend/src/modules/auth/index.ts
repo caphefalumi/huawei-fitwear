@@ -122,7 +122,7 @@ export const auth = new Elysia({
       detail: {
         summary: "Register a new user account",
         description:
-          "Creates user, hashes password with bcryptjs cost 12, and issues a 30-day session token.",
+          "Creates user, hashes password with Web Crypto PBKDF2-HMAC-SHA256, and issues a 30-day session token.",
       },
     },
   )

@@ -1,14 +1,19 @@
 import { describe, expect, it } from "bun:test"
 
-import { hashPassword, isPasswordWithinBcryptLimit, verifyPassword } from "../../src/lib/password"
+import {
+  hashPassword,
+  isPasswordWithinLimit,
+  needsPasswordRehash,
+  verifyPassword,
+} from "../../src/lib/password"
 
 describe("Password hashing and legacy compatibility", () => {
-  it("hashes passwords using bcryptjs cost 12", async () => {
+  it("hashes passwords using PBKDF2-HMAC-SHA256 at 100,000 iterations", async () => {
     const password = "SuperSecretPassword123!"
     const encoded = await hashPassword(password)
-    expect(encoded).toStartWith("$2")
-    expect(encoded.slice(4, 6)).toBe("12")
-    expect(encoded.length).toBeGreaterThan(40)
+    expect(encoded).toStartWith("pbkdf2-sha256$100000$")
+    expect(encoded.split("$")).toHaveLength(4)
+    expect(needsPasswordRehash(encoded)).toBeFalse()
   })
 
   it("should verify correct password successfully", async () => {
@@ -37,15 +42,16 @@ describe("Password hashing and legacy compatibility", () => {
     expect(await verifyPassword(password, hash2)).toBeTrue()
   })
 
-  it("rejects passwords that exceed bcrypt’s 72-byte input limit instead of truncating them", async () => {
-    expect(isPasswordWithinBcryptLimit("é".repeat(37))).toBeFalse()
+  it("rejects passwords over 72 UTF-8 bytes", async () => {
+    expect(isPasswordWithinLimit("é".repeat(37))).toBeFalse()
     await expect(hashPassword("é".repeat(37))).rejects.toThrow("72 UTF-8 bytes")
   })
 
-  it("accepts an existing Bun bcrypt hash without changing stored credentials", async () => {
+  it("continues to verify existing Bun bcrypt hashes", async () => {
     const password = "ExistingMember123!"
     const legacyHash = await Bun.password.hash(password, { algorithm: "bcrypt", cost: 10 })
     expect(await verifyPassword(password, legacyHash)).toBe(true)
     expect(await verifyPassword("wrong-password", legacyHash)).toBe(false)
+    expect(needsPasswordRehash(legacyHash)).toBeTrue()
   })
 })
