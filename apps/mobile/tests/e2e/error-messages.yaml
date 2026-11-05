@@ -20,7 +20,6 @@ tags:
 - hideKeyboard
 - tapOn:
     id: "login-submit"
-- hideKeyboard
 - assertVisible: "Enter a valid email address."
 - tapOn: "invalid-email"
 - eraseText
@@ -28,21 +27,18 @@ tags:
 - hideKeyboard
 - tapOn:
     id: "login-submit"
-- hideKeyboard
 - assertVisible: "Enter your password."
 - tapOn: "Your password"
 - inputText: "wrong-maestro-password"
 - hideKeyboard
 - tapOn:
     id: "login-submit"
-- hideKeyboard
 - assertVisible: "We could not sign you in. Check your email and password and try again."
 
 # Offline state remains visible, and password reset fails safely for an unknown address.
 - setAirplaneMode: enabled
 - tapOn:
     id: "login-submit"
-- hideKeyboard
 - extendedWaitUntil:
     visible: "Can't connect. Check your connection and try again."
     timeout: 20000
@@ -52,14 +48,13 @@ tags:
     timeout: 10000
 - tapOn: ${MAESTRO_TEST_EMAIL}
 - eraseText
-- tapOn: "Send reset code"
 - hideKeyboard
+- tapOn: "Send reset code"
 - assertVisible: "Enter your email address."
 - tapOn: "example@gmail.com"
 - inputText: ${output.unknownEmail}
 - hideKeyboard
 - tapOn: "Send reset code"
-- hideKeyboard
 - extendedWaitUntil:
     visible: "Could not reach the server. Check your connection and try again."
     timeout: 20000

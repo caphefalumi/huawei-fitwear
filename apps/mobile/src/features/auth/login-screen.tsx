@@ -50,7 +50,6 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
   const [submitting, setSubmitting] = useState(false)
   const mounted = useRef(true)
   const submittingRef = useRef(false)
-  const focusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const emailInput = useRef<TextInputInstance>(null)
   const passwordInput = useRef<TextInputInstance>(null)
   const {
@@ -75,15 +74,12 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
     mounted.current = true
     return () => {
       mounted.current = false
-      clearTimeout(focusTimer.current)
     }
   }, [])
 
   function clearLoginError() {
     setFieldError(null)
     setValidationError(null)
-    clearTimeout(focusTimer.current)
-    focusTimer.current = undefined
   }
 
   function focusEmail() {
@@ -97,17 +93,6 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
   function showFieldError(message: string) {
     setFieldError(message)
     void errorHaptic()
-    clearTimeout(focusTimer.current)
-    focusTimer.current = setTimeout(() => {
-      focusTimer.current = undefined
-      if (!mounted.current) return
-      passwordInput.current?.focus()
-      if (Platform.OS !== "web") {
-        const handle = findNodeHandle(passwordInput.current)
-        if (typeof handle === "number") AccessibilityInfo.setAccessibilityFocus(handle)
-      }
-      if (Platform.OS === "ios") AccessibilityInfo.announceForAccessibility(message)
-    }, 100)
   }
 
   async function submit() {
