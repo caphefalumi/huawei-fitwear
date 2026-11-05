@@ -2,7 +2,7 @@ import { and, eq, exists, gt, like, or } from "drizzle-orm"
 
 import { getDb, getEmailConfig, getEmailQueue, session, user, verification } from "../../db"
 import { generateId, generateToken } from "../../lib/id"
-import { hashPassword, isPasswordWithinBcryptLimit } from "../../lib/password"
+import { hashPassword, isPasswordWithinLimit } from "../../lib/password"
 import { enqueueEmail } from "../email/queue"
 import type { PasswordResetBody, PasswordResetVerifyBody } from "./index"
 import { clearPasswordResetEmailSlot } from "./rate-limit"
@@ -153,7 +153,7 @@ export async function resetPassword({ resetToken, password }: PasswordResetBody)
   const userId = record.identifier.slice(TOKEN_IDENTIFIER_PREFIX.length)
   if (!userId) throw new InvalidPasswordResetToken()
 
-  if (!isPasswordWithinBcryptLimit(password)) {
+  if (!isPasswordWithinLimit(password)) {
     throw new RangeError("Password must not exceed 72 UTF-8 bytes.")
   }
 

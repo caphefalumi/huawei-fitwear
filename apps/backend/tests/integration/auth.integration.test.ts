@@ -326,7 +326,7 @@ describe("Integration Test: Auth API Endpoints", () => {
         .prepare("SELECT password FROM user WHERE id = ?")
         .bind("legacy-signin")
         .first<{ password: string }>()
-      expect(updatedHash?.password.slice(4, 6)).toBe("12")
+      expect(updatedHash?.password).toStartWith("pbkdf2-sha256$100000$")
     })
   })
 
