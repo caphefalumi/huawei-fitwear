@@ -4,6 +4,17 @@ on:
   schedule:
     - cron: "0 2 * * *"
   workflow_dispatch:
+    inputs:
+      run_fitness:
+        description: Run the fitness lifecycle flow
+        required: false
+        type: boolean
+        default: true
+      run_error_messages:
+        description: Run the visible error-state flow
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -15,7 +26,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build Android release APK
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_fitness || inputs.run_error_messages }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -73,7 +84,7 @@ jobs:
 
   e2e:
     name: Android Maestro E2E
-    needs: build
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_fitness || inputs.run_error_messages }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -114,7 +125,7 @@ jobs:
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
           "$HOME/.maestro/bin/maestro" --version
 
-      - name: Run the Maestro end-to-end flows
+      - name: Run selected Maestro E2E flows
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -130,11 +141,22 @@ jobs:
             adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
             sleep 5
             mkdir -p maestro-artifacts/recordings
+            flows=()
+            if [[ "$RUN_FITNESS" == "true" ]]; then
+              flows+=(apps/mobile/tests/e2e/fitness.yaml)
+            fi
+            if [[ "$RUN_ERROR_MESSAGES" == "true" ]]; then
+              flows+=(apps/mobile/tests/e2e/error-messages.yaml)
+            fi
+            printf 'Selected flows: %s\n' "${flows[*]}"
             set +e
-            maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts apps/mobile/tests/e2e/fitness.yaml apps/mobile/tests/e2e/error-messages.yaml
+            maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts "${flows[@]}"
             MAESTRO_EXIT=$?
             echo "MAESTRO_EXIT_CODE=$MAESTRO_EXIT" >> "$GITHUB_ENV"
             exit $MAESTRO_EXIT
+        env:
+          RUN_FITNESS: ${{ github.event_name != 'workflow_dispatch' || inputs.run_fitness }}
+          RUN_ERROR_MESSAGES: ${{ github.event_name != 'workflow_dispatch' || inputs.run_error_messages }}
 
       - name: Collect Maestro test recordings and artifacts
         if: always()
