@@ -1,13 +1,12 @@
 import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useState } from "react"
-import { ScrollView, StyleSheet, Text, View } from "react-native"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { StyleSheet, Text, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
+import { BackHeader, Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
 import { Palette as C } from "@/constants/palette"
 import { useHealth } from "@/features/health/health-store"
-import { BackHeader, Card } from "@/features/home/ui"
 
 const icons = {
   play: require("@/assets/images/workout/play.svg"),
@@ -61,7 +60,6 @@ const SUMMARY = [
 ]
 
 export function ChestPlanScreen() {
-  const insets = useSafeAreaInsets()
   const { recovery } = useHealth()
   const [loads, setLoads] = useState<Record<string, number>>(() =>
     Object.fromEntries(EXERCISES.map((exercise) => [exercise.key, exercise.load])),
@@ -78,21 +76,13 @@ export function ChestPlanScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}
-    >
+    <Screen contentStyle={styles.content}>
       <BackHeader label="Workouts" onPress={() => router.back()} />
 
-      <View style={styles.heading}>
-        <Text style={styles.title}>Chest</Text>
-        {recovery ? (
-          <Text style={styles.subtitle}>Tentative return · {recovery.returnDate}</Text>
-        ) : null}
-      </View>
+      <PageHeading
+        title="Chest"
+        subtitle={recovery ? `Tentative return · ${recovery.returnDate}` : undefined}
+      />
 
       <Image
         source={require("@/assets/images/workout/chest-hero.png")}
@@ -118,7 +108,7 @@ export function ChestPlanScreen() {
         </View>
       ) : null}
 
-      <Text style={styles.sectionTitle}>Exercises</Text>
+      <SectionHeading title="Exercises" />
 
       {EXERCISES.map((exercise, index) => (
         <Card key={exercise.key} style={styles.exerciseCard}>
@@ -176,36 +166,17 @@ export function ChestPlanScreen() {
         </Card>
       ))}
 
-      <Pressable style={styles.primaryButton} onPress={() => router.push("/session")}>
-        <Text style={styles.primaryLabel}>Start workout</Text>
-      </Pressable>
+      <Button label="Start workout" onPress={() => router.push("/session")} />
       {recovery ? (
         <Text style={styles.footnote}>Resume your regular plan when you’re ready.</Text>
       ) : null}
-    </ScrollView>
+    </Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: C.background,
-  },
   content: {
-    paddingHorizontal: 24,
     gap: 14,
-  },
-  heading: {
-    gap: 3,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "400",
-    color: C.text,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: C.textMuted,
   },
   hero: {
     width: "100%",
@@ -251,12 +222,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 11,
     color: C.textMuted,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: C.text,
-    paddingTop: 4,
   },
   exerciseCard: {
     padding: 14,
@@ -392,18 +357,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: C.textMuted,
-  },
-  primaryButton: {
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: C.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryLabel: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: C.onAccent,
   },
   footnote: {
     fontSize: 11,

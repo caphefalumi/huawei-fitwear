@@ -184,6 +184,7 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
       ) : null}
 
       <Pressable
+        testID="sign-up-submit"
         accessibilityRole="button"
         accessibilityLabel="Create account"
         accessibilityState={{

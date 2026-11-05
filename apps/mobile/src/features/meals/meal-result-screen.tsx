@@ -8,8 +8,9 @@ import { useReducedMotion } from "react-native-reanimated"
 import { FetchErrorState } from "@/components/fetch-states"
 import { Pressable } from "@/components/pressable"
 import { Sheet } from "@/components/sheet"
+import { BackHeader, Button, SectionHeading } from "@/components/ui"
 import { Palette as C } from "@/constants/palette"
-import { Glyph, Header, PrimaryButton, SectionTitle, icons } from "./meals-ui"
+import { Glyph, icons } from "./meals-ui"
 import {
   rescaleItem,
   splitDetail,
@@ -89,10 +90,10 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
         ]}
       >
-        <Header
+        <BackHeader
           label="Meal"
-          onBack={() => router.back()}
-          action="Delete"
+          onPress={() => router.back()}
+          actionLabel="Delete"
           onAction={() => {
             if (log)
               void perform(
@@ -122,7 +123,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
         ) : null}
         {meals.actionError ? (
           <FetchErrorState
-            title="Couldn't save your meal"
+            title="Could not save your meal"
             message={meals.actionError}
             onRetry={async () => {
               await meals.retryAction()
@@ -132,7 +133,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
         ) : null}
         {meals.error ? (
           <FetchErrorState
-            title="Couldn't refresh meal data"
+            title="Could not refresh meal data"
             message={meals.error}
             onRetry={meals.refresh}
           />
@@ -186,9 +187,9 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           </View>
         </View>
 
-        <SectionTitle
+        <SectionHeading
           title="Meal Details"
-          action="+ Add item"
+          actionLabel="+ Add item"
           onPress={() => router.push(log ? `/add-item?log=${log.id}` : "/add-item")}
         />
 
@@ -221,7 +222,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
         </Text>
 
         {log ? null : (
-          <PrimaryButton
+          <Button
             label="Log Meal"
             disabled={items.length === 0 || pending || meals.busy}
             busy={pending || meals.busy}
@@ -394,7 +395,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           </View>
         ) : null}
 
-        <PrimaryButton label="Save amount" disabled={pending} busy={pending} onPress={saveAmount} />
+        <Button label="Save amount" disabled={pending} busy={pending} onPress={saveAmount} />
         <Pressable style={styles.sheetCancel} onPress={() => setAmountFor(null)}>
           <Text style={styles.sheetCancelLabel}>Cancel</Text>
         </Pressable>

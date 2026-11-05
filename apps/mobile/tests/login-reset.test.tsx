@@ -85,7 +85,7 @@ test("shows one inline credential error and preserves entered credentials", asyn
   await fireEvent.press(screen.getByLabelText("Log in"))
   expect(
     await screen.findByText(
-      "We couldn’t sign you in. Check your email and password and try again.",
+      "We could not sign you in. Check your email and password and try again.",
     ),
   ).toBeTruthy()
   expect(screen.queryByText("secret-specific server text")).toBeNull()
@@ -98,7 +98,7 @@ test("shows one inline credential error and preserves entered credentials", asyn
   await fireEvent.press(screen.getByLabelText("Log in"))
   expect(screen.getByText("Enter a valid email address.")).toBeTruthy()
   expect(
-    screen.queryByText("We couldn’t sign you in. Check your email and password and try again."),
+    screen.queryByText("We could not sign you in. Check your email and password and try again."),
   ).toBeNull()
   expect(auth.signIn).toHaveBeenCalledTimes(1)
 })
@@ -177,7 +177,7 @@ test("the third credential failure offers a reset hint and usable reset link", a
     await fireEvent.press(screen.getByLabelText("Log in"))
     expect(
       await screen.findByText(
-        "We couldn’t sign you in. Check your email and password and try again.",
+        "We could not sign you in. Check your email and password and try again.",
       ),
     ).toBeTruthy()
     if (attempt < 2) expect(screen.queryByText(/Having trouble/)).toBeNull()
@@ -194,7 +194,7 @@ test("credential feedback leaves the password unhighlighted", async () => {
   await fireEvent.changeText(screen.getByLabelText("Password"), "wrong")
   await fireEvent(screen.getByLabelText("Password"), "focus", { nativeEvent: {} })
   await fireEvent.press(screen.getByLabelText("Log in"))
-  await screen.findByText("We couldn’t sign you in. Check your email and password and try again.")
+  await screen.findByText("We could not sign you in. Check your email and password and try again.")
   const input = screen.getByLabelText("Password")
   expect(input.props.value).toBe("wrong")
   expect(input.props.accessibilityHint).toBeUndefined()
@@ -337,7 +337,7 @@ describe("wall-clock lockouts and delayed focus", () => {
     await fireEvent.changeText(screen.getByLabelText("Email address"), "member@example.com")
     await fireEvent.changeText(screen.getByLabelText("Password"), "wrong")
     await fireEvent.press(screen.getByLabelText("Log in"))
-    const message = "We couldn’t sign you in. Check your email and password and try again."
+    const message = "We could not sign you in. Check your email and password and try again."
     expect(await screen.findByText(message)).toBeTruthy()
     await screen.unmount()
     expect(AccessibilityInfo.announceForAccessibility).not.toHaveBeenCalled()
@@ -350,7 +350,7 @@ describe("wall-clock lockouts and delayed focus", () => {
     await fireEvent.changeText(screen.getByLabelText("Email address"), "member@example.com")
     await fireEvent.changeText(screen.getByLabelText("Password"), "wrong")
     await fireEvent.press(screen.getByLabelText("Log in"))
-    const message = "We couldn’t sign you in. Check your email and password and try again."
+    const message = "We could not sign you in. Check your email and password and try again."
     expect(await screen.findByText(message)).toBeTruthy()
     expect(screen.getByLabelText("Password").props.value).toBe("wrong")
     await fireEvent.changeText(screen.getByLabelText("Email address"), "other@example.com")
@@ -400,7 +400,7 @@ describe("wall-clock lockouts and delayed focus", () => {
     await fireEvent.changeText(screen.getByLabelText("Password"), "wrong")
     await fireEvent.press(screen.getByLabelText("Log in"))
     expect(
-      screen.getByText("We couldn’t sign you in. Check your email and password and try again."),
+      screen.getByText("We could not sign you in. Check your email and password and try again."),
     ).toBeTruthy()
     await fireEvent.changeText(screen.getByLabelText("Password"), "correct")
     await fireEvent.press(screen.getByLabelText("Log in"))

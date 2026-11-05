@@ -23,14 +23,14 @@ export class ApiError extends Error {
 export function apiErrorMessage(error: unknown, subject = "your data"): string {
   if (!(error instanceof ApiError)) {
     return subject === "that change"
-      ? "Couldn't save your change. Try again."
-      : `Couldn't load ${subject}. Try again.`
+      ? "Could not save your change. Try again."
+      : `Could not load ${subject}. Try again.`
   }
   if (error.status === 0 && error.code === "TIMEOUT") {
     return `Loading ${subject} took too long. Try again.`
   }
   if (error.status === 0 || error.code === "NETWORK_ERROR") {
-    return `Couldn't connect to load ${subject}. Check your connection and try again.`
+    return `Could not connect to load ${subject}. Check your connection and try again.`
   }
   if (error.status === 401) return "Your session expired. Sign in again."
   if (error.status === 403) return "You don't have access to this information."
@@ -40,7 +40,7 @@ export function apiErrorMessage(error: unknown, subject = "your data"): string {
     return "Some information needs attention. Check the fields and try again."
   }
   if (error.status >= 500) return "Something went wrong on our end. Try again."
-  return `Couldn't load ${subject}. Try again.`
+  return `Could not load ${subject}. Try again.`
 }
 
 const REQUEST_TIMEOUT_MS = 12_000
@@ -114,7 +114,7 @@ apiClient.interceptors.response.use(undefined, (cause: unknown) => {
   }
   return Promise.reject(
     new ApiError(
-      "Unable to reach the server. Check your connection and try again.",
+      "Could not reach the server. Check your connection and try again.",
       0,
       "NETWORK_ERROR",
     ),

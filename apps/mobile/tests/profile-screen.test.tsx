@@ -75,7 +75,7 @@ test("keeps identity visible and shows health skeletons while loading", async ()
 test("keeps identity visible and retries after a health load error", async () => {
   mockUseHealth.mockReturnValue({ ...health, loading: false, error: "offline" } as never)
   const screen = await render(<ProfileScreen />)
-  expect(screen.getByText("Couldn’t load your health data.")).toBeTruthy()
+  expect(screen.getByText("Could not load your health data.")).toBeTruthy()
   expect(screen.getByText("Member")).toBeTruthy()
   await fireEvent.press(screen.getByRole("button", { name: "Retry loading health data" }))
   expect(refresh).toHaveBeenCalledTimes(1)

@@ -1,4 +1,7 @@
+import "@/lib/sentry"
+
 import { QueryClientProvider } from "@tanstack/react-query"
+import * as Sentry from "@sentry/react-native"
 
 import { queryClient } from "@/lib/query-client"
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router"
@@ -17,7 +20,7 @@ import { WorkoutProvider } from "@/features/workout"
 
 SplashScreen.preventAutoHideAsync()
 
-export default function RootLayout() {
+function RootLayout() {
   const colorScheme = useColorScheme()
   return (
     <QueryClientProvider client={queryClient}>
@@ -74,3 +77,5 @@ function RootNavigator() {
   )
   return user ? <AccountProviders key={user.id}>{navigation}</AccountProviders> : navigation
 }
+
+export default Sentry.wrap(RootLayout)

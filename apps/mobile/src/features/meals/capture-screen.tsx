@@ -9,8 +9,9 @@ import { pickImage } from "@/features/camera/image-picker"
 
 import { Pressable } from "@/components/pressable"
 import { Sheet } from "@/components/sheet"
+import { BackHeader, Button } from "@/components/ui"
 import { Palette as C } from "@/constants/palette"
-import { Header, icons, PrimaryButton, SecondaryButton } from "./meals-ui"
+import { icons } from "./meals-ui"
 import { useMeals, type ApiMealItem } from "./meals-store"
 import { apiRequest } from "@/lib/api"
 
@@ -97,7 +98,7 @@ export function MealCaptureScreen() {
           { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
         ]}
       >
-        <Header label="Meals" onBack={() => router.back()} />
+        <BackHeader label="Meals" onPress={() => router.back()} />
 
         <View style={styles.heading}>
           <Text accessibilityRole="header" style={styles.title}>
@@ -166,8 +167,9 @@ export function MealCaptureScreen() {
             {error} Manual entry remains available.
           </Text>
         ) : null}
-        <PrimaryButton label="Analyze photo" disabled={!image || busy} onPress={analyze} />
-        <SecondaryButton
+        <Button label="Analyze photo" disabled={!image || busy} onPress={analyze} />
+        <Button
+          variant="secondary"
           label="Enter meal manually"
           onPress={() => {
             if (image) setDraftPhoto(image.uri, { data: image.base64, mimeType: image.mimeType })

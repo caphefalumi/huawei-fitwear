@@ -1,11 +1,11 @@
 import { Image } from "expo-image"
 import { router, useFocusEffect } from "expo-router"
 import { useCallback, useEffect, useState } from "react"
-import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { StyleSheet, Text, View } from "react-native"
 import Animated, { FadeInUp } from "react-native-reanimated"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
+import { Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
 import { Palette as C } from "@/constants/palette"
 import { recoveryTitle, useHealth } from "@/features/health/health-store"
 import { routinesFor } from "@/features/workout/routines"
@@ -13,7 +13,7 @@ import { RecoverySheet } from "@/features/recovery/recovery-sheet"
 import { useMeals } from "@/features/meals/meals-store"
 import { NutritionRing } from "@/features/home/ring"
 import { WeightChart } from "@/features/home/weight-chart"
-import { Card, MacroBar, SectionHeading } from "@/features/home/ui"
+import { MacroBar } from "@/features/home/ui"
 
 const DEMO_WEIGHTS = [72.8, 72.5, 72.3, 72.1, 71.9, 71.7, 71.5]
 const WEEK_ACTIVE = [true, true, false, true, true, false, true]
@@ -43,7 +43,6 @@ function useCountUp(target: number, duration = 600) {
 }
 
 export function HomeScreen() {
-  const insets = useSafeAreaInsets()
   const { weightKg, weightUpdated, recovery } = useHealth()
   const { loggedKcal, loggedMacros } = useMeals()
   const [bannerDismissed, setBannerDismissed] = useState(false)
@@ -66,19 +65,13 @@ export function HomeScreen() {
       : DEMO_WEIGHTS
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}
-    >
+    <Screen>
       <View style={styles.topRow}>
         <Text style={styles.date}>THU, OCT 8</Text>
         <Text style={styles.name}>Sam N.</Text>
       </View>
 
-      <Text style={styles.title}>Today</Text>
+      <PageHeading title="Today" style={styles.heading} />
 
       <Animated.View entering={FadeInUp.duration(250)}>
         <Card style={styles.focus}>
@@ -200,19 +193,11 @@ export function HomeScreen() {
       {weightUpdated ? (
         <Text style={styles.footnote}>Demo personal targets · estimates, not medical advice.</Text>
       ) : null}
-    </ScrollView>
+    </Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: C.background,
-  },
-  content: {
-    paddingHorizontal: 24,
-    gap: 18,
-  },
   topRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -227,10 +212,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: C.accent,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "400",
-    color: C.text,
+  heading: {
     marginTop: -6,
   },
   banner: {

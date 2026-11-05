@@ -9,6 +9,7 @@ import {
   verifyPassword,
 } from "../../lib/password"
 import { generateId, generateToken } from "../../lib/id"
+import { deleteUserMealImages } from "../../lib/meal-images"
 
 import type { SignUpBody, SignInBody, UpdateUserBody } from "./index"
 
@@ -192,6 +193,7 @@ export abstract class Auth {
   }
   static async deleteAccount(userId: string, d1?: D1Database) {
     const db = getDb(d1)
+    await deleteUserMealImages(userId)
     await db.delete(sessionTable).where(eq(sessionTable.userId, userId)).run()
     await db.delete(userTable).where(eq(userTable.id, userId)).run()
     return { success: true, message: "Account deleted successfully" }

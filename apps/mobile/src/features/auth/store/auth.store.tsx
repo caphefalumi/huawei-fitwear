@@ -135,7 +135,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         if (!active || revision.current !== hydrateRevision) return
         if (!isLoggedIn(result.session)) {
           await clearSession()
-          setError("Your session expired. Please sign in again.")
+          setError("Your session expired. Sign in again.")
           return
         }
         setAuthenticated(true)
@@ -146,7 +146,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           setError(
             cause instanceof Error
               ? cause.message
-              : "Unable to restore your session. Please sign in again.",
+              : "Could not restore your session. Sign in again.",
           )
         }
       } finally {
@@ -157,9 +157,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (!active) return
       setError("Your session expired. Please sign in again.")
       void clearSession().catch(() =>
-        setError(
-          "Session expired, but saved credentials could not be removed. Please sign in again.",
-        ),
+        setError("Session expired, but saved credentials could not be removed. Sign in again."),
       )
     })
     void hydrate()
@@ -177,7 +175,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (remaining <= 0) {
         setError("Your session expired. Please sign in again.")
         void clearSession().catch(() =>
-          setError("Could not remove expired saved credentials. Please sign in again."),
+          setError("Could not remove expired saved credentials. Sign in again."),
         )
       } else {
         clearTimeout(timer)
@@ -271,7 +269,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         return
       }
       setError(
-        cause instanceof Error ? cause.message : "Unable to delete your account. Please try again.",
+        cause instanceof Error ? cause.message : "Could not delete your account. Please try again.",
       )
       throw cause
     } finally {
@@ -293,7 +291,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
         await queryClient.invalidateQueries({ queryKey: ["meals", result.id, "summary"] })
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Unable to update your profile.")
+        setError(cause instanceof Error ? cause.message : "Could not update your profile.")
         throw cause
       }
     },
