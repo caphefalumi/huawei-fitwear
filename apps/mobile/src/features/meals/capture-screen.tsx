@@ -169,7 +169,16 @@ export function MealCaptureScreen() {
               <Text style={styles.circleNote}>or pick a photo from your library below</Text>
             </View>
           ) : (
-            <CameraView ref={cameraRef} style={styles.preview} facing="back" />
+            <View style={styles.preview}>
+              <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
+              <View pointerEvents="none" style={styles.guide}>
+                <View style={[styles.guideCorner, styles.guideTL]} />
+                <View style={[styles.guideCorner, styles.guideTR]} />
+                <View style={[styles.guideCorner, styles.guideBL]} />
+                <View style={[styles.guideCorner, styles.guideBR]} />
+                <View style={styles.guideCircle} />
+              </View>
+            </View>
           )}
         </View>
 
@@ -180,6 +189,7 @@ export function MealCaptureScreen() {
             </Text>
           ) : null}
           <View style={styles.shutterRow}>
+            <View style={styles.sideSlot} />
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Take meal photo"
@@ -189,20 +199,22 @@ export function MealCaptureScreen() {
             >
               <View style={styles.shutter} />
             </Pressable>
-            <Pressable
-              accessibilityLabel="Choose from library"
-              disabled={busy}
-              onPress={selectLibrary}
-              style={styles.libraryChip}
-            >
-              <Image
-                accessible={false}
-                source={icons.images}
-                style={styles.libraryIcon}
-                contentFit="contain"
-              />
-              <Text style={styles.libraryChipLabel}>Library</Text>
-            </Pressable>
+            <View style={[styles.sideSlot, styles.sideSlotRight]}>
+              <Pressable
+                accessibilityLabel="Choose from library"
+                disabled={busy}
+                onPress={selectLibrary}
+                style={styles.libraryIconButton}
+                hitSlop={8}
+              >
+                <Image
+                  accessible={false}
+                  source={icons.images}
+                  style={styles.libraryIcon}
+                  contentFit="contain"
+                />
+              </Pressable>
+            </View>
           </View>
           <TextInput
             accessibilityLabel="Optional meal description"
@@ -355,8 +367,18 @@ const styles = StyleSheet.create({
   shutterRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+  },
+  sideSlot: {
+    width: 56,
+    alignItems: "center",
     justifyContent: "center",
-    gap: 16,
+  },
+  sideSlotRight: {
+    alignItems: "flex-end",
+  },
+  libraryIconButton: {
+    padding: 10,
   },
   shutterRing: {
     width: 64,
@@ -373,25 +395,53 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     backgroundColor: C.accent,
   },
-  libraryChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: C.surface,
-  },
   libraryIcon: {
-    width: 18,
-    height: 18,
+    width: 22,
+    height: 22,
   },
-  libraryChipLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: C.text,
+  guide: {
+    ...StyleSheet.absoluteFill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.22)",
+  },
+  guideCircle: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "rgba(255,255,255,0.6)",
+  },
+  guideCorner: {
+    position: "absolute",
+    width: 26,
+    height: 26,
+    borderColor: "rgba(255,255,255,0.55)",
+  },
+  guideTL: {
+    top: 14,
+    left: 14,
+    borderTopWidth: 2,
+    borderLeftWidth: 2,
+  },
+  guideTR: {
+    top: 14,
+    right: 14,
+    borderTopWidth: 2,
+    borderRightWidth: 2,
+  },
+  guideBL: {
+    bottom: 14,
+    left: 14,
+    borderBottomWidth: 2,
+    borderLeftWidth: 2,
+  },
+  guideBR: {
+    bottom: 14,
+    right: 14,
+    borderBottomWidth: 2,
+    borderRightWidth: 2,
   },
   description: {
     minHeight: 44,
