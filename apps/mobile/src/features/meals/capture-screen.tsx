@@ -141,7 +141,12 @@ export function MealCaptureScreen() {
                 }}
                 style={styles.retake}
               >
-                <Text style={styles.retakeLabel}>Retake</Text>
+                <Image
+                  accessible={false}
+                  source={icons.switchCamera}
+                  style={styles.retakeIcon}
+                  contentFit="contain"
+                />
               </Pressable>
             </>
           ) : !permission ? (
@@ -326,15 +331,16 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 10,
     right: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  retakeLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#fff",
+  retakeIcon: {
+    width: 20,
+    height: 20,
   },
   circle: {
     minWidth: 160,
