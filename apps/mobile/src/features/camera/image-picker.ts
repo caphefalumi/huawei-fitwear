@@ -7,6 +7,20 @@ export type PickedImage = {
   mimeType: "image/jpeg" | "image/png"
 }
 
+export function validatePickedImage(uri: string, base64: string | null | undefined): PickedImage {
+  if (!base64) throw new Error("Could not read this image. Choose another JPEG or PNG.")
+  const mimeType = base64.startsWith("/9j/")
+    ? "image/jpeg"
+    : base64.startsWith("iVBOR")
+      ? "image/png"
+      : null
+  if (!mimeType) throw new Error("Choose a JPEG or PNG image.")
+  if (base64.length > 7_000_000) {
+    throw new Error("This image is too large. Crop it or choose a smaller photo (under 5 MB).")
+  }
+  return { uri, base64, mimeType }
+}
+
 export async function pickImage(camera: boolean): Promise<PickedImage | null> {
   if (camera && Platform.OS !== "web") {
     const permission = await ImagePicker.requestCameraPermissionsAsync()
@@ -29,16 +43,5 @@ export async function pickImage(camera: boolean): Promise<PickedImage | null> {
   if (result.canceled) return null
 
   const asset = result.assets[0]
-  if (!asset.base64) throw new Error("Could not read this image. Choose another JPEG or PNG.")
-  const mimeType = asset.base64.startsWith("/9j/")
-    ? "image/jpeg"
-    : asset.base64.startsWith("iVBOR")
-      ? "image/png"
-      : null
-  if (!mimeType) throw new Error("Choose a JPEG or PNG image.")
-  if (asset.base64.length > 7_000_000) {
-    throw new Error("This image is too large. Crop it or choose a smaller photo (under 5 MB).")
-  }
-
-  return { uri: asset.uri, base64: asset.base64, mimeType }
+  return validatePickedImage(asset.uri, asset.base64)
 }
