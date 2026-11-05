@@ -4,6 +4,10 @@ tags:
   - errors
 ---
 - evalScript: ${output.unknownEmail = 'maestro_unknown_' + Date.now() + '_' + Math.floor(Math.random() * 1000000) + '@fitwear.dev'}
+- setAirplaneMode: disabled
+# Stop the previous flow before clearing data: Android can otherwise finish
+# removing its task after launch and kill the newly started process.
+- stopApp
 - launchApp:
     clearState: true
 
@@ -51,8 +55,9 @@ tags:
 - extendedWaitUntil:
     visible: "Reset your password."
     timeout: 10000
-- tapOn: ${MAESTRO_TEST_EMAIL}
-- eraseText
+# The reset field auto-focuses at the end of its value. Do not tap the middle
+# of the prefilled address before backspacing, or its suffix will remain.
+- eraseText: 100
 - hideKeyboard
 - tapOn: "Send reset code"
 - assertVisible: "Enter your email address."

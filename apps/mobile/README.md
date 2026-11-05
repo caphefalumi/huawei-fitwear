@@ -10,6 +10,8 @@ App accounts are separate from Expo accounts. Sign up with a real email-format a
 
 Login errors are classified by HTTP status and API error code, not server message text. Invalid credentials use a persistent inline password error; rate limiting and account locks disable sign-in with a server-timed countdown; network and server failures remain separate banners. Editing either credential clears the inline error, and duplicate submissions are blocked synchronously.
 
+Sign-in/sign-up and password-reset mutations use `networkMode: "always"` so an offline submission reaches the request's connection error or timeout and releases the form, rather than remaining paused and replaying silently when connectivity returns.
+
 Meals, portions, daily nutrition, profile preferences, weights, recovery schedules and workout sessions/sets use the API. Empty accounts show empty states, not seeded personal data. Camera/library images are sent to Workers AI only after tapping **Analyze photo**; review estimates before logging. Logged images are stored privately in R2 and read through authenticated requests. Manual food/label entry works independently of inference.
 
 Remote data uses TanStack Query. Each feature owns domain/user-scoped query keys and colocated query functions; writes run as mutations and invalidate only affected data. Meal deletion/type changes and workout deletion update cached lists optimistically and roll back on failure. API requests use Axios with a 12-second timeout, typed status/network failures, and exponential-backoff retries with jitter for retryable queries. Native connectivity feeds TanStack Query and a persistent offline banner. Data screens keep cached content during refresh failures, expose retry and pull-to-refresh, and announce accessible error panels; delayed skeletons distinguish loading from empty states. Zustand holds client-owned meal drafts/preferences and auth operation status; API responses stay in TanStack Query, and credentials stay in secure/local storage.
@@ -171,6 +173,8 @@ bun run lint
 ```
 
 The `tests/e2e/fitness.yaml` and `tests/e2e/error-messages.yaml` Maestro flows run nightly at 02:00 UTC and on manual workflow dispatch; pull-request mobile checks run Jest unit tests without the emulator build. The fitness flow verifies sign-in, session restoration, and backend-backed empty states; the error flow checks login validation and network-failure feedback. They require Maestro CLI 2.12.0, Java 17+, an Android emulator, and the E2E account secrets; CI provisions the native build, emulator, and Maestro CLI.
+
+Each flow stops the app before clearing its data and launching it. Keep that order: clearing data while the previous flow's activity is running can leave Android removing the old task after the new process starts, killing the new process and stranding the test on the system splash screen.
 
 Android E2E on the Ubuntu CI runner requires KVM hardware acceleration. The workflow grants access to `/dev/kvm` before building the APK and requires `-accel on`, so unavailable acceleration fails the job instead of silently falling back to slow software emulation.
 
