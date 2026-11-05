@@ -73,6 +73,7 @@ jobs:
         working-directory: apps/mobile/android
         env:
           EXPO_PUBLIC_API_URL: https://fitwear.tm-project.id.vn/
+          SENTRY_DISABLE_AUTO_UPLOAD: "true"
         run: ./gradlew assembleRelease --no-daemon -Pandroid.enableMinifyInReleaseBuilds=false -PreactNativeArchitectures=x86_64
 
       - name: Upload Android release APK
