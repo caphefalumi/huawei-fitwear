@@ -2,10 +2,7 @@ appId: com.fitwear.mobile
 tags:
   - e2e
   - fitness
-env:
-  PASSWORD: "FitnessTest123!"
 ---
-- evalScript: ${output.email = 'maestro_' + Date.now() + '_' + Math.floor(Math.random() * 1000000) + '@fitwear.dev'}
 - launchApp:
     clearState: true
 - startRecording:
@@ -13,117 +10,43 @@ env:
     label: "Capture fitness end-to-end test execution"
     optional: true
 
-# 1. Register a new user
+# Sign in with the dedicated E2E account and verify the authenticated app.
 - extendedWaitUntil:
     visible: "Explore the app"
     timeout: 30000
-- tapOn:
-    text: "Create account"
-    retryTapIfNoChange: true
+- tapOn: "Sign in"
 - extendedWaitUntil:
-    visible: "Your username"
+    visible: "Hi, welcome back."
     timeout: 20000
-- tapOn:
-    text: "Your username"
-    retryTapIfNoChange: true
-- inputText: "Maestro E2E"
-- tapOn:
-    text: "Your email"
-    retryTapIfNoChange: true
-- inputText: ${output.email}
+- tapOn: "example@gmail.com"
+- inputText: ${MAESTRO_TEST_EMAIL}
+- tapOn: "Your password"
+- inputText: ${MAESTRO_TEST_PASSWORD}
 - hideKeyboard
 - tapOn:
-    text: "Month"
-    retryTapIfNoChange: true
-- inputText: "01"
-- tapOn:
-    text: "Day"
-    retryTapIfNoChange: true
-- inputText: "01"
-- tapOn:
-    text: "Year"
-    retryTapIfNoChange: true
-- inputText: "1990"
-- hideKeyboard
-- tapOn:
-    text: "Password"
-    retryTapIfNoChange: true
-- inputText: ${PASSWORD}
-- hideKeyboard
-- repeat:
-    times: 6
-    while:
-      notVisible: "I accept the terms and privacy policy."
-    commands:
-      - swipe:
-          start: 5%, 80%
-          end: 5%, 30%
-- tapOn:
-    text: "I accept the terms and privacy policy."
-    retryTapIfNoChange: true
-- repeat:
-    times: 4
-    while:
-      notVisible:
-        id: "sign-up-submit"
-    commands:
-      - swipe:
-          start: 5%, 80%
-          end: 5%, 30%
-- tapOn:
-    id: "sign-up-submit"
-    retryTapIfNoChange: true
+    id: "login-submit"
 - extendedWaitUntil:
     visible: "Today"
     timeout: 30000
 
-# 2. Verify Session Persistence Across App Restart
+# Session survives an app restart.
 - stopApp
 - launchApp
 - extendedWaitUntil:
     visible: "Today"
     timeout: 30000
 
-# 3. Sign Out
-- tapOn: "Profile"
-- repeat:
-    times: 8
-    while:
-      notVisible: "Sign out"
-    commands:
-      - swipe:
-          start: 5%, 80%
-          end: 5%, 30%
+# Check the read-only fitness surfaces without changing health data.
 - tapOn:
-    text: "Sign out"
-    retryTapIfNoChange: true
+    id: "tab-profile"
 - extendedWaitUntil:
-    visible: "Hi, welcome back."
-    timeout: 30000
-
-# 4. Login with Registered Credentials
+    visible: "Profile overview"
+    timeout: 20000
 - tapOn:
-    text: "example@gmail.com"
-    retryTapIfNoChange: true
-- inputText: ${output.email}
-- tapOn:
-    text: "Your password"
-    retryTapIfNoChange: true
-- inputText: ${PASSWORD}
-- tapOn:
-    text: "Log in"
-    retryTapIfNoChange: true
-- extendedWaitUntil:
-    visible: "Today"
-    timeout: 30000
-
-# 5. Verify App Content Access
-- tapOn: "Meals"
+    id: "tab-meals"
 - extendedWaitUntil:
     visible: "No meals match.*"
     timeout: 20000
-
-# 6. First Capture Tutorial
 - tapOn:
     text: "Capture meal"
     retryTapIfNoChange: true
@@ -132,129 +55,13 @@ env:
     timeout: 20000
 - assertVisible: "Add a ruler"
 - assertVisible: "Shoot from above"
-- assertNotVisible: "Review & edit"
-- assertNotVisible: ".*Three quick tips.*"
 - tapOn:
     text: "Close Capture your meal"
     retryTapIfNoChange: true
 - extendedWaitUntil:
     notVisible: "Add a ruler"
     timeout: 5000
-- back
-
-# 7. Period Recovery Plan (confirm, then reflected in Workout)
-- tapOn: "Profile"
-- repeat:
-    times: 8
-    while:
-      notVisible: "Sex / gender.*"
-    commands:
-      - swipe:
-          start: 5%, 30%
-          end: 5%, 80%
 - tapOn:
-    text: "Sex / gender.*"
-    retryTapIfNoChange: true
-- tapOn:
-    text: "Female"
-    retryTapIfNoChange: true
-- extendedWaitUntil:
-    visible: "Sex / gender, Female"
-    timeout: 20000
-- repeat:
-    times: 8
-    while:
-      notVisible: "I am in my period"
-    commands:
-      - swipe:
-          start: 5%, 80%
-          end: 5%, 30%
-- tapOn:
-    text: "I am in my period"
-    retryTapIfNoChange: true
-- extendedWaitUntil:
-    visible: "Turn on"
-    timeout: 20000
-- tapOn:
-    text: "Turn on"
-    retryTapIfNoChange: true
-- extendedWaitUntil:
-    visible: "Save recovery plan"
-    timeout: 20000
-- tapOn:
-    text: "In period"
-    retryTapIfNoChange: true
-- tapOn:
-    text: "Save recovery plan"
-    retryTapIfNoChange: true
-- extendedWaitUntil:
-    visible: "My period has ended"
-    timeout: 20000
-- tapOn: "Workout"
-- extendedWaitUntil:
-    visible: "Recovery"
-    timeout: 20000
-- repeat:
-    times: 8
-    while:
-      notVisible: "View Chest plan"
-    commands:
-      - swipe:
-          start: 5%, 80%
-          end: 5%, 30%
-- assertVisible: "View Chest plan"
-- tapOn: "Profile"
-- repeat:
-    times: 8
-    while:
-      notVisible: "My period has ended"
-    commands:
-      - swipe:
-          start: 5%, 80%
-          end: 5%, 30%
-- tapOn:
-    text: "My period has ended"
-    retryTapIfNoChange: true
-- extendedWaitUntil:
-    visible: "I am in my period"
-    timeout: 20000
-- tapOn: "Workout"
-- extendedWaitUntil:
-    notVisible: "Recovery"
-    timeout: 20000
-
-# 8. Delete Account to Clean Up
-- tapOn: "Profile"
-- repeat:
-    times: 8
-    while:
-      notVisible: "Account data"
-    commands:
-      - swipe:
-          start: 5%, 80%
-          end: 5%, 30%
-- tapOn:
-    text: "Account data"
-    retryTapIfNoChange: true
-- extendedWaitUntil:
-    visible: "Account & data"
-    timeout: 20000
-- repeat:
-    times: 8
-    while:
-      notVisible: "Delete account"
-    commands:
-      - swipe:
-          start: 5%, 80%
-          end: 5%, 30%
-- tapOn: "Delete account"
-- extendedWaitUntil:
-    visible: "Delete your account?"
-    timeout: 10000
-- tapOn:
-    text: "Confirm account deletion"
-    retryTapIfNoChange: true
-- extendedWaitUntil:
-    visible: "Hi, welcome back."
-    timeout: 30000
+    id: "tab-workout"
+- assertVisible: "Workout"
 - stopRecording

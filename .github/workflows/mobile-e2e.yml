@@ -129,6 +129,9 @@ jobs:
 
       - name: Run selected Maestro E2E flows
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          MAESTRO_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
+          MAESTRO_TEST_PASSWORD: ${{ secrets.MAESTRO_TEST_PASSWORD }}
         with:
           api-level: 34
           target: google_apis
@@ -143,7 +146,8 @@ jobs:
             adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
             sleep 5
             mkdir -p maestro-artifacts/recordings
-            maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts ${{ (github.event_name != 'workflow_dispatch' || inputs.run_fitness) && 'apps/mobile/tests/e2e/fitness.yaml' || '' }} ${{ (github.event_name != 'workflow_dispatch' || inputs.run_error_messages) && 'apps/mobile/tests/e2e/error-messages.yaml' || '' }}; status=$?; printf 'MAESTRO_EXIT_CODE=%s\n' "$status" >> "$GITHUB_ENV"; exit "$status"
+            test -n "$MAESTRO_TEST_EMAIL" && test -n "$MAESTRO_TEST_PASSWORD"
+            maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts -e MAESTRO_TEST_EMAIL="$MAESTRO_TEST_EMAIL" -e MAESTRO_TEST_PASSWORD="$MAESTRO_TEST_PASSWORD" ${{ (github.event_name != 'workflow_dispatch' || inputs.run_fitness) && 'apps/mobile/tests/e2e/fitness.yaml' || '' }} ${{ (github.event_name != 'workflow_dispatch' || inputs.run_error_messages) && 'apps/mobile/tests/e2e/error-messages.yaml' || '' }}; status=$?; printf 'MAESTRO_EXIT_CODE=%s\n' "$status" >> "$GITHUB_ENV"; exit "$status"
 
       - name: Collect Maestro test recordings and artifacts
         if: always()

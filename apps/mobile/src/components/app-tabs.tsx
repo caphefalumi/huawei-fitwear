@@ -66,7 +66,14 @@ function TabButton({
   }))
 
   return (
-    <Pressable style={styles.tab} onPress={onPress} onLayout={onLayout}>
+    <Pressable
+      style={styles.tab}
+      onPress={onPress}
+      onLayout={onLayout}
+      accessibilityRole="tab"
+      accessibilityLabel={tab.label}
+      testID={`tab-${tab.name}`}
+    >
       <Animated.View style={[styles.tabInner, contentStyle]}>
         <Image source={tab.icon} style={styles.icon} contentFit="contain" tintColor={color} />
         <Animated.Text style={[styles.label, { color }, labelStyle]}>{tab.label}</Animated.Text>
