@@ -35,17 +35,13 @@ tags:
     id: "login-submit"
 - assertVisible: "We could not sign you in. Check your email and password and try again."
 
-# Offline state remains visible, and password reset fails safely for an unknown address.
+# Clear the previous credential error before testing the offline failure. The
+# inline error expands the form and can push the submit button below the viewport.
 - setAirplaneMode: enabled
-- repeat:
-    times: 4
-    while:
-      notVisible:
-        id: "login-submit"
-    commands:
-      - swipe:
-          start: 5%, 80%
-          end: 5%, 30%
+- tapOn: "Your password"
+- eraseText
+- inputText: "offline-maestro-password"
+- hideKeyboard
 - tapOn:
     id: "login-submit"
 - extendedWaitUntil:
