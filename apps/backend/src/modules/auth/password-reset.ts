@@ -3,6 +3,7 @@ import { and, eq, exists, gt, like, or } from "drizzle-orm"
 import { getDb, getEmailConfig, getEmailQueue, session, user, verification } from "../../db"
 import { generateId, generateToken } from "../../lib/id"
 import { hashPassword, isPasswordWithinBcryptLimit } from "../../lib/password"
+import { clearPasswordResetEmailSlot } from "./rate-limit"
 import type { PasswordResetBody, PasswordResetVerifyBody } from "./index"
 
 const OTP_IDENTIFIER_PREFIX = "password-reset:"
@@ -174,5 +175,10 @@ export async function resetPassword({ resetToken, password }: PasswordResetBody)
     db.delete(verification).where(validToken),
   ])
   if (!updated || updated.meta.changes !== 1) throw new InvalidPasswordResetToken()
+
+  const account = await db.select({ email: user.email }).from(user).where(eq(user.id, userId)).get()
+  if (account) {
+    await clearPasswordResetEmailSlot(account.email).catch(() => undefined)
+  }
 }
 export const passwordResetMessage = SUCCESS_MESSAGE

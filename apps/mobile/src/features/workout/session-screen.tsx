@@ -1,12 +1,11 @@
 import { router } from "expo-router"
 import { useEffect, useState } from "react"
-import { ScrollView, StyleSheet, Text, View } from "react-native"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { StyleSheet, Text, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
+import { BackHeader, Button, Card, PageHeading, Screen } from "@/components/ui"
 import { Palette as C } from "@/constants/palette"
 import { useHealth } from "@/features/health/health-store"
-import { BackHeader, Card } from "@/features/home/ui"
 import { routinesFor } from "@/features/workout/routines"
 
 function formatElapsed(totalSeconds: number) {
@@ -16,7 +15,6 @@ function formatElapsed(totalSeconds: number) {
 }
 
 export function SessionScreen() {
-  const insets = useSafeAreaInsets()
   const { recovery } = useHealth()
   const { today } = routinesFor(recovery)
   const [done, setDone] = useState<Record<string, boolean>>({})
@@ -35,21 +33,13 @@ export function SessionScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}
-    >
+    <Screen contentStyle={styles.content}>
       <BackHeader label="Workout plan" onPress={() => router.back()} />
 
-      <View style={styles.heading}>
-        <Text style={styles.title}>{today.name} session</Text>
-        <Text style={styles.subtitle}>
-          {formatElapsed(seconds)} · {doneCount}/{today.exercises.length} done
-        </Text>
-      </View>
+      <PageHeading
+        title={`${today.name} session`}
+        subtitle={`${formatElapsed(seconds)} · ${doneCount}/${today.exercises.length} done`}
+      />
 
       <Card>
         <View style={styles.exerciseList}>
@@ -74,37 +64,19 @@ export function SessionScreen() {
         </View>
       </Card>
 
-      <Pressable
-        style={[styles.primaryButton, !allDone && styles.primaryButtonIdle]}
+      <Button
+        label={allDone ? "Finish workout" : "End session"}
         onPress={() => router.replace("/workout")}
-      >
-        <Text style={styles.primaryLabel}>{allDone ? "Finish workout" : "End session"}</Text>
-      </Pressable>
+        style={!allDone && styles.primaryButtonIdle}
+      />
       {/* ponytail: session completion is not persisted; wire to a store when history matters. */}
-    </ScrollView>
+    </Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: C.background,
-  },
   content: {
-    paddingHorizontal: 24,
     gap: 14,
-  },
-  heading: {
-    gap: 3,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "400",
-    color: C.text,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: C.textMuted,
   },
   exerciseList: {
     gap: 4,
@@ -150,19 +122,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: C.textMuted,
   },
-  primaryButton: {
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: C.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   primaryButtonIdle: {
     opacity: 0.85,
-  },
-  primaryLabel: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: C.onAccent,
   },
 })

@@ -1,13 +1,12 @@
 import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useState } from "react"
-import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { StyleSheet, Text, View } from "react-native"
 import Animated, { FadeInUp } from "react-native-reanimated"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
+import { Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
 import { Palette as C } from "@/constants/palette"
-import { Card, SectionHeading } from "@/features/home/ui"
 import { recoveryRanges, useHealth } from "@/features/health/health-store"
 import { routinesFor, type Routine } from "@/features/workout/routines"
 import { RecoverySheet } from "@/features/recovery/recovery-sheet"
@@ -60,7 +59,6 @@ const MUSCLE_GROUPS = [
 ]
 
 export function WorkoutPlanScreen() {
-  const insets = useSafeAreaInsets()
   const { plan, recovery } = useHealth()
   const [recoveryOpen, setRecoveryOpen] = useState(false)
 
@@ -74,20 +72,12 @@ export function WorkoutPlanScreen() {
     `${routine.name} · ${routine.exercises.length} exercises · ${routine.sets} sets · ${routine.minutes} min`
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}
-    >
-      <View style={styles.heading}>
-        <Text style={styles.eyebrow}>My plan</Text>
-        <Text style={styles.title}>Workout plan</Text>
-        <Text style={styles.subtitle}>
-          {plan.sessions}x/week · fat loss &amp; muscle maintenance
-        </Text>
-      </View>
+    <Screen>
+      <PageHeading
+        eyebrow="My plan"
+        title="Workout plan"
+        subtitle={`${plan.sessions}x/week · fat loss & muscle maintenance`}
+      />
 
       <View style={styles.week}>
         {WEEK.map((day) => {
@@ -189,41 +179,14 @@ export function WorkoutPlanScreen() {
         </Animated.View>
       </View>
 
-      <Pressable style={styles.primaryButton} onPress={() => router.push("/chest-plan")}>
-        <Text style={styles.primaryLabel}>View Chest plan</Text>
-      </Pressable>
+      <Button label="View Chest plan" onPress={() => router.push("/chest-plan")} />
 
       {recoveryOpen ? <RecoverySheet visible onClose={() => setRecoveryOpen(false)} /> : null}
-    </ScrollView>
+    </Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: C.background,
-  },
-  content: {
-    paddingHorizontal: 24,
-    gap: 18,
-  },
-  heading: {
-    gap: 3,
-  },
-  eyebrow: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: C.textMuted,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "400",
-    color: C.text,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: C.textMuted,
-  },
   week: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -377,17 +340,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: C.text,
-  },
-  primaryButton: {
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: C.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryLabel: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: C.onAccent,
   },
 })

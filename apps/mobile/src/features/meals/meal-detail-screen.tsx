@@ -59,7 +59,7 @@ export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: ()
               "status" in detailQuery.error &&
               detailQuery.error.status === 404
                 ? "Meal not found"
-                : "Couldn't load this meal"
+                : "Could not load this meal"
             }
             message={error}
             onRetry={() => detailQuery.refetch()}
@@ -70,7 +70,7 @@ export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: ()
         {!error && !detailQuery.isLoading ? (
           <FetchErrorState
             title="Meal unavailable"
-            message="This meal couldn't be found."
+            message="This meal could not be found."
             onBack={onBack}
           />
         ) : null}

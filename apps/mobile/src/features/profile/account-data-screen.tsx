@@ -19,7 +19,7 @@ export function AccountDataScreen() {
     try {
       await deleteAccount()
     } catch {
-      setDeleteError("Couldn't delete your account. Try again.")
+      setDeleteError("Could not delete your account. Try again.")
     }
   }
 

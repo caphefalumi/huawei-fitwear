@@ -2,11 +2,11 @@ import { router } from "expo-router"
 import { Image } from "expo-image"
 import { useAuth } from "@/features/auth/auth-store"
 import { useState } from "react"
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native"
+import { Alert, StyleSheet, Text, View } from "react-native"
 import Animated, { FadeInUp } from "react-native-reanimated"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
+import { Button, PageHeading, Screen } from "@/components/ui"
 import { Palette as C } from "@/constants/palette"
 import { PERIOD_AREA, useHealth } from "@/features/health/health-store"
 import {
@@ -65,7 +65,6 @@ type OpenSheet =
   | null
 
 export function ProfileScreen() {
-  const insets = useSafeAreaInsets()
   const { user, signOut } = useAuth()
   const { weightKg, heightCm, sex, plan, recovery, saveRecovery, loading, error, refresh } =
     useHealth()
@@ -80,19 +79,11 @@ export function ProfileScreen() {
   const close = () => setOpenSheet(null)
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}
-    >
-      <Text accessibilityRole="header" style={styles.title}>
-        Profile
-      </Text>
+    <Screen contentStyle={styles.content}>
+      <PageHeading title="Profile" />
       {error ? (
         <View style={styles.errorBanner}>
-          <Text>Couldn’t load your health data.</Text>
+          <Text>Could not load your health data.</Text>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Retry loading health data"
@@ -191,10 +182,11 @@ export function ProfileScreen() {
       </View>
       {sex === "Female" ? (
         <Animated.View entering={FadeInUp.delay(150).duration(220)}>
-          <Pressable
-            accessibilityRole="button"
+          <Button
             accessibilityLabel={`Period recovery, ${inPeriod ? "On" : "Off"}`}
-            style={[styles.periodButton, inPeriod && styles.periodButtonActive]}
+            label={inPeriod ? "My period has ended" : "I am in my period"}
+            variant={inPeriod ? "secondary" : "primary"}
+            style={inPeriod ? styles.periodButtonActive : undefined}
             onPress={() => {
               if (inPeriod) {
                 void saveRecovery(null)
@@ -209,11 +201,7 @@ export function ProfileScreen() {
                 )
               }
             }}
-          >
-            <Text style={[styles.periodLabel, inPeriod && styles.periodLabelActive]}>
-              {inPeriod ? "My period has ended" : "I am in my period"}
-            </Text>
-          </Pressable>
+          />
         </Animated.View>
       ) : null}
 
@@ -225,23 +213,13 @@ export function ProfileScreen() {
       {openSheet === "activity" ? <ActivitySheet visible onClose={close} /> : null}
       {openSheet === "target" ? <TargetWeightSheet visible onClose={close} /> : null}
       {openSheet === "recovery" ? <RecoverySheet visible onClose={close} /> : null}
-    </ScrollView>
+    </Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: C.background,
-  },
   content: {
-    paddingHorizontal: 24,
     gap: 22,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "400",
-    color: C.text,
   },
   identity: {
     flexDirection: "row",
@@ -322,22 +300,8 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
   },
-  periodButton: {
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: C.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   periodButtonActive: {
     backgroundColor: C.accentTint,
-  },
-  periodLabel: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: C.onAccent,
-  },
-  periodLabelActive: {
-    color: C.accent,
+    borderColor: C.accentTint,
   },
 })

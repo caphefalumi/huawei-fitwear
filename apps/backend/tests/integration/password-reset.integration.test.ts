@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test"
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test"
 import { like } from "drizzle-orm"
 import { app, setTestDatabaseBinding } from "../helpers/test-app"
 import { createTestDatabase } from "../helpers/test-db"
@@ -92,29 +92,78 @@ describe("Password reset integration", () => {
     }
   })
 
-  it("applies exponential resend delays by normalized address", async () => {
+  it("applies staged resend delays and a daily send cap by normalized address", async () => {
     const kv = createTestKv()
     const email = "person@example.test"
     const firstSentAt = 1_000
-    expect(await takePasswordResetEmailSlot(kv, email, firstSentAt)).toEqual({
-      allowed: true,
-      retryAfterSeconds: 60,
-    })
-    expect(await takePasswordResetEmailSlot(kv, email.toUpperCase(), firstSentAt + 59_999)).toEqual(
-      { allowed: false, retryAfterSeconds: 1 },
-    )
-    expect(await takePasswordResetEmailSlot(kv, email, firstSentAt + 60_000)).toEqual({
-      allowed: true,
-      retryAfterSeconds: 120,
-    })
-    expect(await takePasswordResetEmailSlot(kv, email, firstSentAt + 179_999)).toEqual({
+    const sent = async (at: number, expected: number) =>
+      expect(await takePasswordResetEmailSlot(kv, email, at)).toEqual({
+        allowed: true,
+        retryAfterSeconds: expected,
+      })
+    const blocked = async (at: number) =>
+      expect(await takePasswordResetEmailSlot(kv, email.toUpperCase(), at)).toEqual({
+        allowed: false,
+        retryAfterSeconds: 1,
+      })
+
+    await sent(firstSentAt, 30)
+    await blocked(firstSentAt + 29_999)
+    await sent(firstSentAt + 30_000, 60)
+    await blocked(firstSentAt + 89_999)
+    await sent(firstSentAt + 90_000, 180)
+    await blocked(firstSentAt + 269_999)
+    await sent(firstSentAt + 270_000, 300)
+    await blocked(firstSentAt + 569_999)
+    await sent(firstSentAt + 570_000, 600)
+    expect(await takePasswordResetEmailSlot(kv, email, firstSentAt + 1_169_999)).toEqual({
       allowed: false,
-      retryAfterSeconds: 1,
+      retryAfterSeconds: 85_231,
+      dailyLimitReached: true,
     })
-    expect(await takePasswordResetEmailSlot(kv, email, firstSentAt + 180_000)).toEqual({
+    expect(await takePasswordResetEmailSlot(kv, email, firstSentAt + 1_170_000)).toEqual({
+      allowed: false,
+      retryAfterSeconds: 85_230,
+      dailyLimitReached: true,
+    })
+  })
+
+  it("restarts the resend ladder after a quiet day", async () => {
+    const kv = createTestKv()
+    const email = "person@example.test"
+    const start = 1_000
+    await takePasswordResetEmailSlot(kv, email, start)
+    await takePasswordResetEmailSlot(kv, email, start + 30_000)
+    expect(await takePasswordResetEmailSlot(kv, email, start + 24 * 60 * 60_000)).toEqual({
       allowed: true,
-      retryAfterSeconds: 240,
+      retryAfterSeconds: 30,
     })
+  })
+
+  it("returns 429 once an address hits the daily reset email cap", async () => {
+    await createAccount()
+    const clock = spyOn(Date, "now")
+    const start = Date.now()
+    try {
+      const times = [0, 30_000, 90_000, 270_000, 570_000]
+      for (const [index, offset] of times.entries()) {
+        clock.mockReturnValue(start + offset)
+        const response = await requestReset("reset@fitwear.dev", `203.0.113.${80 + index}`)
+        expect(response.status).toBe(200)
+      }
+      clock.mockReturnValue(start + 1_170_000)
+      const capped = await requestReset("reset@fitwear.dev", "203.0.113.90")
+      expect(capped.status).toBe(429)
+      expect(capped.headers.get("Retry-After")).toBe("85230")
+      expect(await capped.json()).toEqual({
+        success: false,
+        message: "Too many requests. Try again later.",
+        resendAfterSeconds: 85_230,
+      })
+      expect(queued.messages.filter((message) => message.type === "password-reset")).toHaveLength(5)
+    } finally {
+      clock.mockRestore()
+    }
   })
 
   it("returns the same response for known and unknown addresses and queues only for the account owner", async () => {
@@ -123,7 +172,7 @@ describe("Password reset integration", () => {
     const unknownBody = await unknown.json()
     expect(unknownBody.success).toBe(true)
     expect(typeof unknownBody.message).toBe("string")
-    expect(unknownBody.resendAfterSeconds).toBe(60)
+    expect(unknownBody.resendAfterSeconds).toBe(30)
     expect(unknown.status).toBe(200)
     expect(queued.messages).toHaveLength(1)
 
@@ -132,7 +181,7 @@ describe("Password reset integration", () => {
     const knownBody = await known.json()
     expect(knownBody.message).toEqual(unknownBody.message)
     expect(knownBody.resendAfterSeconds).toBeGreaterThan(0)
-    expect(knownBody.resendAfterSeconds).toBeLessThanOrEqual(60)
+    expect(knownBody.resendAfterSeconds).toBeLessThanOrEqual(30)
     expect(queued.messages).toHaveLength(2)
     const resetMessage = queued.messages[1]
     expect(resetMessage).toMatchObject({ type: "password-reset", to: "reset@fitwear.dev" })
@@ -258,6 +307,11 @@ describe("Password reset integration", () => {
         })
       ).status,
     ).toBe(422)
+
+    const afterReset = await requestReset("reset@fitwear.dev")
+    expect(afterReset.status).toBe(200)
+    expect((await afterReset.json()).resendAfterSeconds).toBe(30)
+    expect(queued.messages.filter((message) => message.type === "password-reset")).toHaveLength(2)
   })
 
   it("removes the reset code record when queue publication fails", async () => {

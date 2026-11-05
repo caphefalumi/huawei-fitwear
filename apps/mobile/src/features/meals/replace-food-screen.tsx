@@ -4,8 +4,9 @@ import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
+import { BackHeader, SectionHeading } from "@/components/ui"
 import { Palette as C } from "@/constants/palette"
-import { Header, SearchInput, SectionTitle } from "./meals-ui"
+import { SearchInput } from "./meals-ui"
 import {
   useFoodSearch,
   estimatePortion,
@@ -71,10 +72,10 @@ export function ReplaceFoodScreen() {
         { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
       ]}
     >
-      <Header
+      <BackHeader
         label="Lunch"
-        onBack={() => router.back()}
-        action="Cancel"
+        onPress={() => router.back()}
+        actionLabel="Cancel"
         onAction={() => router.back()}
       />
 
@@ -111,7 +112,7 @@ export function ReplaceFoodScreen() {
 
       {matches.length > 0 ? (
         <>
-          <SectionTitle title="Database results" action={`${matches.length} matches`} />
+          <SectionHeading title="Database results" actionLabel={`${matches.length} matches`} />
 
           {matches.map((food) => (
             <View key={food.id} style={styles.resultCard}>

@@ -46,6 +46,19 @@ export async function deleteMealImage(userId: string, mealId: string): Promise<v
   if (bucket) await bucket.delete(`${userId}/${mealId}`)
 }
 
+export async function deleteUserMealImages(userId: string): Promise<void> {
+  const bucket = getMealImages()
+  if (!bucket) return
+  let cursor: string | undefined
+  do {
+    const page = await bucket.list({ prefix: `${userId}/`, cursor })
+    if (page.objects.length > 0) {
+      await bucket.delete(page.objects.map((object) => object.key))
+    }
+    cursor = page.truncated ? page.cursor : undefined
+  } while (cursor)
+}
+
 export async function readMealImage(userId: string, mealId: string): Promise<{ imageUrl: string }> {
   const bucket = getMealImages()
   if (!bucket)

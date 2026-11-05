@@ -14,55 +14,68 @@ env:
     optional: true
 
 # 1. Register a new user
-- assertVisible: "Welcome back."
+- assertVisible: "Hi, welcome back."
 - repeat:
     times: 5
     while:
-      notVisible: "Create account"
+      notVisible: "Sign up"
     commands:
       - swipe:
           start: 5%, 80%
           end: 5%, 30%
 - tapOn:
-    text: "Create account"
+    text: "Sign up"
     retryTapIfNoChange: true
-- assertVisible: "Start your journey."
+- extendedWaitUntil:
+    visible: "Create account"
+    timeout: 20000
 - tapOn:
-    text: "Name"
+    text: "Your username"
     retryTapIfNoChange: true
 - inputText: "Maestro E2E"
-- tapOn: "Start your journey."
 - tapOn:
-    text: "Email"
+    text: "Your email"
     retryTapIfNoChange: true
 - inputText: ${output.email}
-- tapOn: "Start your journey."
+- tapOn:
+    text: "Month"
+    retryTapIfNoChange: true
+- inputText: "01"
+- tapOn:
+    text: "Day"
+    retryTapIfNoChange: true
+- inputText: "01"
+- tapOn:
+    text: "Year"
+    retryTapIfNoChange: true
+- inputText: "1990"
 - tapOn:
     text: "Password"
     retryTapIfNoChange: true
 - inputText: ${PASSWORD}
-- tapOn: "Start your journey."
+- hideKeyboard
 - repeat:
-    times: 10
+    times: 6
     while:
-      notVisible: ".*Terms of Service.*"
+      notVisible: "I accept the terms and privacy policy."
     commands:
       - swipe:
           start: 5%, 80%
           end: 5%, 30%
 - tapOn:
-    text: ".*Terms of Service.*"
+    text: "I accept the terms and privacy policy."
     retryTapIfNoChange: true
 - repeat:
-    times: 5
+    times: 4
     while:
-      notVisible: "Create account"
+      notVisible:
+        id: "sign-up-submit"
     commands:
       - swipe:
           start: 5%, 80%
           end: 5%, 30%
 - tapOn:
-    text: "Create account"
+    id: "sign-up-submit"
     retryTapIfNoChange: true
 - extendedWaitUntil:
     visible: "Today"
@@ -89,28 +102,18 @@ env:
     text: "Sign out"
     retryTapIfNoChange: true
 - extendedWaitUntil:
-    visible: "Welcome back."
+    visible: "Hi, welcome back."
     timeout: 30000
 
 # 4. Login with Registered Credentials
 - tapOn:
-    text: "Email"
+    text: "example@gmail.com"
     retryTapIfNoChange: true
 - inputText: ${output.email}
-- tapOn: "Welcome back."
 - tapOn:
-    text: "Password"
+    text: "Your password"
     retryTapIfNoChange: true
 - inputText: ${PASSWORD}
-- tapOn: "Welcome back."
-- repeat:
-    times: 5
-    while:
-      notVisible: "Log in"
-    commands:
-      - swipe:
-          start: 5%, 80%
-          end: 5%, 30%
 - tapOn:
     text: "Log in"
     retryTapIfNoChange: true
@@ -121,7 +124,7 @@ env:
 # 5. Verify App Content Access
 - tapOn: "Meals"
 - extendedWaitUntil:
-    visible: "No meals logged yet. Add your first meal above."
+    visible: "No meals match.*"
     timeout: 20000
 
 # 6. First Capture Tutorial
@@ -138,10 +141,12 @@ env:
 - tapOn:
     text: "Close Capture your meal"
     retryTapIfNoChange: true
-- assertNotVisible: "Add a ruler"
+- extendedWaitUntil:
+    notVisible: "Add a ruler"
+    timeout: 5000
 - back
 
-# 7. Period Recovery Plan (one tap, then reflected in Workout)
+# 7. Period Recovery Plan (confirm, then reflected in Workout)
 - tapOn: "Profile"
 - repeat:
     times: 8
@@ -172,25 +177,45 @@ env:
     text: "I am in my period"
     retryTapIfNoChange: true
 - extendedWaitUntil:
+    visible: "Turn on"
+    timeout: 20000
+- tapOn:
+    text: "Turn on"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Save recovery plan"
+    timeout: 20000
+- tapOn:
+    text: "In period recovery"
+    retryTapIfNoChange: true
+- tapOn:
+    text: "Save recovery plan"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
     visible: "My period has ended"
     timeout: 20000
 - tapOn: "Workout"
 - extendedWaitUntil:
-    visible: "Edit recovery plan.*"
+    visible: "Recovery"
     timeout: 20000
-- assertVisible: "Rest"
-- assertVisible: "Rehab"
-- assertVisible: "Return"
 - repeat:
     times: 8
     while:
-      notVisible: "View Chest workout plan"
+      notVisible: "View Chest plan"
     commands:
       - swipe:
           start: 5%, 80%
           end: 5%, 30%
-- assertNotVisible: "View Recovery workout plan"
+- assertVisible: "View Chest plan"
 - tapOn: "Profile"
+- repeat:
+    times: 8
+    while:
+      notVisible: "My period has ended"
+    commands:
+      - swipe:
+          start: 5%, 80%
+          end: 5%, 30%
 - tapOn:
     text: "My period has ended"
     retryTapIfNoChange: true
@@ -198,21 +223,24 @@ env:
     visible: "I am in my period"
     timeout: 20000
 - tapOn: "Workout"
-- assertNotVisible: "Edit recovery plan.*"
+- assertNotVisible: "Recovery"
 
 # 8. Delete Account to Clean Up
 - tapOn: "Profile"
 - repeat:
     times: 8
     while:
-      notVisible: "Account and data"
+      notVisible: "Account data"
     commands:
       - swipe:
           start: 5%, 80%
           end: 5%, 30%
 - tapOn:
-    text: "Account and data"
+    text: "Account data"
     retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Account & data"
+    timeout: 20000
 - repeat:
     times: 8
     while:
@@ -229,6 +257,6 @@ env:
     text: "Confirm account deletion"
     retryTapIfNoChange: true
 - extendedWaitUntil:
-    visible: "Welcome back."
+    visible: "Hi, welcome back."
     timeout: 30000
 - stopRecording
