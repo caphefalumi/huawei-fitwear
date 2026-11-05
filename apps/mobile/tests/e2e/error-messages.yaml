@@ -21,11 +21,13 @@ env:
     timeout: 20000
 - tapOn: "example@gmail.com"
 - inputText: "invalid-email"
+- hideKeyboard
 - tapOn: "Log in"
 - assertVisible: "Enter a valid email address."
 - tapOn: "invalid-email"
 - eraseText
 - inputText: ${output.unknownEmail}
+- hideKeyboard
 - tapOn: "Log in"
 - assertVisible: "Enter your password."
 - tapOn: "Your password"
@@ -51,6 +53,7 @@ env:
 - assertVisible: "Enter your email address."
 - tapOn: "example@gmail.com"
 - inputText: ${output.unknownEmail}
+- hideKeyboard
 - tapOn: "Send reset code"
 - extendedWaitUntil:
     visible: "Could not reach the server. Check your connection and try again."
@@ -71,6 +74,7 @@ env:
 - inputText: "Maestro Error E2E"
 - tapOn: "Your email"
 - inputText: ${output.email}
+- hideKeyboard
 - tapOn: "Month"
 - inputText: "02"
 - tapOn: "Day"
