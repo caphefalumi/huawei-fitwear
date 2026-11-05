@@ -61,3 +61,14 @@ test("the tutorial stays hidden once it has been seen", async () => {
   const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
   expect(screen.queryByText("Add a ruler")).toBeNull()
 })
+
+test("shutter sits right under preview before description", async () => {
+  mockMeals(true)
+  const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
+  const shutter = screen.getByLabelText("Take meal photo")
+  const desc = screen.getByLabelText("Optional meal description")
+  expect(shutter).toBeTruthy()
+  expect(desc).toBeTruthy()
+  const flat = JSON.stringify(screen.toJSON())
+  expect(flat.indexOf("Take meal photo")).toBeLessThan(flat.indexOf("Optional meal description"))
+})

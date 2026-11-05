@@ -147,6 +147,34 @@ export function MealCaptureScreen() {
           </View>
         )}
 
+        <View style={styles.actionRow}>
+          <View style={styles.controls}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Take meal photo"
+              disabled={busy}
+              style={styles.shutterRing}
+              onPress={() => selectImage(true)}
+            >
+              <View style={styles.shutter} />
+            </Pressable>
+          </View>
+
+          <Pressable
+            disabled={busy}
+            style={styles.libraryButton}
+            onPress={() => selectImage(false)}
+          >
+            <Image
+              accessible={false}
+              source={icons.images}
+              style={styles.libraryIcon}
+              contentFit="contain"
+            />
+            <Text style={styles.libraryLabel}>Upload from library</Text>
+          </Pressable>
+        </View>
+
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Optional description</Text>
           <TextInput
@@ -178,28 +206,6 @@ export function MealCaptureScreen() {
             router.push("/meal")
           }}
         />
-
-        <View style={styles.controls}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Take meal photo"
-            disabled={busy}
-            style={styles.shutterRing}
-            onPress={() => selectImage(true)}
-          >
-            <View style={styles.shutter} />
-          </Pressable>
-        </View>
-
-        <Pressable disabled={busy} style={styles.libraryButton} onPress={() => selectImage(false)}>
-          <Image
-            accessible={false}
-            source={icons.images}
-            style={styles.libraryIcon}
-            contentFit="contain"
-          />
-          <Text style={styles.libraryLabel}>Upload from library</Text>
-        </Pressable>
       </ScrollView>
 
       <Sheet visible={!tutorialSeen} title="Capture your meal" onClose={dismissTutorial}>
@@ -364,6 +370,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 24,
     marginTop: -2,
+  },
+  actionRow: {
+    gap: 12,
   },
   controlIcon: {
     width: 24,
