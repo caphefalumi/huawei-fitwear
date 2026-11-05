@@ -52,7 +52,7 @@ test("loads a meal by encoded route ID and retries a failed request", async () =
   await act(async () => {
     initialRequest.reject(new Error("Could not reach meal service."))
   })
-  await waitFor(() => expect(screen.getByText("Couldn't load this meal. Try again.")).toBeTruthy())
+  await waitFor(() => expect(screen.getByText("Could not load this meal. Try again.")).toBeTruthy())
   expect(request).toHaveBeenNthCalledWith(
     1,
     "/meals/meal%2F42",

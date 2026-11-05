@@ -35,7 +35,7 @@ export function LoadingSkeleton({
 }
 
 export function FetchErrorState({
-  title = "Couldn't load this information",
+  title = "Could not load this information",
   message,
   onRetry,
   retrying = false,

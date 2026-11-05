@@ -193,7 +193,7 @@ test("failed logging preserves the editable draft and surfaces the error", async
   })
   expect(result.current.items).toEqual([item])
   await waitFor(() =>
-    expect(result.current.actionError).toBe("Couldn't save your change. Try again."),
+    expect(result.current.actionError).toBe("Could not save your change. Try again."),
   )
   expect(result.current.busy).toBe(false)
 
@@ -296,7 +296,7 @@ test("failed history deletion leaves the saved meal available", async () => {
   })
   expect(result.current.history.map((meal) => meal.id)).toEqual(["meal-a"])
   await waitFor(() =>
-    expect(result.current.actionError).toBe("Couldn't save your change. Try again."),
+    expect(result.current.actionError).toBe("Could not save your change. Try again."),
   )
 })
 

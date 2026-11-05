@@ -117,7 +117,7 @@ export class WatchBleClient {
         return
       }
     } catch (err) {
-      this.listener.onError(err instanceof Error ? err.message : "Unable to read Bluetooth state")
+      this.listener.onError(err instanceof Error ? err.message : "Could not read Bluetooth state")
       return
     }
 

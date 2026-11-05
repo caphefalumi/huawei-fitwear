@@ -16,8 +16,8 @@ const AUTH_RATE_LIMITS: Record<AuthRateLimitAction, TokenBucketOptions> = {
 }
 
 const SIGN_IN_ACCOUNT_LIMIT: TokenBucketOptions = { capacity: 10, refillPerSecond: 10 / 60 }
-const RESET_RESEND_BASE_DELAY_MS = 60_000
-const RESET_RESEND_MAX_DELAY_MS = 60 * 60_000
+const RESET_RESEND_DELAYS_MS = [30_000, 60_000, 180_000, 600_000]
+const RESET_RESEND_LOCKOUT_MS = 24 * 60 * 60_000
 const RESET_RESEND_TTL_SECONDS = 30 * 24 * 60 * 60
 
 export async function takePasswordResetEmailSlot(
@@ -38,10 +38,8 @@ export async function takePasswordResetEmailSlot(
     return { allowed: false, retryAfterSeconds: Math.ceil((nextAllowedAt - now) / 1000) }
   }
 
-  const delay = Math.min(
-    RESET_RESEND_BASE_DELAY_MS * 2 ** Math.min(attempts, 12),
-    RESET_RESEND_MAX_DELAY_MS,
-  )
+  // After the 30s/60s/180s/600s ladder, hold further sends for a day.
+  const delay = RESET_RESEND_DELAYS_MS[attempts] ?? RESET_RESEND_LOCKOUT_MS
   await kv.put(key, JSON.stringify({ attempts: attempts + 1, nextAllowedAt: now + delay }), {
     expirationTtl: RESET_RESEND_TTL_SECONDS,
   })
@@ -54,7 +52,7 @@ export async function canSendPasswordResetEmail(
   const kv = getKv()
   return kv
     ? takePasswordResetEmailSlot(kv, email)
-    : { allowed: true, retryAfterSeconds: RESET_RESEND_BASE_DELAY_MS / 1000 }
+    : { allowed: true, retryAfterSeconds: RESET_RESEND_DELAYS_MS[0] / 1000 }
 }
 
 export function clientIpFromRequest(request: Request): string {

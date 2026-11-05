@@ -123,7 +123,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
         ) : null}
         {meals.actionError ? (
           <FetchErrorState
-            title="Couldn't save your meal"
+            title="Could not save your meal"
             message={meals.actionError}
             onRetry={async () => {
               await meals.retryAction()
@@ -133,7 +133,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
         ) : null}
         {meals.error ? (
           <FetchErrorState
-            title="Couldn't refresh meal data"
+            title="Could not refresh meal data"
             message={meals.error}
             onRetry={meals.refresh}
           />

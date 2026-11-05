@@ -83,7 +83,7 @@ export function ProfileScreen() {
       <PageHeading title="Profile" />
       {error ? (
         <View style={styles.errorBanner}>
-          <Text>Couldn’t load your health data.</Text>
+          <Text>Could not load your health data.</Text>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Retry loading health data"

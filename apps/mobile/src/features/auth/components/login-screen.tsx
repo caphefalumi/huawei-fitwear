@@ -109,6 +109,12 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
         : lockoutKind === "locked"
           ? "Account locked. Reset your password to regain access."
           : "Too many attempts. Reset your password or try again later."
+  const resendLabel =
+    resendSeconds === 0
+      ? null
+      : resendSeconds >= 3600
+        ? "Try again later"
+        : `Resend in ${String(Math.floor(resendSeconds / 60)).padStart(2, "0")}:${String(resendSeconds % 60).padStart(2, "0")}`
 
   useEffect(() => {
     if (resendDeadline === null) return
@@ -221,7 +227,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
       } else if (cause instanceof ApiError && cause.status === 401) {
         setFailedAttempts((attempts) => attempts + 1)
         setFieldError(null)
-        setValidationError("We couldn’t sign you in. Check your email and password and try again.")
+        setValidationError("We could not sign you in. Check your email and password and try again.")
       } else if (cause instanceof ApiError && (cause.status === 400 || cause.status === 422)) {
         setValidationError("Check your email address and try again.")
       } else {
@@ -271,7 +277,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
       setResetCode("")
     } catch (cause) {
       if (!mounted.current) return
-      setResetError(cause instanceof Error ? cause.message : "Unable to resend the reset code.")
+      setResetError(cause instanceof Error ? cause.message : "Could not resend the reset code.")
     } finally {
       if (mounted.current) setResetPending(false)
     }
@@ -296,7 +302,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
       } catch (cause) {
         if (!mounted.current) return
         setResetError(
-          cause instanceof Error ? cause.message : "Unable to request a password reset.",
+          cause instanceof Error ? cause.message : "Could not request a password reset.",
         )
       } finally {
         if (mounted.current) setResetPending(false)
@@ -337,7 +343,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
       setResetStep("done")
     } catch (cause) {
       if (!mounted.current) return
-      setResetError(cause instanceof Error ? cause.message : "Unable to reset your password.")
+      setResetError(cause instanceof Error ? cause.message : "Could not reset your password.")
     } finally {
       if (mounted.current) setResetPending(false)
     }
@@ -549,22 +555,14 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
               </Pressable>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={
-                  resendSeconds > 0
-                    ? `Resend reset code in ${resendSeconds} seconds`
-                    : "Resend reset code"
-                }
+                accessibilityLabel={resendLabel ?? "Resend reset code"}
                 accessibilityState={{ disabled: resetPending || resendSeconds > 0 }}
                 disabled={resetPending || resendSeconds > 0}
                 onPress={() => {
                   void resendResetCode()
                 }}
               >
-                <Text style={styles.footerLink}>
-                  {resendSeconds > 0
-                    ? `Resend in ${String(Math.floor(resendSeconds / 60)).padStart(2, "0")}:${String(resendSeconds % 60).padStart(2, "0")}`
-                    : "Resend code"}
-                </Text>
+                <Text style={styles.footerLink}>{resendLabel ?? "Resend code"}</Text>
               </Pressable>
             </>
           ) : resetStep === "password" ? (

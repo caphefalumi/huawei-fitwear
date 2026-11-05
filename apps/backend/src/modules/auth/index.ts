@@ -155,7 +155,7 @@ export const auth = new Elysia({
         set.status = 503
         return { success: false, message: "Password reset email is not configured." }
       }
-      let resendAfterSeconds = 60
+      let resendAfterSeconds = 30
       try {
         const slot = await canSendPasswordResetEmail(body.email)
         resendAfterSeconds = slot.retryAfterSeconds

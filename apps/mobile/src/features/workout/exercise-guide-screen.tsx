@@ -71,7 +71,7 @@ const GUIDES: Record<string, Guide> = {
     step: 2.5,
     cues: [
       { title: "Slight forward lean", detail: "Step forward, keep a soft bend in the elbows." },
-      { title: "Arc, don’t press", detail: "Bring hands together in a wide arc, not a press." },
+      { title: "Arc, don't press", detail: "Bring hands together in a wide arc, not a press." },
       { title: "Slow return", detail: "Let the cables pull back over two seconds." },
     ],
   },
