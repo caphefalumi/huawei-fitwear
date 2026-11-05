@@ -61,6 +61,7 @@ tags:
 - extendedWaitUntil:
     notVisible: "Add a ruler"
     timeout: 5000
+- back
 - tapOn:
     id: "tab-workout"
 - assertVisible: "Workout"
