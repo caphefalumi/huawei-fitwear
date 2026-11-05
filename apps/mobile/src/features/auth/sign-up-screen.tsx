@@ -53,22 +53,6 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
       setValidationError("Date can't be in the future")
       return
     }
-    const today = new Date()
-    const age =
-      today.getUTCFullYear() -
-      date.getUTCFullYear() -
-      (today.getUTCMonth() < date.getUTCMonth() ||
-      (today.getUTCMonth() === date.getUTCMonth() && today.getUTCDate() < date.getUTCDate())
-        ? 1
-        : 0)
-    if (age < 13) {
-      setValidationError("You must be at least 13 years old to create an account.")
-      return
-    }
-    if (date.getUTCFullYear() < today.getUTCFullYear() - 120) {
-      setValidationError("Enter a valid date")
-      return
-    }
     if (!agreed) {
       setValidationError("Please agree to the terms before creating an account.")
       return

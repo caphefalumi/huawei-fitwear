@@ -114,7 +114,7 @@ jobs:
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
           "$HOME/.maestro/bin/maestro" --version
 
-      - name: Run the single Maestro end-to-end flow
+      - name: Run the Maestro end-to-end flows
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -131,7 +131,7 @@ jobs:
             sleep 5
             mkdir -p maestro-artifacts/recordings
             set +e
-            maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts apps/mobile/tests/e2e/fitness.yaml
+            maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts apps/mobile/tests/e2e/fitness.yaml apps/mobile/tests/e2e/error-messages.yaml
             MAESTRO_EXIT=$?
             echo "MAESTRO_EXIT_CODE=$MAESTRO_EXIT" >> "$GITHUB_ENV"
             exit $MAESTRO_EXIT

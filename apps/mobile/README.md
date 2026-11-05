@@ -178,7 +178,7 @@ Android E2E on the Ubuntu CI runner requires KVM hardware acceleration. The work
 
 Auth routes use `Slot` on web so inactive forms are unmounted rather than hidden with retained focus. Native auth navigation keeps its stack.
 
-Logged-out users enter the Welcome screen, then choose Sign In or Create account. Login and signup cross-links replace the active auth route so Back returns to Welcome. Signup collects a locale-ordered numeric birth date and sends it as `YYYY-MM-DD`; the form enforces a 13-year minimum age.
+Logged-out users enter the Welcome screen, then choose Sign In or Create account. Login and signup cross-links replace the active auth route so Back returns to Welcome. Signup collects a locale-ordered numeric birth date and sends it as `YYYY-MM-DD`.
 
 If Metro reports `Requiring unknown module` from a server-render bundle, stop the existing server and run `bun run web --clear` from `apps/mobile`, then reload the browser. When `CI=true`, Metro disables file watching; unset it for normal interactive development.
 
