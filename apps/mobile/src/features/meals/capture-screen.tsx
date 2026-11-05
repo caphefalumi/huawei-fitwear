@@ -176,7 +176,25 @@ export function MealCaptureScreen() {
                 <View style={[styles.guideCorner, styles.guideTR]} />
                 <View style={[styles.guideCorner, styles.guideBL]} />
                 <View style={[styles.guideCorner, styles.guideBR]} />
-                <View style={styles.guideCircle} />
+                <View style={styles.guideCircle}>
+                  <Image
+                    accessible={false}
+                    source={icons.utensils}
+                    style={styles.circleIcon}
+                    contentFit="contain"
+                  />
+                  <Text style={styles.circleTitle}>Place food or drink here</Text>
+                  <Text style={styles.circleNote}>Top-down shot · keep steady</Text>
+                </View>
+                <View style={styles.guideRuler}>
+                  <Image
+                    accessible={false}
+                    source={icons.ruler}
+                    style={styles.guideRulerIcon}
+                    contentFit="contain"
+                  />
+                  <Text style={styles.guideRulerText}>Place 15 cm ruler beside plate or cup</Text>
+                </View>
               </View>
             </View>
           )}
@@ -404,14 +422,39 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.22)",
+    gap: 12,
   },
   guideCircle: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
+    minWidth: 192,
+    minHeight: 192,
+    padding: 16,
+    borderRadius: 96,
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: "rgba(255,255,255,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  guideRuler: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "rgba(255,255,255,0.6)",
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  guideRulerIcon: {
+    width: 20,
+    height: 20,
+  },
+  guideRulerText: {
+    fontSize: 11,
+    color: "rgba(255,255,255,0.85)",
   },
   guideCorner: {
     position: "absolute",
