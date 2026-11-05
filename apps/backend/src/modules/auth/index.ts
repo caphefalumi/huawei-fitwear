@@ -159,6 +159,15 @@ export const auth = new Elysia({
       try {
         const slot = await canSendPasswordResetEmail(body.email)
         resendAfterSeconds = slot.retryAfterSeconds
+        if (slot.dailyLimitReached) {
+          set.status = 429
+          set.headers["Retry-After"] = String(resendAfterSeconds)
+          return {
+            success: false,
+            message: "Too many requests. Try again later.",
+            resendAfterSeconds,
+          }
+        }
         if (slot.allowed) {
           await requestPasswordReset(body.email)
         }

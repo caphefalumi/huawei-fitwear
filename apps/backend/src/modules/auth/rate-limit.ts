@@ -18,37 +18,88 @@ const AUTH_RATE_LIMITS: Record<AuthRateLimitAction, TokenBucketOptions> = {
 const SIGN_IN_ACCOUNT_LIMIT: TokenBucketOptions = { capacity: 10, refillPerSecond: 10 / 60 }
 const RESET_RESEND_DELAYS_MS = [30_000, 60_000, 180_000, 300_000]
 const RESET_RESEND_MAX_DELAY_MS = 600_000
+const RESET_EMAILS_PER_DAY = 5
+const RESET_DAY_MS = 24 * 60 * 60_000
 const RESET_RESEND_TTL_SECONDS = 30 * 24 * 60 * 60
 
-export async function takePasswordResetEmailSlot(
-  kv: KVNamespace,
-  email: string,
-  now = Date.now(),
-): Promise<{ allowed: boolean; retryAfterSeconds: number }> {
+type ResetEmailState = {
+  attempts?: number
+  nextAllowedAt?: number
+  sends?: number
+  windowStartedAt?: number
+  lastRequestAt?: number
+}
+
+export type ResetEmailSlot = {
+  allowed: boolean
+  retryAfterSeconds: number
+  dailyLimitReached?: boolean
+}
+
+async function passwordResetKey(email: string): Promise<string> {
   const normalized = email.trim().toLowerCase()
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(normalized))
   const emailHash = Array.from(new Uint8Array(digest), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("")
-  const key = `rl:auth:password-reset:email:${emailHash}`
-  const raw = await kv.get<{ attempts: number; nextAllowedAt: number }>(key, "json")
-  const attempts = raw && Number.isSafeInteger(raw.attempts) && raw.attempts >= 0 ? raw.attempts : 0
-  const nextAllowedAt = raw && Number.isFinite(raw.nextAllowedAt) ? raw.nextAllowedAt : 0
+  return `rl:auth:password-reset:email:${emailHash}`
+}
+
+export async function takePasswordResetEmailSlot(
+  kv: KVNamespace,
+  email: string,
+  now = Date.now(),
+): Promise<ResetEmailSlot> {
+  const key = await passwordResetKey(email)
+  const raw = await kv.get<ResetEmailState>(key, "json")
+  const windowStartedAt = raw?.windowStartedAt ?? raw?.lastRequestAt ?? 0
+  const idle = !raw || now - windowStartedAt >= RESET_DAY_MS
+  const attempts =
+    idle ||
+    typeof raw?.attempts !== "number" ||
+    !Number.isSafeInteger(raw.attempts) ||
+    raw.attempts < 0
+      ? 0
+      : raw.attempts
+  const sends = idle ? 0 : (raw?.sends ?? 0)
+  const windowStart = idle ? now : windowStartedAt
+
+  if (sends >= RESET_EMAILS_PER_DAY) {
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(1, Math.ceil((windowStart + RESET_DAY_MS - now) / 1000)),
+      dailyLimitReached: true,
+    }
+  }
+
+  const nextAllowedAt = idle ? 0 : (raw?.nextAllowedAt ?? 0)
   if (now < nextAllowedAt) {
     return { allowed: false, retryAfterSeconds: Math.ceil((nextAllowedAt - now) / 1000) }
   }
 
   // 30s/60s/180s/300s, then a 10-minute wait for every later request.
   const delay = RESET_RESEND_DELAYS_MS[attempts] ?? RESET_RESEND_MAX_DELAY_MS
-  await kv.put(key, JSON.stringify({ attempts: attempts + 1, nextAllowedAt: now + delay }), {
-    expirationTtl: RESET_RESEND_TTL_SECONDS,
-  })
+  await kv.put(
+    key,
+    JSON.stringify({
+      attempts: attempts + 1,
+      sends: sends + 1,
+      windowStartedAt: windowStart,
+      nextAllowedAt: now + delay,
+      lastRequestAt: now,
+    }),
+    { expirationTtl: RESET_RESEND_TTL_SECONDS },
+  )
   return { allowed: true, retryAfterSeconds: Math.ceil(delay / 1000) }
 }
 
-export async function canSendPasswordResetEmail(
-  email: string,
-): Promise<{ allowed: boolean; retryAfterSeconds: number }> {
+export async function clearPasswordResetEmailSlot(email: string): Promise<void> {
+  const kv = getKv()
+  if (!kv) return
+  await kv.delete(await passwordResetKey(email))
+}
+
+export async function canSendPasswordResetEmail(email: string): Promise<ResetEmailSlot> {
   const kv = getKv()
   return kv
     ? takePasswordResetEmailSlot(kv, email)
