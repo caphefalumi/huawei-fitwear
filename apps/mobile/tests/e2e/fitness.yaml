@@ -14,20 +14,14 @@ env:
     optional: true
 
 # 1. Register a new user
-- assertVisible: "Hi, welcome back."
-- repeat:
-    times: 5
-    while:
-      notVisible: "Sign up"
-    commands:
-      - swipe:
-          start: 5%, 80%
-          end: 5%, 30%
+- extendedWaitUntil:
+    visible: "Explore the app"
+    timeout: 30000
 - tapOn:
-    text: "Sign up"
+    text: "Create account"
     retryTapIfNoChange: true
 - extendedWaitUntil:
-    visible: "Create account"
+    visible: "Your username"
     timeout: 20000
 - tapOn:
     text: "Your username"
@@ -186,7 +180,7 @@ env:
     visible: "Save recovery plan"
     timeout: 20000
 - tapOn:
-    text: "In period recovery"
+    text: "In period"
     retryTapIfNoChange: true
 - tapOn:
     text: "Save recovery plan"
@@ -223,7 +217,9 @@ env:
     visible: "I am in my period"
     timeout: 20000
 - tapOn: "Workout"
-- assertNotVisible: "Recovery"
+- extendedWaitUntil:
+    notVisible: "Recovery"
+    timeout: 20000
 
 # 8. Delete Account to Clean Up
 - tapOn: "Profile"
