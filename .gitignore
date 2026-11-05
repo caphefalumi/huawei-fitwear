@@ -37,7 +37,7 @@ Thumbs.db
 .claude/
 .agents/
 tmp/
-
+.tmp/
 # Tool lockfiles (bun is source of truth)
 package-lock.json
 skills-lock.json
