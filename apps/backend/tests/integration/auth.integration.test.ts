@@ -459,5 +459,42 @@ describe("Integration Test: Auth API Endpoints", () => {
       )
       expect(reSignUpRes.status).toBe(200)
     })
+
+    it("DELETE /auth/account should remove the user's private meal photos", async () => {
+      const signUpRes = await app.handle(
+        new Request("http://localhost/auth/sign-up", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "photos_to_delete@example.com",
+            password: "SecurePassword123!",
+            name: "Delete My Photos",
+          }),
+        }),
+      )
+      expect(signUpRes.status).toBe(200)
+      const { user, session } = await signUpRes.json()
+
+      const deletedKeys: string[] = []
+      const bucket = {
+        list: async ({ prefix }: { prefix?: string }) => ({
+          objects: [{ key: `${prefix}meal_1` }, { key: `${prefix}meal_2` }],
+          truncated: false,
+        }),
+        delete: async (keys: string | string[]) => {
+          deletedKeys.push(...(Array.isArray(keys) ? keys : [keys]))
+        },
+      } as unknown as R2Bucket
+      setTestDatabaseBinding({ DB: testD1, fitwear_kv: createTestKv(), MEAL_IMAGES: bucket })
+
+      const deleteRes = await app.handle(
+        new Request("http://localhost/auth/account", {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${session.token}` },
+        }),
+      )
+      expect(deleteRes.status).toBe(200)
+      expect(deletedKeys).toEqual([`${user.id}/meal_1`, `${user.id}/meal_2`])
+    })
   })
 })
