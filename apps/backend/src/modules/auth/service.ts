@@ -106,6 +106,13 @@ export abstract class Auth {
     if (!foundUser || !isValid) {
       throw status(401, { success: false, message: "Email or password is incorrect." })
     }
+    if (foundUser.pendingDeletion) {
+      await Auth.deleteAccount(foundUser.id, d1)
+      throw status(410, {
+        success: false,
+        message: "Account deletion has completed. Create a new account to continue.",
+      })
+    }
     if (needsPasswordRehash(foundUser.password) && isPasswordWithinBcryptLimit(data.password)) {
       const upgradedHash = await hashPassword(data.password)
       await db
@@ -167,6 +174,7 @@ export abstract class Auth {
           updatedAt: userTable.updatedAt,
         },
         session: sessionTable,
+        accountPendingDeletion: userTable.pendingDeletion,
       })
       .from(sessionTable)
       .innerJoin(userTable, eq(sessionTable.userId, userTable.id))
@@ -183,6 +191,7 @@ export abstract class Auth {
     return {
       user: record.user,
       session: record.session,
+      accountPendingDeletion: record.accountPendingDeletion,
     }
   }
 
@@ -193,8 +202,12 @@ export abstract class Auth {
   }
   static async deleteAccount(userId: string, d1?: D1Database) {
     const db = getDb(d1)
+    await db
+      .update(userTable)
+      .set({ pendingDeletion: true, updatedAt: new Date() })
+      .where(eq(userTable.id, userId))
+      .run()
     await deleteUserMealImages(userId)
-    await db.delete(sessionTable).where(eq(sessionTable.userId, userId)).run()
     await db.delete(userTable).where(eq(userTable.id, userId)).run()
     return { success: true, message: "Account deleted successfully" }
   }
@@ -269,6 +282,15 @@ export const authGuard = new Elysia({ name: "authGuard" }).macro({
           throw setStatus(401, {
             success: false,
             message: "Unauthorized: invalid or expired session",
+          })
+        }
+        const requestPath = new URL(request.url).pathname
+        const canResumeDeletion = request.method === "DELETE" && requestPath === "/auth/account"
+        const canRestorePendingSession = request.method === "GET" && requestPath === "/auth/session"
+        if (authData.accountPendingDeletion && !canResumeDeletion && !canRestorePendingSession) {
+          throw setStatus(410, {
+            success: false,
+            message: "Account deletion is pending. Retry account deletion to finish.",
           })
         }
 

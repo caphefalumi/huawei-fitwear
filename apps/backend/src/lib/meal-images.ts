@@ -50,12 +50,24 @@ export async function deleteMealImage(userId: string, mealId: string): Promise<v
 
 export async function deleteUserMealImages(userId: string): Promise<void> {
   const bucket = getMealImages()
-  if (!bucket) return
+  if (!bucket) {
+    throw status(503, {
+      success: false,
+      message:
+        "Account deletion is paused because private photo storage is unavailable. Retry later.",
+    })
+  }
   let cursor: string | undefined
   do {
     const page = await bucket.list({ prefix: `${userId}/`, cursor })
     if (page.objects.length > 0) {
       await bucket.delete(page.objects.map((object) => object.key))
+    }
+    if (page.truncated && !page.cursor) {
+      throw status(503, {
+        success: false,
+        message: "Account deletion could not continue paginated photo cleanup. Retry later.",
+      })
     }
     cursor = page.truncated ? page.cursor : undefined
   } while (cursor)

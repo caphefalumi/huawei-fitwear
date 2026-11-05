@@ -29,6 +29,13 @@
       "when": 1793491200001,
       "tag": "0003_meal_item_units",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793852817906,
+      "tag": "0004_slippery_wasp",
+      "breakpoints": true
     }
   ]
 }

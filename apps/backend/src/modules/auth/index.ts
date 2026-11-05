@@ -288,7 +288,8 @@ export const auth = new Elysia({
       auth: true,
       detail: {
         summary: "Delete authenticated user account",
-        description: "Permanently deletes the user and cascades to all related data.",
+        description:
+          "Deletes private photos before cascading user data and sessions. Interrupted cleanup stays pending and can be retried.",
       },
     },
   )
