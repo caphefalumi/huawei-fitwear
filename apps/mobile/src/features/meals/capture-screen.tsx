@@ -181,7 +181,7 @@ export function MealCaptureScreen() {
             accessibilityLabel="Optional meal description"
             value={description}
             onChangeText={setDescription}
-            placeholder="Add ingredients, preparation, or drink details (e.g. sugar, milk, size)."
+            placeholder="Add details (e.g. ingredients, sugar, size)."
             placeholderTextColor={C.textMuted}
             multiline
             style={styles.description}
@@ -197,7 +197,16 @@ export function MealCaptureScreen() {
             {error} Manual entry remains available.
           </Text>
         ) : null}
-        <Button label="Analyze photo" disabled={!image || busy} onPress={analyze} />
+        {error && /permission|denied|library|read|jpeg|png|large|picker/i.test(error) ? (
+          <Pressable
+            accessibilityLabel="Choose from library"
+            onPress={() => selectImage(false)}
+            style={styles.errorCta}
+          >
+            <Text style={styles.errorCtaLabel}>Choose from library</Text>
+          </Pressable>
+        ) : null}
+        <Button label="Analyze photo" disabled={!image || busy} busy={busy} onPress={analyze} />
         <Button
           variant="secondary"
           label="Enter meal manually"
@@ -348,7 +357,7 @@ const styles = StyleSheet.create({
     color: C.textMuted,
   },
   description: {
-    minHeight: 84,
+    minHeight: 64,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: C.border,
@@ -363,6 +372,20 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
     color: C.textMuted,
+  },
+  errorCta: {
+    alignSelf: "flex-start",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.surface,
+  },
+  errorCtaLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: C.accent,
   },
   controls: {
     flexDirection: "row",

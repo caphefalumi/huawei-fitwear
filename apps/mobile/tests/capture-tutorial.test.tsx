@@ -62,6 +62,37 @@ test("the tutorial stays hidden once it has been seen", async () => {
   expect(screen.queryByText("Add a ruler")).toBeNull()
 })
 
+test("analyze disabled without photo, enabled with photo", async () => {
+  mockMeals(true)
+  jest.mocked(require("@/features/camera").pickImage).mockResolvedValueOnce({
+    uri: "file://meal.jpg",
+    base64: "/9j/abc",
+    mimeType: "image/jpeg",
+  })
+  const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
+  expect(screen.getByLabelText("Analyze photo").props.accessibilityState.disabled).toBe(true)
+  await fireEvent.press(screen.getByLabelText("Take meal photo"))
+  await screen.findByLabelText("Selected meal photo")
+  expect(screen.getByLabelText("Analyze photo").props.accessibilityState.disabled).toBe(false)
+})
+
+test("permission error offers library path", async () => {
+  mockMeals(true)
+  const { pickImage } = require("@/features/camera")
+  jest.mocked(pickImage).mockRejectedValueOnce(new Error("Camera permission was denied."))
+  const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
+  await fireEvent.press(screen.getByLabelText("Take meal photo"))
+  const cta = await screen.findByLabelText("Choose from library")
+  expect(cta).toBeTruthy()
+  jest.mocked(pickImage).mockResolvedValueOnce({
+    uri: "file://meal.jpg",
+    base64: "/9j/abc",
+    mimeType: "image/jpeg",
+  })
+  await fireEvent.press(cta)
+  expect(jest.mocked(pickImage)).toHaveBeenLastCalledWith(false)
+  await screen.findByLabelText("Selected meal photo")
+})
 test("shutter sits right under preview before description", async () => {
   mockMeals(true)
   const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
