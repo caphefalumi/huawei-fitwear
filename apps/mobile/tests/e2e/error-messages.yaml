@@ -22,22 +22,26 @@ env:
 - tapOn: "example@gmail.com"
 - inputText: "invalid-email"
 - hideKeyboard
-- tapOn: "Log in"
+- tapOn:
+    id: "login-submit"
 - assertVisible: "Enter a valid email address."
 - tapOn: "invalid-email"
 - eraseText
 - inputText: ${output.unknownEmail}
 - hideKeyboard
-- tapOn: "Log in"
+- tapOn:
+    id: "login-submit"
 - assertVisible: "Enter your password."
 - tapOn: "Your password"
 - inputText: "WrongPassword123!"
 - hideKeyboard
-- tapOn: "Log in"
+- tapOn:
+    id: "login-submit"
 - assertVisible: "We could not sign you in. Check your email and password and try again."
 - setAirplaneMode: enabled
 - assertVisible: "You're offline. Saved information may be out of date."
-- tapOn: "Log in"
+- tapOn:
+    id: "login-submit"
 - extendedWaitUntil:
     visible: "Can't connect. Check your connection and try again."
     timeout: 20000
@@ -81,6 +85,7 @@ env:
 - inputText: "30"
 - tapOn: "Year"
 - inputText: "2000"
+- hideKeyboard
 - tapOn: "Password"
 - inputText: ${PASSWORD}
 - hideKeyboard

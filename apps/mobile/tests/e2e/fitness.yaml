@@ -44,6 +44,7 @@ env:
     text: "Year"
     retryTapIfNoChange: true
 - inputText: "1990"
+- hideKeyboard
 - tapOn:
     text: "Password"
     retryTapIfNoChange: true

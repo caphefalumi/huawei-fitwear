@@ -348,6 +348,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
             ) : null}
 
             <Pressable
+              testID="login-submit"
               accessibilityRole="button"
               accessibilityLabel="Log in"
               accessibilityState={{ disabled: loginDisabled, busy: loginPending }}
