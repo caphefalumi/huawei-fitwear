@@ -1,6 +1,6 @@
-import type { QueryClient } from "@tanstack/react-query"
+import { onlineManager, type QueryClient } from "@tanstack/react-query"
 import { act, renderHook, waitFor } from "@testing-library/react-native"
-import { type AxiosResponse } from "axios"
+import { AxiosError, type AxiosResponse } from "axios"
 
 import {
   AuthProvider,
@@ -69,6 +69,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  onlineManager.setOnline(true)
   setApiToken(null)
 })
 
@@ -109,6 +110,45 @@ test("failed login stays signed out and surfaces server error", async () => {
   expect(result.current.error).toBe("Invalid email or password")
   expect(saved.setToken).not.toHaveBeenCalled()
 })
+
+test.each(["sign-in", "sign-up", "request reset", "verify reset", "complete reset"] as const)(
+  "offline %s rejects and releases the form instead of queuing until reconnect",
+  async (action) => {
+    const { result } = await renderHook(() => useAuth(), {
+      wrapper: createQueryWrapper(AuthProvider),
+    })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    const actions = {
+      "sign-in": () => result.current.signIn("member@example.com", "secret"),
+      "sign-up": () =>
+        result.current.signUp({
+          name: "Member",
+          email: "member@example.com",
+          password: "secret-password",
+          birthDate: "2000-01-01",
+        }),
+      "request reset": () => result.current.requestPasswordReset("member@example.com"),
+      "verify reset": () => result.current.verifyPasswordReset("member@example.com", "1234"),
+      "complete reset": () => result.current.completePasswordReset("reset-token", "new-password"),
+    }
+    onlineManager.setOnline(false)
+    request.mockRejectedValue(new AxiosError("Network Error", "ERR_NETWORK"))
+    let failure: unknown
+    await act(async () => {
+      void actions[action]().catch((error: unknown) => {
+        failure = error
+      })
+    })
+    await waitFor(() => expect(failure).toMatchObject({ status: 0, code: "NETWORK_ERROR" }))
+    expect(result.current.pending).toBe(false)
+    expect(result.current.user).toBeNull()
+    expect(saved.setToken).not.toHaveBeenCalled()
+    await act(async () => {
+      onlineManager.setOnline(true)
+    })
+    expect(request).toHaveBeenCalledTimes(1)
+  },
+)
 
 test("sign-out clears local private state before server revocation completes", async () => {
   const client = { current: null as QueryClient | null }

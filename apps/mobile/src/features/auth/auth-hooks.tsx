@@ -81,19 +81,24 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const queryClient = useQueryClient()
   const authenticateMutation = useMutation({
     mutationKey: ["auth", "authenticate"],
+    // Interactive auth must report offline failures, not queue until reconnect.
+    networkMode: "always",
     mutationFn: (send: () => Promise<AuthenticationSessionResponse>) => send(),
   })
   const passwordResetMutation = useMutation({
     mutationKey: ["auth", "password-reset"],
+    networkMode: "always",
     mutationFn: sendPasswordReset,
   })
   const verifyResetMutation = useMutation({
     mutationKey: ["auth", "password-reset-verify"],
+    networkMode: "always",
     mutationFn: ({ email, code }: { email: string; code: string }) =>
       sendVerifyPasswordReset(email, code),
   })
   const completeResetMutation = useMutation({
     mutationKey: ["auth", "password-reset-complete"],
+    networkMode: "always",
     mutationFn: ({ resetToken, password }: { resetToken: string; password: string }) =>
       sendCompletePasswordReset(resetToken, password),
   })
