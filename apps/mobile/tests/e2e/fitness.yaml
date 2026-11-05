@@ -3,6 +3,8 @@ tags:
   - e2e
   - fitness
 ---
+# A warm app must be stopped before its data is cleared (including local reruns).
+- stopApp
 - launchApp:
     clearState: true
 - startRecording:

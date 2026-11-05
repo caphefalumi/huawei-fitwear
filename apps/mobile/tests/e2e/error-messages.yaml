@@ -4,6 +4,9 @@ tags:
   - errors
 ---
 - evalScript: ${output.unknownEmail = 'maestro_unknown_' + Date.now() + '_' + Math.floor(Math.random() * 1000000) + '@fitwear.dev'}
+# Stop the previous flow before clearing data: Android can otherwise finish
+# removing its task after launch and kill the newly started process.
+- stopApp
 - launchApp:
     clearState: true
 
