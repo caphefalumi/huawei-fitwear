@@ -11,9 +11,19 @@ import {
 import { AppState } from "react-native"
 
 import { useAuth } from "@/features/auth"
-import { apiErrorMessage, apiRequest } from "@/lib/api"
+import { apiErrorMessage } from "@/lib/api"
 
 import { useMealClientStore } from "./meal-client.store"
+import {
+  fetchMeals,
+  fetchMealSummary,
+  searchFoods,
+  writeMeal,
+  type ApiMeal,
+  type ApiMealItem,
+} from "./meals-api"
+
+export type { ApiMealItem } from "./meals-api"
 
 export type Macros = { protein: number; carbs: number; fat: number }
 export type MealGlyph = "wheat" | "drumstick" | "carrot" | "droplet"
@@ -63,26 +73,6 @@ export type NutritionSummary = {
   consumed: { caloriesKcal: number; proteinG: number; carbsG: number; fatG: number }
   remaining: { caloriesKcal: number; proteinG: number; carbsG: number; fatG: number }
   mealCount: number
-}
-export type ApiMealItem = {
-  id?: string
-  foodName: string
-  estimatedWeightG: number
-  servingUnit?: "g" | "ml"
-  correctedWeightG?: number | null
-  caloriesKcal: number
-  proteinG: number
-  carbsG: number
-  fatG: number
-  aiConfidence?: number | null
-}
-type ApiMeal = {
-  id: string
-  mealType: MealType
-  targetDate: string
-  loggedAt: string
-  imageUrl: string | null
-  items: ApiMealItem[]
 }
 const round1 = (value: number) => Math.round(value * 10) / 10
 export const localDate = (date = new Date()) =>
@@ -253,33 +243,23 @@ export function MealsProvider({ children }: { children: ReactNode }) {
   const historyQuery = useQuery({
     queryKey: userId ? mealsQueryKeys.history(userId) : ["meals", "signed-out", "history"],
     enabled: Boolean(userId),
-    queryFn: async ({ signal }) => {
-      const all: MealLog[] = []
-      let offset = 0
-      while (true) {
-        const result = await apiRequest<{ meals: ApiMeal[] }>(`/meals?limit=100&offset=${offset}`, {
-          signal,
-        })
-        all.push(...result.meals.map(fromApiMeal))
-        if (result.meals.length < 100) return all
-        offset += result.meals.length
-      }
-    },
+    queryFn: async ({ signal }) => (await fetchMeals(signal)).map(fromApiMeal),
   })
   const summaryQuery = useQuery({
     queryKey: userId
       ? mealsQueryKeys.summary(userId, summaryDate)
       : ["meals", "signed-out", "summary", summaryDate],
     enabled: Boolean(userId),
-    queryFn: ({ signal }) =>
-      apiRequest<NutritionSummary>(`/meals/summary?date=${summaryDate}`, { signal }),
+    queryFn: ({ signal }) => fetchMealSummary(summaryDate, signal),
   })
   const history = historyQuery.data ?? []
   const summary = summaryQuery.data ?? null
   const loading = historyQuery.isLoading || summaryQuery.isLoading
+  const { refetch: refetchHistory } = historyQuery
+  const { refetch: refetchSummary } = summaryQuery
   const refresh = useCallback(async () => {
-    await Promise.all([historyQuery.refetch(), summaryQuery.refetch()])
-  }, [historyQuery.refetch, summaryQuery.refetch])
+    await Promise.all([refetchHistory(), refetchSummary()])
+  }, [refetchHistory, refetchSummary])
   const invalidateMeals = async (_result: unknown, variables: { path: string; method: string }) => {
     if (!userId) return
     const mealId = /^\/meals\/([^/]+)/.exec(variables.path)?.[1]
@@ -299,8 +279,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
   }
   const writeMutation = useMutation({
     mutationKey: [...mealsQueryKeys.all(userId ?? "signed-out"), "write"],
-    mutationFn: ({ path, method, body }: WriteMutationInput) =>
-      apiRequest<unknown>(path, { method, ...(body === undefined ? {} : { body }) }),
+    mutationFn: (input: WriteMutationInput) => writeMeal(input),
     onMutate: async ({ path, method, body }) => {
       if (!userId) return undefined
       const key = mealsQueryKeys.history(userId)
@@ -354,8 +333,8 @@ export function MealsProvider({ children }: { children: ReactNode }) {
       ...(onSuccess ? { onSuccess } : {}),
     })) as T
   useEffect(() => {
-    if (user?.updatedAt) void summaryQuery.refetch()
-  }, [user?.updatedAt, summaryQuery.refetch])
+    if (user?.updatedAt) void refetchSummary()
+  }, [user?.updatedAt, refetchSummary])
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") {
@@ -378,7 +357,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
       subscription.remove()
       clearTimeout(midnight)
     }
-  }, [refresh])
+  }, [refresh, setSummaryDate])
   const addItem = async (item: MealItem, mealId?: string) => {
     validateItem(item)
     if (!mealId) {
@@ -493,33 +472,7 @@ export function useFoodSearch(query: string) {
   const searchQuery = useQuery({
     queryKey: mealsQueryKeys.foodSearch(user?.id ?? "signed-out", debounced),
     enabled: Boolean(user?.id && debounced),
-    queryFn: async ({ signal }) => {
-      const result = await apiRequest<{
-        foods: {
-          id: string
-          name: string
-          servingUnit: "g" | "ml"
-          glyph: MealGlyph
-          caloriesPer100: number
-          proteinPer100G: number
-          carbsPer100G: number
-          fatPer100G: number
-        }[]
-      }>(`/foods?q=${encodeURIComponent(debounced)}`, { signal })
-      return result.foods.map((food) => ({
-        id: food.id,
-        name: food.name,
-        serving: `Per 100 ${food.servingUnit}`,
-        unit: food.servingUnit,
-        glyph: food.glyph,
-        per100: {
-          kcal: food.caloriesPer100,
-          protein: food.proteinPer100G,
-          carbs: food.carbsPer100G,
-          fat: food.fatPer100G,
-        },
-      }))
-    },
+    queryFn: ({ signal }) => searchFoods(debounced, signal),
   })
   const matches = debounced === normalized ? (searchQuery.data ?? []) : []
   return {

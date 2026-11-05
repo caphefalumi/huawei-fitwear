@@ -9,10 +9,10 @@ import { Pressable } from "@/components/pressable"
 import { Sheet } from "@/components/sheet"
 import { BackHeader, Button } from "@/components/ui"
 import { pickImage } from "@/features/camera"
-import { apiRequest } from "@/lib/api"
 import { Palette as C } from "@/theme"
 
-import { useMeals, type ApiMealItem } from "./meals-store"
+import { analyzeMeal } from "./meals-api"
+import { useMeals } from "./meals-store"
 import { icons } from "./meals-ui"
 
 const TUTORIAL_STEPS = [
@@ -31,17 +31,19 @@ export function MealCaptureScreen() {
   } | null>(null)
   const analyzeMutation = useMutation({
     mutationFn: (body: { image: string; mimeType: string; description?: string }) =>
-      apiRequest<{ items: ApiMealItem[] }>("/meals/analyze", { method: "POST", body }),
+      analyzeMeal(body),
   })
   const [error, setError] = useState<string | null>(null)
   const active = useRef(true)
   const request = useRef(0)
   const busy = analyzeMutation.isPending
   useEffect(() => {
-    active.current = true
+    const activeRef = active
+    const requestRef = request
+    activeRef.current = true
     return () => {
-      active.current = false
-      request.current++
+      activeRef.current = false
+      requestRef.current++
     }
   }, [])
 
@@ -74,9 +76,9 @@ export function MealCaptureScreen() {
         ...(description.trim() ? { description: description.trim() } : {}),
       })
       if (!active.current || current !== request.current) return
-      if (!result.items.length)
+      if (!result.length)
         throw new Error("No food was identified. Try another photo or enter items manually.")
-      setAnalysis(result.items, image.uri, { data: image.base64, mimeType: image.mimeType })
+      setAnalysis(result, image.uri, { data: image.base64, mimeType: image.mimeType })
       router.push("/meal")
     } catch (cause) {
       if (active.current && current === request.current)

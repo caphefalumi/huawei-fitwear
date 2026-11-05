@@ -5,9 +5,10 @@ import { Text, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
 import { useAuth } from "@/features/auth"
-import { apiErrorMessage, apiRequest } from "@/lib/api"
+import { apiErrorMessage } from "@/lib/api"
 import { Palette as C } from "@/theme"
 
+import { fetchMealPhoto } from "./meals-api"
 import { mealsQueryKeys } from "./meals-store"
 import { icons } from "./meals-ui"
 
@@ -27,12 +28,7 @@ export function MealPhoto({
   const photoQuery = useQuery({
     queryKey: mealsQueryKeys.photo(user?.id ?? "signed-out", mealId ?? "missing"),
     enabled: Boolean(remotePhoto && user?.id),
-    queryFn: async ({ signal }) =>
-      (
-        await apiRequest<{ imageUrl: string }>(`/meals/${encodeURIComponent(mealId!)}/photo`, {
-          signal,
-        })
-      ).imageUrl,
+    queryFn: ({ signal }) => fetchMealPhoto(mealId!, signal),
   })
   const [imageError, setImageError] = useState<string | null>(null)
   useEffect(() => setImageError(null), [imageUrl])

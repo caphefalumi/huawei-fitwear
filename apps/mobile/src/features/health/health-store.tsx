@@ -3,7 +3,8 @@ import { createContext, useCallback, useContext, useState, type ReactNode } from
 
 import { useAuth } from "@/features/auth"
 import { apiErrorMessage } from "@/lib/api"
-import { apiRequest } from "@/lib/api"
+
+import { fetchRecovery, fetchWeights, putRecovery, putWeight, type RecoveryRow } from "./health-api"
 
 export type Sex = "Male" | "Female" | "Rather not say"
 export type PlanPreferences = {
@@ -22,8 +23,6 @@ export type RecoveryPlan = {
   start: string
   returnDate: string
 }
-type RecoveryRow = Omit<RecoveryPlan, "start" | "returnDate" | "note"> & { note: string | null }
-
 export const PERIOD_AREA = "In period"
 const PERIOD_REST_DAYS = 3
 const PERIOD_LIGHT_DAYS = 4
@@ -133,14 +132,12 @@ export function HealthProvider({ children }: { children: ReactNode }) {
   const userId = user?.id
   const weightsQuery = useQuery({
     queryKey: userId ? healthQueryKeys.weights(userId) : ["health", "signed-out", "weights"],
-    queryFn: async ({ signal }) =>
-      (await apiRequest<{ weights: WeightLog[] }>("/health/weights", { signal })).weights,
+    queryFn: ({ signal }) => fetchWeights(signal),
     enabled: Boolean(userId),
   })
   const recoveryQuery = useQuery({
     queryKey: userId ? healthQueryKeys.recovery(userId) : ["health", "signed-out", "recovery"],
-    queryFn: async ({ signal }) =>
-      (await apiRequest<{ recovery: RecoveryRow | null }>("/health/recovery", { signal })).recovery,
+    queryFn: ({ signal }) => fetchRecovery(signal),
     enabled: Boolean(userId),
   })
   const [weightUpdated, setWeightUpdated] = useState(false)
@@ -154,13 +151,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
   const error = errorCause ? apiErrorMessage(errorCause, "your health data") : null
   const saveWeightMutation = useMutation({
     mutationKey: [...healthQueryKeys.all(userId ?? "signed-out"), "save-weight"],
-    mutationFn: async (weightKg: number) =>
-      (
-        await apiRequest<{ weight: WeightLog }>("/health/weight", {
-          method: "PUT",
-          body: { weightKg, date: dateKey() },
-        })
-      ).weight,
+    mutationFn: async (weightKg: number) => putWeight(weightKg, dateKey()),
     onSuccess: (weight) => {
       if (!userId) return
       queryClient.setQueryData<WeightLog[]>(healthQueryKeys.weights(userId), (previous = []) =>
@@ -173,31 +164,16 @@ export function HealthProvider({ children }: { children: ReactNode }) {
   })
   const saveRecoveryMutation = useMutation({
     mutationKey: [...healthQueryKeys.all(userId ?? "signed-out"), "save-recovery"],
-    mutationFn: async (next: RecoveryPlan | null) => {
-      const result = await apiRequest<{ recovery?: RecoveryRow }>(
-        "/health/recovery",
-        next
-          ? {
-              method: "PUT",
-              body: {
-                area: next.area,
-                note: next.note,
-                restDays: next.restDays,
-                lightDays: next.lightDays,
-                startDate: next.startDate,
-              },
-            }
-          : { method: "DELETE" },
-      )
-      return result.recovery ?? null
-    },
+    mutationFn: (next: RecoveryPlan | null) => putRecovery(next),
     onSuccess: (next) => {
       if (userId) queryClient.setQueryData(healthQueryKeys.recovery(userId), next)
     },
   })
+  const { refetch: refetchWeights } = weightsQuery
+  const { refetch: refetchRecovery } = recoveryQuery
   const refresh = useCallback(async () => {
-    await Promise.all([weightsQuery.refetch(), recoveryQuery.refetch()])
-  }, [weightsQuery.refetch, recoveryQuery.refetch])
+    await Promise.all([refetchWeights(), refetchRecovery()])
+  }, [refetchWeights, refetchRecovery])
   const saveWeight = async (weightKg: number) => {
     await saveWeightMutation.mutateAsync(weightKg)
     await updateUser({})
