@@ -1,198 +1,190 @@
 import fs from "node:fs"
 import path from "node:path"
-import { pathToFileURL } from "node:url"
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B"
-  const k = 1024
-  const sizes = ["B", "KB", "MB", "GB"]
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
+import { DOMParser, onWarningStopParsing } from "@xmldom/xmldom"
+
+type TestCase = {
+  name: string
+  file: string
+  status: "Passed" | "Failed" | "Error" | "Skipped"
+  duration: number
+  details: string
 }
 
-function findFilesByExt(dir: string, ext: string): string[] {
-  const matches = []
-  if (!fs.existsSync(dir)) return matches
-  const entries = fs.readdirSync(dir, { withFileTypes: true })
-  for (const entry of entries) {
+export type SummaryOptions = {
+  artifactsDir?: string
+  exitCode?: string | number
+  artifactsUrl?: string
+  recordingUrl?: string
+  runUrl?: string
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
+}
+
+function cell(value: string) {
+  return escapeHtml(value).replaceAll("|", "&#124;").replaceAll("\n", "<br>")
+}
+
+function findRecordings(dir: string): string[] {
+  if (!fs.existsSync(dir)) return []
+  const recordings: string[] = []
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const fullPath = path.join(dir, entry.name)
-    if (entry.isDirectory()) {
-      matches.push(...findFilesByExt(fullPath, ext))
-    } else if (entry.isFile() && entry.name.endsWith(ext)) {
-      matches.push(fullPath)
-    }
+    if (entry.isDirectory()) recordings.push(...findRecordings(fullPath))
+    else if (entry.isFile() && entry.name.endsWith(".mp4")) recordings.push(fullPath)
   }
-  return matches
+  return recordings
 }
 
 export function generateSummary({
   artifactsDir = "maestro-artifacts",
-  recordingUrl = process.env.RECORDING_URL || "",
-  artifactsUrl = process.env.ARTIFACTS_URL || "",
-  exitCode = process.env.MAESTRO_EXIT_CODE || "0",
-  githubRepository = process.env.GITHUB_REPOSITORY || "",
-  githubRunId = process.env.GITHUB_RUN_ID || "",
-}: {
-  artifactsDir?: string
-  recordingUrl?: string
-  artifactsUrl?: string
-  exitCode?: string | number
-  githubRepository?: string
-  githubRunId?: string
-}): string {
-  const defaultRunUrl =
-    githubRepository && githubRunId
-      ? `https://github.com/${githubRepository}/actions/runs/${githubRunId}`
-      : ""
+  exitCode,
+  artifactsUrl = "",
+  recordingUrl = "",
+  runUrl = "",
+}: SummaryOptions = {}) {
+  let cases: TestCase[] = []
+  let reportError = ""
+  try {
+    const xml = fs.readFileSync(path.join(artifactsDir, "report.xml"), "utf8")
+    const report = new DOMParser({ onError: onWarningStopParsing }).parseFromString(
+      xml,
+      "application/xml",
+    )
+    for (const node of Array.from(report.getElementsByTagName("testcase"))) {
+      const issues = [
+        ...Array.from(node.getElementsByTagName("failure")),
+        ...Array.from(node.getElementsByTagName("error")),
+      ]
+      const reportedStatus = node.getAttribute("status")?.toUpperCase() ?? ""
+      let status: TestCase["status"] = "Passed"
+      if (
+        issues.some((issue) => issue.tagName === "error") ||
+        (issues.length === 0 && reportedStatus === "ERROR")
+      ) {
+        status = "Error"
+      } else if (issues.length > 0 || ["FAILED", "FAILURE"].includes(reportedStatus)) {
+        status = "Failed"
+      } else if (node.getElementsByTagName("skipped").length > 0 || reportedStatus === "SKIPPED") {
+        status = "Skipped"
+      }
+      const duration = Number(node.getAttribute("time") || "0")
+      if (!Number.isFinite(duration) || duration < 0) throw new Error("Invalid testcase duration")
+      cases.push({
+        name: node.getAttribute("name") || "Unnamed flow",
+        file: (node.getAttribute("file") || "").replaceAll("\\", "/"),
+        status,
+        duration,
+        details: issues
+          .map((issue) =>
+            [issue.getAttribute("message")?.trim(), issue.textContent?.trim()]
+              .filter(Boolean)
+              .join("\n"),
+          )
+          .join("\n\n"),
+      })
+    }
+    if (cases.length === 0) reportError = "The JUnit report contains no flow results."
+  } catch (error) {
+    reportError = `JUnit report unavailable or invalid: ${error instanceof Error ? error.message : String(error)}`
+    cases = []
+  }
 
-  const finalArtifactsUrl = artifactsUrl || defaultRunUrl || "#"
-  const finalRecordingUrl = recordingUrl || finalArtifactsUrl
-
-  const reportPath = path.join(artifactsDir, "report.xml")
-  let hasReport = false
-  let totalTests = 0
-  let totalFailures = 0
-  let totalErrors = 0
-  let duration = "0"
-  let failureDetails: { message: string; detail: string }[] = []
-  let testCases: { name: string; time: string; failed: boolean }[] = []
-
-  if (fs.existsSync(reportPath)) {
-    hasReport = true
-    try {
-      const xml = fs.readFileSync(reportPath, "utf8")
-
-      const testsuitesMatch = xml.match(
-        /<testsuites[^>]*tests="(\d+)"[^>]*failures="(\d+)"[^>]*errors="(\d+)"[^>]*time="([^"]+)"/,
+  const passed = cases.filter((test) => test.status === "Passed").length
+  const failed = cases.filter((test) => test.status === "Failed").length
+  const errors = cases.filter((test) => test.status === "Error").length
+  const skipped = cases.filter((test) => test.status === "Skipped").length
+  const success =
+    String(exitCode) === "0" && !reportError && passed > 0 && failed === 0 && errors === 0
+  const duration = cases.reduce((total, test) => total + test.duration, 0)
+  const lines = [
+    "## Maestro E2E results",
+    "",
+    `**Status:** ${success ? "Passed" : "Failed"}`,
+    `**Flows:** ${cases.length} total; ${passed} passed, ${failed} failed, ${errors} errors, ${skipped} skipped`,
+    `**Flow time:** ${duration.toFixed(2)}s`,
+    `**Maestro exit code:** ${exitCode === undefined ? "Not recorded" : cell(String(exitCode))}`,
+    "",
+  ]
+  if (reportError) {
+    lines.push(`> ${cell(reportError)}`, "")
+  } else if (passed === 0 && failed === 0 && errors === 0) {
+    lines.push(
+      "> No flows completed successfully; an empty or skipped-only suite is not a pass.",
+      "",
+    )
+  } else if (String(exitCode) !== "0" && failed === 0 && errors === 0) {
+    lines.push(
+      "> The process did not finish successfully, even though the report has no failed cases.",
+      "",
+    )
+  }
+  if (cases.length > 0) {
+    lines.push("| Flow | File | Result | Duration |", "| --- | --- | --- | --- |")
+    for (const test of cases) {
+      lines.push(
+        `| ${cell(test.name)} | ${cell(test.file)} | ${test.status} | ${test.duration.toFixed(2)}s |`,
       )
-      if (testsuitesMatch) {
-        totalTests = parseInt(testsuitesMatch[1], 10)
-        totalFailures = parseInt(testsuitesMatch[2], 10)
-        totalErrors = parseInt(testsuitesMatch[3], 10)
-        duration = testsuitesMatch[4]
-      } else {
-        const testsuiteMatch = xml.match(
-          /<testsuite[^>]*tests="(\d+)"[^>]*failures="(\d+)"[^>]*errors="(\d+)"[^>]*time="([^"]+)"/,
+    }
+    lines.push("")
+    for (const test of cases) {
+      if (test.status === "Failed" || test.status === "Error") {
+        lines.push(
+          "<details>",
+          `<summary>${escapeHtml(test.name)}: ${test.status}</summary>`,
+          "",
+          `<pre>${escapeHtml(test.details || "No failure detail was recorded.")}</pre>`,
+          "</details>",
+          "",
         )
-        if (testsuiteMatch) {
-          totalTests = parseInt(testsuiteMatch[1], 10)
-          totalFailures = parseInt(testsuiteMatch[2], 10)
-          totalErrors = parseInt(testsuiteMatch[3], 10)
-          duration = testsuiteMatch[4]
-        }
       }
-
-      const testcaseRegex =
-        /<testcase[^>]*name="([^"]+)"[^>]*time="([^"]+)"([\s\S]*?)<\/testcase>|<testcase[^>]*name="([^"]+)"[^>]*time="([^"]+)"\s*\/>/g
-      let match: RegExpExecArray | null
-      while ((match = testcaseRegex.exec(xml)) !== null) {
-        const name = match[1] || match[4]
-        const time = match[2] || match[5]
-        const inner = match[3] || ""
-        const failed = inner.includes("<failure")
-        testCases.push({ name, time, failed })
-      }
-
-      const failureRegex = /<failure[^>]*message="([^"]*)"[^>]*>([\s\S]*?)<\/failure>/g
-      let failMatch: RegExpExecArray | null
-      while ((failMatch = failureRegex.exec(xml)) !== null) {
-        const message = failMatch[1]
-        const detail = failMatch[2].replace(/<!\[CDATA\[|\]\]>/g, "").trim()
-        failureDetails.push({ message, detail })
-      }
-    } catch (err) {
-      console.error("Error parsing report.xml:", err)
     }
   }
 
-  const isFailed = (exitCode !== "0" && exitCode !== 0) || totalFailures > 0 || totalErrors > 0
-  const statusEmoji = isFailed ? "❌" : "✅"
-  const statusText = isFailed ? "Failed" : "Passed"
-
-  // Search for MP4 files
-  const mp4Files = findFilesByExt(artifactsDir, ".mp4")
-  let videoName = "None detected"
-  let videoSize = "N/A"
-  let videoFound = false
-
-  if (mp4Files.length > 0) {
-    const videoFile = mp4Files[0]
-    videoName = path.basename(videoFile)
-    try {
-      const stats = fs.statSync(videoFile)
-      videoSize = formatBytes(stats.size)
-      videoFound = true
-    } catch {
-      videoSize = "Unknown"
+  const recordings = findRecordings(artifactsDir).sort()
+  lines.push("### Recordings", "")
+  if (recordings.length > 0) {
+    lines.push("| File | Size (bytes) |", "| --- | ---: |")
+    for (const recording of recordings) {
+      const name = path.relative(artifactsDir, recording).replaceAll("\\", "/")
+      lines.push(`| ${cell(name)} | ${fs.statSync(recording).size} |`)
     }
-  }
-
-  const passedTests = Math.max(0, totalTests - totalFailures - totalErrors)
-
-  let md = `## 📱 Maestro E2E Execution Summary\n\n`
-  md += `| 🧪 Test Result | 📹 Execution Recording |\n`
-  md += `| :--- | :--- |\n`
-
-  const testResultCol = [
-    `**Status:** ${statusEmoji} **${statusText}**`,
-    `**Flow:** \`apps/mobile/tests/e2e/fitness.yaml\``,
-    `**Duration:** ${duration}s`,
-    hasReport
-      ? `**Tests:** ${totalTests} total (${passedTests} passed, ${totalFailures + totalErrors} failed)`
-      : `**Execution:** Exit code ${exitCode}`,
-  ].join("<br>")
-
-  const videoCol = [
-    `**File:** \`${videoName}\``,
-    `**Size:** ${videoSize}`,
-    `**Format:** MP4 Video`,
-    videoFound
-      ? `<br>👉 [**Download / Watch Recording**](${finalRecordingUrl})`
-      : `<br>*(No recording generated)*`,
-  ].join("<br>")
-
-  md += `| ${testResultCol} | ${videoCol} |\n\n`
-
-  if (isFailed) {
-    md += `> [!WARNING]\n`
-    md += `> Maestro end-to-end test flow encountered failures. Review the failure log below or inspect the test recording.\n\n`
-
-    if (failureDetails.length > 0) {
-      md += `<details open>\n<summary><b>🔍 Failure Details</b></summary>\n\n`
-      for (const fail of failureDetails) {
-        if (fail.message) {
-          md += `**Error:** ${fail.message}\n\n`
-        }
-        if (fail.detail) {
-          md += `\`\`\`text\n${fail.detail}\n\`\`\`\n\n`
-        }
-      }
-      md += `</details>\n\n`
-    }
+    lines.push("")
+    if (recordingUrl) lines.push(`[Download all recordings](<${recordingUrl}>)`, "")
   } else {
-    md += `> [!NOTE]\n`
-    md += `> All Maestro end-to-end flows passed successfully on Android Emulator (API 34). Video recording captured the full execution lifecycle.\n\n`
+    lines.push(
+      "No recordings were generated. Flows can opt in with startRecording/stopRecording.",
+      "",
+    )
   }
-
-  md += `### 📦 Artifacts & Downloads\n`
-  if (videoFound) {
-    md += `- 🎬 **Test Recording Video:** [Download \`${videoName}\` (${videoSize})](${finalRecordingUrl})\n`
-  }
-  md += `- 📁 **Complete Test Bundle (Report, Logs, Artifacts):** [Download \`maestro-e2e-artifacts\`](${finalArtifactsUrl})\n`
-
-  return md
+  const bundleUrl = artifactsUrl || runUrl
+  if (bundleUrl) lines.push(`[JUnit report, screenshots, logs, and artifacts](<${bundleUrl}>)`, "")
+  return { markdown: lines.join("\n"), success }
 }
 
-// Run CLI if invoked directly
-const isDirectRun =
-  process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url
-if (isDirectRun) {
-  const summary = generateSummary({})
-  const summaryFile = process.env.GITHUB_STEP_SUMMARY
-  if (summaryFile) {
-    fs.appendFileSync(summaryFile, summary + "\n")
-    console.log("Appended Maestro summary to GITHUB_STEP_SUMMARY.")
+if (import.meta.main) {
+  const { GITHUB_REPOSITORY, GITHUB_RUN_ID, GITHUB_RUN_ATTEMPT = "1" } = process.env
+  const runUrl =
+    GITHUB_REPOSITORY && GITHUB_RUN_ID
+      ? `https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}`
+      : ""
+  const { markdown, success } = generateSummary({
+    exitCode: process.env.MAESTRO_EXIT_CODE || undefined,
+    artifactsUrl: process.env.ARTIFACTS_URL,
+    recordingUrl: process.env.RECORDING_URL,
+    runUrl,
+  })
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, markdown + "\n")
   } else {
-    console.log(summary)
+    console.log(markdown)
   }
+  process.exitCode = success ? 0 : 1
 }
