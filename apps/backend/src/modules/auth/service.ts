@@ -6,16 +6,17 @@ import { generateId, generateToken } from "../../lib/id"
 import { deleteUserMealImages } from "../../lib/meal-images"
 import {
   hashPassword,
-  isPasswordWithinBcryptLimit,
+  isPasswordWithinLimit,
   needsPasswordRehash,
   verifyPassword,
 } from "../../lib/password"
 import { enqueueEmail } from "../email/queue"
 import type { SignUpBody, SignInBody, UpdateUserBody } from "./index"
 
-// Public dummy verifier, never an account credential. Match the current bcrypt cost
-// so unknown accounts do not bypass the expensive password check.
-const DUMMY_PASSWORD_HASH = "$2b$12$YvbRQhIG1u3QZLvSTX/wRO50bqc8xV6U.fFNPpEdrGjGJfQ6OVacq"
+// Public dummy verifier, never an account credential. Match the current PBKDF2 work factor
+// so unknown accounts do not bypass password verification.
+const DUMMY_PASSWORD_HASH =
+  "pbkdf2-sha256$100000$I/JGQHdg0q04nAIJdHrgjw==$ewzHdfVsNzzkwsEG3YbeatwSeBFKcuQ9xNPa2kKWohU="
 
 export abstract class Auth {
   static async signUp(data: SignUpBody, d1?: D1Database) {
@@ -34,7 +35,7 @@ export abstract class Auth {
         message: "A user with this email address already exists",
       })
     }
-    if (!isPasswordWithinBcryptLimit(data.password)) {
+    if (!isPasswordWithinLimit(data.password)) {
       throw status(422, { success: false, message: "Password must not exceed 72 UTF-8 bytes." })
     }
 
@@ -113,7 +114,7 @@ export abstract class Auth {
         message: "Account deletion has completed. Create a new account to continue.",
       })
     }
-    if (needsPasswordRehash(foundUser.password) && isPasswordWithinBcryptLimit(data.password)) {
+    if (needsPasswordRehash(foundUser.password) && isPasswordWithinLimit(data.password)) {
       const upgradedHash = await hashPassword(data.password)
       await db
         .update(userTable)
