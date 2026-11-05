@@ -34,6 +34,14 @@ export function WeightChart({ weights }: { weights: number[] }) {
     }
   }, [draw, pulse])
 
+  if (weights.length === 0) {
+    return (
+      <View style={styles.empty}>
+        <Text style={styles.emptyLabel}>No weight logs yet</Text>
+      </View>
+    )
+  }
+
   const dashOffset = draw.interpolate({ inputRange: [0, 1], outputRange: [800, 0] })
   const pulseR = pulse.interpolate({ inputRange: [0, 1], outputRange: [5, 12] })
   const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0] })
@@ -113,6 +121,16 @@ const styles = StyleSheet.create({
   chart: {
     flex: 1,
     height: CHART_HEIGHT,
+  },
+  empty: {
+    flex: 1,
+    height: CHART_HEIGHT,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyLabel: {
+    fontSize: 11,
+    color: C.textMuted,
   },
   grid: {
     position: "absolute",
