@@ -1,10 +1,11 @@
-import { createTestEmailQueue } from "../helpers/test-email-queue"
 import { describe, expect, it, beforeEach, spyOn } from "bun:test"
-import { app, setTestDatabaseBinding } from "../helpers/test-app"
-import { createTestDatabase } from "../helpers/test-db"
-import { createTestKv } from "../helpers/test-kv"
+
 import { user as userTable } from "../../src/db/schema"
 import type { EmailMessage } from "../../src/modules/email/queue"
+import { app, setTestDatabaseBinding } from "../helpers/test-app"
+import { createTestDatabase } from "../helpers/test-db"
+import { createTestEmailQueue } from "../helpers/test-email-queue"
+import { createTestKv } from "../helpers/test-kv"
 
 describe("Integration Test: Auth API Endpoints", () => {
   let testD1: D1Database
@@ -14,7 +15,15 @@ describe("Integration Test: Auth API Endpoints", () => {
     const { d1 } = createTestDatabase()
     testD1 = d1
     emailQueue = createTestEmailQueue()
-    setTestDatabaseBinding({ DB: d1, fitwear_kv: createTestKv(), EMAIL_QUEUE: emailQueue.queue })
+    setTestDatabaseBinding({
+      DB: d1,
+      fitwear_kv: createTestKv(),
+      EMAIL_QUEUE: emailQueue.queue,
+      MEAL_IMAGES: {
+        list: async () => ({ objects: [], truncated: false }),
+        delete: async () => {},
+      } as unknown as R2Bucket,
+    })
   })
 
   describe("POST /auth/sign-up", () => {
@@ -495,6 +504,187 @@ describe("Integration Test: Auth API Endpoints", () => {
       )
       expect(deleteRes.status).toBe(200)
       expect(deletedKeys).toEqual([`${user.id}/meal_1`, `${user.id}/meal_2`])
+    })
+    it("paginates R2 cleanup across more than 1000 meal photos", async () => {
+      const signUpRes = await app.handle(
+        new Request("http://localhost/auth/sign-up", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "many_photos@example.com",
+            password: "SecurePassword123!",
+            name: "Delete Many Photos",
+          }),
+        }),
+      )
+      const { user, session } = (await signUpRes.json()) as {
+        user: { id: string }
+        session: { token: string }
+      }
+      const allKeys = Array.from({ length: 1005 }, (_, index) => ({
+        key: `${user.id}/meal_${index}`,
+      }))
+      const listCursors: (string | undefined)[] = []
+      const deleteBatchSizes: number[] = []
+      const bucket = {
+        list: async ({ prefix, cursor }: { prefix?: string; cursor?: string }) => {
+          listCursors.push(cursor)
+          const start = cursor ? 1000 : 0
+          const objects = allKeys.slice(start, start + 1000)
+          return {
+            objects: objects.filter((object) => object.key.startsWith(prefix ?? "")),
+            truncated: start + objects.length < allKeys.length,
+            cursor: "page-2",
+          }
+        },
+        delete: async (keys: string | string[]) => {
+          deleteBatchSizes.push(Array.isArray(keys) ? keys.length : 1)
+        },
+      } as unknown as R2Bucket
+      setTestDatabaseBinding({
+        DB: testD1,
+        fitwear_kv: createTestKv(),
+        EMAIL_QUEUE: emailQueue.queue,
+        MEAL_IMAGES: bucket,
+      })
+
+      const response = await app.handle(
+        new Request("http://localhost/auth/account", {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${session.token}` },
+        }),
+      )
+      expect(response.status).toBe(200)
+      expect(listCursors).toEqual([undefined, "page-2"])
+      expect(deleteBatchSizes).toEqual([1000, 5])
+    })
+
+    it("keeps pending deletions authenticated for retry after R2 failure", async () => {
+      const signUpRes = await app.handle(
+        new Request("http://localhost/auth/sign-up", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "retry_delete@example.com",
+            password: "SecurePassword123!",
+            name: "Retry Deletion",
+          }),
+        }),
+      )
+      const { session } = (await signUpRes.json()) as { session: { token: string } }
+      let failDelete = true
+      const bucket = {
+        list: async ({ prefix }: { prefix?: string }) => ({
+          objects: [{ key: `${prefix}meal_1` }],
+          truncated: false,
+        }),
+        delete: async () => {
+          if (failDelete) throw new Error("R2 unavailable")
+        },
+      } as unknown as R2Bucket
+      setTestDatabaseBinding({
+        DB: testD1,
+        fitwear_kv: createTestKv(),
+        EMAIL_QUEUE: emailQueue.queue,
+        MEAL_IMAGES: bucket,
+      })
+
+      const deleteRequest = () =>
+        app.handle(
+          new Request("http://localhost/auth/account", {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${session.token}` },
+          }),
+        )
+      const failedDelete = await deleteRequest()
+      expect(failedDelete.status).not.toBe(200)
+
+      const sessionResponse = await app.handle(
+        new Request("http://localhost/auth/session", {
+          headers: { Authorization: `Bearer ${session.token}` },
+        }),
+      )
+      expect(sessionResponse.status).toBe(200)
+      const blockedApi = await app.handle(
+        new Request("http://localhost/user/me", {
+          headers: { Authorization: `Bearer ${session.token}` },
+        }),
+      )
+      expect(blockedApi.status).toBe(410)
+
+      failDelete = false
+      const retriedDelete = await deleteRequest()
+      expect(retriedDelete.status).toBe(200)
+      const deletedSession = await app.handle(
+        new Request("http://localhost/auth/session", {
+          headers: { Authorization: `Bearer ${session.token}` },
+        }),
+      )
+      expect(deletedSession.status).toBe(401)
+    })
+    it("resumes pending deletion after the original session is gone", async () => {
+      const signUpRes = await app.handle(
+        new Request("http://localhost/auth/sign-up", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "resume_delete@example.com",
+            password: "SecurePassword123!",
+            name: "Resume Deletion",
+          }),
+        }),
+      )
+      const { user, session } = (await signUpRes.json()) as {
+        user: { id: string }
+        session: { token: string }
+      }
+      let failDelete = true
+      setTestDatabaseBinding({
+        DB: testD1,
+        fitwear_kv: createTestKv(),
+        EMAIL_QUEUE: emailQueue.queue,
+        MEAL_IMAGES: {
+          list: async ({ prefix }: { prefix?: string }) => ({
+            objects: [{ key: `${prefix}meal_1` }],
+            truncated: false,
+          }),
+          delete: async () => {
+            if (failDelete) throw new Error("R2 unavailable")
+          },
+        } as unknown as R2Bucket,
+      })
+
+      const firstDelete = await app.handle(
+        new Request("http://localhost/auth/account", {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${session.token}` },
+        }),
+      )
+      expect(firstDelete.status).not.toBe(200)
+      await testD1.prepare("DELETE FROM session WHERE userId = ?").bind(user.id).run()
+
+      failDelete = false
+      const resumedSignIn = await app.handle(
+        new Request("http://localhost/auth/sign-in", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "resume_delete@example.com",
+            password: "SecurePassword123!",
+          }),
+        }),
+      )
+      expect(resumedSignIn.status).toBe(410)
+      expect(await resumedSignIn.json()).toMatchObject({
+        success: false,
+        message: "Account deletion has completed. Create a new account to continue.",
+      })
+      const deletedSession = await app.handle(
+        new Request("http://localhost/auth/session", {
+          headers: { Authorization: `Bearer ${session.token}` },
+        }),
+      )
+      expect(deletedSession.status).toBe(401)
     })
   })
 })

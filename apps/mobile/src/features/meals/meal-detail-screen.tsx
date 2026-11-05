@@ -1,19 +1,15 @@
 import { useQuery } from "@tanstack/react-query"
-import { FetchErrorState, LoadingSkeleton } from "@/components/fetch-states"
 import { Text, View } from "react-native"
 
+import { FetchErrorState, LoadingSkeleton } from "@/components/fetch-states"
 import { Pressable } from "@/components/pressable"
-import { Palette as C } from "@/constants/palette"
-import { useAuth } from "@/features/auth/store/auth.store"
-import { apiErrorMessage, apiRequest } from "@/lib/api"
-import { MealResultScreen } from "@/features/meals/meal-result-screen"
-import {
-  fromApiMeal,
-  mealsQueryKeys,
-  useMeals,
-  type ApiMealItem,
-  type MealType,
-} from "@/features/meals/meals-store"
+import { useAuth } from "@/features/auth"
+import { apiErrorMessage } from "@/lib/api"
+import { Palette as C } from "@/theme"
+
+import { MealResultScreen } from "./meal-result-screen"
+import { fetchMeal } from "./meals-api"
+import { fromApiMeal, mealsQueryKeys, useMeals } from "./meals-hooks"
 
 export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: () => void }) {
   const { user } = useAuth()
@@ -22,17 +18,7 @@ export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: ()
   const detailQuery = useQuery({
     queryKey: mealsQueryKeys.detail(user?.id ?? "signed-out", logId ?? "missing"),
     enabled: Boolean(logId && user?.id && !saved && !loading),
-    queryFn: async ({ signal }) => {
-      const meal = await apiRequest<{
-        id: string
-        mealType: MealType
-        targetDate: string
-        loggedAt: string
-        imageUrl: string | null
-        items: ApiMealItem[]
-      }>(`/meals/${encodeURIComponent(logId!)}`, { signal })
-      return fromApiMeal(meal)
-    },
+    queryFn: async ({ signal }) => fromApiMeal(await fetchMeal(logId!, signal)),
   })
   const loaded = detailQuery.data
   const error = detailQuery.error ? apiErrorMessage(detailQuery.error, "this meal") : null

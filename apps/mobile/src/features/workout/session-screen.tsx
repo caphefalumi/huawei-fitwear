@@ -4,9 +4,10 @@ import { StyleSheet, Text, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, Card, PageHeading, Screen } from "@/components/ui"
-import { Palette as C } from "@/constants/palette"
-import { useHealth } from "@/features/health/health-store"
-import { routinesFor } from "@/features/workout/routines"
+import { useHealth } from "@/features/health"
+import { Palette as C } from "@/theme"
+
+import { routinesFor } from "./routines"
 
 function formatElapsed(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60)

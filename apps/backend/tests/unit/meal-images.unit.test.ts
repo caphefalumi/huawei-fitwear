@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test"
+
 import { decodeMealImage } from "../../src/lib/meal-images"
 
 describe("Meal image input boundary", () => {

@@ -4,7 +4,6 @@ import { StyleSheet, Text, TextInput, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
 import { Sheet, SheetActions, SheetField } from "@/components/sheet"
-import { Palette as C } from "@/constants/palette"
 import {
   createRecovery,
   dateLabel,
@@ -12,7 +11,8 @@ import {
   PERIOD_AREA,
   useHealth,
   type RecoveryPlan,
-} from "@/features/health/health-store"
+} from "@/features/health"
+import { Palette as C } from "@/theme"
 
 const icons = {
   shieldCheck: require("@/assets/images/home/shield-check.svg"),

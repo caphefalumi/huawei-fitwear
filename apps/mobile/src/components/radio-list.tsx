@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 
 type RadioListProps<T extends string> = {
   options: readonly T[]

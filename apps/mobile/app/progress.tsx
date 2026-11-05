@@ -1,1 +1,1 @@
-export { ProgressScreen as default } from "@/features/home"
+export { ProgressScreen as default } from "@/features/home/progress-screen"

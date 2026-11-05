@@ -1,8 +1,9 @@
-import type { FoodSearchQuery } from "./index"
 import { asc, eq, like } from "drizzle-orm"
 import { status } from "elysia"
+
 import { getDb, foods as foodsTable } from "../../db"
 import { scalePer100 } from "../../lib/nutrition"
+import type { FoodSearchQuery } from "./index"
 
 const DEFAULT_LIMIT = 25
 

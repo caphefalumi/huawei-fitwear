@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm"
 import { status } from "elysia"
+
 import { getDb, user as userTable } from "../../db"
 
 export abstract class User {

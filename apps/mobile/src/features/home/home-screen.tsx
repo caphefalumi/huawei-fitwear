@@ -6,14 +6,15 @@ import Animated, { FadeInUp } from "react-native-reanimated"
 
 import { Pressable } from "@/components/pressable"
 import { Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
-import { Palette as C } from "@/constants/palette"
-import { recoveryTitle, useHealth } from "@/features/health/health-store"
-import { routinesFor } from "@/features/workout/routines"
-import { RecoverySheet } from "@/features/recovery/recovery-sheet"
-import { useMeals } from "@/features/meals/meals-store"
-import { NutritionRing } from "@/features/home/ring"
-import { WeightChart } from "@/features/home/weight-chart"
-import { MacroBar } from "@/features/home/ui"
+import { recoveryTitle, useHealth } from "@/features/health"
+import { useMeals } from "@/features/meals"
+import { RecoverySheet } from "@/features/recovery"
+import { routinesFor } from "@/features/workout"
+import { Palette as C } from "@/theme"
+
+import { NutritionRing } from "./ring"
+import { MacroBar } from "./ui"
+import { WeightChart } from "./weight-chart"
 
 const DEMO_WEIGHTS = [72.8, 72.5, 72.3, 72.1, 71.9, 71.7, 71.5]
 const WEEK_ACTIVE = [true, true, false, true, true, false, true]

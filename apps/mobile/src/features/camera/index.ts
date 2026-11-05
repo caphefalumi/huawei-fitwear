@@ -1,1 +1,1 @@
-export * from "./image-picker"
+export { pickImage, type PickedImage } from "./image-picker"

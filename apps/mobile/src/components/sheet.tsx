@@ -12,12 +12,12 @@ import {
   View,
 } from "react-native"
 import { KeyboardAvoidingView } from "react-native-keyboard-controller"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useReducedMotion } from "react-native-reanimated"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { CloseButton } from "@/components/close-button"
 import { Pressable } from "@/components/pressable"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 
 type SheetProps = {
   visible: boolean

@@ -1,4 +1,4 @@
-import { isLoggedIn } from "@/features/auth/utils/is-logged-in"
+import { isLoggedIn } from "@/features/auth"
 
 test("only treats token-bearing sessions that expire after now as logged in", () => {
   const active = {

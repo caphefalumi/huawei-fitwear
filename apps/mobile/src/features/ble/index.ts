@@ -1,10 +1,4 @@
-/**
- * Fitwear BLE central — ready for production use.
- *
- * Preferred:
- *   import { WatchBleClient, FITWEAR_SERVICE_UUID } from '@/features/ble';
- *   // or in React: useWatchBle() / useWatchBle({ enableSimulator: true })
- */
+/** Public API. Screens are composed by route files directly. */
 export {
   BLE_MAX_MESSAGE_BYTES,
   BLE_REQUESTED_MTU,
@@ -14,16 +8,15 @@ export {
 } from "./constants"
 export { base64ToBytes, bytesToBase64, decodeUtf8Bytes, encodeUtf8Bytes } from "./codec"
 export {
-  WatchBleClient,
-  type BleDirection,
-  type WatchBleListener,
-  type WatchBleSendResult,
-  type WatchBleStatus,
-} from "./WatchBleClient"
-export {
   useWatchBle,
   type BleConnectionMode,
   type BleSyncMessage,
   type UseWatchBleOptions,
 } from "./use-watch-ble"
-export { BleSyncScreen } from "./BleSyncScreen"
+export {
+  WatchBleClient,
+  type BleDirection,
+  type WatchBleListener,
+  type WatchBleSendResult,
+  type WatchBleStatus,
+} from "./watch-ble-client"

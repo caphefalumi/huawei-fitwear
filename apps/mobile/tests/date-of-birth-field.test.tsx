@@ -1,6 +1,6 @@
 import { fireEvent, render } from "@testing-library/react-native"
 
-import { DateOfBirthField } from "@/features/auth/components/date-of-birth-field"
+import { DateOfBirthField } from "@/features/auth/date-of-birth-field"
 
 const onChange = jest.fn()
 

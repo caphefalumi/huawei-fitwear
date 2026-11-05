@@ -1,8 +1,10 @@
-import type { EmailMessage } from "../modules/email/queue"
 import { AsyncLocalStorage } from "node:async_hooks"
-import * as schema from "./schema"
+
 import { drizzle } from "drizzle-orm/d1"
 import type { DrizzleD1Database } from "drizzle-orm/d1"
+
+import type { EmailMessage } from "../modules/email/queue"
+import * as schema from "./schema"
 
 export type Schema = typeof schema
 export type Database = DrizzleD1Database<typeof schema>

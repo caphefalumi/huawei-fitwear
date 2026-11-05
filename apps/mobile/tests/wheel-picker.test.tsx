@@ -1,6 +1,7 @@
+import { fireEvent, render } from "@testing-library/react-native"
 import { useState } from "react"
 import { Text } from "react-native"
-import { fireEvent, render } from "@testing-library/react-native"
+
 import { WheelPicker } from "@/components/wheel-picker"
 
 function Frequency() {

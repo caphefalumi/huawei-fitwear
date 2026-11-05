@@ -1,17 +1,19 @@
-import { type AxiosResponse } from "axios"
-import { act, renderHook, waitFor } from "@testing-library/react-native"
 import type { QueryClient } from "@tanstack/react-query"
+import { act, renderHook, waitFor } from "@testing-library/react-native"
+import { type AxiosResponse } from "axios"
+
 import {
   AuthProvider,
   useAuth,
   type AuthUser,
   type AuthenticationSessionResponse,
-} from "@/features/auth/auth-store"
-import { sessionStorage } from "@/features/auth/session-storage"
+} from "@/features/auth"
 import { setApiToken } from "@/lib/api"
+import { sessionStorage } from "@/lib/storage"
+
 import { createQueryWrapper } from "./query-wrapper"
 
-jest.mock("@/features/auth/session-storage", () => ({
+jest.mock("@/lib/storage", () => ({
   sessionStorage: { getToken: jest.fn(), setToken: jest.fn(), clearToken: jest.fn() },
 }))
 

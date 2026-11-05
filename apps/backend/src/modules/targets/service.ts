@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm"
 import { status } from "elysia"
+
 import { getDb, dailyTargets as dailyTargetsTable, user as userTable } from "../../db"
 import { isDateKey, toDateKey } from "../../lib/date"
 import { deriveDailyTargets, type MacroTargets } from "../../lib/nutrition"

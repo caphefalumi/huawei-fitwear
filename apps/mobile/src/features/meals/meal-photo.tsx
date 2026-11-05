@@ -1,12 +1,15 @@
+import { useQuery } from "@tanstack/react-query"
 import { Image, type ImageProps } from "expo-image"
 import { useEffect, useState } from "react"
-import { useQuery } from "@tanstack/react-query"
 import { Text, View } from "react-native"
+
 import { Pressable } from "@/components/pressable"
-import { Palette as C } from "@/constants/palette"
 import { useAuth } from "@/features/auth"
-import { mealsQueryKeys } from "@/features/meals/meals-store"
-import { apiErrorMessage, apiRequest } from "@/lib/api"
+import { apiErrorMessage } from "@/lib/api"
+import { Palette as C } from "@/theme"
+
+import { fetchMealPhoto } from "./meals-api"
+import { mealsQueryKeys } from "./meals-hooks"
 import { icons } from "./meals-ui"
 
 export function MealPhoto({
@@ -25,12 +28,7 @@ export function MealPhoto({
   const photoQuery = useQuery({
     queryKey: mealsQueryKeys.photo(user?.id ?? "signed-out", mealId ?? "missing"),
     enabled: Boolean(remotePhoto && user?.id),
-    queryFn: async ({ signal }) =>
-      (
-        await apiRequest<{ imageUrl: string }>(`/meals/${encodeURIComponent(mealId!)}/photo`, {
-          signal,
-        })
-      ).imageUrl,
+    queryFn: ({ signal }) => fetchMealPhoto(mealId!, signal),
   })
   const [imageError, setImageError] = useState<string | null>(null)
   useEffect(() => setImageError(null), [imageUrl])

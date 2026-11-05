@@ -1,9 +1,16 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createContext, useContext, type ReactNode } from "react"
 
-import { useAuth } from "@/features/auth/auth-store"
+import { useAuth } from "@/features/auth"
 import { apiErrorMessage } from "@/lib/api"
-import { apiRequest } from "@/lib/api"
+
+import {
+  fetchExerciseCatalog,
+  fetchWorkoutHistory,
+  fetchWorkoutSession,
+  writeWorkout,
+  type WorkoutWriteInput,
+} from "./workout-api"
 
 export type Exercise = {
   id: string
@@ -84,33 +91,13 @@ function useWorkoutState(): WorkoutState {
   const catalogQuery = useQuery({
     queryKey: workoutQueryKeys.catalog(userId ?? "signed-out"),
     enabled: Boolean(userId),
-    queryFn: async ({ signal }) => {
-      const initial = await apiRequest<{ exercises: Exercise[]; count: number }>(
-        "/exercises?limit=200",
-        { signal },
-      )
-      const exercises = [...initial.exercises]
-      while (exercises.length < initial.count) {
-        const next = await apiRequest<{ exercises: Exercise[] }>(
-          `/exercises?limit=200&offset=${exercises.length}`,
-          { signal },
-        )
-        if (!next.exercises.length)
-          throw new Error("The exercise catalog could not be fully loaded.")
-        exercises.push(...next.exercises)
-      }
-      return exercises
-    },
+    queryFn: ({ signal }) => fetchExerciseCatalog(signal),
   })
   const historyQuery = useInfiniteQuery({
     queryKey: workoutQueryKeys.history(userId ?? "signed-out"),
     enabled: Boolean(userId),
     initialPageParam: 0,
-    queryFn: ({ pageParam, signal }) =>
-      apiRequest<{ sessions: WorkoutSession[]; count: number }>(
-        `/workouts?limit=20&offset=${pageParam}`,
-        { signal },
-      ),
+    queryFn: ({ pageParam, signal }) => fetchWorkoutHistory(pageParam, signal),
     getNextPageParam: (lastPage, pages) => {
       const loaded = pages.reduce((total, page) => total + page.sessions.length, 0)
       return loaded < lastPage.count && lastPage.sessions.length ? loaded : undefined
@@ -145,8 +132,7 @@ function useWorkoutState(): WorkoutState {
   }
   const writeMutation = useMutation({
     mutationKey: [...workoutQueryKeys.all(userId ?? "signed-out"), "write"],
-    mutationFn: ({ path, method, body }: { path: string; method: string; body?: unknown }) =>
-      apiRequest<unknown>(path, { method, ...(body === undefined ? {} : { body }) }),
+    mutationFn: (input: WorkoutWriteInput) => writeWorkout(input),
     onMutate: async ({ path, method }) => {
       if (!userId || method !== "DELETE") return undefined
       const match = /^\/workouts\/([^/]+)$/.exec(path)
@@ -193,8 +179,7 @@ function useWorkoutState(): WorkoutState {
     if (!userId) throw new Error("Sign in to load workouts.")
     const session = await queryClient.fetchQuery({
       queryKey: workoutQueryKeys.detail(userId, id),
-      queryFn: ({ signal }) =>
-        apiRequest<SessionWithSets>(`/workouts/${encodeURIComponent(id)}`, { signal }),
+      queryFn: ({ signal }) => fetchWorkoutSession(id, signal),
     })
     upsert(session)
     return session

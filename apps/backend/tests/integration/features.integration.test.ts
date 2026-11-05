@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it } from "bun:test"
+
+import { Meals } from "../../src/modules/meals/service"
 import { app, setTestDatabaseBinding } from "../helpers/test-app"
 import { createTestDatabase } from "../helpers/test-db"
 import { createTestKv } from "../helpers/test-kv"
-import { Meals } from "../../src/modules/meals/service"
 
 let d1: D1Database
 const request = (path: string, token?: string, method = "GET", body?: unknown) =>

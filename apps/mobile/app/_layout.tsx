@@ -1,9 +1,7 @@
 import "@/lib/sentry"
-
-import { QueryClientProvider } from "@tanstack/react-query"
+import "@/global.css"
 import * as Sentry from "@sentry/react-native"
-
-import { queryClient } from "@/lib/query-client"
+import { QueryClientProvider } from "@tanstack/react-query"
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router"
 import * as SplashScreen from "expo-splash-screen"
 import { type PropsWithChildren } from "react"
@@ -11,12 +9,13 @@ import { useColorScheme } from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 
-import { NetworkStatusBanner } from "@/components/network-status"
 import { AnimatedSplashOverlay } from "@/components/animated-icon"
+import { NetworkStatusBanner } from "@/components/network-status"
 import { APP_ROUTES, AuthProvider, useAuth } from "@/features/auth"
 import { HealthProvider } from "@/features/health"
 import { MealsProvider } from "@/features/meals"
 import { WorkoutProvider } from "@/features/workout"
+import { queryClient } from "@/lib/query-client"
 
 SplashScreen.preventAutoHideAsync()
 

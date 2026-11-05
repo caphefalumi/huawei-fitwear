@@ -1,15 +1,15 @@
 import { fireEvent, render } from "@testing-library/react-native"
 
+import { useMeals } from "@/features/meals"
 import { MealCaptureScreen } from "@/features/meals/capture-screen"
-import { useMeals } from "@/features/meals/meals-store"
 
 jest.mock("expo-router", () => ({ router: { push: jest.fn(), back: jest.fn() } }))
-jest.mock("@/features/camera/image-picker", () => ({ pickImage: jest.fn() }))
+jest.mock("@/features/camera", () => ({ pickImage: jest.fn() }))
 jest.mock("@/lib/api", () => ({
   ...jest.requireActual("@/lib/api"),
   apiRequest: jest.fn(),
 }))
-jest.mock("@/features/meals/meals-store", () => ({ useMeals: jest.fn() }))
+jest.mock("@/features/meals/meals-hooks", () => ({ useMeals: jest.fn() }))
 jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }))

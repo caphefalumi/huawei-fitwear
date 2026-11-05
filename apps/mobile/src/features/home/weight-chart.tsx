@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { Animated, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native"
 import Svg, { Circle, Polyline } from "react-native-svg"
 
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 
 const APolyline = Animated.createAnimatedComponent(Polyline)
 const ACircle = Animated.createAnimatedComponent(Circle)

@@ -6,9 +6,10 @@ import Animated, { FadeInUp } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
+
+import { useMeals, type MealLog } from "./meals-hooks"
 import { icons } from "./meals-ui"
-import { useMeals, type MealLog } from "./meals-store"
 
 type SortKey = "newest" | "kcal" | "protein" | "carbs" | "fat"
 

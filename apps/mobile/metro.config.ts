@@ -1,4 +1,5 @@
 import path from "node:path"
+
 import { getDefaultConfig } from "expo/metro-config"
 import type { CustomResolver } from "metro-resolver"
 
