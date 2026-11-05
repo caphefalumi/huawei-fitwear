@@ -5,9 +5,9 @@ import { Animated, Easing, StyleSheet, Text, View } from "react-native"
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Card, PageHeading, Screen } from "@/components/ui"
 import { Palette as C } from "@/theme"
-import { useHealth } from "@/features/health/health-store"
-import { progressData, RANGES, type Range } from "@/features/home/progress-data"
-import { WeightChart } from "@/features/home/weight-chart"
+import { useHealth } from "@/features/health"
+import { progressData, RANGES, type Range } from "./progress-data"
+import { WeightChart } from "./weight-chart"
 
 /** Bar grows with a spring each time it appears. */
 function ActivityBar({ height, index }: { height: number; index: number }) {

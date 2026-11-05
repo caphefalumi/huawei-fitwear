@@ -5,7 +5,7 @@ import { Text, View } from "react-native"
 import { Pressable } from "@/components/pressable"
 import { Palette as C } from "@/theme"
 import { useAuth } from "@/features/auth"
-import { mealsQueryKeys } from "@/features/meals/meals-store"
+import { mealsQueryKeys } from "./meals-store"
 import { apiErrorMessage, apiRequest } from "@/lib/api"
 import { icons } from "./meals-ui"
 

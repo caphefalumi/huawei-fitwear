@@ -3,11 +3,11 @@ import { AccessibilityInfo, AppState, StyleSheet, type AppStateStatus } from "re
 import * as Haptics from "expo-haptics"
 import { CanceledError } from "axios"
 import { ApiError } from "@/lib/api"
-import { useAuth } from "@/features/auth/store/auth.store"
-import { LoginScreen } from "@/features/auth/components/login-screen"
-import { AuthField } from "@/features/auth/components/auth-field"
+import { useAuth } from "@/features/auth"
+import { AuthField } from "@/features/auth/auth-field"
+import { LoginScreen } from "@/features/auth/login-screen"
 
-jest.mock("@/features/auth/store/auth.store", () => ({
+jest.mock("@/features/auth/auth-store", () => ({
   APP_ROUTES: { signUp: "/sign-up" },
   useAuth: jest.fn(),
 }))

@@ -12,7 +12,7 @@ import {
   PERIOD_AREA,
   useHealth,
   type RecoveryPlan,
-} from "@/features/health/health-store"
+} from "@/features/health"
 
 const icons = {
   shieldCheck: require("@/assets/images/home/shield-check.svg"),

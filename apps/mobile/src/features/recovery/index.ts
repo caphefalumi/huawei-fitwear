@@ -1,1 +1,1 @@
-export * from "./recovery-sheet"
+export { RecoverySheet } from "./recovery-sheet"

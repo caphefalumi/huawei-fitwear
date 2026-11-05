@@ -1,8 +1,10 @@
-export * from "./types"
-export * from "./api/auth.api"
-export * from "./store/auth.store"
-export * from "./components/auth-field"
-export * from "./components/login-screen"
-export * from "./components/welcome-screen"
-export * from "./components/sign-up-screen"
-export * from "./utils/is-logged-in"
+/** Public API. Screens are composed by route files directly. */
+export { APP_ROUTES, AuthProvider, useAuth } from "./auth-store"
+export { isLoggedIn } from "./is-logged-in"
+export type {
+  AuthenticationSession,
+  AuthenticationSessionResponse,
+  AuthUser,
+  SignUpBody,
+  UpdateUserBody,
+} from "./types"

@@ -5,7 +5,7 @@ import { RadioList } from "@/components/radio-list"
 import { Sheet, SheetActions, SheetField } from "@/components/sheet"
 import { WheelPicker } from "@/components/wheel-picker"
 import { Palette as C } from "@/theme"
-import { ACTIVITIES, GOALS, PERIOD_AREA, useHealth, type Sex } from "@/features/health/health-store"
+import { ACTIVITIES, GOALS, PERIOD_AREA, useHealth, type Sex } from "@/features/health"
 
 const ACTIVITY_OPTIONS = Object.values(ACTIVITIES)
 const GOAL_OPTIONS = Object.values(GOALS)

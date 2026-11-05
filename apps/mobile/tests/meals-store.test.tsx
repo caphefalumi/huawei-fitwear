@@ -14,7 +14,7 @@ import {
   splitDetail,
   sumItems,
   type MealItem,
-} from "@/features/meals/meals-store"
+} from "@/features/meals"
 import { createQueryWrapper } from "./query-wrapper"
 import { useMealClientStore } from "@/features/meals/meal-client.store"
 let mockUserId = "member-a"

@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createContext, useContext, type ReactNode } from "react"
 
-import { useAuth } from "@/features/auth/auth-store"
+import { useAuth } from "@/features/auth"
 import { apiErrorMessage } from "@/lib/api"
 import { apiRequest } from "@/lib/api"
 

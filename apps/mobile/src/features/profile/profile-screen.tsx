@@ -1,6 +1,6 @@
 import { router } from "expo-router"
 import { Image } from "expo-image"
-import { useAuth } from "@/features/auth/auth-store"
+import { useAuth } from "@/features/auth"
 import { useState } from "react"
 import { Alert, StyleSheet, Text, View } from "react-native"
 import Animated, { FadeInUp } from "react-native-reanimated"
@@ -8,7 +8,7 @@ import Animated, { FadeInUp } from "react-native-reanimated"
 import { Pressable } from "@/components/pressable"
 import { Button, PageHeading, Screen } from "@/components/ui"
 import { Palette as C } from "@/theme"
-import { PERIOD_AREA, useHealth } from "@/features/health/health-store"
+import { PERIOD_AREA, useHealth } from "@/features/health"
 import {
   ActivitySheet,
   FrequencySheet,
@@ -17,8 +17,8 @@ import {
   SexSheet,
   TargetWeightSheet,
   WeightSheet,
-} from "@/features/profile/sheets"
-import { RecoverySheet } from "@/features/recovery/recovery-sheet"
+} from "./sheets"
+import { RecoverySheet } from "@/features/recovery"
 
 const icons = {
   chevronRight: require("@/assets/images/profile/chevron-right.svg"),

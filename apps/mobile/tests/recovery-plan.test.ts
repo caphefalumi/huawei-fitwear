@@ -1,10 +1,5 @@
-import {
-  createRecovery,
-  dateKey,
-  PERIOD_AREA,
-  recoveryProgress,
-} from "@/features/health/health-store"
-import type { RecoveryPlan } from "@/features/health/health-store"
+import { createRecovery, dateKey, PERIOD_AREA, recoveryProgress } from "@/features/health"
+import type { RecoveryPlan } from "@/features/health"
 
 jest.mock("@/lib/api", () => ({
   ...jest.requireActual("@/lib/api"),

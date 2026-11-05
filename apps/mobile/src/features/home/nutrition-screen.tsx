@@ -3,10 +3,10 @@ import { StyleSheet, Text, View } from "react-native"
 
 import { BackHeader, Card, PageHeading, Screen } from "@/components/ui"
 import { Palette as C } from "@/theme"
-import { useHealth } from "@/features/health/health-store"
-import { useMeals } from "@/features/meals/meals-store"
-import { NutritionRing } from "@/features/home/ring"
-import { MacroBar } from "@/features/home/ui"
+import { useHealth } from "@/features/health"
+import { useMeals } from "@/features/meals"
+import { MacroBar } from "./ui"
+import { NutritionRing } from "./ring"
 
 export function NutritionScreen() {
   const { weightUpdated } = useHealth()

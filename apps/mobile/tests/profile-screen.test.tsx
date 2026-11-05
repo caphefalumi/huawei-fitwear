@@ -2,12 +2,12 @@ import { act, fireEvent, render } from "@testing-library/react-native"
 import { Alert } from "react-native"
 import { router } from "expo-router"
 
-import { useAuth } from "@/features/auth/auth-store"
-import { useHealth } from "@/features/health/health-store"
+import { useAuth } from "@/features/auth"
+import { useHealth } from "@/features/health"
 import { ProfileScreen } from "@/features/profile/profile-screen"
 
 jest.mock("@/features/auth/auth-store", () => ({ useAuth: jest.fn() }))
-jest.mock("@/features/health/health-store", () => ({
+jest.mock("@/features/health", () => ({
   PERIOD_AREA: "In period",
   useHealth: jest.fn(),
 }))
@@ -24,7 +24,7 @@ jest.mock("expo-router", () => ({ router: { push: jest.fn(), back: jest.fn() } }
 jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }))
-jest.mock("@/features/recovery/recovery-sheet", () => {
+jest.mock("@/features/recovery", () => {
   const React = require("react")
   const { Text } = require("react-native")
   return {

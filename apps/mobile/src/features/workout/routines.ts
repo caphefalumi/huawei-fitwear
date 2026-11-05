@@ -1,4 +1,4 @@
-import { PERIOD_AREA, type RecoveryPlan } from "@/features/health/health-store"
+import { PERIOD_AREA, type RecoveryPlan } from "@/features/health"
 
 export type Routine = {
   name: string

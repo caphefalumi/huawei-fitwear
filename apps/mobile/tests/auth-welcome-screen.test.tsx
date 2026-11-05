@@ -1,7 +1,7 @@
 import { fireEvent, render } from "@testing-library/react-native"
 import { router } from "expo-router"
 
-import { WelcomeScreen } from "@/features/auth/components/welcome-screen"
+import { WelcomeScreen } from "@/features/auth/welcome-screen"
 
 jest.mock("expo-router", () => ({ router: { push: jest.fn() } }))
 jest.mock("react-native-safe-area-context", () => ({

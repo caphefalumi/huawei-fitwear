@@ -5,7 +5,7 @@ import {
   useWorkouts,
   workoutQueryKeys,
   type WorkoutSession,
-} from "@/features/workout/workout-store"
+} from "@/features/workout"
 import type { QueryClient } from "@tanstack/react-query"
 import { createQueryWrapper } from "./query-wrapper"
 

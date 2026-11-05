@@ -1,4 +1,4 @@
-import { progressBounds, progressData } from "@/features/home/progress-data"
+import { progressBounds, progressData } from "@/features/home"
 
 const now = new Date(2026, 0, 3, 9)
 

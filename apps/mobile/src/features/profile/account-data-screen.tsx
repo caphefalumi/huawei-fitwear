@@ -6,7 +6,7 @@ import { router } from "expo-router"
 import { Pressable } from "@/components/pressable"
 import { Sheet, SheetActions } from "@/components/sheet"
 import { Palette as C } from "@/theme"
-import { useAuth } from "@/features/auth/auth-store"
+import { useAuth } from "@/features/auth"
 
 export function AccountDataScreen() {
   const insets = useSafeAreaInsets()

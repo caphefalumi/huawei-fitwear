@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react"
 import { AppState } from "react-native"
-import { useAuth } from "@/features/auth/auth-store"
+import { useAuth } from "@/features/auth"
 import { useMealClientStore } from "./meal-client.store"
 
 export type Macros = { protein: number; carbs: number; fat: number }

@@ -1,5 +1,5 @@
-import { PERIOD_AREA, type RecoveryPlan } from "@/features/health/health-store"
-import { GROUP_ROUTINES, routinesFor } from "@/features/workout/routines"
+import { PERIOD_AREA, type RecoveryPlan } from "@/features/health"
+import { GROUP_ROUTINES, routinesFor } from "@/features/workout"
 
 const kneeRecovery: RecoveryPlan = {
   area: "Right knee",

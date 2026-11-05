@@ -4,16 +4,16 @@ import { Text, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
 import { Palette as C } from "@/theme"
-import { useAuth } from "@/features/auth/store/auth.store"
+import { useAuth } from "@/features/auth"
 import { apiErrorMessage, apiRequest } from "@/lib/api"
-import { MealResultScreen } from "@/features/meals/meal-result-screen"
+import { MealResultScreen } from "./meal-result-screen"
 import {
   fromApiMeal,
   mealsQueryKeys,
   useMeals,
   type ApiMealItem,
   type MealType,
-} from "@/features/meals/meals-store"
+} from "./meals-store"
 
 export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: () => void }) {
   const { user } = useAuth()

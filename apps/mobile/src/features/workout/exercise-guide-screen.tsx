@@ -6,7 +6,7 @@ import { StyleSheet, Text, View } from "react-native"
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
 import { Palette as C } from "@/theme"
-import { useHealth } from "@/features/health/health-store"
+import { useHealth } from "@/features/health"
 
 const icons = {
   play: require("@/assets/images/workout/play.svg"),

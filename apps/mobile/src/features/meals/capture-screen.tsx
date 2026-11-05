@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react"
 import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { pickImage } from "@/features/camera/image-picker"
+import { pickImage } from "@/features/camera"
 
 import { Pressable } from "@/components/pressable"
 import { Sheet } from "@/components/sheet"
