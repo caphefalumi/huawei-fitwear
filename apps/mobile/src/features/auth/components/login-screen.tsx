@@ -112,9 +112,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
   const resendLabel =
     resendSeconds === 0
       ? null
-      : resendSeconds >= 3600
-        ? "Try again later"
-        : `Resend in ${String(Math.floor(resendSeconds / 60)).padStart(2, "0")}:${String(resendSeconds % 60).padStart(2, "0")}`
+      : `Resend in ${String(Math.floor(resendSeconds / 60)).padStart(2, "0")}:${String(resendSeconds % 60).padStart(2, "0")}`
 
   useEffect(() => {
     if (resendDeadline === null) return

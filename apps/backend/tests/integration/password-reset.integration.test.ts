@@ -113,9 +113,11 @@ describe("Password reset integration", () => {
     await blocked(firstSentAt + 89_999)
     await sent(firstSentAt + 90_000, 180)
     await blocked(firstSentAt + 269_999)
-    await sent(firstSentAt + 270_000, 600)
-    await blocked(firstSentAt + 869_999)
-    await sent(firstSentAt + 870_000, 86_400)
+    await sent(firstSentAt + 270_000, 300)
+    await blocked(firstSentAt + 569_999)
+    await sent(firstSentAt + 570_000, 600)
+    await blocked(firstSentAt + 1_169_999)
+    await sent(firstSentAt + 1_170_000, 600)
   })
 
   it("returns the same response for known and unknown addresses and queues only for the account owner", async () => {
