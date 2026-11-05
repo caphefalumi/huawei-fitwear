@@ -12,6 +12,7 @@ import { AppState } from "react-native"
 
 import { ApiError, onSessionExpired, setApiToken } from "@/lib/api"
 import { sessionStorage } from "@/lib/storage"
+
 import {
   authQueryKeys,
   authSessionQueryOptions,
@@ -38,8 +39,8 @@ export type {
   SignUpBody,
   UpdateUserBody,
 }
-import { isLoggedIn } from "./is-logged-in"
 import { useAuthUiStore } from "./auth-ui-store"
+import { isLoggedIn } from "./is-logged-in"
 
 export const APP_ROUTES = {
   welcome: "/",

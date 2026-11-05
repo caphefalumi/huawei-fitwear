@@ -1,12 +1,14 @@
+import type { QueryClient } from "@tanstack/react-query"
 import { act, renderHook, waitFor } from "@testing-library/react-native"
-import { apiRequest } from "@/lib/api"
+
 import {
   WorkoutProvider,
   useWorkouts,
   workoutQueryKeys,
   type WorkoutSession,
 } from "@/features/workout"
-import type { QueryClient } from "@tanstack/react-query"
+import { apiRequest } from "@/lib/api"
+
 import { createQueryWrapper } from "./query-wrapper"
 
 let serverSessions: WorkoutSession[]

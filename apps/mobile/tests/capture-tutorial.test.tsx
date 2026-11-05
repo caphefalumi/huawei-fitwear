@@ -1,7 +1,7 @@
 import { fireEvent, render } from "@testing-library/react-native"
 
-import { MealCaptureScreen } from "@/features/meals/capture-screen"
 import { useMeals } from "@/features/meals"
+import { MealCaptureScreen } from "@/features/meals/capture-screen"
 
 jest.mock("expo-router", () => ({ router: { push: jest.fn(), back: jest.fn() } }))
 jest.mock("@/features/camera", () => ({ pickImage: jest.fn() }))

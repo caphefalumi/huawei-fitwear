@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test"
+
 import { withDatabaseBinding } from "../../src/db"
 import { consumeEmailBatch, isEmailMessage, type EmailMessage } from "../../src/modules/email/queue"
 

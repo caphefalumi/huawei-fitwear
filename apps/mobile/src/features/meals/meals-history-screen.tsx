@@ -7,8 +7,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
 import { Palette as C } from "@/theme"
-import { icons } from "./meals-ui"
+
 import { useMeals, type MealLog } from "./meals-store"
+import { icons } from "./meals-ui"
 
 type SortKey = "newest" | "kcal" | "protein" | "carbs" | "fat"
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test"
+
 import { app } from "../helpers/test-app"
 
 describe("Integration Test: Root & Swagger API", () => {

@@ -5,9 +5,10 @@ import { SafeAreaView } from "react-native-safe-area-context"
 
 import { ThemedText } from "@/components/themed-text"
 import { ThemedView } from "@/components/themed-view"
-import { BottomTabInset, tokens } from "@/theme"
-import { useWatchBle } from "./use-watch-ble"
 import { useTheme } from "@/hooks/use-theme"
+import { BottomTabInset, tokens } from "@/theme"
+
+import { useWatchBle } from "./use-watch-ble"
 
 // ─── IMU packet type ──────────────────────────────────────────────────────────
 interface ImuPacket {

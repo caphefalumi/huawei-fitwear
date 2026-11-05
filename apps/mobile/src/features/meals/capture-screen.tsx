@@ -5,15 +5,15 @@ import { useEffect, useRef, useState } from "react"
 import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { pickImage } from "@/features/camera"
-
 import { Pressable } from "@/components/pressable"
 import { Sheet } from "@/components/sheet"
 import { BackHeader, Button } from "@/components/ui"
-import { Palette as C } from "@/theme"
-import { icons } from "./meals-ui"
-import { useMeals, type ApiMealItem } from "./meals-store"
+import { pickImage } from "@/features/camera"
 import { apiRequest } from "@/lib/api"
+import { Palette as C } from "@/theme"
+
+import { useMeals, type ApiMealItem } from "./meals-store"
+import { icons } from "./meals-ui"
 
 const TUTORIAL_STEPS = [
   { title: "Add a ruler", detail: "Place a 15 cm ruler beside the plate or cup." },

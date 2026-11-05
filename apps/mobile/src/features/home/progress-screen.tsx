@@ -4,8 +4,9 @@ import { Animated, Easing, StyleSheet, Text, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Card, PageHeading, Screen } from "@/components/ui"
-import { Palette as C } from "@/theme"
 import { useHealth } from "@/features/health"
+import { Palette as C } from "@/theme"
+
 import { progressData, RANGES, type Range } from "./progress-data"
 import { WeightChart } from "./weight-chart"
 

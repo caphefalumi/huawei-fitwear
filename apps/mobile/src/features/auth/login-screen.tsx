@@ -24,10 +24,11 @@ import Animated, { FadeIn, FadeOut, useReducedMotion } from "react-native-reanim
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
-import { Palette } from "@/theme"
 import { ApiError } from "@/lib/api"
-import { useAuth } from "./auth-store"
+import { Palette } from "@/theme"
+
 import { AuthField } from "./auth-field"
+import { useAuth } from "./auth-store"
 
 const AuthColors = {
   ...Palette,

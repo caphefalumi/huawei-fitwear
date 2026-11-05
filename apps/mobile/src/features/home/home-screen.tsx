@@ -6,13 +6,14 @@ import Animated, { FadeInUp } from "react-native-reanimated"
 
 import { Pressable } from "@/components/pressable"
 import { Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
-import { Palette as C } from "@/theme"
 import { recoveryTitle, useHealth } from "@/features/health"
-import { routinesFor } from "@/features/workout"
-import { RecoverySheet } from "@/features/recovery"
 import { useMeals } from "@/features/meals"
-import { MacroBar } from "./ui"
+import { RecoverySheet } from "@/features/recovery"
+import { routinesFor } from "@/features/workout"
+import { Palette as C } from "@/theme"
+
 import { NutritionRing } from "./ring"
+import { MacroBar } from "./ui"
 import { WeightChart } from "./weight-chart"
 
 const DEMO_WEIGHTS = [72.8, 72.5, 72.3, 72.1, 71.9, 71.7, 71.5]

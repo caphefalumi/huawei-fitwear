@@ -4,8 +4,9 @@ import { StyleSheet, Text, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, Card, PageHeading, Screen } from "@/components/ui"
-import { Palette as C } from "@/theme"
 import { useHealth } from "@/features/health"
+import { Palette as C } from "@/theme"
+
 import { routinesFor } from "./routines"
 
 function formatElapsed(totalSeconds: number) {

@@ -2,15 +2,16 @@ import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Animated, PanResponder, ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useReducedMotion } from "react-native-reanimated"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { FetchErrorState } from "@/components/fetch-states"
 import { Pressable } from "@/components/pressable"
 import { Sheet } from "@/components/sheet"
 import { BackHeader, Button, SectionHeading } from "@/components/ui"
 import { Palette as C } from "@/theme"
-import { Glyph, icons } from "./meals-ui"
+
+import { MealPhoto } from "./meal-photo"
 import {
   rescaleItem,
   splitDetail,
@@ -20,7 +21,7 @@ import {
   type MealType,
   mealTypeLabel,
 } from "./meals-store"
-import { MealPhoto } from "./meal-photo"
+import { Glyph, icons } from "./meals-ui"
 
 const ACTION_WIDTH = 88
 

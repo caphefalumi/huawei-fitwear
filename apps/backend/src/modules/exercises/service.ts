@@ -1,5 +1,6 @@
 import { and, asc, count, eq, like, type SQL } from "drizzle-orm"
 import { status } from "elysia"
+
 import { getDb, exercises as exercisesTable } from "../../db"
 import type { ExerciseListQuery } from "./index"
 

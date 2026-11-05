@@ -6,8 +6,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
 import { Palette as AuthColors } from "@/theme"
-import { APP_ROUTES, useAuth } from "./auth-store"
+
 import { AuthField } from "./auth-field"
+import { APP_ROUTES, useAuth } from "./auth-store"
 import { DateOfBirthField } from "./date-of-birth-field"
 
 const icons = {

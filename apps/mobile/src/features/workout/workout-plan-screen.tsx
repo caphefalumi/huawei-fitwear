@@ -6,10 +6,11 @@ import Animated, { FadeInUp } from "react-native-reanimated"
 
 import { Pressable } from "@/components/pressable"
 import { Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
-import { Palette as C } from "@/theme"
 import { recoveryRanges, useHealth } from "@/features/health"
-import { routinesFor, type Routine } from "./routines"
 import { RecoverySheet } from "@/features/recovery"
+import { Palette as C } from "@/theme"
+
+import { routinesFor, type Routine } from "./routines"
 
 const icons = {
   shieldCheck: require("@/assets/images/home/shield-check.svg"),

@@ -1,10 +1,11 @@
-import { createTestEmailQueue } from "../helpers/test-email-queue"
 import { describe, expect, it, beforeEach, spyOn } from "bun:test"
-import { app, setTestDatabaseBinding } from "../helpers/test-app"
-import { createTestDatabase } from "../helpers/test-db"
-import { createTestKv } from "../helpers/test-kv"
+
 import { user as userTable } from "../../src/db/schema"
 import type { EmailMessage } from "../../src/modules/email/queue"
+import { app, setTestDatabaseBinding } from "../helpers/test-app"
+import { createTestDatabase } from "../helpers/test-db"
+import { createTestEmailQueue } from "../helpers/test-email-queue"
+import { createTestKv } from "../helpers/test-kv"
 
 describe("Integration Test: Auth API Endpoints", () => {
   let testD1: D1Database

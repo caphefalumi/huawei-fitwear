@@ -1,6 +1,6 @@
-import { createTestEmailQueue } from "./test-email-queue"
 import { app as fitwearApp } from "../../src/app"
 import { withDatabaseBinding, type WorkerBindings } from "../../src/db"
+import { createTestEmailQueue } from "./test-email-queue"
 
 const fallbackEmailQueue = createTestEmailQueue().queue
 let bindings: WorkerBindings = {}

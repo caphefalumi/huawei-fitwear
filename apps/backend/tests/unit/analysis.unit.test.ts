@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test"
+
 import { parseMealAnalysis } from "../../src/modules/meals/analysis"
 
 describe("Meal analysis result validation", () => {

@@ -1,11 +1,12 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native"
-import { AccessibilityInfo, AppState, StyleSheet, type AppStateStatus } from "react-native"
-import * as Haptics from "expo-haptics"
 import { CanceledError } from "axios"
-import { ApiError } from "@/lib/api"
+import * as Haptics from "expo-haptics"
+import { AccessibilityInfo, AppState, StyleSheet, type AppStateStatus } from "react-native"
+
 import { useAuth } from "@/features/auth"
 import { AuthField } from "@/features/auth/auth-field"
 import { LoginScreen } from "@/features/auth/login-screen"
+import { ApiError } from "@/lib/api"
 
 jest.mock("@/features/auth/auth-store", () => ({
   APP_ROUTES: { signUp: "/sign-up" },

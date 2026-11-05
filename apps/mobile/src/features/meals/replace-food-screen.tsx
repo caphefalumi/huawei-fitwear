@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Pressable } from "@/components/pressable"
 import { BackHeader, SectionHeading } from "@/components/ui"
 import { Palette as C } from "@/theme"
-import { SearchInput } from "./meals-ui"
+
 import {
   useFoodSearch,
   estimatePortion,
@@ -14,6 +14,7 @@ import {
   useMeals,
   type FoodEntry,
 } from "./meals-store"
+import { SearchInput } from "./meals-ui"
 
 export function ReplaceFoodScreen() {
   const insets = useSafeAreaInsets()

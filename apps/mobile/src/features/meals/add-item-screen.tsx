@@ -1,3 +1,4 @@
+import { Image } from "expo-image"
 import { router, useLocalSearchParams } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
@@ -6,8 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, SectionHeading } from "@/components/ui"
 import { Palette as C } from "@/theme"
-import { Box, Field, NutrientGrid, SearchInput, ValueInput, icons } from "./meals-ui"
-import { Image } from "expo-image"
+
 import {
   useFoodSearch,
   estimatePortion,
@@ -15,6 +15,7 @@ import {
   type FoodEntry,
   type MealEstimate,
 } from "./meals-store"
+import { Box, Field, NutrientGrid, SearchInput, ValueInput, icons } from "./meals-ui"
 
 type NutrientKey = "energy" | "protein" | "carbs" | "fat"
 

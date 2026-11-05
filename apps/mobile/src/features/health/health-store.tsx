@@ -1,8 +1,8 @@
-import { apiErrorMessage } from "@/lib/api"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react"
 
 import { useAuth } from "@/features/auth"
+import { apiErrorMessage } from "@/lib/api"
 import { apiRequest } from "@/lib/api"
 
 export type Sex = "Male" | "Female" | "Rather not say"

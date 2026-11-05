@@ -1,4 +1,5 @@
 import { fireEvent, render } from "@testing-library/react-native"
+
 import { useAuth } from "@/features/auth"
 import { SignUpScreen } from "@/features/auth/sign-up-screen"
 

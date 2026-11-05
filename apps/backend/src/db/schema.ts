@@ -1,5 +1,6 @@
-import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core"
 import { relations } from "drizzle-orm"
+import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core"
+
 import { generateId } from "../lib/id"
 
 export const user = sqliteTable("user", {

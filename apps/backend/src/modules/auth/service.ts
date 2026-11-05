@@ -1,16 +1,16 @@
-import { enqueueEmail } from "../email/queue"
 import { and, eq } from "drizzle-orm"
 import { Elysia, status } from "elysia"
+
 import { getDb, user as userTable, session as sessionTable } from "../../db"
+import { generateId, generateToken } from "../../lib/id"
+import { deleteUserMealImages } from "../../lib/meal-images"
 import {
   hashPassword,
   isPasswordWithinBcryptLimit,
   needsPasswordRehash,
   verifyPassword,
 } from "../../lib/password"
-import { generateId, generateToken } from "../../lib/id"
-import { deleteUserMealImages } from "../../lib/meal-images"
-
+import { enqueueEmail } from "../email/queue"
 import type { SignUpBody, SignInBody, UpdateUserBody } from "./index"
 
 // Public dummy verifier, never an account credential. Match the current bcrypt cost

@@ -4,6 +4,7 @@ import { StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } fro
 
 import { Pressable } from "@/components/pressable"
 import { Palette as C } from "@/theme"
+
 import type { MealGlyph } from "./meals-store"
 
 export const icons = {

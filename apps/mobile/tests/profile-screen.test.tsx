@@ -1,6 +1,6 @@
 import { act, fireEvent, render } from "@testing-library/react-native"
-import { Alert } from "react-native"
 import { router } from "expo-router"
+import { Alert } from "react-native"
 
 import { useAuth } from "@/features/auth"
 import { useHealth } from "@/features/health"

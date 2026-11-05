@@ -1,6 +1,5 @@
 import { Elysia, t, type Static } from "elysia"
-import { Auth, authGuard } from "./service"
-import { assertAuthRateLimit, canSendPasswordResetEmail } from "./rate-limit"
+
 import {
   InvalidPasswordResetToken,
   isPasswordResetConfigured,
@@ -9,6 +8,8 @@ import {
   resetPassword,
   verifyPasswordResetCode,
 } from "./password-reset"
+import { assertAuthRateLimit, canSendPasswordResetEmail } from "./rate-limit"
+import { Auth, authGuard } from "./service"
 
 export const AuthSchemas = {
   signUpBody: t.Object({

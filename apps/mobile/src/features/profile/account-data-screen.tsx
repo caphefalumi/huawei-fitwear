@@ -1,12 +1,12 @@
+import { router } from "expo-router"
 import { useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { router } from "expo-router"
 
 import { Pressable } from "@/components/pressable"
 import { Sheet, SheetActions } from "@/components/sheet"
-import { Palette as C } from "@/theme"
 import { useAuth } from "@/features/auth"
+import { Palette as C } from "@/theme"
 
 export function AccountDataScreen() {
   const insets = useSafeAreaInsets()

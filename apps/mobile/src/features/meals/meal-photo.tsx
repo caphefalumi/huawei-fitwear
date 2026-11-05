@@ -1,12 +1,14 @@
+import { useQuery } from "@tanstack/react-query"
 import { Image, type ImageProps } from "expo-image"
 import { useEffect, useState } from "react"
-import { useQuery } from "@tanstack/react-query"
 import { Text, View } from "react-native"
+
 import { Pressable } from "@/components/pressable"
-import { Palette as C } from "@/theme"
 import { useAuth } from "@/features/auth"
-import { mealsQueryKeys } from "./meals-store"
 import { apiErrorMessage, apiRequest } from "@/lib/api"
+import { Palette as C } from "@/theme"
+
+import { mealsQueryKeys } from "./meals-store"
 import { icons } from "./meals-ui"
 
 export function MealPhoto({

@@ -1,10 +1,11 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm"
 import { status } from "elysia"
+
 import { getDb, mealItems as mealItemsTable, mealLogs as mealLogsTable } from "../../db"
-import { generateId } from "../../lib/id"
 import { isDateKey, toDateKey } from "../../lib/date"
-import { sumNutrition, type NutritionTotals } from "../../lib/nutrition"
+import { generateId } from "../../lib/id"
 import { deleteMealImage, saveMealImage } from "../../lib/meal-images"
+import { sumNutrition, type NutritionTotals } from "../../lib/nutrition"
 import { Targets } from "../targets/service"
 import type {
   MealCreateBody,

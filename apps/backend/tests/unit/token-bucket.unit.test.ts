@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test"
+
 import { consumeTokenBucket } from "../../src/lib/token-bucket"
 import { createTestKv } from "../helpers/test-kv"
 

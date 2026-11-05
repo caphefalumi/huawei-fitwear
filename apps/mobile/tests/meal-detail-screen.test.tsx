@@ -1,7 +1,7 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native"
 
-import { MealDetailScreen } from "@/features/meals/meal-detail-screen"
 import { useMeals } from "@/features/meals"
+import { MealDetailScreen } from "@/features/meals/meal-detail-screen"
 import { apiRequest } from "@/lib/api"
 
 import { createQueryWrapper } from "./query-wrapper"
