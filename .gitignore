@@ -48,3 +48,6 @@ docs/superpowers/
 # Test artifacts
 test-results/
 
+
+# Agent scratch (reports, briefs, review packages)
+.superpowers/
