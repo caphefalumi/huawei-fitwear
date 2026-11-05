@@ -44,6 +44,7 @@
     "react-native": "0.88.1"
   },
   "devDependencies": {
+    "@xmldom/xmldom": "^0.9.12",
     "lint-staged": "^17.6.0",
     "oxfmt": "^0.76.0",
     "oxlint": "^1.91.0",

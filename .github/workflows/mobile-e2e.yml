@@ -5,16 +5,11 @@ on:
     - cron: "0 2 * * *"
   workflow_dispatch:
     inputs:
-      run_fitness:
-        description: Run the fitness lifecycle flow
+      include_tags:
+        description: Comma-separated Maestro tags (OR); leave blank to run every top-level flow
         required: false
-        type: boolean
-        default: true
-      run_error_messages:
-        description: Run the visible error-state flow
-        required: false
-        type: boolean
-        default: true
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -26,7 +21,6 @@ concurrency:
 
 jobs:
   build:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_fitness || inputs.run_error_messages }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -93,7 +87,6 @@ jobs:
   e2e:
     name: Android Maestro E2E
     needs: build
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_fitness || inputs.run_error_messages }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -107,6 +100,12 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
+      - name: Install workspace dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Verify Maestro reporting
+        run: bun test ./.github/scripts/generate-maestro-summary.test.ts
 
       - name: Download Android release APK
         uses: actions/download-artifact@v8
@@ -139,6 +138,7 @@ jobs:
         env:
           MAESTRO_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
           MAESTRO_TEST_PASSWORD: ${{ secrets.MAESTRO_TEST_PASSWORD }}
+          MAESTRO_INCLUDE_TAGS: ${{ inputs.include_tags }}
         with:
           api-level: 34
           target: google_apis
@@ -152,25 +152,17 @@ jobs:
             adb wait-for-device
             adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
             sleep 5
-            mkdir -p maestro-artifacts/recordings
+            mkdir -p maestro-artifacts
             test -n "$MAESTRO_TEST_EMAIL" && test -n "$MAESTRO_TEST_PASSWORD"
-            maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts -e MAESTRO_TEST_EMAIL="$MAESTRO_TEST_EMAIL" -e MAESTRO_TEST_PASSWORD="$MAESTRO_TEST_PASSWORD" ${{ (github.event_name != 'workflow_dispatch' || inputs.run_fitness) && 'apps/mobile/tests/e2e/fitness.yaml' || '' }} ${{ (github.event_name != 'workflow_dispatch' || inputs.run_error_messages) && 'apps/mobile/tests/e2e/error-messages.yaml' || '' }}; status=$?; printf 'MAESTRO_EXIT_CODE=%s\n' "$status" >> "$GITHUB_ENV"; exit "$status"
-
-      - name: Collect Maestro test recordings and artifacts
-        if: always()
-        run: |
-          mkdir -p maestro-artifacts/recordings
-          find ~/.maestro/tests maestro-artifacts -type f -name "*.mp4" -exec cp -f {} maestro-artifacts/recordings/ \; 2>/dev/null || true
-          find ~/.maestro/tests -type f -name "*.png" -exec cp -f {} maestro-artifacts/ \; 2>/dev/null || true
-          ls -la maestro-artifacts/recordings/ || true
+            maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts -e MAESTRO_TEST_EMAIL="$MAESTRO_TEST_EMAIL" -e MAESTRO_TEST_PASSWORD="$MAESTRO_TEST_PASSWORD" ${MAESTRO_INCLUDE_TAGS:+--include-tags "$MAESTRO_INCLUDE_TAGS"} apps/mobile/tests/e2e; status=$?; printf 'MAESTRO_EXIT_CODE=%s\n' "$status" >> "$GITHUB_ENV"; exit "$status"
 
       - name: Upload Maestro recording video
         id: upload-recording
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: fitwear-e2e-recording
-          path: maestro-artifacts/recordings/*.mp4
+          name: fitwear-e2e-recording-${{ github.run_attempt }}
+          path: maestro-artifacts/**/*.mp4
           if-no-files-found: ignore
 
       - name: Upload Maestro test artifacts and recordings
@@ -178,7 +170,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: maestro-e2e-artifacts
+          name: maestro-e2e-artifacts-${{ github.run_attempt }}
           path: maestro-artifacts/
           if-no-files-found: ignore
 

@@ -172,7 +172,19 @@ bun run test:e2e
 bun run lint
 ```
 
-The `tests/e2e/fitness.yaml` and `tests/e2e/error-messages.yaml` Maestro flows run nightly at 02:00 UTC and on manual workflow dispatch; pull-request mobile checks run Jest unit tests without the emulator build. The fitness flow verifies sign-in, session restoration, and backend-backed empty states; the error flow checks login validation and network-failure feedback. They require Maestro CLI 2.12.0, Java 17+, an Android emulator, and the E2E account secrets; CI provisions the native build, emulator, and Maestro CLI.
+`bun run test:e2e` runs the Maestro workspace in `tests/e2e/`. Nightly runs at 02:00 UTC and manual Mobile E2E runs discover every top-level `.yaml`/`.yml` flow automatically. Add a self-contained flow there without editing the workflow or summary generator. Keep reusable subflows in subdirectories so they are not executed independently; use Maestro's `config.yaml` `flows` patterns if executable journeys are later organized into subdirectories.
+
+The existing fitness flow verifies sign-in, session restoration, and backend-backed empty states; the error flow checks login validation and network-failure feedback. CI provisions the release APK, API 34 emulator, and Maestro CLI 2.12.0. The current flows require the dedicated E2E account secrets and Java 17+. Pull-request mobile checks run Jest without the emulator build.
+
+For a manual subset, set the workflow's optional `include_tags` input to comma-separated Maestro tags. Tags use OR matching; leaving the input blank runs all discovered flows. The former `run_fitness` and `run_error_messages` booleans have been replaced:
+
+```bash
+gh workflow run mobile-e2e.yml -f include_tags=fitness,errors
+```
+
+JUnit results drive the job summary: each flow gets its own status, source file, and duration, with failure/error details and skipped counts. A missing, invalid, empty, or skipped-only report is not a successful run. All recordings are listed, and artifact uploads preserve each flow's directory so repeated screenshot/video filenames cannot overwrite one another. Artifact names include the run attempt (`maestro-e2e-artifacts-1`, `fitwear-e2e-recording-1`) to distinguish reruns. Recording is opt-in per flow through `startRecording`/`stopRecording`; a flow without a recording still has test results.
+
+The reporter and its tests run on Bun, using the workspace's declared XML parser. Run its regression tests from the repository root with `bun test ./.github/scripts/generate-maestro-summary.test.ts`. These tests also run before the CI emulator starts.
 
 Each flow stops the app before clearing its data and launching it. Keep that order: clearing data while the previous flow's activity is running can leave Android removing the old task after the new process starts, killing the new process and stranding the test on the system splash screen.
 
