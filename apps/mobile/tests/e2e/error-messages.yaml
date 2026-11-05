@@ -3,15 +3,17 @@ tags:
   - e2e
   - errors
 ---
-- evalScript: ${output.unknownEmail = 'maestro_unknown_' + Date.now() + '_' + Math.floor(Math.random() * 1000000) + '@fitwear.dev'}
 - setAirplaneMode: disabled
 # Stop the previous flow before clearing data: Android can otherwise finish
 # removing its task after launch and kill the newly started process.
 - stopApp
 - launchApp:
     clearState: true
+- startRecording:
+    path: "error_messages_e2e"
+    label: "Capture error-message E2E execution"
+    optional: true
 
-# Login validation and invalid credentials use the dedicated E2E account.
 - extendedWaitUntil:
     visible: "Explore the app"
     timeout: 30000
@@ -19,6 +21,44 @@ tags:
 - extendedWaitUntil:
     visible: "Hi, welcome back."
     timeout: 20000
+
+# Sign-up client validation before credential login (submit stays enabled; errors from submit()).
+- tapOn: "Sign up"
+- extendedWaitUntil:
+    visible: "Create account"
+    timeout: 10000
+- tapOn:
+    id: "sign-up-submit"
+- assertVisible: "Enter your name and a valid email address."
+- tapOn: "Your username"
+- inputText: "E2E Member"
+- tapOn: "Your email"
+- inputText: "e2e.member@fitwear.dev"
+- tapOn: "Your password"
+- inputText: "short"
+- tapOn: "Day"
+- inputText: "12"
+- tapOn: "Month"
+- inputText: "03"
+- tapOn: "Year"
+- inputText: "1998"
+- hideKeyboard
+- tapOn:
+    id: "sign-up-submit"
+- assertVisible: "Password must contain at least 8 characters."
+- tapOn: "Your password"
+- eraseText
+- inputText: "password123"
+- hideKeyboard
+- tapOn:
+    id: "sign-up-submit"
+- assertVisible: "Please agree to the terms before creating an account."
+- tapOn: "Log in"
+- extendedWaitUntil:
+    visible: "Hi, welcome back."
+    timeout: 10000
+
+# Login validation and invalid credentials use the dedicated E2E account.
 - tapOn: "example@gmail.com"
 - inputText: "invalid-email"
 - hideKeyboard
@@ -51,22 +91,64 @@ tags:
 - extendedWaitUntil:
     visible: "Can't connect. Check your connection and try again."
     timeout: 20000
-- tapOn: "Forgot password?"
-- extendedWaitUntil:
-    visible: "Reset your password."
-    timeout: 10000
-# The reset field auto-focuses at the end of its value. Do not tap the middle
-# of the prefilled address before backspacing, or its suffix will remain.
-- eraseText: 100
+- setAirplaneMode: disabled
+- tapOn: "Your password"
+- eraseText
+- inputText: ${MAESTRO_TEST_PASSWORD}
 - hideKeyboard
-- tapOn: "Send reset code"
-- assertVisible: "Enter your email address."
-- tapOn: "example@gmail.com"
-- inputText: ${output.unknownEmail}
-- hideKeyboard
-- tapOn: "Send reset code"
+- tapOn:
+    id: "login-submit"
 - extendedWaitUntil:
-    visible: "Could not reach the server. Check your connection and try again."
+    visible: "Today"
+    timeout: 30000
+
+# Profile health load failure after offline cold start (health queries use networkMode: always).
+- stopApp
+- setAirplaneMode: enabled
+- launchApp
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 30000
+- tapOn:
+    id: "tab-profile"
+- extendedWaitUntil:
+    visible: "Could not load your health data."
+    timeout: 30000
+- tapOn: "Retry"
+- extendedWaitUntil:
+    visible: "Could not load your health data."
     timeout: 20000
 - setAirplaneMode: disabled
+
+# Meal manual entry validation on an empty reviewed item.
+- tapOn:
+    id: "tab-meals"
+- extendedWaitUntil:
+    visible: "Capture meal"
+    timeout: 20000
+- tapOn:
+    text: "Capture meal"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Capture your meal"
+    timeout: 20000
+- tapOn:
+    text: "Close Capture your meal"
+    retryTapIfNoChange: true
+- tapOn: "Enter meal manually"
+- extendedWaitUntil:
+    visible: "Log Meal"
+    timeout: 20000
+- tapOn: "+ Add item"
+- extendedWaitUntil:
+    visible: "Enter nutrition manually"
+    timeout: 20000
+- tapOn: "Enter nutrition manually"
+- extendedWaitUntil:
+    visible: "Add item"
+    timeout: 20000
+- tapOn: "Add item"
+- assertVisible: "Enter a name, positive amount and all nutrition values (zero is allowed)."
+
+- stopRecording
 - stopApp

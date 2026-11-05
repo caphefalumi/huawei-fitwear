@@ -2,7 +2,8 @@ name: Mobile E2E
 
 on:
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 1 * * *"
+      timezone: Asia/Ho_Chi_Minh
   workflow_dispatch:
     inputs:
       include_tags:

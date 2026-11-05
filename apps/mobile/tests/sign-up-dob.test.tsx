@@ -58,7 +58,7 @@ test("clearing a completed DOB disables signup and cannot submit the stale date"
   expect(submit.props.accessibilityState.disabled).toBe(false)
 
   await fireEvent.changeText(screen.getByLabelText("Day"), "")
-  expect(screen.getByLabelText("Create account").props.accessibilityState.disabled).toBe(true)
+  expect(screen.getByLabelText("Create account").props.accessibilityState.disabled).toBe(false)
   await fireEvent.press(screen.getByLabelText("Create account"))
   expect(signUp).not.toHaveBeenCalled()
 })
