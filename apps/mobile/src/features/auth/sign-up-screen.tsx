@@ -172,36 +172,12 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
         testID="sign-up-submit"
         accessibilityRole="button"
         accessibilityLabel="Create account"
-        accessibilityState={{
-          disabled:
-            pending ||
-            name.trim().length === 0 ||
-            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
-            Array.from(password).length < 8 ||
-            !birthDate ||
-            !agreed,
-        }}
-        disabled={
-          pending ||
-          name.trim().length === 0 ||
-          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
-          Array.from(password).length < 8 ||
-          !birthDate ||
-          !agreed
-        }
+        accessibilityState={{ disabled: pending, busy: pending }}
+        disabled={pending}
         onPress={() => {
           void submit()
         }}
-        style={[
-          styles.primaryButton,
-          (pending ||
-            name.trim().length === 0 ||
-            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
-            Array.from(password).length < 8 ||
-            !birthDate ||
-            !agreed) &&
-            styles.disabled,
-        ]}
+        style={[styles.primaryButton, pending && styles.disabled]}
       >
         <Text style={styles.primaryLabel}>Create account</Text>
       </Pressable>

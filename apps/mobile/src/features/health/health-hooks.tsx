@@ -134,11 +134,13 @@ export function HealthProvider({ children }: { children: ReactNode }) {
     queryKey: userId ? healthQueryKeys.weights(userId) : ["health", "signed-out", "weights"],
     queryFn: ({ signal }) => fetchWeights(signal),
     enabled: Boolean(userId),
+    networkMode: "always",
   })
   const recoveryQuery = useQuery({
     queryKey: userId ? healthQueryKeys.recovery(userId) : ["health", "signed-out", "recovery"],
     queryFn: ({ signal }) => fetchRecovery(signal),
     enabled: Boolean(userId),
+    networkMode: "always",
   })
   const [weightUpdated, setWeightUpdated] = useState(false)
   const weights = weightsQuery.data ?? []

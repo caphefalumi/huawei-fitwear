@@ -1,35 +1,26 @@
 name: Cleanup Caches
 
 on:
-  pull_request:
-    branches: [main]
-    types: [closed]
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 2 * * *"
+      timezone: Asia/Ho_Chi_Minh
   workflow_dispatch:
 
 permissions:
   contents: read
   actions: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   cleanup:
-    if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
     name: Invalidate and purge old caches
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Invalidate merged PR caches
-        if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          echo "Invalidating caches for closed PR #${PR_NUMBER}..."
-          gh cache delete --ref "refs/pull/${PR_NUMBER}/merge" --all --succeed-on-no-caches || true
-
       - name: Invalidate stale caches
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
