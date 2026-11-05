@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from "expo-router"
 import { StyleSheet, Text, View } from "react-native"
 
 import { BackHeader, Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 import { GROUP_ROUTINES } from "@/features/workout/routines"
 
 export function GroupPlanScreen() {

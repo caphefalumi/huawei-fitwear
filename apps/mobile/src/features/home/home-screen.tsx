@@ -6,7 +6,7 @@ import Animated, { FadeInUp } from "react-native-reanimated"
 
 import { Pressable } from "@/components/pressable"
 import { Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 import { recoveryTitle, useHealth } from "@/features/health/health-store"
 import { routinesFor } from "@/features/workout/routines"
 import { RecoverySheet } from "@/features/recovery/recovery-sheet"

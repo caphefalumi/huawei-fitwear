@@ -5,7 +5,7 @@ import { router } from "expo-router"
 
 import { Pressable } from "@/components/pressable"
 import { Sheet, SheetActions } from "@/components/sheet"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 import { useAuth } from "@/features/auth/auth-store"
 
 export function AccountDataScreen() {

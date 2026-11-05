@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react"
 import { Animated, StyleSheet, Text, View } from "react-native"
 import Svg, { Circle } from "react-native-svg"
 
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 
 /** Ring frame size from Figma (node 4:3836, "Nutrition" body). */
 const SIZE = 112

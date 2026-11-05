@@ -5,7 +5,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
-import { Palette as AuthColors } from "@/constants/palette"
+import { Palette as AuthColors } from "@/theme"
 import { APP_ROUTES, useAuth } from "../store/auth.store"
 import { AuthField } from "./auth-field"
 import { DateOfBirthField } from "./date-of-birth-field"

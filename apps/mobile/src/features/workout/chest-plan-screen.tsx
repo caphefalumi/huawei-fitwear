@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 import { useHealth } from "@/features/health/health-store"
 
 const icons = {

@@ -1,7 +1,7 @@
 import { useNetworkState } from "expo-network"
 import { Text, View } from "react-native"
 
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 
 export function NetworkStatusBanner() {
   const state = useNetworkState()

@@ -14,7 +14,7 @@ import Animated, { useReducedMotion } from "react-native-reanimated"
 import Svg, { Circle, Path } from "react-native-svg"
 
 import { Pressable } from "@/components/pressable"
-import { Palette as AuthColors } from "@/constants/palette"
+import { Palette as AuthColors } from "@/theme"
 
 const defaultColors = { ...AuthColors, error: "#B3261D" }
 

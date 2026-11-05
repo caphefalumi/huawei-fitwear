@@ -3,7 +3,7 @@ import { FetchErrorState, LoadingSkeleton } from "@/components/fetch-states"
 import { Text, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 import { useAuth } from "@/features/auth/store/auth.store"
 import { apiErrorMessage, apiRequest } from "@/lib/api"
 import { MealResultScreen } from "@/features/meals/meal-result-screen"

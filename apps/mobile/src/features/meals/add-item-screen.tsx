@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, SectionHeading } from "@/components/ui"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 import { Box, Field, NutrientGrid, SearchInput, ValueInput, icons } from "./meals-ui"
 import { Image } from "expo-image"
 import {

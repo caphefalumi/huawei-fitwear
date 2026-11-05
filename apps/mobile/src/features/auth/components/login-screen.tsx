@@ -24,7 +24,7 @@ import Animated, { FadeIn, FadeOut, useReducedMotion } from "react-native-reanim
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
-import { Palette } from "@/constants/palette"
+import { Palette } from "@/theme"
 import { ApiError } from "@/lib/api"
 import { useAuth } from "../store/auth.store"
 import { AuthField } from "./auth-field"

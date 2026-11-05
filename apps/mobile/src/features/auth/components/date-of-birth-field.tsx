@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ElementRef } from "react"
 import { StyleSheet, Text, TextInput, View } from "react-native"
 
-import { Palette as AuthColors } from "@/constants/palette"
+import { Palette as AuthColors } from "@/theme"
 
 const ORDER = new Intl.DateTimeFormat(undefined, {
   day: "numeric",

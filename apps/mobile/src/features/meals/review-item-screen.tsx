@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { BackHeader, Button } from "@/components/ui"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 import { Pressable } from "@/components/pressable"
 import { Box, Field, NutrientGrid, ValueInput } from "./meals-ui"
 import { splitDetail, useMeals } from "./meals-store"

@@ -7,7 +7,7 @@ import Animated, { FadeInUp } from "react-native-reanimated"
 
 import { Pressable } from "@/components/pressable"
 import { Button, PageHeading, Screen } from "@/components/ui"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 import { PERIOD_AREA, useHealth } from "@/features/health/health-store"
 import {
   ActivitySheet,

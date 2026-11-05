@@ -8,7 +8,7 @@ import {
 } from "expo-router/ui"
 import { Pressable, StyleSheet, Text, View } from "react-native"
 
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 
 const TABS = [
   { name: "home", label: "Home" },

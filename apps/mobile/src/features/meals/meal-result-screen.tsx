@@ -9,7 +9,7 @@ import { FetchErrorState } from "@/components/fetch-states"
 import { Pressable } from "@/components/pressable"
 import { Sheet } from "@/components/sheet"
 import { BackHeader, Button, SectionHeading } from "@/components/ui"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 import { Glyph, icons } from "./meals-ui"
 import {
   rescaleItem,

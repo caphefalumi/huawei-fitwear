@@ -4,7 +4,7 @@ import { StyleSheet, Text, TextInput, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
 import { Sheet, SheetActions, SheetField } from "@/components/sheet"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 import {
   createRecovery,
   dateLabel,

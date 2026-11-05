@@ -4,7 +4,7 @@ import { Alert, StyleSheet, Text, TextInput, View } from "react-native"
 import { RadioList } from "@/components/radio-list"
 import { Sheet, SheetActions, SheetField } from "@/components/sheet"
 import { WheelPicker } from "@/components/wheel-picker"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 import { ACTIVITIES, GOALS, PERIOD_AREA, useHealth, type Sex } from "@/features/health/health-store"
 
 const ACTIVITY_OPTIONS = Object.values(ACTIVITIES)

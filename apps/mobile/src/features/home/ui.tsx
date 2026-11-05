@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react"
 import { Animated, StyleSheet, Text, View } from "react-native"
 
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 
 export function MacroBar({
   label,

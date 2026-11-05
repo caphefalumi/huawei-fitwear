@@ -1,7 +1,7 @@
 import { Image } from "expo-image"
 
 import { Pressable } from "@/components/pressable"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 import { StyleSheet, Text, View } from "react-native"
 
 const icons = {

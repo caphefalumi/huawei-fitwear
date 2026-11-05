@@ -17,7 +17,7 @@ import { useReducedMotion } from "react-native-reanimated"
 
 import { CloseButton } from "@/components/close-button"
 import { Pressable } from "@/components/pressable"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 
 type SheetProps = {
   visible: boolean
