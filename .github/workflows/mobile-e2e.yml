@@ -84,6 +84,7 @@ jobs:
 
   e2e:
     name: Android Maestro E2E
+    needs: build
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_fitness || inputs.run_error_messages }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -136,24 +137,7 @@ jobs:
           disable-animations: true
           disable-linux-hw-accel: false
           emulator-options: -accel on -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: |
-            adb wait-for-device
-            adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
-            sleep 5
-            mkdir -p maestro-artifacts/recordings
-            flows=()
-            if [[ "$RUN_FITNESS" == "true" ]]; then
-              flows+=(apps/mobile/tests/e2e/fitness.yaml)
-            fi
-            if [[ "$RUN_ERROR_MESSAGES" == "true" ]]; then
-              flows+=(apps/mobile/tests/e2e/error-messages.yaml)
-            fi
-            printf 'Selected flows: %s\n' "${flows[*]}"
-            set +e
-            maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts "${flows[@]}"
-            MAESTRO_EXIT=$?
-            echo "MAESTRO_EXIT_CODE=$MAESTRO_EXIT" >> "$GITHUB_ENV"
-            exit $MAESTRO_EXIT
+          script: bash .github/scripts/run-maestro-e2e.sh
         env:
           RUN_FITNESS: ${{ github.event_name != 'workflow_dispatch' || inputs.run_fitness }}
           RUN_ERROR_MESSAGES: ${{ github.event_name != 'workflow_dispatch' || inputs.run_error_messages }}
