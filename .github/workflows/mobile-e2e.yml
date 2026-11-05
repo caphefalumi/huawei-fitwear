@@ -137,10 +137,12 @@ jobs:
           disable-animations: true
           disable-linux-hw-accel: false
           emulator-options: -accel on -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: bash .github/scripts/run-maestro-e2e.sh
-        env:
-          RUN_FITNESS: ${{ github.event_name != 'workflow_dispatch' || inputs.run_fitness }}
-          RUN_ERROR_MESSAGES: ${{ github.event_name != 'workflow_dispatch' || inputs.run_error_messages }}
+          script: |
+            adb wait-for-device
+            adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            sleep 5
+            mkdir -p maestro-artifacts/recordings
+            maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts ${{ (github.event_name != 'workflow_dispatch' || inputs.run_fitness) && 'apps/mobile/tests/e2e/fitness.yaml' || '' }} ${{ (github.event_name != 'workflow_dispatch' || inputs.run_error_messages) && 'apps/mobile/tests/e2e/error-messages.yaml' || '' }}; status=$?; printf 'MAESTRO_EXIT_CODE=%s\n' "$status" >> "$GITHUB_ENV"; exit "$status"
 
       - name: Collect Maestro test recordings and artifacts
         if: always()
