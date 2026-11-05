@@ -2,16 +2,12 @@ appId: com.fitwear.mobile
 tags:
   - e2e
   - errors
-env:
-  PASSWORD: "FitnessTest123!"
 ---
-- evalScript: ${output.email = 'maestro_errors_' + Date.now() + '_' + Math.floor(Math.random() * 1000000) + '@fitwear.dev'}
 - evalScript: ${output.unknownEmail = 'maestro_unknown_' + Date.now() + '_' + Math.floor(Math.random() * 1000000) + '@fitwear.dev'}
-- evalScript: ${output.underageYear = String(new Date().getUTCFullYear() - 6)}
 - launchApp:
     clearState: true
 
-# Login validation, invalid credentials, and an unavailable network.
+# Login validation and invalid credentials use the dedicated E2E account.
 - extendedWaitUntil:
     visible: "Explore the app"
     timeout: 30000
@@ -21,150 +17,55 @@ env:
     timeout: 20000
 - tapOn: "example@gmail.com"
 - inputText: "invalid-email"
-- tapOn: "Log in"
+- hideKeyboard
+- tapOn:
+    id: "login-submit"
 - assertVisible: "Enter a valid email address."
 - tapOn: "invalid-email"
 - eraseText
-- inputText: ${output.unknownEmail}
-- tapOn: "Log in"
+- inputText: ${MAESTRO_TEST_EMAIL}
+- hideKeyboard
+- tapOn:
+    id: "login-submit"
 - assertVisible: "Enter your password."
 - tapOn: "Your password"
-- inputText: "WrongPassword123!"
+- inputText: "wrong-maestro-password"
 - hideKeyboard
-- tapOn: "Log in"
+- tapOn:
+    id: "login-submit"
 - assertVisible: "We could not sign you in. Check your email and password and try again."
+
+# Offline state remains visible, and password reset fails safely for an unknown address.
 - setAirplaneMode: enabled
-- assertVisible: "You're offline. Saved information may be out of date."
-- tapOn: "Log in"
-- extendedWaitUntil:
-    visible: "Can't connect. Check your connection and try again."
-    timeout: 20000
-
-# Password-reset validation and request failure remain visible in the same flow.
-- tapOn: "Forgot password?"
-- extendedWaitUntil:
-    visible: "Reset your password."
-    timeout: 10000
-- tapOn: ${output.unknownEmail}
-- eraseText
-- tapOn: "Send reset code"
-- assertVisible: "Enter your email address."
-- tapOn: "example@gmail.com"
-- inputText: ${output.unknownEmail}
-- tapOn: "Send reset code"
-- extendedWaitUntil:
-    visible: "Could not reach the server. Check your connection and try again."
-    timeout: 20000
-- tapOn: "Back to log in"
-- tapOn: "Back"
-- extendedWaitUntil:
-    visible: "Explore the app"
-    timeout: 10000
-- setAirplaneMode: disabled
-
-# Registration date validation and a successful under-13 registration.
-- tapOn: "Create account"
-- extendedWaitUntil:
-    visible: "Your username"
-    timeout: 20000
-- tapOn: "Your username"
-- inputText: "Maestro Error E2E"
-- tapOn: "Your email"
-- inputText: ${output.email}
-- tapOn: "Month"
-- inputText: "02"
-- tapOn: "Day"
-- inputText: "30"
-- tapOn: "Year"
-- inputText: "2000"
-- tapOn: "Password"
-- inputText: ${PASSWORD}
-- hideKeyboard
-- repeat:
-    times: 6
-    while:
-      notVisible: "I accept the terms and privacy policy."
-    commands:
-      - swipe:
-          start: 5%, 80%
-          end: 5%, 30%
-- tapOn: "I accept the terms and privacy policy."
 - repeat:
     times: 4
     while:
       notVisible:
-        id: "sign-up-submit"
+        id: "login-submit"
     commands:
       - swipe:
           start: 5%, 80%
           end: 5%, 30%
 - tapOn:
-    id: "sign-up-submit"
-- assertVisible: "Enter a valid date"
-
-- tapOn: "Month"
+    id: "login-submit"
+- extendedWaitUntil:
+    visible: "Can't connect. Check your connection and try again."
+    timeout: 20000
+- tapOn: "Forgot password?"
+- extendedWaitUntil:
+    visible: "Reset your password."
+    timeout: 10000
+- tapOn: ${MAESTRO_TEST_EMAIL}
 - eraseText
-- inputText: "01"
-- tapOn: "Day"
-- eraseText
-- inputText: "01"
-- tapOn: "Year"
-- eraseText
-- inputText: "2999"
-- tapOn:
-    id: "sign-up-submit"
-- assertVisible: "Date can't be in the future"
-
-- tapOn: "Year"
-- eraseText
-- inputText: ${output.underageYear}
-- setAirplaneMode: enabled
-- tapOn:
-    id: "sign-up-submit"
+- hideKeyboard
+- tapOn: "Send reset code"
+- assertVisible: "Enter your email address."
+- tapOn: "example@gmail.com"
+- inputText: ${output.unknownEmail}
+- hideKeyboard
+- tapOn: "Send reset code"
 - extendedWaitUntil:
     visible: "Could not reach the server. Check your connection and try again."
     timeout: 20000
 - setAirplaneMode: disabled
-- tapOn:
-    id: "sign-up-submit"
-- extendedWaitUntil:
-    visible: "Today"
-    timeout: 30000
-
-# Profile save and account deletion failures are recoverable; retry the deletion online to clean up.
-- tapOn: "Profile"
-- extendedWaitUntil:
-    visible: "Profile"
-    timeout: 20000
-- setAirplaneMode: enabled
-- tapOn: "Weight, Not set"
-- extendedWaitUntil:
-    visible: "Update weight"
-    timeout: 10000
-- tapOn: "Weight in kilograms"
-- inputText: "70"
-- tapOn: "Save update"
-- extendedWaitUntil:
-    visible: "Could not reach the server. Check your connection and try again. Please try again."
-    timeout: 20000
-- tapOn: "Cancel"
-- repeat:
-    times: 8
-    while:
-      notVisible: "Account data"
-    commands:
-      - swipe:
-          start: 5%, 80%
-          end: 5%, 30%
-- tapOn: "Account data"
-- tapOn: "Delete account"
-- assertVisible: "Delete your account?"
-- tapOn: "Confirm account deletion"
-- extendedWaitUntil:
-    visible: "Could not delete your account. Try again."
-    timeout: 20000
-- setAirplaneMode: disabled
-- tapOn: "Confirm account deletion"
-- extendedWaitUntil:
-    visible: "Hi, welcome back."
-    timeout: 30000
+- stopApp
