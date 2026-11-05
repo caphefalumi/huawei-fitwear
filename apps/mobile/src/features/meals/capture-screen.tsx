@@ -1,14 +1,15 @@
 import { useMutation } from "@tanstack/react-query"
+import { CameraView, useCameraPermissions } from "expo-camera"
 import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useEffect, useRef, useState } from "react"
-import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
+import { StyleSheet, Text, TextInput, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
 import { Sheet } from "@/components/sheet"
 import { BackHeader, Button } from "@/components/ui"
-import { pickImage } from "@/features/camera"
+import { pickImage, validatePickedImage } from "@/features/camera"
 import { Palette as C } from "@/theme"
 
 import { analyzeMeal } from "./meals-api"
@@ -36,6 +37,8 @@ export function MealCaptureScreen() {
   const [error, setError] = useState<string | null>(null)
   const active = useRef(true)
   const request = useRef(0)
+  const cameraRef = useRef<CameraView>(null)
+  const [permission, requestPermission] = useCameraPermissions()
   const busy = analyzeMutation.isPending
   useEffect(() => {
     const activeRef = active
@@ -47,15 +50,28 @@ export function MealCaptureScreen() {
     }
   }, [])
 
-  async function selectImage(camera: boolean) {
+  async function selectLibrary() {
     if (busy) return
     setError(null)
     try {
-      const image = await pickImage(camera)
-      if (image && active.current) setImage(image)
+      const picked = await pickImage(false)
+      if (picked && active.current) setImage(picked)
     } catch (cause) {
       if (active.current)
         setError(cause instanceof Error ? cause.message : "Could not open image picker.")
+    }
+  }
+  async function takePhoto() {
+    if (busy) return
+    setError(null)
+    try {
+      const photo = await cameraRef.current?.takePictureAsync({ base64: true, quality: 0.7 })
+      if (!photo) throw new Error("Could not capture photo. Try again.")
+      const validated = validatePickedImage(photo.uri, photo.base64)
+      if (active.current) setImage(validated)
+    } catch (cause) {
+      if (active.current)
+        setError(cause instanceof Error ? cause.message : "Could not capture photo. Try again.")
     }
   }
   async function analyze() {
@@ -90,15 +106,12 @@ export function MealCaptureScreen() {
     }
   }
 
+  const cameraGranted = permission?.granted ?? false
+
   return (
     <>
-      <ScrollView
-        style={styles.screen}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={[
-          styles.content,
-          { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-        ]}
+      <View
+        style={[styles.screen, { paddingTop: 12 + insets.top, paddingBottom: 16 + insets.bottom }]}
       >
         <BackHeader label="Meals" onPress={() => router.back()} />
 
@@ -109,98 +122,156 @@ export function MealCaptureScreen() {
           <Text style={styles.subtitle}>Capture food or drinks.</Text>
         </View>
 
-        {image ? (
-          <Image
-            accessible
-            accessibilityLabel="Selected meal photo"
-            source={{ uri: image.uri }}
-            style={styles.preview}
-            contentFit="contain"
-          />
-        ) : (
-          <View style={styles.preview}>
-            <View style={[styles.corner, styles.cornerTopLeft]} />
-            <View style={[styles.corner, styles.cornerTopRight]} />
-            <View style={[styles.corner, styles.cornerBottomLeft]} />
-            <View style={[styles.corner, styles.cornerBottomRight]} />
-
-            <View style={styles.circle}>
+        <View style={styles.previewWrap}>
+          {image ? (
+            <>
               <Image
-                accessible={false}
-                source={icons.utensils}
-                style={styles.circleIcon}
-                contentFit="contain"
+                accessible
+                accessibilityLabel="Selected meal photo"
+                source={{ uri: image.uri }}
+                style={styles.preview}
+                contentFit="cover"
               />
-              <Text style={styles.circleTitle}>Place food or drink here</Text>
-              <Text style={styles.circleNote}>Top-down shot · keep steady</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Retake photo"
+                onPress={() => {
+                  setImage(null)
+                  setError(null)
+                }}
+                style={styles.retake}
+              >
+                <Image
+                  accessible={false}
+                  source={icons.switchCamera}
+                  style={styles.retakeIcon}
+                  contentFit="contain"
+                />
+              </Pressable>
+            </>
+          ) : !permission ? (
+            <View style={styles.preview} />
+          ) : !cameraGranted ? (
+            <View style={styles.preview}>
+              <View style={styles.circle}>
+                <Image
+                  accessible={false}
+                  source={icons.utensils}
+                  style={styles.circleIcon}
+                  contentFit="contain"
+                />
+                <Text style={styles.circleTitle}>Camera access needed</Text>
+                <Text style={styles.circleNote}>Allow access or pick from library</Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Allow camera access"
+                onPress={requestPermission}
+                style={styles.permissionButton}
+              >
+                <Text style={styles.permissionLabel}>Allow camera access</Text>
+              </Pressable>
+              <Text style={styles.circleNote}>or pick a photo from your library below</Text>
             </View>
+          ) : (
+            <View style={styles.preview}>
+              <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
+              <View pointerEvents="none" style={styles.guide}>
+                <View style={[styles.guideCorner, styles.guideTL]} />
+                <View style={[styles.guideCorner, styles.guideTR]} />
+                <View style={[styles.guideCorner, styles.guideBL]} />
+                <View style={[styles.guideCorner, styles.guideBR]} />
+                <View style={styles.guideCircle}>
+                  <Image
+                    accessible={false}
+                    source={icons.utensils}
+                    style={styles.circleIcon}
+                    contentFit="contain"
+                  />
+                  <Text style={styles.circleTitle}>Place food or drink here</Text>
+                  <Text style={styles.circleNote}>Top-down shot · keep steady</Text>
+                </View>
+                <View style={styles.guideRuler}>
+                  <Image
+                    accessible={false}
+                    source={icons.ruler}
+                    style={styles.guideRulerIcon}
+                    contentFit="contain"
+                  />
+                  <Text style={styles.guideRulerText}>Place 15 cm ruler beside plate or cup</Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
 
-            <View style={styles.rulerChip}>
-              <Image
-                accessible={false}
-                source={icons.ruler}
-                style={styles.rulerIcon}
-                contentFit="contain"
-              />
-              <Text style={styles.rulerText}>Place 15 cm ruler beside plate or cup</Text>
+        <View style={styles.bottom}>
+          {error ? (
+            <Text accessibilityRole="alert" numberOfLines={2} style={styles.error}>
+              {error} Manual entry remains available.
+            </Text>
+          ) : null}
+          <View style={styles.shutterRow}>
+            <View style={styles.sideSlot} />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Take meal photo"
+              disabled={busy || (!image && !cameraGranted)}
+              style={styles.shutterRing}
+              onPress={image ? () => setImage(null) : takePhoto}
+            >
+              <View style={styles.shutter} />
+            </Pressable>
+            <View style={[styles.sideSlot, styles.sideSlotRight]}>
+              <Pressable
+                accessibilityLabel="Choose from library"
+                disabled={busy}
+                onPress={selectLibrary}
+                style={styles.libraryIconButton}
+                hitSlop={8}
+              >
+                <Image
+                  accessible={false}
+                  source={icons.images}
+                  style={styles.libraryIcon}
+                  contentFit="contain"
+                />
+              </Pressable>
             </View>
           </View>
-        )}
-
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>Optional description</Text>
           <TextInput
             accessibilityLabel="Optional meal description"
             value={description}
             onChangeText={setDescription}
-            placeholder="Add ingredients, preparation, or drink details (e.g. sugar, milk, size)."
+            placeholder="Add details (e.g. ingredients, size)."
             placeholderTextColor={C.textMuted}
-            multiline
+            maxLength={120}
+            returnKeyType="done"
             style={styles.description}
           />
-        </View>
-
-        <Text style={styles.footnote}>
-          Only when you tap Analyze, your selected photo and description are sent to the configured
-          cloud model. Estimates must be reviewed; no wearable or medical measurements are inferred.
-        </Text>
-        {error ? (
-          <Text accessibilityRole="alert" style={styles.footnote}>
-            {error} Manual entry remains available.
+          <Text numberOfLines={2} style={styles.footnote}>
+            Only when you tap Analyze, your selected photo and description are sent to the
+            configured cloud model. Estimates must be reviewed; no wearable or medical measurements
+            are inferred.
           </Text>
-        ) : null}
-        <Button label="Analyze photo" disabled={!image || busy} onPress={analyze} />
-        <Button
-          variant="secondary"
-          label="Enter meal manually"
-          onPress={() => {
-            if (image) setDraftPhoto(image.uri, { data: image.base64, mimeType: image.mimeType })
-            router.push("/meal")
-          }}
-        />
-
-        <View style={styles.controls}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Take meal photo"
-            disabled={busy}
-            style={styles.shutterRing}
-            onPress={() => selectImage(true)}
-          >
-            <View style={styles.shutter} />
-          </Pressable>
-        </View>
-
-        <Pressable disabled={busy} style={styles.libraryButton} onPress={() => selectImage(false)}>
-          <Image
-            accessible={false}
-            source={icons.images}
-            style={styles.libraryIcon}
-            contentFit="contain"
+          <Button
+            label="Analyze photo"
+            disabled={!image || busy}
+            busy={busy}
+            onPress={analyze}
+            style={styles.compactButton}
           />
-          <Text style={styles.libraryLabel}>Upload from library</Text>
-        </Pressable>
-      </ScrollView>
+          <Button
+            variant="secondary"
+            label="Enter meal manually"
+            onPress={() => {
+              if (image) setDraftPhoto(image.uri, { data: image.base64, mimeType: image.mimeType })
+              router.push("/meal")
+            }}
+            style={styles.compactButton}
+          />
+        </View>
+      </View>
 
       <Sheet visible={!tutorialSeen} title="Capture your meal" onClose={dismissTutorial}>
         <View style={styles.tutorialSteps}>
@@ -228,17 +299,14 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: C.background,
-  },
-  content: {
     paddingHorizontal: 24,
-    gap: 18,
+    gap: 10,
   },
   heading: {
-    gap: 6,
-    marginTop: -4,
+    gap: 2,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "400",
     color: C.text,
   },
@@ -246,51 +314,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: C.textMuted,
   },
+  previewWrap: {
+    flex: 1,
+    minHeight: 200,
+  },
   preview: {
-    minHeight: 370,
+    flex: 1,
     borderRadius: 18,
     backgroundColor: "#2B2724",
-    paddingVertical: 44,
-    paddingHorizontal: 18,
     alignItems: "center",
     justifyContent: "center",
-    gap: 16,
+    gap: 12,
+    overflow: "hidden",
   },
-  corner: {
+  retake: {
     position: "absolute",
-    width: 26,
-    height: 26,
-    borderColor: "rgba(255,255,255,0.35)",
+    top: 10,
+    right: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  cornerTopLeft: {
-    top: 44,
-    left: 18,
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-  },
-  cornerTopRight: {
-    top: 44,
-    right: 18,
-    borderTopWidth: 1,
-    borderRightWidth: 1,
-  },
-  cornerBottomLeft: {
-    bottom: 44,
-    left: 18,
-    borderBottomWidth: 1,
-    borderLeftWidth: 1,
-  },
-  cornerBottomRight: {
-    bottom: 44,
-    right: 18,
-    borderBottomWidth: 1,
-    borderRightWidth: 1,
+  retakeIcon: {
+    width: 20,
+    height: 20,
   },
   circle: {
-    minWidth: 192,
-    minHeight: 192,
+    minWidth: 160,
+    minHeight: 160,
     padding: 16,
-    borderRadius: 96,
+    borderRadius: 80,
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: "rgba(255,255,255,0.28)",
@@ -299,8 +355,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   circleIcon: {
-    width: 30,
-    height: 30,
+    width: 26,
+    height: 26,
   },
   circleTitle: {
     fontSize: 12,
@@ -313,7 +369,80 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "rgba(255,255,255,0.45)",
   },
-  rulerChip: {
+  permissionButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: C.accent,
+  },
+  permissionLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: C.onAccent,
+  },
+  bottom: {
+    gap: 8,
+  },
+  error: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: C.accent,
+  },
+  shutterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  sideSlot: {
+    width: 56,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sideSlotRight: {
+    alignItems: "flex-end",
+  },
+  libraryIconButton: {
+    padding: 10,
+  },
+  shutterRing: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: "rgba(157,35,50,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  shutter: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: C.accent,
+  },
+  libraryIcon: {
+    width: 22,
+    height: 22,
+  },
+  guide: {
+    ...StyleSheet.absoluteFill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.22)",
+    gap: 12,
+  },
+  guideCircle: {
+    minWidth: 192,
+    minHeight: 192,
+    padding: 16,
+    borderRadius: 96,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "rgba(255,255,255,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  guideRuler: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -322,91 +451,66 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "rgba(255,255,255,0.28)",
+    borderColor: "rgba(255,255,255,0.6)",
+    backgroundColor: "rgba(0,0,0,0.35)",
   },
-  rulerIcon: {
+  guideRulerIcon: {
     width: 20,
     height: 20,
   },
-  rulerText: {
-    flex: 1,
+  guideRulerText: {
     fontSize: 11,
-    color: "rgba(255,255,255,0.8)",
+    color: "rgba(255,255,255,0.85)",
   },
-  field: {
-    gap: 8,
+  guideCorner: {
+    position: "absolute",
+    width: 26,
+    height: 26,
+    borderColor: "rgba(255,255,255,0.55)",
   },
-  fieldLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: C.textMuted,
+  guideTL: {
+    top: 14,
+    left: 14,
+    borderTopWidth: 2,
+    borderLeftWidth: 2,
+  },
+  guideTR: {
+    top: 14,
+    right: 14,
+    borderTopWidth: 2,
+    borderRightWidth: 2,
+  },
+  guideBL: {
+    bottom: 14,
+    left: 14,
+    borderBottomWidth: 2,
+    borderLeftWidth: 2,
+  },
+  guideBR: {
+    bottom: 14,
+    right: 14,
+    borderBottomWidth: 2,
+    borderRightWidth: 2,
   },
   description: {
-    minHeight: 84,
-    borderRadius: 14,
+    minHeight: 44,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: C.border,
     backgroundColor: C.surface,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
     color: C.text,
-    textAlignVertical: "top",
   },
   footnote: {
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 10,
+    lineHeight: 14,
     color: C.textMuted,
   },
-  controls: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 24,
-    marginTop: -2,
-  },
-  controlIcon: {
-    width: 24,
-    height: 24,
-    opacity: 0.5,
-  },
-  shutterRing: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    borderWidth: 1,
-    borderColor: "rgba(157,35,50,0.45)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  shutter: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: C.accent,
-  },
-  libraryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    minHeight: 52,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: C.surface,
-  },
-  libraryIcon: {
-    width: 19,
-    height: 19,
-  },
-  libraryLabel: {
-    fontSize: 14,
-    flexShrink: 1,
-    fontWeight: "600",
-    color: C.text,
+  compactButton: {
+    minHeight: 46,
+    paddingVertical: 12,
   },
   tutorialSteps: {
     gap: 14,
