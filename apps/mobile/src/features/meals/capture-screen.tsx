@@ -12,7 +12,7 @@ import { pickImage } from "@/features/camera"
 import { Palette as C } from "@/theme"
 
 import { analyzeMeal } from "./meals-api"
-import { useMeals } from "./meals-store"
+import { useMeals } from "./meals-hooks"
 import { icons } from "./meals-ui"
 
 const TUTORIAL_STEPS = [

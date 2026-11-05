@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { AppState } from "react-native"
 
-import { useAuth } from "./auth-store"
+import { useAuth } from "./auth-hooks"
 
 type PasswordResetOptions = {
   email: string

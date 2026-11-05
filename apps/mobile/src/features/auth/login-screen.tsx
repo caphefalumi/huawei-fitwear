@@ -7,7 +7,6 @@ import { useEffect, useRef, useState } from "react"
 import {
   AccessibilityInfo,
   ActivityIndicator,
-  AppState,
   findNodeHandle,
   Platform,
   ScrollView,
@@ -24,7 +23,7 @@ import { Pressable } from "@/components/pressable"
 import { ApiError } from "@/lib/api"
 
 import { AuthField } from "./auth-field"
-import { useAuth } from "./auth-store"
+import { useAuth } from "./auth-hooks"
 import {
   AuthColors,
   authStyles as styles,
@@ -33,6 +32,7 @@ import {
   shake,
 } from "./login-styles"
 import { PasswordResetPanel } from "./password-reset-panel"
+import { useLoginLockout } from "./use-login-lockout"
 import { usePasswordReset } from "./use-password-reset"
 
 export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void } = {}) {
@@ -53,51 +53,23 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
   const focusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const emailInput = useRef<TextInputInstance>(null)
   const passwordInput = useRef<TextInputInstance>(null)
-  const [lockoutDeadline, setLockoutDeadline] = useState<number | null>(null)
-  const [lockoutSeconds, setLockoutSeconds] = useState(0)
-  const [lockoutKind, setLockoutKind] = useState<"rate" | "locked" | null>(null)
+  const {
+    kind: lockoutKind,
+    message: lockoutMessage,
+    lock,
+    clear: clearLockout,
+  } = useLoginLockout()
   const reset = usePasswordReset({
     email,
     onStart: clearLoginError,
     onCompleted: () => {
-      setLockoutKind(null)
-      setLockoutDeadline(null)
-      setLockoutSeconds(0)
+      clearLockout()
       setFailedAttempts(0)
       setPassword("")
     },
   })
   const loginPending = pending || submitting
   const loginDisabled = loginPending || lockoutKind !== null
-  const lockoutMessage =
-    lockoutKind === null
-      ? null
-      : lockoutSeconds > 0
-        ? `${lockoutKind === "locked" ? "Account temporarily locked" : "Too many attempts"}. Try again in ${Math.floor(lockoutSeconds / 60)}:${String(lockoutSeconds % 60).padStart(2, "0")}.`
-        : lockoutKind === "locked"
-          ? "Account locked. Reset your password to regain access."
-          : "Too many attempts. Reset your password or try again later."
-
-  useEffect(() => {
-    if (lockoutDeadline === null) return
-    const update = () => {
-      const remaining = Math.max(0, Math.ceil((lockoutDeadline - Date.now()) / 1000))
-      setLockoutSeconds(remaining)
-      if (remaining === 0) {
-        setLockoutDeadline(null)
-        setLockoutKind(null)
-      }
-    }
-    update()
-    const timer = setInterval(update, 1000)
-    const foregroundListener = AppState.addEventListener("change", (state) => {
-      if (state === "active") update()
-    })
-    return () => {
-      clearInterval(timer)
-      foregroundListener.remove()
-    }
-  }, [lockoutDeadline])
 
   useEffect(() => {
     mounted.current = true
@@ -159,14 +131,13 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
     } catch (cause) {
       if (!mounted.current || isCancel(cause)) return
       if (cause instanceof ApiError && (cause.code === "ACCOUNT_LOCKED" || cause.status === 429)) {
-        setLockoutKind(cause.code === "ACCOUNT_LOCKED" ? "locked" : "rate")
-        const seconds = cause.retryAfterSec
-        setLockoutSeconds(seconds ?? 0)
-        setLockoutDeadline(seconds === undefined ? null : Date.now() + seconds * 1000)
+        lock(cause.code === "ACCOUNT_LOCKED" ? "locked" : "rate", cause.retryAfterSec)
       } else if (cause instanceof ApiError && cause.status === 401) {
         setFailedAttempts((attempts) => attempts + 1)
         setFieldError(null)
         setValidationError("We could not sign you in. Check your email and password and try again.")
+      } else if (cause instanceof ApiError && cause.status === 410) {
+        setValidationError("Account deletion has completed. Create a new account to continue.")
       } else if (cause instanceof ApiError && (cause.status === 400 || cause.status === 422)) {
         setValidationError("Check your email address and try again.")
       } else {

@@ -1,11 +1,12 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn", "oxc", "react"],
+  "plugins": ["import", "typescript", "unicorn", "oxc", "react"],
   "categories": {
     "correctness": "error"
   },
   "rules": {
-    "react/exhaustive-deps": "warn",
+    "import/no-cycle": "error",
+    "react/exhaustive-deps": "error",
     "react/immutability": "off",
     "react/purity": "off",
     "react/refs": "off",

@@ -9,7 +9,7 @@ import { Palette as C } from "@/theme"
 
 import { MealResultScreen } from "./meal-result-screen"
 import { fetchMeal } from "./meals-api"
-import { fromApiMeal, mealsQueryKeys, useMeals } from "./meals-store"
+import { fromApiMeal, mealsQueryKeys, useMeals } from "./meals-hooks"
 
 export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: () => void }) {
   const { user } = useAuth()

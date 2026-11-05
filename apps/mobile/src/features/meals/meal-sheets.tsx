@@ -6,7 +6,7 @@ import { Sheet } from "@/components/sheet"
 import { Button } from "@/components/ui"
 import { Palette as C } from "@/theme"
 
-import { rescaleItem, splitDetail, type MealItem } from "./meals-store"
+import { rescaleItem, splitDetail, type MealItem } from "./meals-hooks"
 import { icons } from "./meals-ui"
 
 export function MealOptionsSheet({

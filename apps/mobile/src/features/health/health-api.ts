@@ -1,6 +1,6 @@
 import { apiRequest } from "@/lib/api"
 
-import type { RecoveryPlan, WeightLog } from "./health-store"
+import type { RecoveryPlan, WeightLog } from "./health-hooks"
 
 export type RecoveryRow = Omit<RecoveryPlan, "start" | "returnDate" | "note"> & {
   note: string | null

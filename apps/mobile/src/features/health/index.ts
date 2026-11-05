@@ -13,5 +13,5 @@ export {
   recoveryRanges,
   recoveryTitle,
   useHealth,
-} from "./health-store"
-export type { PlanPreferences, RecoveryPlan, Sex, WeightLog } from "./health-store"
+} from "./health-hooks"
+export type { PlanPreferences, RecoveryPlan, Sex, WeightLog } from "./health-hooks"

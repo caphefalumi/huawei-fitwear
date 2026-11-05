@@ -1,6 +1,6 @@
 import { create } from "zustand"
 
-import type { MealImage, MealItem, MealType } from "./meals-store"
+import type { MealImage, MealItem, MealType } from "./meals-hooks"
 
 type MealClientState = {
   accountId: string | null

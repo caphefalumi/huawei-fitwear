@@ -5,7 +5,7 @@ import { StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } fro
 import { Pressable } from "@/components/pressable"
 import { Palette as C } from "@/theme"
 
-import type { MealGlyph } from "./meals-store"
+import type { MealGlyph } from "./meals-hooks"
 
 export const icons = {
   chevronRight: require("@/assets/images/meals/chevron-right.svg"),

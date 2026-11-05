@@ -5,7 +5,7 @@ jest.mock("@/lib/api", () => ({
   ...jest.requireActual("@/lib/api"),
   apiRequest: jest.fn(),
 }))
-jest.mock("@/features/auth/auth-store", () => ({ useAuth: jest.fn() }))
+jest.mock("@/features/auth/auth-hooks", () => ({ useAuth: jest.fn() }))
 
 const plan = (restDays: number, lightDays: number): RecoveryPlan => ({
   area: "Right knee",

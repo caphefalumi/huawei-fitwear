@@ -8,7 +8,7 @@ import { Pressable } from "@/components/pressable"
 import { Palette as AuthColors } from "@/theme"
 
 import { AuthField } from "./auth-field"
-import { APP_ROUTES, useAuth } from "./auth-store"
+import { APP_ROUTES, useAuth } from "./auth-hooks"
 import { DateOfBirthField } from "./date-of-birth-field"
 
 const icons = {

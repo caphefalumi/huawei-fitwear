@@ -19,7 +19,7 @@ import {
   type MealItem,
   type MealLog,
   type MealType,
-} from "./meals-store"
+} from "./meals-hooks"
 
 export function MealResultScreen({ log }: { log?: MealLog }) {
   const insets = useSafeAreaInsets()

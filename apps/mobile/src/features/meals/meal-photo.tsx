@@ -9,7 +9,7 @@ import { apiErrorMessage } from "@/lib/api"
 import { Palette as C } from "@/theme"
 
 import { fetchMealPhoto } from "./meals-api"
-import { mealsQueryKeys } from "./meals-store"
+import { mealsQueryKeys } from "./meals-hooks"
 import { icons } from "./meals-ui"
 
 export function MealPhoto({

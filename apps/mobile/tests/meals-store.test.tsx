@@ -25,7 +25,7 @@ jest.mock("@/lib/api", () => ({
   ...jest.requireActual("@/lib/api"),
   apiRequest: jest.fn(),
 }))
-jest.mock("@/features/auth/auth-store", () => ({
+jest.mock("@/features/auth/auth-hooks", () => ({
   useAuth: () => ({ user: { id: mockUserId, updatedAt: "2026-11-01T00:00:00Z" } }),
 }))
 const request = apiRequest as jest.MockedFunction<

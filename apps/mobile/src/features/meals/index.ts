@@ -12,7 +12,7 @@ export {
   sumItems,
   useFoodSearch,
   useMeals,
-} from "./meals-store"
+} from "./meals-hooks"
 export type {
   ApiMealItem,
   FoodEntry,
@@ -24,6 +24,6 @@ export type {
   MealLog,
   MealType,
   NutritionSummary,
-} from "./meals-store"
+} from "./meals-hooks"
 export { MealPhoto } from "./meal-photo"
 export { Box, Field, Glyph, icons, NutrientGrid, SearchInput, ValueInput } from "./meals-ui"

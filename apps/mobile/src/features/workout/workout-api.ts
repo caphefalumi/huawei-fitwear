@@ -1,6 +1,6 @@
 import { apiRequest } from "@/lib/api"
 
-import type { Exercise, SessionWithSets, WorkoutSession } from "./workout-store"
+import type { Exercise, SessionWithSets, WorkoutSession } from "./workout-hooks"
 
 export type WorkoutPage = { sessions: WorkoutSession[]; count: number }
 export type WorkoutWriteInput = { path: string; method: string; body?: unknown }

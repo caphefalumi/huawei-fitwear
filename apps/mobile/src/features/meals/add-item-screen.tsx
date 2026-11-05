@@ -14,7 +14,7 @@ import {
   useMeals,
   type FoodEntry,
   type MealEstimate,
-} from "./meals-store"
+} from "./meals-hooks"
 import { Box, Field, NutrientGrid, SearchInput, ValueInput, icons } from "./meals-ui"
 
 type NutrientKey = "energy" | "protein" | "carbs" | "fat"

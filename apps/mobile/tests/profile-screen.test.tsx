@@ -6,7 +6,7 @@ import { useAuth } from "@/features/auth"
 import { useHealth } from "@/features/health"
 import { ProfileScreen } from "@/features/profile/profile-screen"
 
-jest.mock("@/features/auth/auth-store", () => ({ useAuth: jest.fn() }))
+jest.mock("@/features/auth/auth-hooks", () => ({ useAuth: jest.fn() }))
 jest.mock("@/features/health", () => ({
   PERIOD_AREA: "In period",
   useHealth: jest.fn(),

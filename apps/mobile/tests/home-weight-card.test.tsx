@@ -10,7 +10,7 @@ jest.mock("@/lib/api", () => ({
   ...jest.requireActual("@/lib/api"),
   apiRequest: jest.fn(),
 }))
-jest.mock("@/features/auth/auth-store", () => ({ useAuth: () => ({ user: { name: "Vooc" } }) }))
+jest.mock("@/features/auth/auth-hooks", () => ({ useAuth: () => ({ user: { name: "Vooc" } }) }))
 jest.mock("@/features/health", () => ({
   ...jest.requireActual("@/features/health"),
   useHealth: jest.fn(),

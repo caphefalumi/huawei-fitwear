@@ -13,7 +13,7 @@ import {
   splitDetail,
   useMeals,
   type FoodEntry,
-} from "./meals-store"
+} from "./meals-hooks"
 import { SearchInput } from "./meals-ui"
 
 export function ReplaceFoodScreen() {

@@ -15,7 +15,7 @@ jest.mock("react-native-reanimated", () => ({
   useReducedMotion: () => true,
 }))
 
-jest.mock("@/features/auth/auth-store", () => ({
+jest.mock("@/features/auth/auth-hooks", () => ({
   APP_ROUTES: { login: "/login" },
   useAuth: jest.fn(),
 }))

@@ -7,7 +7,7 @@ import { Pressable } from "@/components/pressable"
 import { BackHeader, Button } from "@/components/ui"
 import { Palette as C } from "@/theme"
 
-import { splitDetail, useMeals } from "./meals-store"
+import { splitDetail, useMeals } from "./meals-hooks"
 import { Box, Field, NutrientGrid, ValueInput } from "./meals-ui"
 
 type NutrientKey = "energy" | "protein" | "carbs" | "fat"
