@@ -1,6 +1,5 @@
 import { Elysia, t, type Static } from "elysia"
-import { Auth, authGuard } from "./service"
-import { assertAuthRateLimit, canSendPasswordResetEmail } from "./rate-limit"
+
 import {
   InvalidPasswordResetToken,
   isPasswordResetConfigured,
@@ -9,6 +8,8 @@ import {
   resetPassword,
   verifyPasswordResetCode,
 } from "./password-reset"
+import { assertAuthRateLimit, canSendPasswordResetEmail } from "./rate-limit"
+import { Auth, authGuard } from "./service"
 
 export const AuthSchemas = {
   signUpBody: t.Object({
@@ -287,7 +288,8 @@ export const auth = new Elysia({
       auth: true,
       detail: {
         summary: "Delete authenticated user account",
-        description: "Permanently deletes the user and cascades to all related data.",
+        description:
+          "Deletes private photos before cascading user data and sessions. Interrupted cleanup stays pending and can be retried.",
       },
     },
   )

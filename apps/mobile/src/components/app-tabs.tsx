@@ -12,7 +12,7 @@ import Animated, {
 } from "react-native-reanimated"
 
 import { Pressable } from "@/components/pressable"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 
 type TabBarRenderer = NonNullable<ComponentProps<typeof Tabs>["tabBar"]>
 type TabBarProps = Parameters<TabBarRenderer>[0]

@@ -1,8 +1,8 @@
 import { Image } from "expo-image"
+import { StyleSheet, Text, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
-import { Palette as C } from "@/constants/palette"
-import { StyleSheet, Text, View } from "react-native"
+import { Palette as C } from "@/theme"
 
 const icons = {
   back: require("@/assets/images/progress/chevron-left.svg"),

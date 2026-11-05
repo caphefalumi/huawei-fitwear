@@ -1,4 +1,4 @@
-import type { AuthenticationSession } from "../types"
+import type { AuthenticationSession } from "./types"
 
 export function isLoggedIn(
   session: AuthenticationSession | null | undefined,

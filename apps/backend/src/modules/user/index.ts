@@ -1,4 +1,5 @@
 import { Elysia } from "elysia"
+
 import { authGuard } from "../auth/service"
 
 export const user = new Elysia({

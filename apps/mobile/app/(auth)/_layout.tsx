@@ -2,7 +2,7 @@ import { Slot, Stack } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { Platform, View } from "react-native"
 
-import { Palette as AuthColors } from "@/constants/palette"
+import { Palette as AuthColors } from "@/theme"
 
 export default function AuthLayout() {
   if (Platform.OS === "web") {

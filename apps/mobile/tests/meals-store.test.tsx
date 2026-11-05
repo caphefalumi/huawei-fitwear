@@ -1,7 +1,7 @@
-import { act, renderHook, waitFor } from "@testing-library/react-native"
-import { apiRequest } from "@/lib/api"
 import { useQuery } from "@tanstack/react-query"
 import type { QueryClient } from "@tanstack/react-query"
+import { act, renderHook, waitFor } from "@testing-library/react-native"
+
 import {
   MealsProvider,
   useMeals,
@@ -14,16 +14,18 @@ import {
   splitDetail,
   sumItems,
   type MealItem,
-} from "@/features/meals/meals-store"
-import { createQueryWrapper } from "./query-wrapper"
+} from "@/features/meals"
 import { useMealClientStore } from "@/features/meals/meal-client.store"
+import { apiRequest } from "@/lib/api"
+
+import { createQueryWrapper } from "./query-wrapper"
 let mockUserId = "member-a"
 
 jest.mock("@/lib/api", () => ({
   ...jest.requireActual("@/lib/api"),
   apiRequest: jest.fn(),
 }))
-jest.mock("@/features/auth/auth-store", () => ({
+jest.mock("@/features/auth/auth-hooks", () => ({
   useAuth: () => ({ user: { id: mockUserId, updatedAt: "2026-11-01T00:00:00Z" } }),
 }))
 const request = apiRequest as jest.MockedFunction<

@@ -1,6 +1,7 @@
 import axios, { AxiosError, CanceledError, type AxiosResponse } from "axios"
 
 import { ApiError, apiErrorMessage, apiRequest, onSessionExpired, setApiToken } from "@/lib/api"
+
 import { request } from "./http-adapter"
 
 jest.mock("axios", () => {

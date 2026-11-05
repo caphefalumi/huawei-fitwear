@@ -38,7 +38,7 @@ import {
 } from "react-native"
 
 import { Pressable } from "@/components/pressable"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 
 const VISIBLE_ROWS = 5
 const MAX_STEP = Math.trunc((VISIBLE_ROWS + 2) / 2)

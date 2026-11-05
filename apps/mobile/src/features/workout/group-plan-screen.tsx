@@ -2,8 +2,9 @@ import { router, useLocalSearchParams } from "expo-router"
 import { StyleSheet, Text, View } from "react-native"
 
 import { BackHeader, Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
-import { Palette as C } from "@/constants/palette"
-import { GROUP_ROUTINES } from "@/features/workout/routines"
+import { Palette as C } from "@/theme"
+
+import { GROUP_ROUTINES } from "./routines"
 
 export function GroupPlanScreen() {
   const { group } = useLocalSearchParams<{ group?: string }>()

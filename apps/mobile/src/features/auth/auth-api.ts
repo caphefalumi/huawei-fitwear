@@ -1,12 +1,14 @@
 import { queryOptions } from "@tanstack/react-query"
+
 import { apiRequest } from "@/lib/api"
+
 import type {
   AuthUser,
   AuthenticationSessionResponse,
   SignInBody,
   SignUpBody,
   UpdateUserBody,
-} from "../types"
+} from "./types"
 
 export const authQueryKeys = {
   session: ["auth", "session"] as const,

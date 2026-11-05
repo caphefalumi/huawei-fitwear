@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native"
 
 import { Pressable } from "@/components/pressable"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 import { tokens } from "@/theme/tokens"
 
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {

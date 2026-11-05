@@ -5,15 +5,15 @@ import { useEffect, useRef, useState } from "react"
 import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { pickImage } from "@/features/camera/image-picker"
-
 import { Pressable } from "@/components/pressable"
 import { Sheet } from "@/components/sheet"
 import { BackHeader, Button } from "@/components/ui"
-import { Palette as C } from "@/constants/palette"
+import { pickImage } from "@/features/camera"
+import { Palette as C } from "@/theme"
+
+import { analyzeMeal } from "./meals-api"
+import { useMeals } from "./meals-hooks"
 import { icons } from "./meals-ui"
-import { useMeals, type ApiMealItem } from "./meals-store"
-import { apiRequest } from "@/lib/api"
 
 const TUTORIAL_STEPS = [
   { title: "Add a ruler", detail: "Place a 15 cm ruler beside the plate or cup." },
@@ -31,17 +31,19 @@ export function MealCaptureScreen() {
   } | null>(null)
   const analyzeMutation = useMutation({
     mutationFn: (body: { image: string; mimeType: string; description?: string }) =>
-      apiRequest<{ items: ApiMealItem[] }>("/meals/analyze", { method: "POST", body }),
+      analyzeMeal(body),
   })
   const [error, setError] = useState<string | null>(null)
   const active = useRef(true)
   const request = useRef(0)
   const busy = analyzeMutation.isPending
   useEffect(() => {
-    active.current = true
+    const activeRef = active
+    const requestRef = request
+    activeRef.current = true
     return () => {
-      active.current = false
-      request.current++
+      activeRef.current = false
+      requestRef.current++
     }
   }, [])
 
@@ -74,9 +76,9 @@ export function MealCaptureScreen() {
         ...(description.trim() ? { description: description.trim() } : {}),
       })
       if (!active.current || current !== request.current) return
-      if (!result.items.length)
+      if (!result.length)
         throw new Error("No food was identified. Try another photo or enter items manually.")
-      setAnalysis(result.items, image.uri, { data: image.base64, mimeType: image.mimeType })
+      setAnalysis(result, image.uri, { data: image.base64, mimeType: image.mimeType })
       router.push("/meal")
     } catch (cause) {
       if (active.current && current === request.current)

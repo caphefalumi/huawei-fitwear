@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test"
+
 import { hashPassword, isPasswordWithinBcryptLimit, verifyPassword } from "../../src/lib/password"
 
 describe("Password hashing and legacy compatibility", () => {

@@ -5,9 +5,10 @@ import { SafeAreaView } from "react-native-safe-area-context"
 
 import { ThemedText } from "@/components/themed-text"
 import { ThemedView } from "@/components/themed-view"
-import { BottomTabInset, Spacing } from "@/constants/theme"
-import { useWatchBle } from "@/features/ble/use-watch-ble"
 import { useTheme } from "@/hooks/use-theme"
+import { BottomTabInset, tokens } from "@/theme"
+
+import { useWatchBle } from "./use-watch-ble"
 
 // ─── IMU packet type ──────────────────────────────────────────────────────────
 interface ImuPacket {
@@ -196,7 +197,10 @@ export function BleSyncScreen() {
       <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={[styles.content, { paddingBottom: BottomTabInset + Spacing.four }]}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: BottomTabInset + tokens.spacing.lg },
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {/* ── Top Bar ── */}
@@ -480,18 +484,18 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { flex: 1 },
   content: {
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.two,
+    gap: tokens.spacing.sm,
+    paddingHorizontal: tokens.spacing.md,
+    paddingTop: tokens.spacing.sm,
   },
 
-  header: { paddingVertical: Spacing.two },
+  header: { paddingVertical: tokens.spacing.sm },
   headerNavRow: { marginBottom: 6 },
   backButton: { paddingVertical: 4 },
   backArrow: { fontSize: 16, color: "#38BDF8", fontWeight: "600" },
   headerTitle: { fontSize: 28, lineHeight: 36 },
 
-  card: { borderRadius: 16, padding: Spacing.three, gap: Spacing.two },
+  card: { borderRadius: 16, padding: tokens.spacing.md, gap: tokens.spacing.sm },
 
   statusRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   dotWrap: { width: 20, height: 20, alignItems: "center", justifyContent: "center" },
@@ -502,10 +506,10 @@ const styles = StyleSheet.create({
   errorBanner: {
     backgroundColor: "rgba(239,68,68,0.12)",
     borderRadius: 8,
-    padding: Spacing.two,
+    padding: tokens.spacing.sm,
   },
 
-  buttonRow: { flexDirection: "row", gap: Spacing.two, flexWrap: "wrap" },
+  buttonRow: { flexDirection: "row", gap: tokens.spacing.sm, flexWrap: "wrap" },
   btn: {
     flex: 1,
     minWidth: 120,
@@ -542,7 +546,7 @@ const styles = StyleSheet.create({
   divider: { height: StyleSheet.hairlineWidth, marginVertical: 4 },
   placeholderText: {
     textAlign: "center",
-    paddingVertical: Spacing.two,
+    paddingVertical: tokens.spacing.sm,
     fontSize: 13,
   },
 
@@ -562,7 +566,7 @@ const styles = StyleSheet.create({
   logContent: { flex: 1, gap: 2 },
 
   // Text message card styles
-  textInputRow: { flexDirection: "row", gap: Spacing.two, alignItems: "center" },
+  textInputRow: { flexDirection: "row", gap: tokens.spacing.sm, alignItems: "center" },
   textInput: {
     flex: 1,
     height: 40,

@@ -1,30 +1,25 @@
-import { Image } from "expo-image"
 import { router } from "expo-router"
-import { useEffect, useMemo, useRef, useState } from "react"
-import { Animated, PanResponder, ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
+import { useEffect, useRef, useState } from "react"
+import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { useReducedMotion } from "react-native-reanimated"
 
 import { FetchErrorState } from "@/components/fetch-states"
 import { Pressable } from "@/components/pressable"
-import { Sheet } from "@/components/sheet"
 import { BackHeader, Button, SectionHeading } from "@/components/ui"
-import { Palette as C } from "@/constants/palette"
-import { Glyph, icons } from "./meals-ui"
+import { Palette as C } from "@/theme"
+
+import { MealPhoto } from "./meal-photo"
+import { MealRow } from "./meal-row"
+import { MealAmountSheet, MealOptionsSheet } from "./meal-sheets"
 import {
+  mealTypeLabel,
   rescaleItem,
   splitDetail,
   useMeals,
   type MealItem,
   type MealLog,
   type MealType,
-  mealTypeLabel,
-} from "./meals-store"
-import { MealPhoto } from "./meal-photo"
-
-const ACTION_WIDTH = 88
-
-type SwipeState = "edit" | "delete" | null
+} from "./meals-hooks"
 
 export function MealResultScreen({ log }: { log?: MealLog }) {
   const insets = useSafeAreaInsets()
@@ -79,6 +74,8 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
       () => setAmountFor(null),
     )
   }
+
+  const logQuery = log ? `&log=${log.id}` : ""
 
   return (
     <>
@@ -233,297 +230,40 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
         )}
       </ScrollView>
 
-      <Sheet
-        visible={optionsFor !== null}
-        title={optionsFor?.name ?? ""}
+      <MealOptionsSheet
+        item={optionsFor}
+        actionError={actionError}
         onClose={() => setOptionsFor(null)}
-      >
-        {actionError ? (
-          <Text accessibilityRole="alert" style={styles.footnote}>
-            {actionError}
-          </Text>
-        ) : null}
-        <Text style={styles.sheetSubtitle}>
-          {optionsFor
-            ? `${splitDetail(optionsFor.detail).amount} ${splitDetail(optionsFor.detail).unit} · selected item`
-            : ""}
-        </Text>
-        <Pressable
-          style={styles.optionRow}
-          onPress={() => {
-            const id = optionsFor?.id
-            setOptionsFor(null)
-            router.push(`/review-item?id=${id ?? ""}${log ? `&log=${log.id}` : ""}`)
-          }}
-        >
-          <View style={styles.optionText}>
-            <Text style={styles.optionTitle}>Edit nutrition</Text>
-            <Text style={styles.optionNote}>Review the name, portion, calories and macros</Text>
-          </View>
-        </Pressable>
+        onEditNutrition={(item) => {
+          setOptionsFor(null)
+          router.push(`/review-item?id=${item.id}${logQuery}`)
+        }}
+        onSearchFood={(item) => {
+          setOptionsFor(null)
+          router.push(`/replace-food?id=${item.id}${logQuery}`)
+        }}
+        onChangeAmount={openAmount}
+        onDelete={(item) => {
+          void perform(
+            () => removeItem(item.id, log?.id),
+            () => {
+              setOptionsFor(null)
+              if (log && items.length === 1) router.back()
+            },
+          )
+        }}
+      />
 
-        <Pressable
-          style={styles.optionRow}
-          onPress={() => {
-            setOptionsFor(null)
-            router.push(`/replace-food?id=${optionsFor?.id ?? ""}${log ? `&log=${log.id}` : ""}`)
-          }}
-        >
-          <Image
-            accessible={false}
-            source={icons.search}
-            style={styles.optionIcon}
-            contentFit="contain"
-          />
-          <View style={styles.optionText}>
-            <Text style={styles.optionTitle}>Search food</Text>
-            <Text style={styles.optionNote}>Select a replacement from the database</Text>
-          </View>
-          <Image
-            accessible={false}
-            source={icons.chevronRight}
-            style={styles.optionChevron}
-            contentFit="contain"
-          />
-        </Pressable>
-
-        <Pressable style={styles.optionRow} onPress={() => optionsFor && openAmount(optionsFor)}>
-          <Image
-            accessible={false}
-            source={icons.weight}
-            style={styles.optionIcon}
-            contentFit="contain"
-          />
-          <View style={styles.optionText}>
-            <Text style={styles.optionTitle}>Change amount</Text>
-            <Text style={styles.optionNote}>Update the portion weight</Text>
-          </View>
-          <Image
-            accessible={false}
-            source={icons.chevronRight}
-            style={styles.optionChevron}
-            contentFit="contain"
-          />
-        </Pressable>
-
-        <Pressable
-          style={styles.optionRow}
-          onPress={() => {
-            const target = optionsFor
-            if (target)
-              void perform(
-                () => removeItem(target.id, log?.id),
-                () => {
-                  setOptionsFor(null)
-                  if (log && items.length === 1) router.back()
-                },
-              )
-          }}
-        >
-          <Image
-            accessible={false}
-            source={icons.close}
-            style={styles.optionIcon}
-            contentFit="contain"
-          />
-          <View style={styles.optionText}>
-            <Text style={[styles.optionTitle, styles.optionDanger]}>Delete item</Text>
-            <Text style={styles.optionNote}>Remove this food from the meal</Text>
-          </View>
-          <Image
-            accessible={false}
-            source={icons.chevronRight}
-            style={styles.optionChevron}
-            contentFit="contain"
-          />
-        </Pressable>
-
-        <Pressable style={styles.sheetCancel} onPress={() => setOptionsFor(null)}>
-          <Text style={styles.sheetCancelLabel}>Cancel</Text>
-        </Pressable>
-      </Sheet>
-
-      <Sheet visible={amountFor !== null} title="Change amount" onClose={() => setAmountFor(null)}>
-        {actionError ? (
-          <Text accessibilityRole="alert" style={styles.footnote}>
-            {actionError}
-          </Text>
-        ) : null}
-        <Text style={styles.sheetSubtitle}>
-          {amountFor
-            ? `${amountFor.name}${splitDetail(amountFor.detail).note ? ` · ${splitDetail(amountFor.detail).note}` : ""}`
-            : ""}
-        </Text>
-
-        <View style={styles.previousRow}>
-          <Text style={styles.previousLabel}>Previous amount</Text>
-          <Text style={styles.previousValue}>
-            {amountFor
-              ? `${splitDetail(amountFor.detail).amount} ${splitDetail(amountFor.detail).unit}`
-              : ""}
-          </Text>
-        </View>
-
-        <Text style={styles.fieldLabel}>New amount</Text>
-        <View style={styles.amountBox}>
-          <TextInput
-            accessibilityLabel={`New amount for ${amountFor?.name ?? "item"}, ${amountFor ? splitDetail(amountFor.detail).unit : "g"}`}
-            value={amountDraft}
-            onChangeText={setAmountDraft}
-            keyboardType="numeric"
-            style={styles.amountInput}
-          />
-          <Text style={styles.amountUnit}>
-            {amountFor ? splitDetail(amountFor.detail).unit : "g"}
-          </Text>
-        </View>
-
-        {amountFor ? (
-          <View style={styles.estimateBox}>
-            <View style={styles.estimateTop}>
-              <Text style={styles.estimateLabel}>This item · estimated</Text>
-              <Text style={styles.estimateValue}>
-                {rescaleItem(amountFor, Number(amountDraft) || 0).kcal} kcal
-              </Text>
-            </View>
-            <Text style={styles.estimateMacros}>
-              {(() => {
-                const next = rescaleItem(amountFor, Number(amountDraft) || 0)
-                return `Protein ${next.macros.protein}g · Carbs ${next.macros.carbs}g · Fat ${next.macros.fat}g`
-              })()}
-            </Text>
-          </View>
-        ) : null}
-
-        <Button label="Save amount" disabled={pending} busy={pending} onPress={saveAmount} />
-        <Pressable style={styles.sheetCancel} onPress={() => setAmountFor(null)}>
-          <Text style={styles.sheetCancelLabel}>Cancel</Text>
-        </Pressable>
-      </Sheet>
+      <MealAmountSheet
+        item={amountFor}
+        draft={amountDraft}
+        actionError={actionError}
+        pending={pending}
+        onDraftChange={setAmountDraft}
+        onSave={saveAmount}
+        onClose={() => setAmountFor(null)}
+      />
     </>
-  )
-}
-
-function MealRow({
-  item,
-  last,
-  onPress,
-  onEdit,
-  onDelete,
-}: {
-  item: MealItem
-  last: boolean
-  onPress: () => void
-  onEdit: () => void
-  onDelete: () => void
-}) {
-  const [state, setState] = useState<SwipeState>(null)
-  const translateX = useRef(new Animated.Value(0)).current
-  const reducedMotion = useReducedMotion()
-
-  const settle = (next: SwipeState) => {
-    setState(next)
-    if (reducedMotion) {
-      translateX.setValue(next === "edit" ? -ACTION_WIDTH : next === "delete" ? ACTION_WIDTH : 0)
-      return
-    }
-    Animated.timing(translateX, {
-      toValue: next === "edit" ? -ACTION_WIDTH : next === "delete" ? ACTION_WIDTH : 0,
-      duration: 160,
-      useNativeDriver: true,
-    }).start()
-  }
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => false,
-        onMoveShouldSetPanResponderCapture: (_, gesture) =>
-          Math.abs(gesture.dx) > 8 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
-        onMoveShouldSetPanResponder: (_, gesture) =>
-          Math.abs(gesture.dx) > 8 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
-        onPanResponderMove: (_, gesture) => {
-          translateX.setValue(Math.max(-ACTION_WIDTH, Math.min(ACTION_WIDTH, gesture.dx)))
-        },
-        onPanResponderRelease: (_, gesture) => {
-          if (gesture.dx < -ACTION_WIDTH / 2) settle("edit")
-          else if (gesture.dx > ACTION_WIDTH / 2) settle("delete")
-          else settle(null)
-        },
-      }),
-    // settle/translateX are stable for the lifetime of the row
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  )
-
-  const content = (
-    <>
-      <Glyph glyph={item.glyph} />
-      <View style={styles.rowText}>
-        <View style={styles.rowTop}>
-          <Text style={styles.itemName}>{item.name}</Text>
-          <Text style={styles.itemKcal}>{item.kcal} kcal</Text>
-        </View>
-        <Text style={styles.itemDetail}>{item.detail}</Text>
-        <Text style={styles.itemMacros}>
-          Protein {item.macros.protein}g · Carbs {item.macros.carbs}g · Fat {item.macros.fat}g
-        </Text>
-      </View>
-    </>
-  )
-
-  return (
-    <View style={[styles.rowWrap, !last && styles.rowDivider]}>
-      <View
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        style={styles.rowActions}
-      >
-        <Pressable
-          style={styles.deleteAction}
-          onPress={() => {
-            settle(null)
-            onDelete()
-          }}
-        >
-          <Text style={styles.deleteActionLabel}>Delete</Text>
-        </Pressable>
-        <Pressable
-          style={styles.editAction}
-          onPress={() => {
-            settle(null)
-            onEdit()
-          }}
-        >
-          <Text style={styles.editActionLabel}>Edit</Text>
-        </Pressable>
-      </View>
-
-      <Animated.View
-        style={[styles.rowSurface, { transform: [{ translateX }] }]}
-        {...panResponder.panHandlers}
-      >
-        <Pressable
-          style={styles.row}
-          accessibilityLabel={`${item.name}, ${item.detail}, ${item.kcal} kilocalories, protein ${item.macros.protein} grams, carbs ${item.macros.carbs} grams, fat ${item.macros.fat} grams`}
-          accessibilityHint="Opens food options"
-          accessibilityActions={[
-            { name: "edit", label: `Edit ${item.name}` },
-            { name: "delete", label: `Delete ${item.name}` },
-          ]}
-          onAccessibilityAction={({ nativeEvent }) => {
-            if (nativeEvent.actionName === "edit") onEdit()
-            if (nativeEvent.actionName === "delete") onDelete()
-          }}
-          onPress={() => {
-            if (state) settle(null)
-            else onPress()
-          }}
-        >
-          {content}
-        </Pressable>
-      </Animated.View>
-    </View>
   )
 }
 
@@ -619,200 +359,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: C.textMuted,
   },
-  rowWrap: {
-    overflow: "hidden",
-  },
-  rowDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  rowActions: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  deleteAction: {
-    width: ACTION_WIDTH,
-    backgroundColor: C.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  deleteActionLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: C.onAccent,
-  },
-  editAction: {
-    width: ACTION_WIDTH,
-    backgroundColor: C.card,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  editActionLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: C.accent,
-  },
-  rowSurface: {
-    backgroundColor: C.surface,
-    zIndex: 1,
-  },
-  row: {
-    flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  rowText: {
-    flex: 1,
-    gap: 2,
-  },
-  rowTop: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  itemName: {
-    fontSize: 13,
-    flexShrink: 1,
-    fontWeight: "600",
-    color: C.text,
-  },
-  itemKcal: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: C.text,
-  },
-  itemDetail: {
-    fontSize: 10,
-    color: C.textMuted,
-  },
-  itemMacros: {
-    fontSize: 10,
-    color: C.textMuted,
-    marginTop: 4,
-  },
   footnote: {
-    fontSize: 11,
-    color: C.textMuted,
-  },
-  sheetSubtitle: {
-    fontSize: 13,
-    color: C.textMuted,
-  },
-  optionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: C.surface,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  optionDanger: {
-    color: C.accent,
-  },
-  optionIcon: {
-    width: 20,
-    height: 20,
-  },
-  optionText: {
-    flex: 1,
-    gap: 2,
-  },
-  optionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: C.text,
-  },
-  optionNote: {
-    fontSize: 11,
-    color: C.textMuted,
-  },
-  optionChevron: {
-    width: 16,
-    height: 16,
-  },
-  sheetCancel: {
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  sheetCancelLabel: {
-    fontSize: 13,
-    color: C.textMuted,
-  },
-  previousRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 8,
-    justifyContent: "space-between",
-  },
-  previousLabel: {
-    fontSize: 12,
-    color: C.textMuted,
-  },
-  previousValue: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: C.text,
-  },
-  fieldLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: C.textMuted,
-  },
-  amountBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: C.surface,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  amountInput: {
-    flex: 1,
-    fontSize: 15,
-    color: C.text,
-  },
-  amountUnit: {
-    fontSize: 13,
-    color: C.textMuted,
-  },
-  estimateBox: {
-    backgroundColor: C.card,
-    borderRadius: 12,
-    padding: 14,
-    gap: 4,
-  },
-  estimateTop: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  estimateLabel: {
-    fontSize: 12,
-    color: C.textMuted,
-  },
-  estimateValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: C.text,
-  },
-  estimateMacros: {
     fontSize: 11,
     color: C.textMuted,
   },

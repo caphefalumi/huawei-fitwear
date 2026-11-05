@@ -9,7 +9,7 @@ import {
 } from "react-native"
 
 import { Pressable } from "@/components/pressable"
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 
 /** Filled (primary) or outlined (secondary) action button with a busy state. */
 export function Button({

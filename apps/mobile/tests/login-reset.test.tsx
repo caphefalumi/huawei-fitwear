@@ -1,13 +1,14 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native"
-import { AccessibilityInfo, AppState, StyleSheet, type AppStateStatus } from "react-native"
-import * as Haptics from "expo-haptics"
 import { CanceledError } from "axios"
-import { ApiError } from "@/lib/api"
-import { useAuth } from "@/features/auth/store/auth.store"
-import { LoginScreen } from "@/features/auth/components/login-screen"
-import { AuthField } from "@/features/auth/components/auth-field"
+import * as Haptics from "expo-haptics"
+import { AccessibilityInfo, AppState, StyleSheet, type AppStateStatus } from "react-native"
 
-jest.mock("@/features/auth/store/auth.store", () => ({
+import { useAuth } from "@/features/auth"
+import { AuthField } from "@/features/auth/auth-field"
+import { LoginScreen } from "@/features/auth/login-screen"
+import { ApiError } from "@/lib/api"
+
+jest.mock("@/features/auth/auth-hooks", () => ({
   APP_ROUTES: { signUp: "/sign-up" },
   useAuth: jest.fn(),
 }))
@@ -101,6 +102,20 @@ test("shows one inline credential error and preserves entered credentials", asyn
     screen.queryByText("We could not sign you in. Check your email and password and try again."),
   ).toBeNull()
   expect(auth.signIn).toHaveBeenCalledTimes(1)
+})
+
+test("shows account deletion completion feedback instead of a network error", async () => {
+  const screen = await render(<LoginScreen />)
+  await fireEvent.changeText(screen.getByLabelText("Email address"), "member@example.com")
+  await fireEvent.changeText(screen.getByLabelText("Password"), "secret")
+  auth.signIn.mockRejectedValueOnce(
+    new ApiError("Account deletion has completed. Create a new account to continue.", 410),
+  )
+  await fireEvent.press(screen.getByLabelText("Log in"))
+  expect(
+    await screen.findByText("Account deletion has completed. Create a new account to continue."),
+  ).toBeTruthy()
+  expect(screen.queryByText(/Can't connect/)).toBeNull()
 })
 
 test("invalid email feedback appears with the email input and no credential message", async () => {
@@ -450,4 +465,47 @@ test("requires successful OTP verification before collecting a password and comp
     ),
   )
   expect(await screen.findByText("Password updated. You can now sign in.")).toBeTruthy()
+})
+
+test("password reset failure keeps the login password; only successful completion clears it", async () => {
+  const screen = await render(<LoginScreen />)
+  await fireEvent.changeText(screen.getByLabelText("Email address"), "member@example.com")
+  await fireEvent.changeText(screen.getByLabelText("Password"), "original-secret")
+  await fireEvent.press(screen.getByRole("button", { name: "Forgot password?" }))
+  await fireEvent.press(screen.getByLabelText("Send reset code"))
+  await fireEvent.changeText(screen.getByLabelText("4-digit reset code"), "1234")
+  await fireEvent.changeText(screen.getByLabelText("New password"), "ReplacementPassword123!")
+  auth.completePasswordReset.mockRejectedValueOnce(new Error("Reset failed"))
+  await fireEvent.press(screen.getByLabelText("Reset password"))
+  expect(await screen.findByText("Reset failed")).toBeTruthy()
+  expect(screen.getByLabelText("Back to log in")).toBeTruthy()
+  await fireEvent.press(screen.getByLabelText("Back to log in"))
+  expect(screen.getByLabelText("Password").props.value).toBe("original-secret")
+
+  await fireEvent.press(screen.getByRole("button", { name: "Forgot password?" }))
+  await fireEvent.press(screen.getByLabelText("Send reset code"))
+  await fireEvent.changeText(screen.getByLabelText("4-digit reset code"), "1234")
+  await fireEvent.changeText(screen.getByLabelText("New password"), "ReplacementPassword123!")
+  await fireEvent.press(screen.getByLabelText("Reset password"))
+  expect(await screen.findByText("Password updated. You can now sign in.")).toBeTruthy()
+  await fireEvent.press(screen.getByLabelText("Back to log in"))
+  expect(screen.getByLabelText("Email address").props.value).toBe("member@example.com")
+  expect(screen.getByLabelText("Password").props.value).toBe("")
+})
+
+test("password reset resend is blocked during cooldown and allowed after expiry", async () => {
+  jest.useFakeTimers()
+  jest.setSystemTime(new Date("2026-01-01T00:00:00Z"))
+  const screen = await render(<LoginScreen />)
+  await fireEvent.changeText(screen.getByLabelText("Email address"), "member@example.com")
+  await fireEvent.press(screen.getByRole("button", { name: "Forgot password?" }))
+  await fireEvent.press(screen.getByLabelText("Send reset code"))
+  expect(screen.getByText("Resend in 01:00")).toBeTruthy()
+  await fireEvent.press(screen.getByText("Resend in 01:00"))
+  expect(auth.requestPasswordReset).toHaveBeenCalledTimes(1)
+  await act(async () => {
+    jest.advanceTimersByTime(60000)
+  })
+  await fireEvent.press(screen.getByText("Resend code"))
+  expect(auth.requestPasswordReset).toHaveBeenCalledTimes(2)
 })

@@ -1,9 +1,10 @@
-import { Elysia, status, t, type Static } from "elysia"
 import { Value } from "@sinclair/typebox/value"
+import { Elysia, status, t, type Static } from "elysia"
+
 import { getAi, getKv } from "../../db"
+import { decodeMealImage, readMealImage } from "../../lib/meal-images"
 import { consumeTokenBucket } from "../../lib/token-bucket"
 import { authGuard } from "../auth/service"
-import { decodeMealImage, readMealImage } from "../../lib/meal-images"
 import { Meals } from "./service"
 
 const analysisBody = t.Object({

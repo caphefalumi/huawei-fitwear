@@ -3,8 +3,9 @@ import type { ReactNode } from "react"
 import { StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native"
 
 import { Pressable } from "@/components/pressable"
-import { Palette as C } from "@/constants/palette"
-import type { MealGlyph } from "./meals-store"
+import { Palette as C } from "@/theme"
+
+import type { MealGlyph } from "./meals-hooks"
 
 export const icons = {
   chevronRight: require("@/assets/images/meals/chevron-right.svg"),

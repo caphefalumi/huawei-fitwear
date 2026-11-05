@@ -11,7 +11,8 @@ import {
 import { AppState } from "react-native"
 
 import { ApiError, onSessionExpired, setApiToken } from "@/lib/api"
-import { sessionStorage } from "../session-storage"
+import { sessionStorage } from "@/lib/storage"
+
 import {
   authQueryKeys,
   authSessionQueryOptions,
@@ -23,14 +24,14 @@ import {
   sendSignOut,
   sendSignUp,
   sendUpdateUser,
-} from "../api/auth.api"
+} from "./auth-api"
 import type {
   AuthUser,
   AuthenticationSession,
   AuthenticationSessionResponse,
   SignUpBody,
   UpdateUserBody,
-} from "../types"
+} from "./types"
 export type {
   AuthUser,
   AuthenticationSession,
@@ -38,8 +39,8 @@ export type {
   SignUpBody,
   UpdateUserBody,
 }
-import { isLoggedIn } from "../utils/is-logged-in"
-import { useAuthUiStore } from "./auth-ui.store"
+import { useAuthUiStore } from "./auth-ui-store"
+import { isLoggedIn } from "./is-logged-in"
 
 export const APP_ROUTES = {
   welcome: "/",
@@ -108,6 +109,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
     mutationKey: ["auth", "update-user"],
     mutationFn: sendUpdateUser,
   })
+  const { mutateAsync: authenticateAsync } = authenticateMutation
+  const { mutateAsync: signOutAsync } = signOutMutation
+  const { mutateAsync: deleteAccountAsync } = deleteAccountMutation
+  const { mutateAsync: updateUserAsync } = updateUserMutation
 
   const clearSession = useCallback(async () => {
     revision.current += 1
@@ -190,7 +195,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       clearTimeout(timer)
       subscription.remove()
     }
-  }, [session, clearSession])
+  }, [session, clearSession, setError])
 
   const authenticate = useCallback(
     async (sendRequest: () => Promise<AuthenticationSessionResponse>) => {
@@ -200,7 +205,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setError(null)
       const currentRevision = ++revision.current
       try {
-        const result = await authenticateMutation.mutateAsync(sendRequest)
+        const result = await authenticateAsync(sendRequest)
         if (!isLoggedIn(result.session)) {
           throw new ApiError("The server returned an invalid session.", 0, "INVALID_SESSION")
         }
@@ -220,7 +225,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setPending(false)
       }
     },
-    [authenticateMutation.mutateAsync, queryClient, setAuthenticated],
+    [authenticateAsync, queryClient, setAuthenticated, setError, setPending],
   )
 
   const signIn = useCallback(
@@ -242,7 +247,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setError(null)
     revision.current += 1
     const localRevision = revision.current
-    void signOutMutation.mutateAsync(sendSignOut()).catch((cause) => {
+    void signOutAsync(sendSignOut()).catch((cause) => {
       if (revision.current !== localRevision) return
       if (!(cause instanceof ApiError && cause.status === 401)) {
         setError(
@@ -254,14 +259,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (revision.current === localRevision)
         setError("Signed out on this device, but saved credentials could not be removed.")
     })
-  }, [clearSession, signOutMutation.mutateAsync])
+  }, [clearSession, signOutAsync, setError])
   const deleteAccount = useCallback(async () => {
     if (busy.current) return
     busy.current = true
     setError(null)
     setPending(true)
     try {
-      await deleteAccountMutation.mutateAsync()
+      await deleteAccountAsync()
       await clearSession()
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) {
@@ -276,13 +281,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       busy.current = false
       setPending(false)
     }
-  }, [clearSession, deleteAccountMutation.mutateAsync])
+  }, [clearSession, deleteAccountAsync, setError, setPending])
 
   const updateUser = useCallback(
     async (body: UpdateUserBody) => {
       const currentRevision = revision.current
       try {
-        const result = await updateUserMutation.mutateAsync(body)
+        const result = await updateUserAsync(body)
         if (currentRevision === revision.current) {
           queryClient.setQueryData<AuthenticationSessionResponse>(
             authQueryKeys.session,
@@ -295,7 +300,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         throw cause
       }
     },
-    [queryClient, updateUserMutation.mutateAsync],
+    [queryClient, updateUserAsync, setError],
   )
 
   return (

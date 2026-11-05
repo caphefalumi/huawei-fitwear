@@ -1,5 +1,6 @@
-import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core"
 import { relations } from "drizzle-orm"
+import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core"
+
 import { generateId } from "../lib/id"
 
 export const user = sqliteTable("user", {
@@ -19,6 +20,7 @@ export const user = sqliteTable("user", {
   activityLevel: text("activityLevel").default("moderately_active"),
   fitnessGoal: text("fitnessGoal").default("muscle_gain"),
   weeklySessions: integer("weeklySessions").notNull().default(3),
+  pendingDeletion: integer("pendingDeletion", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("createdAt", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),

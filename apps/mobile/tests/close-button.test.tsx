@@ -1,5 +1,5 @@
-import { Text } from "react-native"
 import { fireEvent, render } from "@testing-library/react-native"
+import { Text } from "react-native"
 
 import { CloseButton } from "@/components/close-button"
 import { Sheet } from "@/components/sheet"

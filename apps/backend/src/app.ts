@@ -1,16 +1,17 @@
+import { cors } from "@elysiajs/cors"
 import { Elysia } from "elysia"
 import { CloudflareAdapter } from "elysia/adapter/cloudflare-worker"
-import { cors } from "@elysiajs/cors"
-import { fitwearOpenapi } from "./openapi-config"
+
 import { auth } from "./modules/auth"
-import { user } from "./modules/user"
-import { foods } from "./modules/foods"
-import { targets } from "./modules/targets"
-import { meals } from "./modules/meals"
 import { exercises } from "./modules/exercises"
-import { workouts } from "./modules/workouts"
+import { foods } from "./modules/foods"
 import { health } from "./modules/health"
+import { meals } from "./modules/meals"
 import { mealAnalysis } from "./modules/meals/analysis"
+import { targets } from "./modules/targets"
+import { user } from "./modules/user"
+import { workouts } from "./modules/workouts"
+import { fitwearOpenapi } from "./openapi-config"
 
 export function buildFitwearApp() {
   return new Elysia({ adapter: CloudflareAdapter })

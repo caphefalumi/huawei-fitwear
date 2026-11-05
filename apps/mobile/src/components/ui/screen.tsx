@@ -10,7 +10,7 @@ import {
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Palette as C } from "@/constants/palette"
+import { Palette as C } from "@/theme"
 import { tokens } from "@/theme/tokens"
 
 /** Scrollable screen with the shared gutter, background and safe-area padding. */

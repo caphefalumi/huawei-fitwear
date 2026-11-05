@@ -1,4 +1,5 @@
 import { Elysia, t, type Static } from "elysia"
+
 import { DATE_KEY_PATTERN } from "../../lib/date"
 import { authGuard } from "../auth/service"
 import { Meals } from "./service"

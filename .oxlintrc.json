@@ -1,11 +1,37 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn", "oxc"],
+  "plugins": ["import", "typescript", "unicorn", "oxc", "react"],
   "categories": {
     "correctness": "error"
   },
-  "rules": {},
+  "rules": {
+    "import/no-cycle": "error",
+    "react/exhaustive-deps": "error",
+    "react/immutability": "off",
+    "react/purity": "off",
+    "react/refs": "off",
+    "react/rules-of-hooks": "error",
+    "react/set-state-in-effect": "off"
+  },
   "env": {
     "builtin": true
-  }
+  },
+  "overrides": [
+    {
+      "files": ["apps/mobile/src/features/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/*/*"],
+                "message": "Import other features through their barrel: @/features/<name>. Use relative paths inside a feature."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }

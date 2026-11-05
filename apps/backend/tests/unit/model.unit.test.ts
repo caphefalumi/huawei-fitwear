@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test"
+
 import { Value } from "@sinclair/typebox/value"
+
 import { AuthSchemas } from "../../src/modules/auth"
 
 describe("Unit Test: Auth Validation Schemas", () => {

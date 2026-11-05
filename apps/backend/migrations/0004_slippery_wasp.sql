@@ -1,0 +1,1 @@
+ALTER TABLE `user` ADD `pendingDeletion` integer DEFAULT false NOT NULL;

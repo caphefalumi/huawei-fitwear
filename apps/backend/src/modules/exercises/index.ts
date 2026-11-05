@@ -1,4 +1,5 @@
 import { Elysia, t, type Static } from "elysia"
+
 import { authGuard } from "../auth/service"
 import { Exercises } from "./service"
 
