@@ -170,7 +170,7 @@ bun run test:e2e
 bun run lint
 ```
 
-The single Maestro flow in `tests/e2e/fitness.yaml` runs nightly at 02:00 UTC and on manual workflow dispatch; pull-request mobile checks run Jest unit tests without the emulator build. It signs up, restarts the app, verifies the session is restored, and checks the backend-backed empty meals state. It requires Maestro CLI 2.12.0, Java 17+, an Android emulator, and a local Wrangler backend with D1 migrations applied. CI provisions the backend, native build, emulator, and Maestro CLI.
+The `tests/e2e/fitness.yaml` and `tests/e2e/error-messages.yaml` Maestro flows run nightly at 02:00 UTC and on manual workflow dispatch; pull-request mobile checks run Jest unit tests without the emulator build. The fitness flow verifies sign-in, session restoration, and backend-backed empty states; the error flow checks login validation and network-failure feedback. They require Maestro CLI 2.12.0, Java 17+, an Android emulator, and the E2E account secrets; CI provisions the native build, emulator, and Maestro CLI.
 
 Android E2E on the Ubuntu CI runner requires KVM hardware acceleration. The workflow grants access to `/dev/kvm` before building the APK and requires `-accel on`, so unavailable acceleration fails the job instead of silently falling back to slow software emulation.
 
