@@ -38,6 +38,8 @@ Thumbs.db
 .agents/
 tmp/
 .tmp/
+graphify-out/
+
 # Tool lockfiles (bun is source of truth)
 package-lock.json
 skills-lock.json
