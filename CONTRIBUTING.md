@@ -2,7 +2,7 @@
 
 Thanks for taking the time to contribute. This repository is a Bun workspace with three apps: React Native/Expo (`apps/mobile`), Elysia on Cloudflare Workers (`apps/backend`), and a standalone HarmonyOS ArkTS watch app (`apps/watch`).
 
-By participating you agree to keep discussion respectful and focused on the change at hand.
+By participating you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md) and to keep discussion focused on the change at hand.
 
 ## Before you start
 
