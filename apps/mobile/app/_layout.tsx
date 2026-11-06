@@ -17,6 +17,7 @@ import { WorkoutProvider } from "@/features/workout"
 import { queryClient } from "@/lib/query-client"
 
 Observe.configure({
+  dispatchInDebug: true,
   integrations: { "expo-router": { filteredParams: ["id", "log"] } },
 })
 
