@@ -1,0 +1,54 @@
+name: Feature request
+description: Propose a new capability or improvement
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the problem before the solution. For security issues, follow [SECURITY.md](https://github.com/caphefalumi/huawei-fitwear/blob/main/SECURITY.md) instead.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - apps/mobile
+        - apps/backend
+        - apps/watch
+        - CI / tooling
+        - Documentation
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is hard, missing, or confusing today, and who is affected?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: The smallest change that solves the problem. Note alternatives you considered.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and impact
+      description: Affected apps, API or schema changes, new dependencies, device support, and data/privacy implications.
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Mockups, references, or related issues.
+    validations:
+      required: false
