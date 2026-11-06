@@ -46,14 +46,16 @@ const withAndroidCiDebugBundle: ConfigPlugin = (config) =>
   })
 
 const withAndroidCmakeVersion: ConfigPlugin = (config) =>
-  withGradleProperties(config, (config) => {
-    config.modResults = AndroidConfig.BuildProperties.updateAndroidBuildProperty(
-      config.modResults,
-      "android.cmakeVersion",
-      "3.31.6",
-    )
-    return config
-  })
+  process.platform === "win32"
+    ? withGradleProperties(config, (config) => {
+        config.modResults = AndroidConfig.BuildProperties.updateAndroidBuildProperty(
+          config.modResults,
+          "android.cmakeVersion",
+          "3.31.6",
+        )
+        return config
+      })
+    : config
 
 const withAndroidCiFixes: ConfigPlugin = (config) =>
   withAndroidCmakeVersion(withAndroidCiDebugBundle(withAndroidBluetoothMaxSdk(config)))
