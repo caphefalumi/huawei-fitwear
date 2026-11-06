@@ -1,0 +1,74 @@
+name: Bug report
+description: Report a defect in the mobile app, backend, or watch app
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not report security vulnerabilities here. Follow [SECURITY.md](https://github.com/caphefalumi/huawei-fitwear/blob/main/SECURITY.md) instead.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - apps/mobile
+        - apps/backend
+        - apps/watch
+        - CI / tooling
+        - Documentation
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Commit SHA, branch, or app version where the problem appears.
+      placeholder: 8480d4f
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include error messages or logs. Redact tokens, secrets, and personal data.
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Device, OS, browser/emulator, Node/Bun version, or DevEco Studio version.
+      placeholder: Pixel 8, Android 15, Expo Go SDK 58
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Screenshots, recordings, or related issues.
+    validations:
+      required: false

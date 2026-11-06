@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/caphefalumi/huawei-fitwear/security/advisories/new
+    about: Report security issues privately; do not open a public issue.
+  - name: Question or discussion
+    url: https://github.com/caphefalumi/huawei-fitwear/discussions
+    about: Ask usage questions or discuss ideas before opening a feature request.
