@@ -87,7 +87,7 @@ jobs:
 
       - name: Setup Java
         if: ${{ matrix.platform == 'android' }}
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
@@ -104,7 +104,7 @@ jobs:
 
       - name: Upload Android APK
         if: ${{ matrix.platform == 'android' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: fitwear-android-debug-apk
           path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
@@ -139,7 +139,7 @@ jobs:
 
       - name: Upload iOS Simulator app
         if: ${{ matrix.platform == 'ios' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: fitwear-ios-simulator-app
           path: apps/mobile/build/ios/mobile-ios-simulator.zip
