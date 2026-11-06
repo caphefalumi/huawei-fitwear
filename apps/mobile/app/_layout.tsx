@@ -1,11 +1,10 @@
-import "@/lib/sentry"
 import "@/global.css"
-import * as Sentry from "@sentry/react-native"
 import { QueryClientProvider } from "@tanstack/react-query"
+import { Observe, ObserveRoot } from "expo-observe"
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router"
 import * as SplashScreen from "expo-splash-screen"
 import { type PropsWithChildren } from "react"
-import { useColorScheme } from "react-native"
+import { Text, useColorScheme, View } from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 
@@ -17,9 +16,13 @@ import { MealsProvider } from "@/features/meals"
 import { WorkoutProvider } from "@/features/workout"
 import { queryClient } from "@/lib/query-client"
 
+Observe.configure({
+  integrations: { "expo-router": { filteredParams: ["id", "log"] } },
+})
+
 SplashScreen.preventAutoHideAsync()
 
-function RootLayout() {
+function AppRoot() {
   const colorScheme = useColorScheme()
   return (
     <QueryClientProvider client={queryClient}>
@@ -77,4 +80,28 @@ function RootNavigator() {
   return user ? <AccountProviders key={user.id}>{navigation}</AccountProviders> : navigation
 }
 
-export default Sentry.wrap(RootLayout)
+function StartupErrorFallback() {
+  return (
+    <View
+      style={{
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+        backgroundColor: "#FFFFFF",
+      }}
+    >
+      <Text style={{ color: "#111111", textAlign: "center" }}>
+        Something went wrong while starting the app. Reopen it to try again.
+      </Text>
+    </View>
+  )
+}
+
+export default function RootLayout() {
+  return (
+    <ObserveRoot errorBoundaryFallback={<StartupErrorFallback />}>
+      <AppRoot />
+    </ObserveRoot>
+  )
+}

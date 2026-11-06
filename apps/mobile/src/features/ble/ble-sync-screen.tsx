@@ -1,3 +1,4 @@
+import { Observe } from "expo-observe"
 import { router } from "expo-router"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Pressable, ScrollView, StyleSheet, TextInput, useColorScheme, View } from "react-native"
@@ -6,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { ThemedText } from "@/components/themed-text"
 import { ThemedView } from "@/components/themed-view"
 import { useTheme } from "@/hooks/use-theme"
+import { useMarkInteractive } from "@/lib/observe"
 import { BottomTabInset, tokens } from "@/theme"
 
 import { useWatchBle } from "./use-watch-ble"
@@ -100,6 +102,7 @@ function AxisRow({
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 export function BleSyncScreen() {
+  useMarkInteractive()
   const theme = useTheme()
   const colorScheme = useColorScheme()
   const isDark = colorScheme === "dark"
@@ -167,6 +170,7 @@ export function BleSyncScreen() {
         const ok = await sendTextToWatch(txt)
         setSendFeedback(ok ? "Sent ✓" : "Failed to send")
       } catch (e) {
+        Observe.reportError(e)
         setSendFeedback(`Error: ${e instanceof Error ? e.message : String(e)}`)
       } finally {
         setSending(false)
@@ -183,6 +187,7 @@ export function BleSyncScreen() {
       const ok = await sendTextToWatch(phoneDraft.trim())
       setSendFeedback(ok ? "Sent ✓" : "Failed to send")
     } catch (e) {
+      Observe.reportError(e)
       setSendFeedback(`Error: ${e instanceof Error ? e.message : String(e)}`)
     } finally {
       setSending(false)

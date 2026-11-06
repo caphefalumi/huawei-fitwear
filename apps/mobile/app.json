@@ -60,14 +60,16 @@
           "bluetoothAlwaysPermission": "Allow $(PRODUCT_NAME) to connect to your Huawei Watch."
         }
       ],
-      "./plugins/withAndroidCiFixes",
-      "@sentry/react-native"
+      "./plugins/withAndroidCiFixes"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
     "extra": {
+      "eas": {
+        "projectId": "7db03bfd-3c6f-4b96-ab9a-f99315236743"
+      },
       "router": {}
     },
     "owner": "caphefalumis-organization"

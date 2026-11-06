@@ -1,3 +1,4 @@
+import { Observe } from "expo-observe"
 import { router, useLocalSearchParams } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
@@ -5,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
 import { BackHeader, SectionHeading } from "@/components/ui"
+import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
 import {
@@ -17,6 +19,7 @@ import {
 import { SearchInput } from "./meals-ui"
 
 export function ReplaceFoodScreen() {
+  useMarkInteractive()
   const insets = useSafeAreaInsets()
   const params = useLocalSearchParams<{ id?: string; log?: string }>()
   const { items, history, updateItem } = useMeals()
@@ -57,6 +60,7 @@ export function ReplaceFoodScreen() {
       )
       if (active.current) router.back()
     } catch (cause) {
+      Observe.reportError(cause)
       if (active.current)
         setError(cause instanceof Error ? cause.message : "Could not replace food.")
     } finally {

@@ -1,3 +1,4 @@
+import { Observe } from "expo-observe"
 import { useEffect, useRef, useState } from "react"
 import { Alert, StyleSheet, Text, TextInput, View } from "react-native"
 
@@ -34,6 +35,7 @@ function useSave(onClose: () => void) {
       await mutation()
       if (active.current) onClose()
     } catch (cause) {
+      Observe.reportError(cause)
       if (active.current)
         setError(`${cause instanceof Error ? cause.message : "Could not save."} Please try again.`)
     } finally {

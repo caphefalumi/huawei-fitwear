@@ -5,6 +5,7 @@ import { FetchErrorState, LoadingSkeleton } from "@/components/fetch-states"
 import { Pressable } from "@/components/pressable"
 import { useAuth } from "@/features/auth"
 import { apiErrorMessage } from "@/lib/api"
+import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
 import { MealResultScreen } from "./meal-result-screen"
@@ -12,6 +13,7 @@ import { fetchMeal } from "./meals-api"
 import { fromApiMeal, mealsQueryKeys, useMeals } from "./meals-hooks"
 
 export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: () => void }) {
+  useMarkInteractive()
   const { user } = useAuth()
   const { history, loading } = useMeals()
   const saved = history.find((item) => item.id === logId)

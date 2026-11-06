@@ -1,3 +1,4 @@
+import { Observe } from "expo-observe"
 import { router, useLocalSearchParams } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
@@ -5,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button } from "@/components/ui"
+import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
 import { splitDetail, useMeals } from "./meals-hooks"
@@ -13,6 +15,7 @@ import { Box, Field, NutrientGrid, ValueInput } from "./meals-ui"
 type NutrientKey = "energy" | "protein" | "carbs" | "fat"
 
 export function ReviewItemScreen() {
+  useMarkInteractive()
   const insets = useSafeAreaInsets()
   const { addItem, updateItem, items, history } = useMeals()
   const params = useLocalSearchParams<{
@@ -87,6 +90,7 @@ export function ReviewItemScreen() {
       if (existing || params.log) router.back()
       else router.navigate("/meal")
     } catch (cause) {
+      Observe.reportError(cause)
       if (active.current) setError(cause instanceof Error ? cause.message : "Could not save item.")
     } finally {
       if (active.current) setSaving(false)

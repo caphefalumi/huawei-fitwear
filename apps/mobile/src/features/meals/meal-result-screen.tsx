@@ -1,3 +1,4 @@
+import { Observe } from "expo-observe"
 import { router } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
@@ -49,6 +50,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
       await action()
       if (active.current) after?.()
     } catch (cause) {
+      Observe.reportError(cause)
       if (active.current)
         setActionError(cause instanceof Error ? cause.message : "Could not save your change.")
     } finally {

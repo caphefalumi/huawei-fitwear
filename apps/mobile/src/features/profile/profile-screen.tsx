@@ -9,6 +9,7 @@ import { Button, PageHeading, Screen } from "@/components/ui"
 import { useAuth } from "@/features/auth"
 import { PERIOD_AREA, useHealth } from "@/features/health"
 import { RecoverySheet } from "@/features/recovery"
+import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
 import {
@@ -66,6 +67,7 @@ type OpenSheet =
   | null
 
 export function ProfileScreen() {
+  useMarkInteractive()
   const { user, signOut } = useAuth()
   const { weightKg, heightCm, sex, plan, recovery, saveRecovery, loading, error, refresh } =
     useHealth()

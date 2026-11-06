@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query"
 import { CameraView, useCameraPermissions } from "expo-camera"
 import { Image } from "expo-image"
+import { Observe } from "expo-observe"
 import { router } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { StyleSheet, Text, TextInput, View } from "react-native"
@@ -10,6 +11,7 @@ import { Pressable } from "@/components/pressable"
 import { Sheet } from "@/components/sheet"
 import { BackHeader, Button } from "@/components/ui"
 import { pickImage, validatePickedImage } from "@/features/camera"
+import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
 import { analyzeMeal } from "./meals-api"
@@ -22,6 +24,7 @@ const TUTORIAL_STEPS = [
 ]
 
 export function MealCaptureScreen() {
+  useMarkInteractive()
   const insets = useSafeAreaInsets()
   const { tutorialSeen, dismissTutorial, setAnalysis, setDraftPhoto, items } = useMeals()
   const [description, setDescription] = useState("")
@@ -57,6 +60,7 @@ export function MealCaptureScreen() {
       const picked = await pickImage(false)
       if (picked && active.current) setImage(picked)
     } catch (cause) {
+      Observe.reportError(cause)
       if (active.current)
         setError(cause instanceof Error ? cause.message : "Could not open image picker.")
     }
@@ -70,6 +74,7 @@ export function MealCaptureScreen() {
       const validated = validatePickedImage(photo.uri, photo.base64)
       if (active.current) setImage(validated)
     } catch (cause) {
+      Observe.reportError(cause)
       if (active.current)
         setError(cause instanceof Error ? cause.message : "Could not capture photo. Try again.")
     }
@@ -97,6 +102,7 @@ export function MealCaptureScreen() {
       setAnalysis(result, image.uri, { data: image.base64, mimeType: image.mimeType })
       router.push("/meal")
     } catch (cause) {
+      Observe.reportError(cause)
       if (active.current && current === request.current)
         setError(
           cause instanceof Error
