@@ -72,6 +72,7 @@ export function ProfileScreen() {
   useMarkInteractive()
   const { user, signOut } = useAuth()
   const developerMode = useDeveloperMode((state) => state.enabled)
+  const developerFeatures = useDeveloperMode((state) => state.features)
   const toggleDeveloperMode = useDeveloperMode((state) => state.toggle)
   const { weightKg, heightCm, sex, plan, recovery, saveRecovery, loading, error, refresh } =
     useHealth()
@@ -177,13 +178,6 @@ export function ProfileScreen() {
           <Text style={styles.rowLabel}>Account data</Text>
         </Pressable>
         <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push("/ble-sync")}
-          style={styles.row}
-        >
-          <Text style={styles.rowLabel}>BLE test</Text>
-        </Pressable>
-        <Pressable
           accessibilityLabel={`Developer mode, ${developerMode ? "on" : "off"}`}
           accessibilityRole="button"
           onPress={toggleDeveloperMode}
@@ -192,7 +186,25 @@ export function ProfileScreen() {
           <Text style={styles.rowLabel}>Developer mode</Text>
           <Text style={styles.rowValue}>{developerMode ? "On" : "Off"}</Text>
         </Pressable>
-        {__DEV__ || developerMode ? (
+        {developerMode ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push("/developer-options")}
+            style={styles.row}
+          >
+            <Text style={styles.rowLabel}>Developer options</Text>
+          </Pressable>
+        ) : null}
+        {developerMode && developerFeatures.bleTest ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push("/ble-sync")}
+            style={styles.row}
+          >
+            <Text style={styles.rowLabel}>BLE test</Text>
+          </Pressable>
+        ) : null}
+        {developerMode && developerFeatures.testError ? (
           <Pressable
             accessibilityRole="button"
             onPress={() => Sentry.captureException(new Error("First error"))}

@@ -57,6 +57,7 @@ function RootNavigator() {
         <Stack.Protected guard={!!user} redirectTo={APP_ROUTES.login}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="account-data" />
+          <Stack.Screen name="developer-options" />
           <Stack.Screen name="nutrition" />
           <Stack.Screen name="progress" />
           <Stack.Screen name="capture" />
