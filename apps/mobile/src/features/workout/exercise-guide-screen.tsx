@@ -6,6 +6,7 @@ import { StyleSheet, Text, View } from "react-native"
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
 import { useHealth } from "@/features/health"
+import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
 const icons = {
@@ -78,6 +79,7 @@ const GUIDES: Record<string, Guide> = {
 }
 
 export function ExerciseGuideScreen() {
+  useMarkInteractive()
   const { name } = useLocalSearchParams<{ name?: string }>()
   const { recovery } = useHealth()
   const guide = GUIDES[name ?? "bench-press"] ?? GUIDES["bench-press"]

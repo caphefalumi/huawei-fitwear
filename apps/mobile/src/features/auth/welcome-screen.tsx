@@ -3,11 +3,13 @@ import { StyleSheet, Text, View, useWindowDimensions } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
+import { useMarkInteractive } from "@/lib/observe"
 import { Palette as AuthColors } from "@/theme"
 
 export function WelcomeScreen() {
   const insets = useSafeAreaInsets()
   const { height } = useWindowDimensions()
+  useMarkInteractive()
 
   return (
     <View

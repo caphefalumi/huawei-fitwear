@@ -2,11 +2,13 @@ import { router, useLocalSearchParams } from "expo-router"
 import { StyleSheet, Text, View } from "react-native"
 
 import { BackHeader, Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
+import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
 import { GROUP_ROUTINES } from "./routines"
 
 export function GroupPlanScreen() {
+  useMarkInteractive()
   const { group } = useLocalSearchParams<{ group?: string }>()
   const routine = GROUP_ROUTINES[group ?? ""] ?? GROUP_ROUTINES.chest
 

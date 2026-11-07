@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from "react-native"
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, Card, PageHeading, Screen } from "@/components/ui"
 import { useHealth } from "@/features/health"
+import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
 import { routinesFor } from "./routines"
@@ -16,6 +17,7 @@ function formatElapsed(totalSeconds: number) {
 }
 
 export function SessionScreen() {
+  useMarkInteractive()
   const { recovery } = useHealth()
   const { today } = routinesFor(recovery)
   const [done, setDone] = useState<Record<string, boolean>>({})

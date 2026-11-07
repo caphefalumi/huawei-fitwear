@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
+import { useMarkInteractive } from "@/lib/observe"
 import { Palette as AuthColors } from "@/theme"
 
 import { AuthField } from "./auth-field"
@@ -19,6 +20,7 @@ const icons = {
 export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
   const insets = useSafeAreaInsets()
   const { signUp, pending, error } = useAuth()
+  useMarkInteractive()
   const handleSignIn = onSignIn ?? (() => router.replace(APP_ROUTES.login))
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")

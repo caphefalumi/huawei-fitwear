@@ -4,6 +4,7 @@ import { Alert } from "react-native"
 
 import { useAuth } from "@/features/auth"
 import { useHealth } from "@/features/health"
+import { useDeveloperMode } from "@/features/profile/developer-mode.store"
 import { ProfileScreen } from "@/features/profile/profile-screen"
 
 jest.mock("@/features/auth/auth-hooks", () => ({ useAuth: jest.fn() }))
@@ -57,6 +58,7 @@ const health = {
 
 beforeEach(() => {
   jest.clearAllMocks()
+  useDeveloperMode.setState({ enabled: false, features: { testError: false, bleTest: false } })
   mockUseAuth.mockReturnValue({
     user: { name: "Member", email: "member@example.com", birthDate: null },
     signOut,
@@ -102,10 +104,14 @@ test("shows unset height and restores account actions", async () => {
   expect(screen.queryByText("null cm")).toBeNull()
 
   await fireEvent.press(screen.getByRole("button", { name: "Account data" }))
+  await fireEvent.press(screen.getByRole("button", { name: "Developer mode, off" }))
+  await fireEvent.press(screen.getByRole("button", { name: "Developer options" }))
+  await act(async () => useDeveloperMode.getState().toggleFeature("bleTest"))
   await fireEvent.press(screen.getByRole("button", { name: "BLE test" }))
   await fireEvent.press(screen.getByRole("button", { name: "Sign out" }))
 
   expect(router.push).toHaveBeenNthCalledWith(1, "/account-data")
-  expect(router.push).toHaveBeenNthCalledWith(2, "/ble-sync")
+  expect(router.push).toHaveBeenNthCalledWith(2, "/developer-options")
+  expect(router.push).toHaveBeenNthCalledWith(3, "/ble-sync")
   expect(signOut).toHaveBeenCalledTimes(1)
 })

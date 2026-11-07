@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react-native"
 import { isCancel } from "axios"
 import { router } from "expo-router"
 import { useIsFocused } from "expo-router/react-navigation"
@@ -21,6 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
 import { ApiError } from "@/lib/api"
+import { useMarkInteractive } from "@/lib/observe"
 
 import { AuthField } from "./auth-field"
 import { useAuth } from "./auth-hooks"
@@ -41,6 +43,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
   const reducedMotion = useReducedMotion()
   const { fontScale } = useWindowDimensions()
   const { signIn, pending } = useAuth()
+  useMarkInteractive()
   const handleCreateAccount = onCreateAccount ?? (() => router.replace("/(auth)/sign-up"))
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -126,6 +129,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
       } else if (cause instanceof ApiError && (cause.status === 400 || cause.status === 422)) {
         setValidationError("Check your email address and try again.")
       } else {
+        Sentry.captureException(cause)
         setValidationError(
           cause instanceof ApiError && cause.status >= 500
             ? "Something went wrong on our end. Try again."

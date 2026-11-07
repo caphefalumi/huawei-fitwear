@@ -6,6 +6,7 @@ import { StyleSheet, Text, View } from "react-native"
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
 import { useHealth } from "@/features/health"
+import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
 const icons = {
@@ -60,6 +61,7 @@ const SUMMARY = [
 ]
 
 export function ChestPlanScreen() {
+  useMarkInteractive()
   const { recovery } = useHealth()
   const [loads, setLoads] = useState<Record<string, number>>(() =>
     Object.fromEntries(EXERCISES.map((exercise) => [exercise.key, exercise.load])),

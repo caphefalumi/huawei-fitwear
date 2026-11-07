@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react-native"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   createContext,
@@ -150,6 +151,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
         setAuthenticated(true)
       } catch (cause) {
+        Sentry.captureException(cause)
         if (active) {
           setApiToken(null)
           setAuthenticated(false)
@@ -166,9 +168,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const unsubscribe = onSessionExpired(() => {
       if (!active) return
       setError("Your session expired. Please sign in again.")
-      void clearSession().catch(() =>
-        setError("Session expired, but saved credentials could not be removed. Sign in again."),
-      )
+      void clearSession().catch((cause) => {
+        Sentry.captureException(cause)
+        setError("Session expired, but saved credentials could not be removed. Sign in again.")
+      })
     })
     void hydrate()
     return () => {
@@ -184,9 +187,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const remaining = Date.parse(session.expiresAt) - Date.now()
       if (remaining <= 0) {
         setError("Your session expired. Please sign in again.")
-        void clearSession().catch(() =>
-          setError("Could not remove expired saved credentials. Sign in again."),
-        )
+        void clearSession().catch((cause) => {
+          Sentry.captureException(cause)
+          setError("Could not remove expired saved credentials. Sign in again.")
+        })
       } else {
         clearTimeout(timer)
         timer = setTimeout(checkExpiration, Math.min(remaining, 2_147_483_647))
@@ -221,6 +225,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         queryClient.setQueryData(authQueryKeys.session, result)
         setAuthenticated(true)
       } catch (cause) {
+        if (!(cause instanceof ApiError && cause.status < 500)) Sentry.captureException(cause)
         setError(
           cause instanceof Error ? cause.message : "Authentication failed. Please try again.",
         )
@@ -255,12 +260,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
     void signOutAsync(sendSignOut()).catch((cause) => {
       if (revision.current !== localRevision) return
       if (!(cause instanceof ApiError && cause.status === 401)) {
+        Sentry.captureException(cause)
         setError(
           "Signed out on this device. The server session could not be revoked; check your connection.",
         )
       }
     })
-    return clearSession().catch(() => {
+    return clearSession().catch((cause) => {
+      Sentry.captureException(cause)
       if (revision.current === localRevision)
         setError("Signed out on this device, but saved credentials could not be removed.")
     })
@@ -278,6 +285,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         await clearSession()
         return
       }
+      Sentry.captureException(cause)
       setError(
         cause instanceof Error ? cause.message : "Could not delete your account. Please try again.",
       )
@@ -301,6 +309,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
         await queryClient.invalidateQueries({ queryKey: ["meals", result.id, "summary"] })
       } catch (cause) {
+        Sentry.captureException(cause)
         setError(cause instanceof Error ? cause.message : "Could not update your profile.")
         throw cause
       }
