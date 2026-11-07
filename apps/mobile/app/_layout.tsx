@@ -1,3 +1,4 @@
+import "@/lib/sentry"
 import "@/global.css"
 import * as Sentry from "@sentry/react-native"
 import { QueryClientProvider } from "@tanstack/react-query"
@@ -15,12 +16,6 @@ import { HealthProvider } from "@/features/health"
 import { MealsProvider } from "@/features/meals"
 import { WorkoutProvider } from "@/features/workout"
 import { queryClient } from "@/lib/query-client"
-
-Sentry.init({
-  dsn: "https://6d1373e54757edcbf1d1340fe16def81@o4510546028855296.ingest.us.sentry.io/4510546031542272",
-  tracesSampleRate: 1.0,
-  integrations: [Sentry.expoRouterIntegration({ enableTimeToInitialDisplay: true })],
-})
 
 SplashScreen.preventAutoHideAsync()
 
@@ -100,10 +95,12 @@ function StartupErrorFallback() {
   )
 }
 
-export default Sentry.wrap(function RootLayout() {
+function RootLayout() {
   return (
     <Sentry.GlobalErrorBoundary fallback={<StartupErrorFallback />}>
       <AppRoot />
     </Sentry.GlobalErrorBoundary>
   )
-})
+}
+
+export default Sentry.wrap(RootLayout)
