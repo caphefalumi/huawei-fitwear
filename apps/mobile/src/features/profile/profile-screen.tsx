@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react-native"
 import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useState } from "react"
@@ -9,8 +10,10 @@ import { Button, PageHeading, Screen } from "@/components/ui"
 import { useAuth } from "@/features/auth"
 import { PERIOD_AREA, useHealth } from "@/features/health"
 import { RecoverySheet } from "@/features/recovery"
+import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
+import { useDeveloperMode } from "./developer-mode.store"
 import {
   ActivitySheet,
   FrequencySheet,
@@ -66,7 +69,11 @@ type OpenSheet =
   | null
 
 export function ProfileScreen() {
+  useMarkInteractive()
   const { user, signOut } = useAuth()
+  const developerMode = useDeveloperMode((state) => state.enabled)
+  const developerFeatures = useDeveloperMode((state) => state.features)
+  const toggleDeveloperMode = useDeveloperMode((state) => state.toggle)
   const { weightKg, heightCm, sex, plan, recovery, saveRecovery, loading, error, refresh } =
     useHealth()
   const inPeriod = recovery?.area === PERIOD_AREA
@@ -171,12 +178,41 @@ export function ProfileScreen() {
           <Text style={styles.rowLabel}>Account data</Text>
         </Pressable>
         <Pressable
+          accessibilityLabel={`Developer mode, ${developerMode ? "on" : "off"}`}
           accessibilityRole="button"
-          onPress={() => router.push("/ble-sync")}
+          onPress={toggleDeveloperMode}
           style={styles.row}
         >
-          <Text style={styles.rowLabel}>BLE test</Text>
+          <Text style={styles.rowLabel}>Developer mode</Text>
+          <Text style={styles.rowValue}>{developerMode ? "On" : "Off"}</Text>
         </Pressable>
+        {developerMode ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push("/developer-options")}
+            style={styles.row}
+          >
+            <Text style={styles.rowLabel}>Developer options</Text>
+          </Pressable>
+        ) : null}
+        {developerMode && developerFeatures.bleTest ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push("/ble-sync")}
+            style={styles.row}
+          >
+            <Text style={styles.rowLabel}>BLE test</Text>
+          </Pressable>
+        ) : null}
+        {developerMode && developerFeatures.testError ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => Sentry.captureException(new Error("First error"))}
+            style={styles.row}
+          >
+            <Text style={styles.rowLabel}>Send test error</Text>
+          </Pressable>
+        ) : null}
         <Pressable accessibilityRole="button" onPress={() => void signOut()} style={styles.row}>
           <Text style={styles.rowLabel}>Sign out</Text>
         </Pressable>

@@ -6,6 +6,7 @@ import Animated, { FadeInUp } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
+import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
 import { useMeals, type MealLog } from "./meals-hooks"
@@ -25,6 +26,7 @@ const metricOf = (item: MealLog, key: Exclude<SortKey, "newest">) =>
   key === "kcal" ? item.kcal : item.macros[key]
 
 export function MealsHistoryScreen() {
+  useMarkInteractive()
   const insets = useSafeAreaInsets()
   const { history } = useMeals()
   const [query, setQuery] = useState("")

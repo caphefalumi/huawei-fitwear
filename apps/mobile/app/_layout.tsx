@@ -5,7 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query"
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router"
 import * as SplashScreen from "expo-splash-screen"
 import { type PropsWithChildren } from "react"
-import { useColorScheme } from "react-native"
+import { Text, useColorScheme, View } from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 
@@ -19,7 +19,7 @@ import { queryClient } from "@/lib/query-client"
 
 SplashScreen.preventAutoHideAsync()
 
-function RootLayout() {
+function AppRoot() {
   const colorScheme = useColorScheme()
   return (
     <QueryClientProvider client={queryClient}>
@@ -57,6 +57,7 @@ function RootNavigator() {
         <Stack.Protected guard={!!user} redirectTo={APP_ROUTES.login}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="account-data" />
+          <Stack.Screen name="developer-options" />
           <Stack.Screen name="nutrition" />
           <Stack.Screen name="progress" />
           <Stack.Screen name="capture" />
@@ -75,6 +76,32 @@ function RootNavigator() {
     </>
   )
   return user ? <AccountProviders key={user.id}>{navigation}</AccountProviders> : navigation
+}
+
+function StartupErrorFallback() {
+  return (
+    <View
+      style={{
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+        backgroundColor: "#FFFFFF",
+      }}
+    >
+      <Text style={{ color: "#111111", textAlign: "center" }}>
+        Something went wrong while starting the app. Reopen it to try again.
+      </Text>
+    </View>
+  )
+}
+
+function RootLayout() {
+  return (
+    <Sentry.GlobalErrorBoundary fallback={<StartupErrorFallback />}>
+      <AppRoot />
+    </Sentry.GlobalErrorBoundary>
+  )
 }
 
 export default Sentry.wrap(RootLayout)

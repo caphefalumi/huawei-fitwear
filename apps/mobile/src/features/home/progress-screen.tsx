@@ -5,6 +5,7 @@ import { Animated, Easing, StyleSheet, Text, View } from "react-native"
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Card, PageHeading, Screen } from "@/components/ui"
 import { useHealth } from "@/features/health"
+import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
 import { progressData, RANGES, type Range } from "./progress-data"
@@ -30,6 +31,7 @@ function ActivityBar({ height, index }: { height: number; index: number }) {
 }
 
 export function ProgressScreen() {
+  useMarkInteractive()
   const { weightKg, weights } = useHealth()
   const [range, setRange] = useState<Range>("Month")
   const data = progressData(range, weights, null)

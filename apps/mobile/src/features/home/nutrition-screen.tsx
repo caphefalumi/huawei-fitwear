@@ -4,12 +4,14 @@ import { StyleSheet, Text, View } from "react-native"
 import { BackHeader, Card, PageHeading, Screen } from "@/components/ui"
 import { useHealth } from "@/features/health"
 import { useMeals } from "@/features/meals"
+import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
 import { NutritionRing } from "./ring"
 import { MacroBar } from "./ui"
 
 export function NutritionScreen() {
+  useMarkInteractive()
   const { weightUpdated } = useHealth()
   const { loggedKcal, loggedMacros } = useMeals()
 

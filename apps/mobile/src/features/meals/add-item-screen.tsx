@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react-native"
 import { Image } from "expo-image"
 import { router, useLocalSearchParams } from "expo-router"
 import { useEffect, useRef, useState } from "react"
@@ -6,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, SectionHeading } from "@/components/ui"
+import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
 import {
@@ -27,6 +29,7 @@ const toDraft = (estimate: MealEstimate) => ({
 })
 
 export function AddItemScreen() {
+  useMarkInteractive()
   const insets = useSafeAreaInsets()
   const { addItem } = useMeals()
   const { log: mealId } = useLocalSearchParams<{ log?: string }>()
@@ -99,6 +102,7 @@ export function AddItemScreen() {
       )
       if (active.current) router.back()
     } catch (cause) {
+      Sentry.captureException(cause)
       if (active.current) setError(cause instanceof Error ? cause.message : "Could not add item.")
     } finally {
       if (active.current) setSaving(false)

@@ -1,4 +1,4 @@
-import type * as Sentry from "@sentry/react-native"
+import * as Sentry from "@sentry/react-native"
 
 type BeforeSend = NonNullable<Parameters<typeof Sentry.init>[0]["beforeSend"]>
 type BeforeBreadcrumb = NonNullable<Parameters<typeof Sentry.init>[0]["beforeBreadcrumb"]>
@@ -23,6 +23,7 @@ export const sentryOptions: Parameters<typeof Sentry.init>[0] = {
   enableAutoBreadcrumbTracking: false,
   enableNetworkBreadcrumbs: false,
   enableNetworkEventBreadcrumbs: false,
+  integrations: [Sentry.expoRouterIntegration({ enableTimeToInitialDisplay: true })],
   beforeSend: scrubSentryEvent,
   beforeBreadcrumb: scrubSentryBreadcrumb,
 }

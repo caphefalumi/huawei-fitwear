@@ -10,6 +10,7 @@ import { recoveryTitle, useHealth } from "@/features/health"
 import { useMeals } from "@/features/meals"
 import { RecoverySheet } from "@/features/recovery"
 import { routinesFor } from "@/features/workout"
+import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
 import { NutritionRing } from "./ring"
@@ -46,6 +47,7 @@ function useCountUp(target: number, duration = 600) {
 export function HomeScreen() {
   const { weightKg, weightUpdated, recovery } = useHealth()
   const { loggedKcal, loggedMacros } = useMeals()
+  useMarkInteractive()
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [recoveryOpen, setRecoveryOpen] = useState(false)
   const [visit, setVisit] = useState(0)

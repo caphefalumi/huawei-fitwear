@@ -8,6 +8,7 @@ import { Pressable } from "@/components/pressable"
 import { Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
 import { recoveryRanges, useHealth } from "@/features/health"
 import { RecoverySheet } from "@/features/recovery"
+import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
 import { routinesFor, type Routine } from "./routines"
@@ -60,6 +61,7 @@ const MUSCLE_GROUPS = [
 ]
 
 export function WorkoutPlanScreen() {
+  useMarkInteractive()
   const { plan, recovery } = useHealth()
   const [recoveryOpen, setRecoveryOpen] = useState(false)
 
