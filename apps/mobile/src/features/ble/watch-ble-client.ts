@@ -32,6 +32,23 @@ export type WatchBleSendResult =
   | { ok: true; text: string; byteLength: number }
   | { ok: false; error: string }
 
+/**
+ * ble-plx expects one native manager for the whole app process. Creating one per
+ * screen mount (and destroying it) leaks connections and can wedge the radio.
+ */
+let sharedManager: BleManager | null = null
+
+function getBleManager(): BleManager | null {
+  if (sharedManager) return sharedManager
+  try {
+    sharedManager = new BleManager()
+  } catch {
+    // Native module unavailable (Expo Go / web).
+    return null
+  }
+  return sharedManager
+}
+
 async function requestAndroidBlePermissions(): Promise<boolean> {
   if (Platform.OS !== "android") return true
   if (Platform.Version >= 31) {
@@ -101,7 +118,8 @@ export class WatchBleClient {
       return
     }
 
-    const manager = this.getOrCreateManager()
+    const manager = getBleManager()
+    this.manager = manager
     if (!manager) {
       this.listener.onError(
         "Native BLE module unavailable. Use a development build with react-native-ble-plx.",
@@ -173,9 +191,10 @@ export class WatchBleClient {
         }
         this.clearScanTimeout()
 
+        let connected: Device | null = null
         try {
           this.setStatus("connecting")
-          const connected = await scannedDevice.connect({ requestMTU: BLE_REQUESTED_MTU })
+          connected = await scannedDevice.connect({ requestMTU: BLE_REQUESTED_MTU })
           if (session !== this.session) {
             await this.safeCancel(connected)
             return
@@ -225,13 +244,19 @@ export class WatchBleClient {
             },
           )
 
-          const initialChar = await connected.readCharacteristicForService(
-            FITWEAR_SERVICE_UUID,
-            FITWEAR_CHAR_MESSAGE_UUID,
-          )
-          if (session !== this.session) return
-          if (initialChar?.value) {
-            this.emitBytes("watch-to-phone", base64ToBytes(initialChar.value))
+          // Initial value is a convenience; a read-restricted characteristic must
+          // not tear down an otherwise healthy notify subscription.
+          try {
+            const initialChar = await connected.readCharacteristicForService(
+              FITWEAR_SERVICE_UUID,
+              FITWEAR_CHAR_MESSAGE_UUID,
+            )
+            if (session !== this.session) return
+            if (initialChar?.value) {
+              this.emitBytes("watch-to-phone", base64ToBytes(initialChar.value))
+            }
+          } catch {
+            // Keep the notify subscription.
           }
 
           this.listener.onDeviceName(
@@ -241,6 +266,8 @@ export class WatchBleClient {
           this.setStatus("connected")
         } catch (connErr) {
           Sentry.captureException(connErr)
+          // Release a half-open link so the watch can advertise again.
+          if (connected) await this.safeCancel(connected)
           if (session !== this.session) return
           this.cleanupSubscriptions({ keepStateListener: true })
           this.connectedDevice = null
@@ -311,11 +338,7 @@ export class WatchBleClient {
     if (dev) {
       void this.safeCancel(dev)
     }
-    try {
-      this.manager?.destroy()
-    } catch {
-      // ignore
-    }
+    // The manager is shared for the process lifetime; only per-client listeners go.
     this.manager = null
     this.status = "disconnected"
   }
@@ -327,16 +350,6 @@ export class WatchBleClient {
 
   private emitBytes(direction: BleDirection, bytes: Uint8Array): void {
     this.listener.onMessage(direction, decodeUtf8Bytes(bytes), bytes.byteLength)
-  }
-
-  private getOrCreateManager(): BleManager | null {
-    if (this.manager) return this.manager
-    try {
-      this.manager = new BleManager()
-      return this.manager
-    } catch {
-      return null
-    }
   }
 
   private bindBluetoothState(manager: BleManager): void {
