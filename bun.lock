@@ -4,11 +4,6 @@
   "workspaces": {
     "": {
       "name": "fitwear",
-      "dependencies": {
-        "expo": "~58.0.23",
-        "react": "19.3.0",
-        "react-native": "0.88.1",
-      },
       "devDependencies": {
         "@xmldom/xmldom": "^0.9.12",
         "husky": "^9.1.7",
