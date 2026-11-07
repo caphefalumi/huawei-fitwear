@@ -20,7 +20,7 @@ Forgot-password requests return the same message whether an account exists or no
 
 ## Sentry privacy and EAS builds
 
-Sentry events disable default PII collection, omit request details, and strip breadcrumb content. Startup and navigation metrics use the Expo Router integration. EAS `preview` and `production` profiles enable source-map uploads. Configure `SENTRY_AUTH_TOKEN` (secret), `SENTRY_ORG`, and `SENTRY_PROJECT` in the matching EAS environments; builds cannot upload source maps until those values and the EAS project link are configured. Source maps upload only on Expo's build servers, not with `eas build --local`.
+Sentry events disable default PII collection, omit request details, and strip breadcrumb content. Startup and navigation metrics use the Expo Router integration. EAS `preview` and `production` profiles enable source-map uploads; the plugin reads `organization` and `project` from `app.json`, so only `SENTRY_AUTH_TOKEN` (secret) must be set in the matching EAS environments. Source maps upload only on Expo's build servers, not with `eas build --local`.
 
 Testing uses the `jest-expo` preset. `flow-parser` is pinned through an override because React Native's `0.327.0` package omits `dist/utils/isReservedWord.js`; `0.338.0` includes it. Revisit the override when the SDK's parser dependency is fixed.
 
