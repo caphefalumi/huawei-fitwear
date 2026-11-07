@@ -1,5 +1,5 @@
-import { Image } from "expo-image"
 import * as Sentry from "@sentry/react-native"
+import { Image } from "expo-image"
 import { useEffect, useRef, useState } from "react"
 import { StyleSheet, Text, TextInput, View } from "react-native"
 

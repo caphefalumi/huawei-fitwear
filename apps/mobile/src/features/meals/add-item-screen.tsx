@@ -1,5 +1,5 @@
-import { Image } from "expo-image"
 import * as Sentry from "@sentry/react-native"
+import { Image } from "expo-image"
 import { router, useLocalSearchParams } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"

@@ -1,7 +1,7 @@
+import * as Sentry from "@sentry/react-native"
 import { useMutation } from "@tanstack/react-query"
 import { CameraView, useCameraPermissions } from "expo-camera"
 import { Image } from "expo-image"
-import * as Sentry from "@sentry/react-native"
 import { router } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { StyleSheet, Text, TextInput, View } from "react-native"
