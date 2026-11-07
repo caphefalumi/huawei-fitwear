@@ -13,6 +13,7 @@ import { RecoverySheet } from "@/features/recovery"
 import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
+import { useDeveloperMode } from "./developer-mode.store"
 import {
   ActivitySheet,
   FrequencySheet,
@@ -70,6 +71,8 @@ type OpenSheet =
 export function ProfileScreen() {
   useMarkInteractive()
   const { user, signOut } = useAuth()
+  const developerMode = useDeveloperMode((state) => state.enabled)
+  const toggleDeveloperMode = useDeveloperMode((state) => state.toggle)
   const { weightKg, heightCm, sex, plan, recovery, saveRecovery, loading, error, refresh } =
     useHealth()
   const inPeriod = recovery?.area === PERIOD_AREA
@@ -180,7 +183,16 @@ export function ProfileScreen() {
         >
           <Text style={styles.rowLabel}>BLE test</Text>
         </Pressable>
-        {__DEV__ ? (
+        <Pressable
+          accessibilityLabel={`Developer mode, ${developerMode ? "on" : "off"}`}
+          accessibilityRole="button"
+          onPress={toggleDeveloperMode}
+          style={styles.row}
+        >
+          <Text style={styles.rowLabel}>Developer mode</Text>
+          <Text style={styles.rowValue}>{developerMode ? "On" : "Off"}</Text>
+        </Pressable>
+        {__DEV__ || developerMode ? (
           <Pressable
             accessibilityRole="button"
             onPress={() => Sentry.captureException(new Error("First error"))}
