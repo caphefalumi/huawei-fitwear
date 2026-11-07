@@ -6,7 +6,6 @@
     "apps/mobile",
     "apps/backend"
   ],
-  "main": "expo-router/entry",
   "scripts": {
     "start": "bun run --cwd apps/mobile start",
     "start:tunnel": "bun run --cwd apps/mobile start:tunnel",
@@ -36,11 +35,6 @@
     "mobile:test:e2e": "bun run --cwd apps/mobile test:e2e",
     "test": "bun run backend:test && bun run mobile:test",
     "test:e2e": "bun run mobile:test:e2e"
-  },
-  "dependencies": {
-    "expo": "~58.0.23",
-    "react": "19.3.0",
-    "react-native": "0.88.1"
   },
   "devDependencies": {
     "@xmldom/xmldom": "^0.9.12",
