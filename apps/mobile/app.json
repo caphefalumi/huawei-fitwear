@@ -56,12 +56,22 @@
         "react-native-ble-plx",
         {
           "isBackgroundEnabled": true,
-          "modes": ["central"],
+          "modes": [
+            "central"
+          ],
           "bluetoothAlwaysPermission": "Allow $(PRODUCT_NAME) to connect to your Huawei Watch."
         }
       ],
       "./plugins/withAndroidCmake",
-      "@sentry/react-native"
+      "@sentry/react-native",
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "huawei-fitwear",
+          "organization": "caphefalumi"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

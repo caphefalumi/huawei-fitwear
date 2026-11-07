@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react-native"
 import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useState } from "react"
@@ -179,6 +180,15 @@ export function ProfileScreen() {
         >
           <Text style={styles.rowLabel}>BLE test</Text>
         </Pressable>
+        {__DEV__ ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => Sentry.captureException(new Error("First error"))}
+            style={styles.row}
+          >
+            <Text style={styles.rowLabel}>Send test error</Text>
+          </Pressable>
+        ) : null}
         <Pressable accessibilityRole="button" onPress={() => void signOut()} style={styles.row}>
           <Text style={styles.rowLabel}>Sign out</Text>
         </Pressable>
