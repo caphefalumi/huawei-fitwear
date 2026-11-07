@@ -1,5 +1,5 @@
 import { Image } from "expo-image"
-import { Observe } from "expo-observe"
+import * as Sentry from "@sentry/react-native"
 import { router, useLocalSearchParams } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
@@ -102,7 +102,7 @@ export function AddItemScreen() {
       )
       if (active.current) router.back()
     } catch (cause) {
-      Observe.reportError(cause)
+      Sentry.captureException(cause)
       if (active.current) setError(cause instanceof Error ? cause.message : "Could not add item.")
     } finally {
       if (active.current) setSaving(false)

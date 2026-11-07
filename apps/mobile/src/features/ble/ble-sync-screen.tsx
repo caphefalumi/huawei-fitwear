@@ -1,4 +1,4 @@
-import { Observe } from "expo-observe"
+import * as Sentry from "@sentry/react-native"
 import { router } from "expo-router"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Pressable, ScrollView, StyleSheet, TextInput, useColorScheme, View } from "react-native"
@@ -170,7 +170,7 @@ export function BleSyncScreen() {
         const ok = await sendTextToWatch(txt)
         setSendFeedback(ok ? "Sent ✓" : "Failed to send")
       } catch (e) {
-        Observe.reportError(e)
+        Sentry.captureException(e)
         setSendFeedback(`Error: ${e instanceof Error ? e.message : String(e)}`)
       } finally {
         setSending(false)
@@ -187,7 +187,7 @@ export function BleSyncScreen() {
       const ok = await sendTextToWatch(phoneDraft.trim())
       setSendFeedback(ok ? "Sent ✓" : "Failed to send")
     } catch (e) {
-      Observe.reportError(e)
+      Sentry.captureException(e)
       setSendFeedback(`Error: ${e instanceof Error ? e.message : String(e)}`)
     } finally {
       setSending(false)

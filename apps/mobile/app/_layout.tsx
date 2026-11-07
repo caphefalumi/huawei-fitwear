@@ -1,6 +1,6 @@
 import "@/global.css"
+import * as Sentry from "@sentry/react-native"
 import { QueryClientProvider } from "@tanstack/react-query"
-import { Observe, ObserveRoot } from "expo-observe"
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router"
 import * as SplashScreen from "expo-splash-screen"
 import { type PropsWithChildren } from "react"
@@ -16,9 +16,10 @@ import { MealsProvider } from "@/features/meals"
 import { WorkoutProvider } from "@/features/workout"
 import { queryClient } from "@/lib/query-client"
 
-Observe.configure({
-  dispatchInDebug: true,
-  integrations: { "expo-router": { filteredParams: ["id", "log"] } },
+Sentry.init({
+  dsn: "https://6d1373e54757edcbf1d1340fe16def81@o4510546028855296.ingest.us.sentry.io/4510546031542272",
+  tracesSampleRate: 1.0,
+  integrations: [Sentry.expoRouterIntegration({ enableTimeToInitialDisplay: true })],
 })
 
 SplashScreen.preventAutoHideAsync()
@@ -99,10 +100,10 @@ function StartupErrorFallback() {
   )
 }
 
-export default function RootLayout() {
+export default Sentry.wrap(function RootLayout() {
   return (
-    <ObserveRoot errorBoundaryFallback={<StartupErrorFallback />}>
+    <Sentry.GlobalErrorBoundary fallback={<StartupErrorFallback />}>
       <AppRoot />
-    </ObserveRoot>
+    </Sentry.GlobalErrorBoundary>
   )
-}
+})

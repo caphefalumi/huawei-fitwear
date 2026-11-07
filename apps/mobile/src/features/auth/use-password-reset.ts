@@ -1,4 +1,4 @@
-import { Observe } from "expo-observe"
+import * as Sentry from "@sentry/react-native"
 import { useEffect, useRef, useState } from "react"
 import { AppState } from "react-native"
 
@@ -94,7 +94,7 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
       setToken(nextToken)
       setStep("password")
     } catch (cause) {
-      Observe.reportError(cause)
+      Sentry.captureException(cause)
       if (!mounted.current) return
       setCode("")
       setError(cause instanceof Error ? cause.message : "This reset code is invalid or expired.")
@@ -114,7 +114,7 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
       setResendDeadline(Date.now() + result.resendAfterSeconds * 1000)
       setCode("")
     } catch (cause) {
-      Observe.reportError(cause)
+      Sentry.captureException(cause)
       if (!mounted.current) return
       setError(cause instanceof Error ? cause.message : "Could not resend the reset code.")
     } finally {
@@ -139,7 +139,7 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
         setResendDeadline(Date.now() + result.resendAfterSeconds * 1000)
         setStep("code")
       } catch (cause) {
-        Observe.reportError(cause)
+        Sentry.captureException(cause)
         if (!mounted.current) return
         setError(cause instanceof Error ? cause.message : "Could not request a password reset.")
       } finally {
@@ -173,7 +173,7 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
       onCompleted()
       setStep("done")
     } catch (cause) {
-      Observe.reportError(cause)
+      Sentry.captureException(cause)
       if (!mounted.current) return
       setError(cause instanceof Error ? cause.message : "Could not reset your password.")
     } finally {

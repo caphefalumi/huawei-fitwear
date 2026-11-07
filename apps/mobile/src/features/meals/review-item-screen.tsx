@@ -1,4 +1,4 @@
-import { Observe } from "expo-observe"
+import * as Sentry from "@sentry/react-native"
 import { router, useLocalSearchParams } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
@@ -90,7 +90,7 @@ export function ReviewItemScreen() {
       if (existing || params.log) router.back()
       else router.navigate("/meal")
     } catch (cause) {
-      Observe.reportError(cause)
+      Sentry.captureException(cause)
       if (active.current) setError(cause instanceof Error ? cause.message : "Could not save item.")
     } finally {
       if (active.current) setSaving(false)

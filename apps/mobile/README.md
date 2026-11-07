@@ -18,9 +18,9 @@ Remote data uses TanStack Query. Each feature owns domain/user-scoped query keys
 
 Forgot-password requests return the same message whether an account exists or not. The app collects a four-digit email code (valid for 10 minutes), exchanges a valid code for a short-lived reset token, and submits that token with the new password. Reset tokens expire after 10 minutes and are single-use. The OTP screen shows the server-provided exponential resend cooldown; new passwords require at least 8 characters and the screen exposes a show/hide toggle.
 
-## Expo Observe and EAS builds
+## Sentry and EAS builds
 
-Startup and navigation metrics are collected with `expo-observe`; the root layout wraps the app in `ObserveRoot`, and the entry screens mark when the app is interactive. EAS `preview` and `production` profiles enable source-map uploads for error symbolication. Source maps upload only on Expo's build servers, not with `eas build --local`.
+Crashes, startup and navigation metrics are collected with `@sentry/react-native`; the root layout initializes Sentry, wraps the app with `Sentry.wrap`, and the entry screens mark when the app is interactive. EAS `preview` and `production` profiles enable source-map uploads for error symbolication. Source maps upload only on Expo's build servers, not with `eas build --local`; set `SENTRY_AUTH_TOKEN` (and the plugin's `organization`/`project`) in EAS to enable the upload.
 
 Testing uses the `jest-expo` preset. `flow-parser` is pinned through an override because React Native's `0.327.0` package omits `dist/utils/isReservedWord.js`; `0.338.0` includes it. Revisit the override when the SDK's parser dependency is fixed.
 

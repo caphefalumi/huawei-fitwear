@@ -1,4 +1,4 @@
-import { Observe } from "expo-observe"
+import * as Sentry from "@sentry/react-native"
 import { router, useLocalSearchParams } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
@@ -60,7 +60,7 @@ export function ReplaceFoodScreen() {
       )
       if (active.current) router.back()
     } catch (cause) {
-      Observe.reportError(cause)
+      Sentry.captureException(cause)
       if (active.current)
         setError(cause instanceof Error ? cause.message : "Could not replace food.")
     } finally {

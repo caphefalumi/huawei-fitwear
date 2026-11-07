@@ -1,4 +1,4 @@
-import { Observe } from "expo-observe"
+import * as Sentry from "@sentry/react-native"
 import { PermissionsAndroid, Platform } from "react-native"
 import {
   BleError,
@@ -118,7 +118,7 @@ export class WatchBleClient {
         return
       }
     } catch (err) {
-      Observe.reportError(err)
+      Sentry.captureException(err)
       this.listener.onError(err instanceof Error ? err.message : "Could not read Bluetooth state")
       return
     }
@@ -240,7 +240,7 @@ export class WatchBleClient {
           this.listener.onError(null)
           this.setStatus("connected")
         } catch (connErr) {
-          Observe.reportError(connErr)
+          Sentry.captureException(connErr)
           if (session !== this.session) return
           this.cleanupSubscriptions({ keepStateListener: true })
           this.connectedDevice = null
@@ -296,7 +296,7 @@ export class WatchBleClient {
       this.emitBytes("phone-to-watch", bytes)
       return { ok: true, text: clean, byteLength: bytes.byteLength }
     } catch (err) {
-      Observe.reportError(err)
+      Sentry.captureException(err)
       const error = err instanceof Error ? err.message : "Write failed."
       this.listener.onError(error)
       return { ok: false, error }

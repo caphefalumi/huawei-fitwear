@@ -1,5 +1,5 @@
 import { Image } from "expo-image"
-import { Observe } from "expo-observe"
+import * as Sentry from "@sentry/react-native"
 import { useEffect, useRef, useState } from "react"
 import { StyleSheet, Text, TextInput, View } from "react-native"
 
@@ -80,7 +80,7 @@ export function RecoverySheet({
       await saveRecovery(draft)
       if (active.current) onClose()
     } catch (cause) {
-      Observe.reportError(cause)
+      Sentry.captureException(cause)
       if (active.current)
         setError(
           `${cause instanceof Error ? cause.message : "Could not save recovery."} Please try again.`,

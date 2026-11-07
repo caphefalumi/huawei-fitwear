@@ -1,5 +1,5 @@
 import { isCancel } from "axios"
-import { Observe } from "expo-observe"
+import * as Sentry from "@sentry/react-native"
 import { router } from "expo-router"
 import { useIsFocused } from "expo-router/react-navigation"
 import { StatusBar } from "expo-status-bar"
@@ -129,7 +129,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
       } else if (cause instanceof ApiError && (cause.status === 400 || cause.status === 422)) {
         setValidationError("Check your email address and try again.")
       } else {
-        Observe.reportError(cause)
+        Sentry.captureException(cause)
         setValidationError(
           cause instanceof ApiError && cause.status >= 500
             ? "Something went wrong on our end. Try again."
