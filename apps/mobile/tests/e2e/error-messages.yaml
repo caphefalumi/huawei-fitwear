@@ -72,6 +72,12 @@ tags:
 - tapOn:
     id: "sign-up-submit"
 - assertVisible: "Please agree to the terms before creating an account."
+# Maestro's center swipe starts inside the DOB inputs here; start on the
+# submit button so the ScrollView receives the gesture instead.
+- swipe:
+    from:
+      id: "sign-up-submit"
+    direction: UP
 - scrollUntilVisible:
     element: "Log in"
     direction: DOWN
