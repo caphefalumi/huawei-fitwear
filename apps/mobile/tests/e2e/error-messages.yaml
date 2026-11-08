@@ -133,23 +133,30 @@ tags:
     visible: "Today"
     timeout: 30000
 
-# Profile health load failure after offline cold start (health queries use networkMode: always).
+# Saved tokens still require server validation. Offline cold start must release
+# the splash without exposing private data; reconnecting can restore the token.
 - stopApp
 - setAirplaneMode: enabled
 - launchApp
 - extendedWaitUntil:
+    visible: "Explore the app|Hi, welcome back."
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "Explore the app"
+    commands:
+      - tapOn: "Sign in"
+- extendedWaitUntil:
+    visible: "Could not reach the server. Check your connection and try again."
+    timeout: 10000
+- assertNotVisible:
+    id: "tab-profile"
+- stopApp
+- setAirplaneMode: disabled
+- launchApp
+- extendedWaitUntil:
     visible: "Today"
     timeout: 30000
-- tapOn:
-    id: "tab-profile"
-- extendedWaitUntil:
-    visible: "Could not load your health data."
-    timeout: 30000
-- tapOn: "Retry"
-- extendedWaitUntil:
-    visible: "Could not load your health data."
-    timeout: 20000
-- setAirplaneMode: disabled
 
 # Meal manual entry validation on an empty reviewed item.
 - tapOn:

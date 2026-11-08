@@ -84,6 +84,31 @@ test("restores a saved session only after the server validates it", async () => 
   expect(request.mock.calls[0][0]?.headers).toHaveProperty("Authorization", "Bearer secret-a")
 })
 
+test("offline saved-session validation releases startup without trusting or deleting the token", async () => {
+  saved.getToken.mockResolvedValue("secret-a")
+  onlineManager.setOnline(false)
+  request.mockRejectedValue(new AxiosError("Network Error", "ERR_NETWORK"))
+  const first = await renderHook(() => useAuth(), {
+    wrapper: createQueryWrapper(AuthProvider),
+  })
+  await waitFor(() => expect(first.result.current.loading).toBe(false))
+  expect(first.result.current.user).toBeNull()
+  expect(saved.clearToken).not.toHaveBeenCalled()
+
+  await act(async () => {
+    onlineManager.setOnline(true)
+  })
+  expect(request).toHaveBeenCalledTimes(1)
+  await first.unmount()
+
+  request.mockResolvedValue(json(200, authenticated()))
+  const restored = await renderHook(() => useAuth(), {
+    wrapper: createQueryWrapper(AuthProvider),
+  })
+  await waitFor(() => expect(restored.result.current.loading).toBe(false))
+  expect(restored.result.current.user?.id).toBe(user.id)
+})
+
 test("revoked credentials cannot restore private account state", async () => {
   saved.getToken.mockResolvedValue("revoked-token")
   request.mockResolvedValue(json(401, { message: "Session expired" }))
