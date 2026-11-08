@@ -34,8 +34,6 @@ tags:
 - inputText: "E2E Member"
 - tapOn: "Your email"
 - inputText: "e2e.member@fitwear.dev"
-- tapOn: "Your password"
-- inputText: "short"
 - tapOn: "Day"
 - inputText: "12"
 - tapOn: "Month"
@@ -43,16 +41,46 @@ tags:
 - tapOn: "Year"
 - inputText: "1998"
 - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "sign-up-password"
+    direction: DOWN
+- tapOn:
+    id: "sign-up-password"
+- inputText: "short"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "sign-up-submit"
+    direction: DOWN
 - tapOn:
     id: "sign-up-submit"
 - assertVisible: "Password must contain at least 8 characters."
-- tapOn: "Your password"
-- eraseText
+- scrollUntilVisible:
+    element:
+      id: "sign-up-password"
+    direction: UP
+- tapOn:
+    id: "sign-up-password"
+- eraseText: 100
 - inputText: "password123"
 - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "sign-up-submit"
+    direction: DOWN
 - tapOn:
     id: "sign-up-submit"
 - assertVisible: "Please agree to the terms before creating an account."
+# Maestro's center swipe starts inside the DOB inputs here; start on the
+# submit button so the ScrollView receives the gesture instead.
+- swipe:
+    from:
+      id: "sign-up-submit"
+    direction: UP
+- scrollUntilVisible:
+    element: "Log in"
+    direction: DOWN
 - tapOn: "Log in"
 - extendedWaitUntil:
     visible: "Hi, welcome back."
@@ -72,7 +100,8 @@ tags:
 - tapOn:
     id: "login-submit"
 - assertVisible: "Enter your password."
-- tapOn: "Your password"
+- tapOn:
+    id: "login-password"
 - inputText: "wrong-maestro-password"
 - hideKeyboard
 - tapOn:
@@ -82,8 +111,9 @@ tags:
 # Clear the previous credential error before testing the offline failure. The
 # inline error expands the form and can push the submit button below the viewport.
 - setAirplaneMode: enabled
-- tapOn: "Your password"
-- eraseText
+- tapOn:
+    id: "login-password"
+- eraseText: 100
 - inputText: "offline-maestro-password"
 - hideKeyboard
 - tapOn:
@@ -92,8 +122,9 @@ tags:
     visible: "Can't connect. Check your connection and try again."
     timeout: 20000
 - setAirplaneMode: disabled
-- tapOn: "Your password"
-- eraseText
+- tapOn:
+    id: "login-password"
+- eraseText: 100
 - inputText: ${MAESTRO_TEST_PASSWORD}
 - hideKeyboard
 - tapOn:
@@ -102,23 +133,30 @@ tags:
     visible: "Today"
     timeout: 30000
 
-# Profile health load failure after offline cold start (health queries use networkMode: always).
+# Saved tokens still require server validation. Offline cold start must release
+# the splash without exposing private data; reconnecting can restore the token.
 - stopApp
 - setAirplaneMode: enabled
 - launchApp
 - extendedWaitUntil:
+    visible: "Explore the app|Hi, welcome back."
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "Explore the app"
+    commands:
+      - tapOn: "Sign in"
+- extendedWaitUntil:
+    visible: "Could not reach the server. Check your connection and try again."
+    timeout: 10000
+- assertNotVisible:
+    id: "tab-profile"
+- stopApp
+- setAirplaneMode: disabled
+- launchApp
+- extendedWaitUntil:
     visible: "Today"
     timeout: 30000
-- tapOn:
-    id: "tab-profile"
-- extendedWaitUntil:
-    visible: "Could not load your health data."
-    timeout: 30000
-- tapOn: "Retry"
-- extendedWaitUntil:
-    visible: "Could not load your health data."
-    timeout: 20000
-- setAirplaneMode: disabled
 
 # Meal manual entry validation on an empty reviewed item.
 - tapOn:

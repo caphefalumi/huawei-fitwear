@@ -141,6 +141,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setApiToken(token)
         const result = await queryClient.fetchQuery({
           ...authSessionQueryOptions(),
+          // Startup must settle offline without trusting an unvalidated token.
+          networkMode: "always",
+          retry: false,
           staleTime: 0,
         })
         if (!active || revision.current !== hydrateRevision) return
