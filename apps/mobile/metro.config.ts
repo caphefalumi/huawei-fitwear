@@ -1,6 +1,6 @@
 import path from "node:path"
 
-import { getSentryExpoConfig } from "@sentry/react-native/metro"
+import { getSentryExpoConfig } from "@sentry/react-native/metro.js"
 import type { CustomResolver } from "metro-resolver"
 
 const projectRoot = import.meta.dirname
