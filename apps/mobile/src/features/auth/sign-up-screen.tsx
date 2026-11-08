@@ -133,6 +133,7 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
           editable={!pending}
         />
         <AuthField
+          testID="sign-up-password"
           label="Password"
           helper="At least 8 characters. Maximum 72 UTF-8 bytes."
           maxLength={72}

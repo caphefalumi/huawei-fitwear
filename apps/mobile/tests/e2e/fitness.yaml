@@ -23,7 +23,8 @@ tags:
     timeout: 20000
 - tapOn: "example@gmail.com"
 - inputText: ${MAESTRO_TEST_EMAIL}
-- tapOn: "Your password"
+- tapOn:
+    id: "login-password"
 - inputText: ${MAESTRO_TEST_PASSWORD}
 - hideKeyboard
 - tapOn:
