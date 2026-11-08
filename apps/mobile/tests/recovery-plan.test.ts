@@ -1,5 +1,12 @@
-import { createRecovery, dateKey, PERIOD_AREA, recoveryProgress } from "@/features/health"
-import type { RecoveryPlan } from "@/features/health"
+import {
+  createInjury,
+  injuryEffect,
+  injuryTitle,
+  isActive,
+  PERIOD_AREA,
+  periodPhase,
+  useInjuries,
+} from "@/features/recovery"
 
 jest.mock("@/lib/api", () => ({
   ...jest.requireActual("@/lib/api"),
@@ -7,51 +14,50 @@ jest.mock("@/lib/api", () => ({
 }))
 jest.mock("@/features/auth/auth-hooks", () => ({ useAuth: jest.fn() }))
 
-const plan = (restDays: number, lightDays: number): RecoveryPlan => ({
-  area: "Right knee",
-  note: "",
-  restDays,
-  lightDays,
-  startDate: "2026-11-01",
-  start: "Nov 1",
-  returnDate: "",
-})
-const day = (date: number) => new Date(2026, 10, date, 9)
+beforeEach(() => useInjuries.setState({ injuries: [] }))
 
-describe("recoveryProgress", () => {
-  test("is empty before the plan starts", () => {
-    expect(recoveryProgress(plan(2, 3), new Date(2026, 9, 31, 9))).toEqual([0, 0, 0])
-  })
-
-  test("fills the rest stage first, then rehab, then return", () => {
-    expect(recoveryProgress(plan(2, 4), day(1))).toEqual([0, 0, 0])
-    expect(recoveryProgress(plan(2, 4), day(2))).toEqual([0.5, 0, 0])
-    expect(recoveryProgress(plan(2, 4), day(3))).toEqual([1, 0, 0])
-    expect(recoveryProgress(plan(2, 4), day(5))).toEqual([1, 0.5, 0])
-    expect(recoveryProgress(plan(2, 4), day(7))).toEqual([1, 1, 1])
-  })
-
-  test("a zero-length stage is complete once the plan has started", () => {
-    expect(recoveryProgress(plan(0, 3), day(1))).toEqual([1, 0, 0])
-    expect(recoveryProgress(plan(2, 0), day(3))).toEqual([1, 1, 1])
+test("new injuries start light for seven days", () => {
+  expect(createInjury("Knee", "2026-11-08")).toEqual({
+    area: "Knee",
+    mode: "light",
+    startDate: "2026-11-08",
+    endDate: "2026-11-15",
   })
 })
 
-describe("createRecovery", () => {
-  test("period recovery is 3 rest and 4 light days starting today", () => {
-    const period = createRecovery(PERIOD_AREA)
-    expect(period).toMatchObject({
-      area: PERIOD_AREA,
-      restDays: 3,
-      lightDays: 4,
-      startDate: dateKey(),
-    })
-  })
+test("an injury is active from its start through its end date, or forever without one", () => {
+  const knee = createInjury("Knee", "2026-11-08")
+  expect(isActive(knee, "2026-11-07")).toBe(false)
+  expect(isActive(knee, "2026-11-15")).toBe(true)
+  expect(isActive(knee, "2026-11-16")).toBe(false)
+  expect(isActive({ ...knee, endDate: null }, "2030-01-01")).toBe(true)
+})
 
-  test("injury areas start with no days until the user sets them", () => {
-    expect(createRecovery("Lower back")).toMatchObject({
-      restDays: 0,
-      lightDays: 0,
-    })
-  })
+test("period recovery rests four days, then trains light for three", () => {
+  const period = createInjury(PERIOD_AREA, "2026-11-08")
+  expect(period.endDate).toBe("2026-11-14")
+  expect(periodPhase(period, "2026-11-11")).toBe("rest")
+  expect(periodPhase(period, "2026-11-12")).toBe("light")
+  expect(periodPhase(period, "2026-11-14")).toBe("light")
+  expect(periodPhase(period, "2026-11-15")).toBeNull()
+})
+
+test("describes each injury by what changes in the plan", () => {
+  const shoulder = createInjury("Shoulder")
+  expect(injuryEffect(shoulder)).toBe("Shoulder exercises: 3 → 2 sets")
+  expect(injuryEffect({ ...shoulder, mode: "exclude" })).toBe(
+    "Shoulder exercises are removed from your plan",
+  )
+  expect(injuryEffect(createInjury(PERIOD_AREA))).toBe("Rest 4 days, then light 3 days")
+  expect(injuryTitle([shoulder])).toBe("Shoulder recovery")
+  expect(injuryTitle([shoulder, createInjury("Knee")])).toBe("2 injuries")
+})
+
+test("adds each area once and removes it again", () => {
+  const { add, remove } = useInjuries.getState()
+  add("Wrist")
+  add("Wrist")
+  expect(useInjuries.getState().injuries.map((injury) => injury.area)).toEqual(["Wrist"])
+  remove("Wrist")
+  expect(useInjuries.getState().injuries).toEqual([])
 })

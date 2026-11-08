@@ -5,9 +5,11 @@ import { StyleSheet, Text, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
-import { useHealth } from "@/features/health"
+import { AREA_JOINTS, PERIOD_AREA, useActiveInjuries } from "@/features/recovery"
 import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
+
+import { findExercise } from "./catalog"
 
 const icons = {
   play: require("@/assets/images/workout/play.svg"),
@@ -18,6 +20,7 @@ type Guide = {
   name: string
   sets: number
   reps: number
+  unit?: string
   load: number
   loadUnit: string
   step: number
@@ -81,8 +84,25 @@ const GUIDES: Record<string, Guide> = {
 export function ExerciseGuideScreen() {
   useMarkInteractive()
   const { name } = useLocalSearchParams<{ name?: string }>()
-  const { recovery } = useHealth()
-  const guide = GUIDES[name ?? "bench-press"] ?? GUIDES["bench-press"]
+  const exercise = findExercise(name)
+  // Exercises without a full guide fall back to the basics from the catalogue.
+  const guide =
+    GUIDES[name ?? ""] ??
+    (exercise
+      ? {
+          name: exercise.name,
+          sets: 3,
+          reps: exercise.reps,
+          unit: exercise.unit,
+          load: 0,
+          loadUnit: "kg",
+          step: 2.5,
+          cues: exercise.cues,
+        }
+      : GUIDES["bench-press"])
+  const injury = useActiveInjuries().find(
+    (active) => active.area === PERIOD_AREA || exercise?.joints.includes(AREA_JOINTS[active.area]),
+  )
   const [load, setLoad] = useState(guide.load)
 
   function adjust(direction: -1 | 1) {
@@ -91,7 +111,7 @@ export function ExerciseGuideScreen() {
 
   return (
     <Screen contentStyle={styles.content}>
-      <BackHeader label="Chest plan" onPress={() => router.back()} />
+      <BackHeader label="Back" onPress={() => router.back()} />
 
       <PageHeading title={guide.name} subtitle="Technique guide" />
 
@@ -116,7 +136,9 @@ export function ExerciseGuideScreen() {
             <Text style={styles.prescriptionLabel}>Sets</Text>
           </View>
           <View style={styles.prescription}>
-            <Text style={styles.prescriptionValue}>{guide.reps} reps</Text>
+            <Text style={styles.prescriptionValue}>
+              {guide.reps} {guide.unit ?? "reps"}
+            </Text>
             <Text style={styles.prescriptionLabel}>Reps</Text>
           </View>
         </View>
@@ -141,7 +163,7 @@ export function ExerciseGuideScreen() {
       </Card>
 
       <View style={styles.cues}>
-        <SectionHeading title="3 key cues" />
+        <SectionHeading title={`${guide.cues.length} key cues`} />
         {guide.cues.map((cue, index) => (
           <View key={cue.title} style={styles.cue}>
             <View style={styles.cueMarker}>
@@ -155,11 +177,12 @@ export function ExerciseGuideScreen() {
         ))}
       </View>
 
-      {recovery ? (
+      {injury ? (
         <View style={styles.warning}>
           <Image source={icons.shieldCheck} style={styles.warningIcon} contentFit="contain" />
           <Text style={styles.warningText}>
-            {recovery.area} is recovering. Review only; stop if you feel pain.
+            {injury.area === PERIOD_AREA ? "Period recovery is on" : `${injury.area} is recovering`}
+            . Review only; stop if you feel pain.
           </Text>
         </View>
       ) : null}

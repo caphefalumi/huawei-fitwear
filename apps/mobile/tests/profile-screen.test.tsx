@@ -6,10 +6,15 @@ import { useAuth } from "@/features/auth"
 import { useHealth } from "@/features/health"
 import { useDeveloperMode } from "@/features/profile/developer-mode.store"
 import { ProfileScreen } from "@/features/profile/profile-screen"
+import { PERIOD_AREA, useInjuries } from "@/features/recovery"
 
 jest.mock("@/features/auth/auth-hooks", () => ({ useAuth: jest.fn() }))
+jest.mock("@/lib/api", () => ({
+  ...jest.requireActual("@/lib/api"),
+  apiRequest: jest.fn(),
+}))
 jest.mock("@/features/health", () => ({
-  PERIOD_AREA: "In period",
+  ...jest.requireActual("@/features/health"),
   useHealth: jest.fn(),
 }))
 jest.mock("@/features/profile/sheets", () => ({
@@ -17,6 +22,7 @@ jest.mock("@/features/profile/sheets", () => ({
   FrequencySheet: () => null,
   GoalSheet: () => null,
   HeightSheet: () => null,
+  SessionLengthSheet: () => null,
   SexSheet: () => null,
   TargetWeightSheet: () => null,
   WeightSheet: () => null,
@@ -25,19 +31,10 @@ jest.mock("expo-router", () => ({ router: { push: jest.fn(), back: jest.fn() } }
 jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }))
-jest.mock("@/features/recovery", () => {
-  const React = require("react")
-  const { Text } = require("react-native")
-  return {
-    RecoverySheet: ({ visible }: { visible: boolean }) =>
-      visible ? React.createElement(Text, null, "Period recovery setup") : null,
-  }
-})
 
 const mockUseAuth = jest.mocked(useAuth)
 const mockUseHealth = jest.mocked(useHealth)
 const refresh = jest.fn()
-const saveRecovery = jest.fn()
 const signOut = jest.fn()
 const health = {
   weightKg: 68,
@@ -49,8 +46,6 @@ const health = {
     activity: "Moderate",
     targetWeightKg: 72,
   },
-  recovery: null,
-  saveRecovery,
   loading: false,
   error: null,
   refresh,
@@ -58,6 +53,7 @@ const health = {
 
 beforeEach(() => {
   jest.clearAllMocks()
+  useInjuries.setState({ injuries: [] })
   useDeveloperMode.setState({ enabled: false, features: { testError: false, bleTest: false } })
   mockUseAuth.mockReturnValue({
     user: { name: "Member", email: "member@example.com", birthDate: null },
@@ -83,7 +79,7 @@ test("keeps identity visible and retries after a health load error", async () =>
   expect(refresh).toHaveBeenCalledTimes(1)
 })
 
-test("requires explicit consent before opening period recovery setup", async () => {
+test("requires explicit consent before turning on period recovery", async () => {
   const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {})
   const screen = await render(<ProfileScreen />)
   expect(screen.getByRole("button", { name: "Period recovery, Off" })).toBeTruthy()
@@ -91,11 +87,21 @@ test("requires explicit consent before opening period recovery setup", async () 
 
   const buttons = alert.mock.calls[0]?.[2]
   expect(buttons?.map((button) => button.text)).toEqual(["Not now", "Turn on"])
-  expect(saveRecovery).not.toHaveBeenCalled()
+  expect(useInjuries.getState().injuries).toEqual([])
   await act(async () => buttons?.[1]?.onPress?.())
-  expect(screen.getByText("Period recovery setup")).toBeTruthy()
+  expect(useInjuries.getState().injuries.map((injury) => injury.area)).toEqual([PERIOD_AREA])
+  expect(screen.getByRole("button", { name: "Period recovery, On" })).toBeTruthy()
   alert.mockRestore()
 })
+test("opens exercise preferences and injuries from the plan section", async () => {
+  const screen = await render(<ProfileScreen />)
+  expect(screen.getByRole("button", { name: "Session length, 45 min" })).toBeTruthy()
+  await fireEvent.press(screen.getByRole("button", { name: "Exercise preferences, None" }))
+  await fireEvent.press(screen.getByRole("button", { name: "Injuries, None" }))
+  expect(router.push).toHaveBeenNthCalledWith(1, "/exercise-preferences")
+  expect(router.push).toHaveBeenNthCalledWith(2, "/injuries")
+})
+
 test("shows unset height and restores account actions", async () => {
   mockUseHealth.mockReturnValue({ ...health, heightCm: null } as never)
   const screen = await render(<ProfileScreen />)

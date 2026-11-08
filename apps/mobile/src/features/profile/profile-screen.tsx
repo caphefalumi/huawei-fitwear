@@ -8,8 +8,9 @@ import Animated, { FadeInUp } from "react-native-reanimated"
 import { Pressable } from "@/components/pressable"
 import { Button, PageHeading, Screen } from "@/components/ui"
 import { useAuth } from "@/features/auth"
-import { PERIOD_AREA, useHealth } from "@/features/health"
-import { RecoverySheet } from "@/features/recovery"
+import { useHealth } from "@/features/health"
+import { PERIOD_AREA, useActiveInjuries, useInjuries } from "@/features/recovery"
+import { usePlanPreferences } from "@/features/workout"
 import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
@@ -19,6 +20,7 @@ import {
   FrequencySheet,
   GoalSheet,
   HeightSheet,
+  SessionLengthSheet,
   SexSheet,
   TargetWeightSheet,
   WeightSheet,
@@ -65,7 +67,7 @@ type OpenSheet =
   | "frequency"
   | "activity"
   | "target"
-  | "recovery"
+  | "session"
   | null
 
 export function ProfileScreen() {
@@ -74,9 +76,16 @@ export function ProfileScreen() {
   const developerMode = useDeveloperMode((state) => state.enabled)
   const developerFeatures = useDeveloperMode((state) => state.features)
   const toggleDeveloperMode = useDeveloperMode((state) => state.toggle)
-  const { weightKg, heightCm, sex, plan, recovery, saveRecovery, loading, error, refresh } =
-    useHealth()
-  const inPeriod = recovery?.area === PERIOD_AREA
+  const { weightKg, heightCm, sex, plan, loading, error, refresh } = useHealth()
+  const injuries = useActiveInjuries()
+  const addInjury = useInjuries((state) => state.add)
+  const removeInjury = useInjuries((state) => state.remove)
+  const inPeriod = injuries.some((injury) => injury.area === PERIOD_AREA)
+  const { minutes, likes, dislikes } = usePlanPreferences()
+  const preferencesLabel =
+    likes.length || dislikes.length ? `${likes.length} liked, ${dislikes.length} disliked` : "None"
+  const injuriesLabel =
+    injuries.length > 1 ? `${injuries.length} active` : (injuries[0]?.area ?? "None")
   const [openSheet, setOpenSheet] = useState<OpenSheet>(null)
   const sexLabel = sex ?? "Not set"
   const weightLabel = weightKg === null ? "Not set" : `${weightKg.toFixed(1)} kg`
@@ -151,6 +160,16 @@ export function ProfileScreen() {
             onPress={() => setOpenSheet("frequency")}
           />
           <ProfileRow
+            label="Session length"
+            value={`${minutes} min`}
+            onPress={() => setOpenSheet("session")}
+          />
+          <ProfileRow
+            label="Exercise preferences"
+            value={preferencesLabel}
+            onPress={() => router.push("/exercise-preferences")}
+          />
+          <ProfileRow
             label="Daily activity"
             value={plan.activity}
             onPress={() => setOpenSheet("activity")}
@@ -161,9 +180,9 @@ export function ProfileScreen() {
             onPress={() => setOpenSheet("target")}
           />
           <ProfileRow
-            label="Recovery plan"
-            value={recovery?.area ?? "None"}
-            onPress={() => setOpenSheet("recovery")}
+            label="Injuries"
+            value={injuriesLabel}
+            onPress={() => router.push("/injuries")}
           />
         </View>
       </Animated.View>
@@ -226,14 +245,14 @@ export function ProfileScreen() {
             style={inPeriod ? styles.periodButtonActive : undefined}
             onPress={() => {
               if (inPeriod) {
-                void saveRecovery(null)
+                removeInjury(PERIOD_AREA)
               } else {
                 Alert.alert(
                   "Period recovery",
                   "Used only to adjust your plan. You can turn it off any time.",
                   [
                     { text: "Not now", style: "cancel" },
-                    { text: "Turn on", onPress: () => setOpenSheet("recovery") },
+                    { text: "Turn on", onPress: () => addInjury(PERIOD_AREA) },
                   ],
                 )
               }
@@ -249,7 +268,7 @@ export function ProfileScreen() {
       {openSheet === "frequency" ? <FrequencySheet visible onClose={close} /> : null}
       {openSheet === "activity" ? <ActivitySheet visible onClose={close} /> : null}
       {openSheet === "target" ? <TargetWeightSheet visible onClose={close} /> : null}
-      {openSheet === "recovery" ? <RecoverySheet visible onClose={close} /> : null}
+      {openSheet === "session" ? <SessionLengthSheet visible onClose={close} /> : null}
     </Screen>
   )
 }

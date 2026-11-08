@@ -5,7 +5,9 @@ import { Alert, StyleSheet, Text, TextInput, View } from "react-native"
 import { RadioList } from "@/components/radio-list"
 import { Sheet, SheetActions, SheetField } from "@/components/sheet"
 import { WheelPicker } from "@/components/wheel-picker"
-import { ACTIVITIES, GOALS, PERIOD_AREA, useHealth, type Sex } from "@/features/health"
+import { ACTIVITIES, GOALS, useHealth, type Sex } from "@/features/health"
+import { PERIOD_AREA, useInjuries } from "@/features/recovery"
+import { SESSION_MINUTES, usePlanPreferences } from "@/features/workout"
 import { apiErrorMessage } from "@/lib/api"
 import { Palette as C } from "@/theme"
 
@@ -159,10 +161,15 @@ export function WeightSheet({ visible, onClose, onDismiss }: SheetProps) {
 }
 
 export function SexSheet({ visible, onClose, onDismiss }: SheetProps) {
-  const { sex, recovery, saveSex } = useHealth()
+  const { sex, saveSex } = useHealth()
+  const inPeriod = useInjuries((state) => state.injuries.some((i) => i.area === PERIOD_AREA))
+  const removeInjury = useInjuries((state) => state.remove)
   const action = useSave(onClose)
   const changeSex = (next: Sex) => {
-    void action.save(() => saveSex(next))
+    void action.save(async () => {
+      await saveSex(next)
+      if (next !== "Female") removeInjury(PERIOD_AREA)
+    })
   }
   return (
     <Sheet visible={visible} title="Sex" onClose={action.close} onDismiss={onDismiss}>
@@ -170,7 +177,7 @@ export function SexSheet({ visible, onClose, onDismiss }: SheetProps) {
         options={SEX_OPTIONS}
         value={sex ?? ("" as Sex)}
         onChange={(next) => {
-          if (next !== "Female" && recovery?.area === PERIOD_AREA) {
+          if (next !== "Female" && inPeriod) {
             Alert.alert(
               "Remove period recovery data?",
               "Changing this will remove your period recovery settings.",
@@ -245,6 +252,34 @@ export function FrequencySheet({ visible, onClose, onDismiss }: SheetProps) {
         secondaryLabel="Cancel"
         onPrimary={() => {
           void action.save(() => savePlan({ ...plan, sessions: draft }))
+        }}
+        onSecondary={action.close}
+      />
+    </Sheet>
+  )
+}
+
+export function SessionLengthSheet({ visible, onClose, onDismiss }: SheetProps) {
+  const { minutes, setMinutes } = usePlanPreferences()
+  const [draft, setDraft] = useState(minutes)
+  const action = useSave(onClose)
+  return (
+    <Sheet visible={visible} title="Session length" onClose={action.close} onDismiss={onDismiss}>
+      <WheelPicker
+        label="Session length"
+        values={SESSION_MINUTES}
+        value={draft}
+        onChange={setDraft}
+        format={(value) => `${value} min`}
+      />
+      <SheetActions
+        primaryDisabled={action.pending}
+        secondaryDisabled={action.pending}
+        busy={action.pending}
+        primaryLabel="OK"
+        secondaryLabel="Cancel"
+        onPrimary={() => {
+          void action.save(async () => setMinutes(draft))
         }}
         onSecondary={action.close}
       />
