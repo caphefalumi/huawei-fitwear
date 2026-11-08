@@ -53,18 +53,15 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
-        with:
-          # Only restore Gradle User Home written by this same job; the default
-          # falls back to any cache on the runner OS, which can pull unrelated state.
-          gradle-home-cache-strict-match: true
-
       - name: Generate Android project
         working-directory: apps/mobile
         env:
           EXPO_PUBLIC_API_URL: https://fitwear.tm-project.id.vn/
         run: bunx expo prebuild --platform android --no-install
+
+      # Generate the wrapper first so setup-gradle can validate it.
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Build Android release APK
         working-directory: apps/mobile/android
