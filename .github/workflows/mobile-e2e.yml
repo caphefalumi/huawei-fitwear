@@ -139,6 +139,10 @@ jobs:
           api-level: 34
           target: google_apis
           arch: x86_64
+          # Without a device profile avdmanager falls back to the legacy
+          # 320x640 skin, smaller than any phone the app targets; the login and
+          # sign-up footers then sit outside the viewport.
+          profile: pixel_6
           ram-size: 4096M
           heap-size: 512M
           disable-animations: true
