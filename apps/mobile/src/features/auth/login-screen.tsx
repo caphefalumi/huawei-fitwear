@@ -237,6 +237,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
                 }
               >
                 <AuthField
+                  testID="login-password"
                   colors={AuthColors}
                   label="Password"
                   value={password}

@@ -34,8 +34,6 @@ tags:
 - inputText: "E2E Member"
 - tapOn: "Your email"
 - inputText: "e2e.member@fitwear.dev"
-- tapOn: "Your password"
-- inputText: "short"
 - tapOn: "Day"
 - inputText: "12"
 - tapOn: "Month"
@@ -43,16 +41,40 @@ tags:
 - tapOn: "Year"
 - inputText: "1998"
 - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "sign-up-password"
+    direction: DOWN
+- tapOn:
+    id: "sign-up-password"
+- inputText: "short"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "sign-up-submit"
+    direction: DOWN
 - tapOn:
     id: "sign-up-submit"
 - assertVisible: "Password must contain at least 8 characters."
-- tapOn: "Your password"
-- eraseText
+- scrollUntilVisible:
+    element:
+      id: "sign-up-password"
+    direction: UP
+- tapOn:
+    id: "sign-up-password"
+- eraseText: 100
 - inputText: "password123"
 - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "sign-up-submit"
+    direction: DOWN
 - tapOn:
     id: "sign-up-submit"
 - assertVisible: "Please agree to the terms before creating an account."
+- scrollUntilVisible:
+    element: "Log in"
+    direction: DOWN
 - tapOn: "Log in"
 - extendedWaitUntil:
     visible: "Hi, welcome back."
@@ -72,7 +94,8 @@ tags:
 - tapOn:
     id: "login-submit"
 - assertVisible: "Enter your password."
-- tapOn: "Your password"
+- tapOn:
+    id: "login-password"
 - inputText: "wrong-maestro-password"
 - hideKeyboard
 - tapOn:
@@ -82,8 +105,9 @@ tags:
 # Clear the previous credential error before testing the offline failure. The
 # inline error expands the form and can push the submit button below the viewport.
 - setAirplaneMode: enabled
-- tapOn: "Your password"
-- eraseText
+- tapOn:
+    id: "login-password"
+- eraseText: 100
 - inputText: "offline-maestro-password"
 - hideKeyboard
 - tapOn:
@@ -92,8 +116,9 @@ tags:
     visible: "Can't connect. Check your connection and try again."
     timeout: 20000
 - setAirplaneMode: disabled
-- tapOn: "Your password"
-- eraseText
+- tapOn:
+    id: "login-password"
+- eraseText: 100
 - inputText: ${MAESTRO_TEST_PASSWORD}
 - hideKeyboard
 - tapOn:
