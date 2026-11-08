@@ -134,7 +134,9 @@ jobs:
           MAESTRO_INCLUDE_TAGS: ${{ inputs.include_tags }}
         with:
           api-level: 34
-          target: google_apis
+          # These flows need no Google services. AOSP avoids Pixel Launcher's
+          # first-boot ANR dialog blocking the app on fresh Google API images.
+          target: default
           arch: x86_64
           # Without a device profile avdmanager falls back to the legacy
           # 320x640 skin, smaller than any phone the app targets; the login and
