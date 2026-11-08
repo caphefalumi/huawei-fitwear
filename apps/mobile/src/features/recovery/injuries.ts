@@ -43,8 +43,8 @@ export function daysBetween(from: string, to: string) {
 }
 
 export function createInjury(area: InjuryArea, today = dateKey()): Injury {
-  const days = area === PERIOD_AREA ? PERIOD_REST_DAYS + PERIOD_LIGHT_DAYS - 1 : DEFAULT_DAYS
-  return { area, mode: "light", startDate: today, endDate: addDays(today, days) }
+  const days = area === PERIOD_AREA ? PERIOD_REST_DAYS + PERIOD_LIGHT_DAYS : DEFAULT_DAYS
+  return { area, mode: "light", startDate: today, endDate: addDays(today, days - 1) }
 }
 
 export const isActive = (injury: Injury, today = dateKey()) =>

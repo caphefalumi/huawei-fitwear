@@ -21,15 +21,15 @@ test("new injuries start light for seven days", () => {
     area: "Knee",
     mode: "light",
     startDate: "2026-11-08",
-    endDate: "2026-11-15",
+    endDate: "2026-11-14",
   })
 })
 
 test("an injury is active from its start through its end date, or forever without one", () => {
   const knee = createInjury("Knee", "2026-11-08")
   expect(isActive(knee, "2026-11-07")).toBe(false)
-  expect(isActive(knee, "2026-11-15")).toBe(true)
-  expect(isActive(knee, "2026-11-16")).toBe(false)
+  expect(isActive(knee, "2026-11-14")).toBe(true)
+  expect(isActive(knee, "2026-11-15")).toBe(false)
   expect(isActive({ ...knee, endDate: null }, "2030-01-01")).toBe(true)
 })
 
