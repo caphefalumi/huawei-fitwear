@@ -32,6 +32,8 @@ Testing uses the `jest-expo` preset. `flow-parser` is pinned through an override
 
 This app requires a custom development build: `react-native-ble-plx` and `react-native-keyboard-controller` use native code that Expo Go does not include. Expo Go cannot load the full app. Rebuild and reinstall the development app whenever native dependencies or plugins change.
 
+Android CNG runs `plugins/withBluetoothPermissions.js` after the BLE plugin to cap legacy `BLUETOOTH` and `BLUETOOTH_ADMIN` permissions at API 30, matching RxAndroidBle and Android's permission guidance. Modern `BLUETOOTH_SCAN`/`BLUETOOTH_CONNECT` and location declarations remain unchanged. This resolves Expo's conflicting-`maxSdkVersion` warning at source rather than disabling its manifest checks; regenerate and rebuild the native app after changing the plugin.
+
 Connect the phone and development computer to the same Wi-Fi network. If the network blocks device-to-computer connections, use Expo's tunnel mode instead.
 ---
 
@@ -207,6 +209,23 @@ gh workflow run gradle-cache-benchmark.yml --ref <branch> -f benchmark_id=experi
 ```
 
 Cold builds restore no Gradle state; warm builds reuse only the experiment's cache. The benchmark alone allows cold cache writes on its branch and uses strict matching for isolation. Manual warm runs require an exact hit. Fresh runners do not retain native project/build outputs. Each strategy uploads `metadata.json` and the full Gradle log, recording source SHA, image version, build duration, exit status, and `FROM-CACHE`/`UP-TO-DATE` task counts. Use GitHub job-step timestamps for restore/save overhead and total job duration. Setup-gradle additionally validates wrappers and installs init scripts/cleanup, so this compares real workflow approaches, not archive compression alone. One pair is directional evidence, not a statistically reliable performance claim; hosted hardware, image and network variation remain.
+
+#### Measured comparison: `gradle-20261108-02`
+
+Both phases used commit `8b82f43c244ab70e271b9d1683e622729b7e88ce`, image `ubuntu24/20261101.360.1`, 4 vCPUs and approximately 16 GiB RAM. Both strategies used two Gradle workers, a 4 GiB JVM heap and 1 GiB metaspace limit. [Cold run](https://github.com/caphefalumi/huawei-fitwear/actions/runs/42500495727) and [warm run](https://github.com/caphefalumi/huawei-fitwear/actions/runs/42502961252) contain the full logs and JSON artifacts.
+
+| Strategy                | Phase | Gradle build (s) | Cache setup/restore (s) | Cache save/post-action (s) | Whole job (s) | `FROM-CACHE` tasks |
+| ----------------------- | ----- | ---------------: | ----------------------: | -------------------------: | ------------: | -----------------: |
+| Manual `actions/cache`  | Cold  |            702.1 |                       0 |                         24 |           745 |                147 |
+| `setup-gradle` enhanced | Cold  |            850.9 |                       2 |                         37 |           906 |                147 |
+| Manual `actions/cache`  | Warm  |            349.3 |                      34 |                          0 |           402 |                399 |
+| `setup-gradle` enhanced | Warm  |            315.7 |                      31 |                          0 |           366 |                399 |
+
+Build durations come from wall-clock measurements in `metadata.json`; action/job durations use GitHub timestamps with one-second resolution. Setup timing includes init scripts and wrapper validation, not just downloading archives. Warm phases are read-only, so there is no cache-save cost. Both warm cache identities matched the experiment exactly. Restored compressed bytes were approximately 2.05 GB for each approach: setup-gradle's small manifest entry is **not** its total restore volume. `FROM-CACHE` counts are task outcomes, not GitHub cache hits; cold jobs can reuse outputs produced earlier within the same build.
+
+The enhanced warm job was 36 seconds (9%) shorter in this sample, but cold-build variability exceeded that difference. Keep setup-gradle for managed cache ownership, wrapper validation, cleanup and deduplication—not a claim of a statistically established speedup. Repeated pairs on comparable hosted hardware are needed for that claim.
+
+Failure record: the earlier experiment `gradle-20261108-01` had a manual-build Java heap failure and is excluded. In experiment `02`, the first setup-gradle cold attempt received a corrupt NDK ZIP download; only that failed job was rerun, after discarding its incomplete experiment cache. The table uses manual cold attempt 1, setup-gradle cold attempt 2, and warm attempt 1 for both. Neither failed attempt is counted as a successful measurement.
 
 ### Web development
 

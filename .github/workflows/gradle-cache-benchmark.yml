@@ -116,7 +116,7 @@ jobs:
         run: |
           started=$(date +%s%N)
           set +e
-          ./gradlew assembleRelease --no-daemon --build-cache --console=plain -Pandroid.enableMinifyInReleaseBuilds=false -PreactNativeArchitectures=x86_64 2>&1 | tee "$BENCHMARK_ARTIFACTS/gradle.log"
+          ./gradlew assembleRelease --no-daemon --build-cache --console=plain --max-workers=2 "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g" -Pandroid.enableMinifyInReleaseBuilds=false -PreactNativeArchitectures=x86_64 2>&1 | tee "$BENCHMARK_ARTIFACTS/gradle.log"
           status=${PIPESTATUS[0]}
           set -e
           finished=$(date +%s%N)
@@ -158,6 +158,10 @@ jobs:
               runner_arch: env.RUNNER_ARCH,
               runner_image: env.ImageOS ?? null,
               runner_image_version: env.ImageVersion ?? null,
+              runner_cpus: require("node:os").cpus().length,
+              runner_memory_bytes: require("node:os").totalmem(),
+              gradle_max_workers: 2,
+              gradle_jvm_args: "-Xmx4g -XX:MaxMetaspaceSize=1g",
               gradle_build_seconds: env.BUILD_DURATION_NS ? Number(env.BUILD_DURATION_NS) / 1e9 : null,
               gradle_exit_status: env.BUILD_EXIT_STATUS ? Number(env.BUILD_EXIT_STATUS) : null,
               gradle_step_outcome: env.BUILD_OUTCOME,
