@@ -95,6 +95,10 @@ jobs:
       - name: Setup Gradle
         if: ${{ matrix.platform == 'android' }}
         uses: gradle/actions/setup-gradle@v6
+        with:
+          # Only restore Gradle User Home written by this same job; the default
+          # falls back to any cache on the runner OS, which can pull unrelated state.
+          gradle-home-cache-strict-match: true
 
       - name: Setup Android SDK
         if: ${{ matrix.platform == 'android' }}
