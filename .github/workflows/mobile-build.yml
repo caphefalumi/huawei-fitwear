@@ -91,7 +91,10 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-          cache: gradle
+
+      - name: Setup Gradle
+        if: ${{ matrix.platform == 'android' }}
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Setup Android SDK
         if: ${{ matrix.platform == 'android' }}
@@ -100,7 +103,7 @@ jobs:
       - name: Build Android debug APK
         if: ${{ matrix.platform == 'android' }}
         working-directory: apps/mobile/android
-        run: .\gradlew.bat --no-daemon assembleDebug
+        run: .\gradlew.bat --no-daemon --build-cache assembleDebug
 
       - name: Upload Android APK
         if: ${{ matrix.platform == 'android' }}
