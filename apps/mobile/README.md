@@ -12,6 +12,8 @@ Login errors are classified by HTTP status and API error code, not server messag
 
 Sign-in/sign-up and password-reset mutations use `networkMode: "always"` so an offline submission reaches the request's connection error or timeout and releases the form, rather than remaining paused and replaying silently when connectivity returns.
 
+Saved-session startup validation also uses `networkMode: "always"` with no retries: offline startup releases the splash and shows the restoration error on sign-in instead of waiting indefinitely. A saved token alone never unlocks private routes. Connection failures retain the token so a later online restart can validate it; rejected/expired credentials still clear it.
+
 Meals, portions, daily nutrition, profile preferences, weights, recovery schedules and workout sessions/sets use the API. Empty accounts show empty states, not seeded personal data. Camera/library images are sent to Workers AI only after tapping **Analyze photo**; review estimates before logging. Logged images are stored privately in R2 and read through authenticated requests. Manual food/label entry works independently of inference.
 
 Remote data uses TanStack Query. Each feature owns domain/user-scoped query keys and colocated query functions; writes run as mutations and invalidate only affected data. Meal deletion/type changes and workout deletion update cached lists optimistically and roll back on failure. API requests use Axios with a 12-second timeout, typed status/network failures, and exponential-backoff retries with jitter for retryable queries. Native connectivity feeds TanStack Query and a persistent offline banner. Data screens keep cached content during refresh failures, expose retry and pull-to-refresh, and announce accessible error panels; delayed skeletons distinguish loading from empty states. Zustand holds client-owned meal drafts/preferences and auth operation status; API responses stay in TanStack Query, and credentials stay in secure/local storage.
@@ -174,7 +176,7 @@ bun run lint
 
 `bun run test:e2e` runs the Maestro workspace in `tests/e2e/`. Nightly runs at 02:00 UTC and manual Mobile E2E runs discover every top-level `.yaml`/`.yml` flow automatically. Add a self-contained flow there without editing the workflow or summary generator. Keep reusable subflows in subdirectories so they are not executed independently; use Maestro's `config.yaml` `flows` patterns if executable journeys are later organized into subdirectories.
 
-The existing fitness flow verifies sign-in, session restoration, and backend-backed empty states; the error flow checks login validation and network-failure feedback. CI provisions the release APK, API 34 emulator, and Maestro CLI 2.12.0. The current flows require the dedicated E2E account secrets and Java 17+. Pull-request mobile checks run Jest without the emulator build.
+The fitness flow verifies sign-in, session restoration, and backend-backed empty states. The error flow checks sign-up/login validation, offline sign-in, offline cold-start rejection and online token recovery, and manual-meal validation. CI provisions the release APK, an API 34 AOSP emulator with Pixel 6 dimensions, and Maestro CLI 2.12.0. These journeys do not use Google services; the AOSP image avoids Google-image Pixel Launcher first-boot ANR dialogs obscuring the app. The flows require dedicated E2E account secrets and Java 17+. Pull-request mobile checks run Jest without the emulator build.
 
 For a manual subset, set the workflow's optional `include_tags` input to comma-separated Maestro tags. Tags use OR matching; leaving the input blank runs all discovered flows. The former `run_fitness` and `run_error_messages` booleans have been replaced:
 
@@ -188,7 +190,23 @@ The reporter and its tests run on Bun, using the workspace's declared XML parser
 
 Each flow stops the app before clearing its data and launching it. Keep that order: clearing data while the previous flow's activity is running can leave Android removing the old task after the new process starts, killing the new process and stranding the test on the system splash screen.
 
+Password inputs use `login-password` and `sign-up-password` test IDs rather than placeholders that disappear or change. On sign-up, Maestro's default center swipe can land inside date inputs; start the footer-reveal swipe from the submit button so the scroll container receives it.
+
 Android E2E on the Ubuntu CI runner requires KVM hardware acceleration. The workflow grants access to `/dev/kvm` before building the APK and requires `-accel on`, so unavailable acceleration fails the job instead of silently falling back to slow software emulation.
+
+### Gradle caching and comparison
+
+Android workflows use `gradle/actions/setup-gradle@v6` as the sole Gradle User Home cache owner, after Expo generates the wrapper so checksum validation can run. They retain the documented enhanced-provider defaults: default-branch-only cache writes, cleanup after successful builds, and compatible cross-job fallback. Do not layer `setup-java`'s Gradle cache or a manual Gradle cache on top. Both build commands enable `--build-cache` to reuse task outputs. See the [official setup-gradle guidance](https://github.com/gradle/actions/blob/v6/docs/setup-gradle.md).
+
+`Gradle Cache Benchmark` compares manual `actions/cache` with setup-gradle's enhanced provider using the same release build, Ubuntu 24.04, Java 17 and Bun 1.4.4. Run a cold/warm pair on an unchanged ref, using a new experiment ID:
+
+```bash
+gh workflow run gradle-cache-benchmark.yml --ref <branch> -f benchmark_id=experiment-01 -f phase=cold
+# Wait for both jobs, including post-action cache saves, before continuing.
+gh workflow run gradle-cache-benchmark.yml --ref <branch> -f benchmark_id=experiment-01 -f phase=warm
+```
+
+Cold builds restore no Gradle state; warm builds reuse only the experiment's cache. The benchmark alone allows cold cache writes on its branch and uses strict matching for isolation. Manual warm runs require an exact hit. Fresh runners do not retain native project/build outputs. Each strategy uploads `metadata.json` and the full Gradle log, recording source SHA, image version, build duration, exit status, and `FROM-CACHE`/`UP-TO-DATE` task counts. Use GitHub job-step timestamps for restore/save overhead and total job duration. Setup-gradle additionally validates wrappers and installs init scripts/cleanup, so this compares real workflow approaches, not archive compression alone. One pair is directional evidence, not a statistically reliable performance claim; hosted hardware, image and network variation remain.
 
 ### Web development
 
