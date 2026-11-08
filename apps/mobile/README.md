@@ -32,6 +32,8 @@ Testing uses the `jest-expo` preset. `flow-parser` is pinned through an override
 
 This app requires a custom development build: `react-native-ble-plx` and `react-native-keyboard-controller` use native code that Expo Go does not include. Expo Go cannot load the full app. Rebuild and reinstall the development app whenever native dependencies or plugins change.
 
+Android CNG runs `plugins/withBluetoothPermissions.js` after the BLE plugin to cap legacy `BLUETOOTH` and `BLUETOOTH_ADMIN` permissions at API 30, matching RxAndroidBle and Android's permission guidance. Modern `BLUETOOTH_SCAN`/`BLUETOOTH_CONNECT` and location declarations remain unchanged. This resolves Expo's conflicting-`maxSdkVersion` warning at source rather than disabling its manifest checks; regenerate and rebuild the native app after changing the plugin.
+
 Connect the phone and development computer to the same Wi-Fi network. If the network blocks device-to-computer connections, use Expo's tunnel mode instead.
 ---
 
