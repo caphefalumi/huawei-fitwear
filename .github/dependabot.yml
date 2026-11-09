@@ -38,7 +38,7 @@ updates:
       - dependency-name: "react-native-*"
 
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directories: ["/", "/.github/actions/*"]
     schedule:
       interval: "weekly"
       day: "monday"
