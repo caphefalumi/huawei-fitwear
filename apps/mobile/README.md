@@ -180,7 +180,7 @@ bun run lint
 
 The **Mobile E2E** workflow runs only on `workflow_dispatch` and the daily `schedule` at **01:00 Asia/Ho_Chi_Minh**. There are no E2E pull request or push triggers, and manual dispatch must target `main`. The separate Mobile CI workflow continues handling Jest and typechecking on pull requests.
 
-Every E2E run builds an **x86_64 Android release APK from the checked-out commit**, then installs it on an API 34 AOSP Pixel 6 emulator with KVM. It never downloads an APK from an earlier run. Native Gradle minification and Sentry upload are disabled for the test build. Maestro 2.12.0 runs the top-level flows in `apps/mobile/tests/e2e/`. Place shared subflows in nested directories. These tests do not require Google services.
+Every E2E run uses an **x86_64 Android release APK matching the checked-out app inputs and staging API URL**, then installs it on an API 34 AOSP Pixel 6 emulator with KVM. A GitHub Actions cache is keyed by tracked mobile application sources, dependency manifests/lockfile, workflow build configuration, and staging API URL. **Changes only to Maestro flows, mobile tests, or README content reuse the cached APK** without rerunning Expo/Gradle. Changes to app code, dependencies, native configuration, or API URL produce a cache miss and a fresh build. A missing or evicted cache also triggers a fresh build, never a fallback to an unrelated APK. A manual run can set `force_rebuild=true` to bypass the cache. Each workflow run uploads its selected APK as a same-run artifact for the emulator job. Native Gradle minification and Sentry upload are disabled for fresh builds. Maestro 2.12.0 runs the top-level flows in `apps/mobile/tests/e2e/`. Place shared subflows in nested directories. These tests do not require Google services.
 
 **Required staging configuration, before enabling the nightly workflow:**
 
@@ -207,11 +207,14 @@ Or select a subset by Maestro tag:
 
 ```bash
 gh workflow run mobile-e2e.yml --ref main -f include_tags=fitness,errors
+
+# Bypass cache when needed
+gh workflow run mobile-e2e.yml --ref main -f force_rebuild=true
 ```
 
 Omitting `include_tags` runs all top-level YAML flows. E2E runs are globally serialized for the dedicated account and never cancel an existing run.
 
-The workflow uploads the commit-matched APK, per-attempt JUnit reports, screenshots, diagnostics, and opt-in recordings for **7 days**. The job summary lists flow outcomes, durations, and failure details. Missing, invalid, empty, or failed JUnit reports fail the workflow. The emulator is stopped, application storage is cleared, and airplane mode is disabled before the test job ends. Any required account cleanup failure also fails the job.
+The workflow uploads the build-input-matched APK, per-attempt JUnit reports, screenshots, diagnostics, and opt-in recordings for **7 days**. The job summary lists flow outcomes, durations, and failure details. Missing, invalid, empty, or failed JUnit reports fail the workflow. The emulator is stopped, application storage is cleared, and airplane mode is disabled before the test job ends. Any required account cleanup failure also fails the job.
 
 Helper regression tests can be run from the repository root:
 
