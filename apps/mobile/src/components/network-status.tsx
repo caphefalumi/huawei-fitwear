@@ -28,9 +28,7 @@ export function NetworkStatusBanner() {
       >
         <Text style={styles.iconMark}>!</Text>
       </View>
-      <Text style={styles.message}>
-        You're offline. Saved information may be out of date.
-      </Text>
+      <Text style={styles.message}>You're offline. Saved information may be out of date.</Text>
     </View>
   )
 }

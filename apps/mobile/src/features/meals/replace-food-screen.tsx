@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
 import { BackHeader, SectionHeading } from "@/components/ui"
+import { apiErrorMessage } from "@/lib/api"
 import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
@@ -62,7 +63,7 @@ export function ReplaceFoodScreen() {
     } catch (cause) {
       Sentry.captureException(cause)
       if (active.current)
-        setError(cause instanceof Error ? cause.message : "Could not replace food.")
+        setError(apiErrorMessage(cause, "this food", "save"))
     } finally {
       if (active.current) setSaving(false)
     }

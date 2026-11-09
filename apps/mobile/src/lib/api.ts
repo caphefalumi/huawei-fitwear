@@ -93,6 +93,76 @@ export function userFacingAuthError(error: unknown): string {
   return AUTH_ERROR_FALLBACK
 }
 
+export function userFacingSessionError(error: unknown): string {
+  if (!(error instanceof ApiError)) {
+    return "Could not restore your session. Sign in again."
+  }
+  if (error.code === "NETWORK_ERROR" || error.code === "TIMEOUT") {
+    return "Could not restore your session. Sign in again when you're back online."
+  }
+  if (error.status === 401) {
+    return "Your session expired. Sign in again."
+  }
+  if (error.status >= 500) {
+    return "Something went wrong on our end. Sign in again."
+  }
+  return "Could not restore your session. Sign in again."
+}
+
+export type PasswordResetPhase = "request" | "verify" | "complete"
+
+const PASSWORD_RESET_FALLBACK: Record<PasswordResetPhase, string> = {
+  request: "Could not request a password reset. Try again.",
+  verify: "This reset code is invalid or expired.",
+  complete: "Could not reset your password. Try again.",
+}
+
+export function userFacingPasswordResetError(
+  error: unknown,
+  phase: PasswordResetPhase,
+): string {
+  if (!(error instanceof ApiError)) {
+    return PASSWORD_RESET_FALLBACK[phase]
+  }
+  const byCode = AUTH_ERRORS_BY_CODE[error.code]
+  if (byCode) return byCode
+  if (error.status >= 500) {
+    return "Something went wrong on our end. Try again."
+  }
+  if (error.status === 429) {
+    return AUTH_ERRORS_BY_STATUS[429]
+  }
+  if (phase === "verify" && (error.status === 400 || error.status === 422)) {
+    return "This reset code is invalid or expired."
+  }
+  if (phase === "complete" && error.status === 400) {
+    return "This reset token is invalid or expired. Request a new code."
+  }
+  if (phase === "complete" && error.status === 422) {
+    return AUTH_ERRORS_BY_STATUS[422]
+  }
+  if (phase === "request" && error.status === 503) {
+    return "Password reset is temporarily unavailable. Try again later."
+  }
+  if (error.status === 400 || error.status === 422) {
+    return AUTH_ERRORS_BY_STATUS[error.status]
+  }
+  return PASSWORD_RESET_FALLBACK[phase]
+}
+
+export function userFacingAccountDeleteError(error: unknown): string {
+  if (!(error instanceof ApiError)) {
+    return "Could not delete your account. Try again."
+  }
+  if (error.code === "NETWORK_ERROR" || error.code === "TIMEOUT") {
+    return "Could not connect to delete your account. Check your connection and try again."
+  }
+  if (error.status >= 500) {
+    return "Something went wrong on our end. Try again."
+  }
+  return "Could not delete your account. Try again."
+}
+
 const REQUEST_TIMEOUT_MS = 12_000
 let apiToken: string | null = null
 const expirationListeners = new Set<() => void>()

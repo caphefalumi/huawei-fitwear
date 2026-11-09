@@ -1,8 +1,4 @@
-import {
-  validateBirthDate,
-  validateEmail,
-  validatePassword,
-} from "@/lib/form-validation"
+import { validateBirthDate, validateEmail, validatePassword } from "@/lib/form-validation"
 
 test("validateEmail waits for actionable feedback", () => {
   expect(validateEmail("")).toBe("Enter your email address.")
@@ -12,9 +8,7 @@ test("validateEmail waits for actionable feedback", () => {
 
 test("validatePassword avoids technical limits in user copy", () => {
   expect(validatePassword("short")).toBe("Use at least 8 characters.")
-  expect(validatePassword("a".repeat(80))).toBe(
-    "Password is too long. Use 72 characters or fewer.",
-  )
+  expect(validatePassword("a".repeat(80))).toBe("Password is too long. Use 72 characters or fewer.")
   expect(validatePassword("good-password")).toBeNull()
 })
 

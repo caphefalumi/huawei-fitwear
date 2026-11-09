@@ -11,7 +11,15 @@ import {
 } from "react"
 import { AppState } from "react-native"
 
-import { ApiError, onSessionExpired, setApiToken, userFacingAuthError } from "@/lib/api"
+import {
+  ApiError,
+  apiErrorMessage,
+  onSessionExpired,
+  setApiToken,
+  userFacingAccountDeleteError,
+  userFacingAuthError,
+  userFacingSessionError,
+} from "@/lib/api"
 import { sessionStorage } from "@/lib/storage"
 
 import {
@@ -158,11 +166,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         if (active) {
           setApiToken(null)
           setAuthenticated(false)
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "Could not restore your session. Sign in again.",
-          )
+          setError(userFacingSessionError(cause))
         }
       } finally {
         if (active) setLoading(false)
@@ -287,9 +291,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         return
       }
       Sentry.captureException(cause)
-      setError(
-        cause instanceof Error ? cause.message : "Could not delete your account. Please try again.",
-      )
+      setError(userFacingAccountDeleteError(cause))
       throw cause
     } finally {
       busy.current = false
@@ -311,7 +313,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         await queryClient.invalidateQueries({ queryKey: ["meals", result.id, "summary"] })
       } catch (cause) {
         Sentry.captureException(cause)
-        setError(cause instanceof Error ? cause.message : "Could not update your profile.")
+        setError(apiErrorMessage(cause, "your profile", "save"))
         throw cause
       }
     },

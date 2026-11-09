@@ -2,6 +2,7 @@ import * as Sentry from "@sentry/react-native"
 import { useEffect, useRef, useState } from "react"
 import { AppState } from "react-native"
 
+import { userFacingPasswordResetError } from "@/lib/api"
 import { validateEmail, validatePassword } from "@/lib/form-validation"
 
 import { useAuth } from "./auth-hooks"
@@ -99,7 +100,7 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
       Sentry.captureException(cause)
       if (!mounted.current) return
       setCode("")
-      setError(cause instanceof Error ? cause.message : "This reset code is invalid or expired.")
+      setError(userFacingPasswordResetError(cause, "verify"))
     } finally {
       if (mounted.current) setPending(false)
     }
@@ -118,7 +119,7 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
     } catch (cause) {
       Sentry.captureException(cause)
       if (!mounted.current) return
-      setError(cause instanceof Error ? cause.message : "Could not resend the reset code.")
+      setError(userFacingPasswordResetError(cause, "request"))
     } finally {
       if (mounted.current) setPending(false)
     }
@@ -144,7 +145,7 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
       } catch (cause) {
         Sentry.captureException(cause)
         if (!mounted.current) return
-        setError(cause instanceof Error ? cause.message : "Could not request a password reset.")
+        setError(userFacingPasswordResetError(cause, "request"))
       } finally {
         if (mounted.current) setPending(false)
       }
@@ -174,7 +175,7 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
     } catch (cause) {
       Sentry.captureException(cause)
       if (!mounted.current) return
-      setError(cause instanceof Error ? cause.message : "Could not reset your password.")
+      setError(userFacingPasswordResetError(cause, "complete"))
     } finally {
       if (mounted.current) setPending(false)
     }

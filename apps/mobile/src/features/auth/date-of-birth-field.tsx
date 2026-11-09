@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ElementRef } from "react"
+import { useEffect, useRef, useState, type ElementRef, type Ref } from "react"
 import { StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native"
 
 import { AuthColors } from "./login-styles"
@@ -27,6 +27,7 @@ export function DateOfBirthField({
   showError = false,
   editable = true,
   onBlurField,
+  yearInputRef,
 }: {
   value: string
   onChange: (isoDate: string) => void
@@ -34,6 +35,7 @@ export function DateOfBirthField({
   showError?: boolean
   editable?: boolean
   onBlurField?: () => void
+  yearInputRef?: Ref<ElementRef<typeof TextInput>>
 }) {
   const { fontScale } = useWindowDimensions()
   const refs = useRef<Record<keyof DateParts, ElementRef<typeof TextInput> | null>>({
@@ -116,6 +118,10 @@ export function DateOfBirthField({
               key={field}
               ref={(node) => {
                 refs.current[field] = node
+                if (field === "year" && yearInputRef) {
+                  if (typeof yearInputRef === "function") yearInputRef(node)
+                  else if (yearInputRef) yearInputRef.current = node
+                }
               }}
               accessibilityLabel={field === "day" ? "Day" : field === "month" ? "Month" : "Year"}
               accessibilityHint="Enter numbers only"

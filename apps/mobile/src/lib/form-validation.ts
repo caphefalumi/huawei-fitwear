@@ -1,6 +1,9 @@
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-export function validateEmail(value: string, { allowEmpty = false }: { allowEmpty?: boolean } = {}) {
+export function validateEmail(
+  value: string,
+  { allowEmpty = false }: { allowEmpty?: boolean } = {},
+) {
   const trimmed = value.trim()
   if (!trimmed) {
     return allowEmpty ? null : "Enter your email address."

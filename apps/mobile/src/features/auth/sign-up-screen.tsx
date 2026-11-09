@@ -13,10 +13,11 @@ import {
   validatePassword,
 } from "@/lib/form-validation"
 import { useMarkInteractive } from "@/lib/observe"
+
 import { AuthField } from "./auth-field"
-import { AuthColors } from "./login-styles"
 import { APP_ROUTES, useAuth } from "./auth-hooks"
 import { DateOfBirthField } from "./date-of-birth-field"
+import { AuthColors } from "./login-styles"
 
 const icons = {
   check: require("@/assets/images/auth/check.svg"),
@@ -40,6 +41,7 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
   const nameInput = useRef<TextInputInstance>(null)
   const emailInput = useRef<TextInputInstance>(null)
   const passwordInput = useRef<TextInputInstance>(null)
+  const birthYearInput = useRef<TextInputInstance>(null)
 
   function focusField(ref: React.RefObject<TextInputInstance | null>) {
     ref.current?.focus()
@@ -109,6 +111,7 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
       if (firstInvalid === "name") focusField(nameInput)
       else if (firstInvalid === "email") focusField(emailInput)
       else if (firstInvalid === "password") focusField(passwordInput)
+      else if (firstInvalid === "birthDate") focusField(birthYearInput)
       return
     }
     try {
@@ -189,6 +192,7 @@ export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
           editable={!pending}
         />
         <DateOfBirthField
+          yearInputRef={birthYearInput}
           value={birthDate}
           onChange={(value) => {
             setBirthDate(value)

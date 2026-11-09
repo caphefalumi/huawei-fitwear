@@ -50,6 +50,7 @@ export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: ()
                 : "Could not load this meal"
             }
             message={error}
+            retrySuccessMessage="Meal loaded."
             onRetry={() => detailQuery.refetch()}
             retrying={detailQuery.isFetching}
             onBack={onBack}

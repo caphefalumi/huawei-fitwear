@@ -477,7 +477,7 @@ test("password reset failure keeps the login password; only successful completio
   await fireEvent.changeText(screen.getByLabelText("New password"), "ReplacementPassword123!")
   auth.completePasswordReset.mockRejectedValueOnce(new Error("Reset failed"))
   await fireEvent.press(screen.getByLabelText("Reset password"))
-  expect(await screen.findByText("Reset failed")).toBeTruthy()
+  expect(await screen.findByText("Could not reset your password. Try again.")).toBeTruthy()
   expect(screen.getByLabelText("Back to log in")).toBeTruthy()
   await fireEvent.press(screen.getByLabelText("Back to log in"))
   expect(screen.getByLabelText("Password").props.value).toBe("original-secret")

@@ -5,9 +5,9 @@ import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { FetchErrorState } from "@/components/fetch-states"
-import { apiErrorMessage } from "@/lib/api"
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, SectionHeading } from "@/components/ui"
+import { apiErrorMessage } from "@/lib/api"
 import { Palette as C } from "@/theme"
 
 import { MealPhoto } from "./meal-photo"
@@ -52,8 +52,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
       if (active.current) after?.()
     } catch (cause) {
       Sentry.captureException(cause)
-      if (active.current)
-        setActionError(apiErrorMessage(cause, "your meal", "save"))
+      if (active.current) setActionError(apiErrorMessage(cause, "your meal", "save"))
     } finally {
       if (active.current) setPending(false)
     }
