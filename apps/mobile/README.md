@@ -176,31 +176,53 @@ bun run test:e2e
 bun run lint
 ```
 
-`bun run test:e2e` runs the Maestro workspace in `tests/e2e/`. Nightly runs at 02:00 UTC and manual Mobile E2E runs discover every top-level `.yaml`/`.yml` flow automatically. Add a self-contained flow there without editing the workflow or summary generator. Keep reusable subflows in subdirectories so they are not executed independently; use Maestro's `config.yaml` `flows` patterns if executable journeys are later organized into subdirectories.
+### Android E2E in GitHub Actions
 
-The fitness flow verifies sign-in, session restoration, and backend-backed empty states. The error flow checks sign-up/login validation, password-reset errors, invalid and future birth dates, offline sign-in, offline cold-start rejection and online token recovery, manual-meal validation, and an offline meal-save failure followed by a successful retry. Password-reset validation with an empty email stops before any reset request, so no email is sent. CI provisions the release APK, an API 34 AOSP emulator with Pixel 6 dimensions, and Maestro CLI 2.12.0. These journeys do not use Google services; the AOSP image avoids Google-image Pixel Launcher first-boot ANR dialogs obscuring the app. The flows require dedicated E2E account secrets and Java 17+. Pull-request mobile checks run Jest without the emulator build.
+The **Mobile E2E** workflow runs only on `workflow_dispatch` and the daily `schedule` at **01:00 Asia/Ho_Chi_Minh**. There are no E2E pull request or push triggers, and manual dispatch must target `main`. The separate Mobile CI workflow continues handling Jest and typechecking on pull requests.
 
-CI requires repository secrets `MAESTRO_TEST_EMAIL` and `MAESTRO_TEST_PASSWORD` for an existing dedicated account, plus `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` with D1 read/write access to the backend database. Immediately before the emulator step, `.github/scripts/cleanup-maestro-account.ts snapshot` records that account's existing session and meal IDs in a private, run-attempt-specific file under `RUNNER_TEMP`, outside uploaded artifacts. A failed snapshot prevents the UI tests from starting. After the emulator step, an `always()` cleanup runs only if the snapshot succeeded and removes sessions and meal logs created since that baseline, including their meal items; pre-existing sessions, meals, the account, and its password are untouched. Cleanup failures fail the job without hiding Maestro failures.
+Every E2E run uses an **x86_64 Android release APK matching the checked-out app inputs and staging API URL**, then installs it on an API 34 AOSP Pixel 6 emulator with KVM. A GitHub Actions cache is keyed by tracked mobile application sources, dependency manifests/lockfile, workflow build configuration, and staging API URL. **Changes only to Maestro flows, mobile tests, or README content reuse the cached APK** without rerunning Expo/Gradle. Changes to app code, dependencies, native configuration, or API URL produce a cache miss and a fresh build. A missing or evicted cache also triggers a fresh build, never a fallback to an unrelated APK. A manual run can set `force_rebuild=true` to bypass the cache. Each workflow run uploads its selected APK as a same-run artifact for the emulator job. Native Gradle minification and Sentry upload are disabled for fresh builds. Maestro 2.12.0 runs the top-level flows in `apps/mobile/tests/e2e/`. Place shared subflows in nested directories. These tests do not require Google services.
 
-The error flow creates one meal server-side through the offline retry case. Cleanup removes only meal logs absent from the snapshot, so the dedicated account's baseline meals remain. After Maestro finishes, even on failure, CI force-stops the app, clears its local data/drafts, and disables airplane mode while the emulator is still alive. Device cleanup failures also fail the job. Future flows that persist other server data must add explicitly scoped cleanup before being enabled. Mobile E2E workflow runs are serialized globally across branches and refs rather than cancelling an active run. Do not use this dedicated account concurrently outside this workflow or sign in manually: new session or meal rows cannot be distinguished from concurrent use. Hard runner loss, forced cancellation, or job timeout can prevent cleanup, so this is not a guarantee against abandoned rows in those cases.
+**Required staging configuration, before enabling the nightly workflow:**
 
-Manual Mobile E2E dispatch compares the checked-out ref to `main`. When only Maestro flows, mobile Jest tests, workflow/reporting scripts, or docs changed, CI skips the Gradle build only if app sources are unchanged since the last successful `build` job on the branch, or on `main` otherwise, then reuses that `fitwear-release-apk`. Nightly runs and the `force_rebuild` workflow input always produce a fresh release APK.
+| GitHub Actions configuration      | Purpose                                                           |
+| --------------------------------- | ----------------------------------------------------------------- |
+| Repository variable `E2E_API_URL` | HTTPS staging API, with isolated backend bindings                 |
+| Secret `E2E_D1_DATABASE_ID`       | Staging Cloudflare D1 database UUID, distinct from production     |
+| Secret `MAESTRO_TEST_EMAIL`       | Dedicated account on the staging backend                          |
+| Secret `MAESTRO_TEST_PASSWORD`    | Password for the staging account                                  |
+| Secret `CLOUDFLARE_ACCOUNT_ID`    | Cloudflare account containing the staging D1 database             |
+| Secret `CLOUDFLARE_API_TOKEN`     | Token scoped to the staging database for the snapshot and cleanup |
 
-For a manual subset, set the workflow's optional `include_tags` input to comma-separated Maestro tags. Tags use OR matching; leaving the input blank runs all discovered flows. The former `run_fitness` and `run_error_messages` booleans have been replaced:
+The validation job refuses missing settings, non-HTTPS URLs, the configured production API hostname, and the production D1 database UUID. **The hostname and database checks are safeguards, not a substitute for provisioning a genuinely separate staging Worker, D1 database, and other writable bindings.** Make sure the staging API truly uses the staging D1 database, KV, R2, and queues as needed, and never forwards writes to production. Avoid using production credentials or real customer accounts.
+
+Before running Maestro, the cleanup helper snapshots the staging account's existing session and meal IDs to a private run-specific file. After testing, even on Maestro failure, it deletes only new sessions and meals belonging to that account. It preserves baseline records. The cleanup helper independently refuses the production database UUID. Because cleanup is not guaranteed following runner loss, force cancellation, or timeout, periodically review staging data. Do not use the dedicated account outside this workflow. Any new E2E flows that create different server-side entities must add safe cleanup first.
+
+Run all flows manually from the main branch:
 
 ```bash
-gh workflow run mobile-e2e.yml -f include_tags=fitness,errors
+gh workflow run mobile-e2e.yml --ref main
 ```
 
-JUnit results drive the job summary: each flow gets its own status, source file, and duration, with failure/error details and skipped counts. A missing, invalid, empty, or skipped-only report is not a successful run. All recordings are listed, and artifact uploads preserve each flow's directory so repeated screenshot/video filenames cannot overwrite one another. Artifact names include the run attempt (`maestro-e2e-artifacts-1`, `fitwear-e2e-recording-1`) to distinguish reruns. Recording is opt-in per flow through `startRecording`/`stopRecording`; a flow without a recording still has test results.
+Or select a subset by Maestro tag:
 
-The reporter and its tests run on Bun, using the workspace's declared XML parser. Run its regression tests from the repository root with `bun test ./.github/scripts/generate-maestro-summary.test.ts`. These tests also run before the CI emulator starts.
+```bash
+gh workflow run mobile-e2e.yml --ref main -f include_tags=fitness,errors
 
-Each flow stops the app before clearing its data and launching it. Keep that order: clearing data while the previous flow's activity is running can leave Android removing the old task after the new process starts, killing the new process and stranding the test on the system splash screen.
+# Bypass cache when needed
+gh workflow run mobile-e2e.yml --ref main -f force_rebuild=true
+```
 
-Password inputs use `login-password` and `sign-up-password` test IDs rather than placeholders that disappear or change. On sign-up, Maestro's default center swipe can land inside date inputs; start the footer-reveal swipe from the submit button so the scroll container receives it.
+Omitting `include_tags` runs all top-level YAML flows. E2E runs are globally serialized for the dedicated account and never cancel an existing run.
 
-Android E2E on the Ubuntu CI runner requires KVM hardware acceleration. The workflow grants access to `/dev/kvm` before building the APK and requires `-accel on`, so unavailable acceleration fails the job instead of silently falling back to slow software emulation.
+The workflow uploads the build-input-matched APK, per-attempt JUnit reports, screenshots, diagnostics, and opt-in recordings for **7 days**. The job summary lists flow outcomes, durations, and failure details. Missing, invalid, empty, or failed JUnit reports fail the workflow. The emulator is stopped, application storage is cleared, and airplane mode is disabled before the test job ends. Any required account cleanup failure also fails the job.
+
+Helper regression tests can be run from the repository root:
+
+```bash
+bun test ./.github/scripts/generate-maestro-summary.test.ts ./.github/scripts/cleanup-maestro-account.test.ts ./.github/scripts/validate-e2e-environment.test.ts
+```
+
+The fitness flow checks authentication, session restoration, and read-only screens. The error flow checks form validation, offline login and recovery, and offline meal-save retry. Each flow stops the app before clearing device state. Password fields use stable `login-password` and `sign-up-password` test IDs. For sign-up scrolling, start the swipe from the submit button to avoid trapping the gesture inside the date fields.
 
 ### Gradle caching
 
