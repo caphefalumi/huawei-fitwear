@@ -33,7 +33,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version-file: package.json
 
       - name: Validate templates
         run: bun apps/backend/scripts/sync-resend-templates.ts --dry-run
