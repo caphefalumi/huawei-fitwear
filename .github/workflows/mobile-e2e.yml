@@ -33,7 +33,6 @@ jobs:
       rebuild_apk: ${{ steps.plan.outputs.rebuild_apk }}
     steps:
       - name: Checkout repository
-        if: github.event_name != 'schedule'
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -45,6 +44,7 @@ jobs:
         uses: dorny/paths-filter@v4
         with:
           base: main
+          predicate-quantifier: some-with-excludes
           filters: |
             rebuild_apk:
               - 'apps/mobile/**'
@@ -53,20 +53,19 @@ jobs:
               - 'package.json'
               - 'bun.lock'
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Plan APK build
         id: plan
         env:
           EVENT_NAME: ${{ github.event_name }}
           FORCE_REBUILD: ${{ inputs.force_rebuild }}
           FILTER_REBUILD: ${{ steps.filter.outputs.rebuild_apk }}
-        run: |
-          if [[ "$EVENT_NAME" == "schedule" || "$FORCE_REBUILD" == "true" || "$FILTER_REBUILD" == "true" ]]; then
-            echo "rebuild_apk=true" >> "$GITHUB_OUTPUT"
-            echo "A fresh Android release APK will be built."
-          else
-            echo "rebuild_apk=false" >> "$GITHUB_OUTPUT"
-            echo "Reusing the latest successful fitwear-release-apk from this branch, or main if needed."
-          fi
+          GH_TOKEN: ${{ github.token }}
+        run: bun .github/scripts/e2e-apk-plan.ts
 
   build:
     needs: prepare
@@ -192,7 +191,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Verify Maestro reporting and cleanup
-        run: bun test ./.github/scripts/generate-maestro-summary.test.ts ./.github/scripts/cleanup-maestro-account.test.ts
+        run: bun test ./.github/scripts/generate-maestro-summary.test.ts ./.github/scripts/cleanup-maestro-account.test.ts ./.github/scripts/e2e-apk-plan.test.ts ./.github/scripts/record-maestro-exit.test.ts
 
       - name: Download Android release APK
         uses: actions/download-artifact@v8
@@ -256,7 +255,12 @@ jobs:
             sleep 5
             mkdir -p maestro-artifacts
             test -n "$MAESTRO_TEST_EMAIL" && test -n "$MAESTRO_TEST_PASSWORD"
-            set +e; maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts -e MAESTRO_TEST_EMAIL="$MAESTRO_TEST_EMAIL" -e MAESTRO_TEST_PASSWORD="$MAESTRO_TEST_PASSWORD" ${MAESTRO_INCLUDE_TAGS:+--include-tags "$MAESTRO_INCLUDE_TAGS"} apps/mobile/tests/e2e; status=$?; cleanup_status=0; printf 'MAESTRO_EXIT_CODE=%s\n' "$status" >> "$GITHUB_ENV" || cleanup_status=$?; adb shell am force-stop com.fitwear.mobile || cleanup_status=$?; adb shell pm clear com.fitwear.mobile || cleanup_status=$?; adb shell cmd connectivity airplane-mode disable || cleanup_status=$?; if [ "$status" -eq 0 ]; then exit "$cleanup_status"; fi; exit 0
+            set +e; maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts -e MAESTRO_TEST_EMAIL="$MAESTRO_TEST_EMAIL" -e MAESTRO_TEST_PASSWORD="$MAESTRO_TEST_PASSWORD" ${MAESTRO_INCLUDE_TAGS:+--include-tags "$MAESTRO_INCLUDE_TAGS"} apps/mobile/tests/e2e; status=$?; cleanup_status=0; printf '%s\n' "$status" > maestro-artifacts/maestro-exit-code.txt; adb shell am force-stop com.fitwear.mobile || cleanup_status=$?; adb shell pm clear com.fitwear.mobile || cleanup_status=$?; adb shell cmd connectivity airplane-mode disable || cleanup_status=$?; if [ "$status" -eq 0 ]; then exit "$cleanup_status"; fi; exit 0
+
+      - name: Record Maestro exit code
+        id: maestro
+        if: always()
+        run: bun .github/scripts/record-maestro-exit.ts
 
       - name: Remove sessions created by Maestro
         if: ${{ always() && steps.snapshot-account.outcome == 'success' }}
@@ -294,7 +298,7 @@ jobs:
         run: bun .github/scripts/generate-maestro-summary.ts
 
       - name: Fail job when Maestro reported test failures
-        if: ${{ always() && env.MAESTRO_EXIT_CODE != '' && env.MAESTRO_EXIT_CODE != '0' }}
+        if: ${{ always() && steps.maestro.outputs.exit_code != '' && steps.maestro.outputs.exit_code != '0' }}
         run: |
-          echo "::error title=Maestro E2E failed::Process exited with code ${MAESTRO_EXIT_CODE}. See the job summary and uploaded artifacts for flow results."
-          exit "${MAESTRO_EXIT_CODE}"
+          echo "::error title=Maestro E2E failed::Process exited with code ${{ steps.maestro.outputs.exit_code }}. See the job summary and uploaded artifacts for flow results."
+          exit "${{ steps.maestro.outputs.exit_code }}"

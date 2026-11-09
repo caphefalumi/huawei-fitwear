@@ -45,8 +45,17 @@ export function DateOfBirthField({
   })
   const [parts, setParts] = useState(() => parseISO(value))
   const [focusedField, setFocusedField] = useState<keyof DateParts | null>(null)
+
+  function partsToIso(next: DateParts) {
+    if (next.year.length === 4 && next.month && next.day) {
+      return `${next.year}-${next.month.padStart(2, "0")}-${next.day.padStart(2, "0")}`
+    }
+    return ""
+  }
+
   useEffect(() => {
-    if (value) setParts(parseISO(value))
+    if (!value) return
+    setParts((current) => (partsToIso(current) === value ? current : parseISO(value)))
   }, [value])
 
   function commit(next: DateParts) {
@@ -79,12 +88,17 @@ export function DateOfBirthField({
       }
     }
     const limit = field === "year" ? 4 : 2
-    const next = { ...parts, [field]: digits.slice(0, limit) }
+    const previousDigits = parts[field].replace(/\D/g, "")
+    const nextDigits = digits.slice(0, limit)
+    const grew = nextDigits.length > previousDigits.length
+    const next = { ...parts, [field]: nextDigits }
     commit(next)
     const invalidSecondDigit =
-      digits.length === 1 &&
-      ((field === "day" && Number(digits) >= 4) || (field === "month" && Number(digits) >= 2))
-    if (field !== "year" && (digits.length >= limit || invalidSecondDigit)) {
+      nextDigits.length === 1 &&
+      grew &&
+      ((field === "day" && Number(nextDigits) >= 4) ||
+        (field === "month" && Number(nextDigits) >= 2))
+    if (field !== "year" && grew && (nextDigits.length >= limit || invalidSecondDigit)) {
       if (field === "day" && next.day.length === 1) next.day = next.day.padStart(2, "0")
       if (field === "month" && next.month.length === 1) next.month = next.month.padStart(2, "0")
       commit(next)
@@ -124,10 +138,17 @@ export function DateOfBirthField({
                 }
               }}
               accessibilityLabel={field === "day" ? "Day" : field === "month" ? "Month" : "Year"}
+              testID={
+                field === "day"
+                  ? "sign-up-dob-day"
+                  : field === "month"
+                    ? "sign-up-dob-month"
+                    : "sign-up-dob-year"
+              }
               accessibilityHint="Enter numbers only"
               keyboardType="number-pad"
               inputMode="numeric"
-              maxLength={field === "year" ? 8 : 10}
+              maxLength={12}
               placeholder={placeholders[field]}
               placeholderTextColor={AuthColors.textMuted}
               value={parts[field]}

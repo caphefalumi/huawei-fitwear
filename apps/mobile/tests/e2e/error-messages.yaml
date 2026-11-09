@@ -49,12 +49,14 @@ tags:
 - inputText: "E2E Member"
 - tapOn: "Your email"
 - inputText: "e2e.member@fitwear.dev"
-- tapOn: "Day"
-- inputText: "12"
-- tapOn: "Month"
-- inputText: "03"
-- tapOn: "Year"
-- inputText: "1998"
+- scrollUntilVisible:
+    element:
+      id: "sign-up-dob-month"
+    direction: UP
+- tapOn:
+    id: "sign-up-dob-month"
+- eraseText: 10
+- inputText: "1998-03-12"
 - hideKeyboard
 - scrollUntilVisible:
     element:
@@ -82,15 +84,16 @@ tags:
 - hideKeyboard
 
 # Invalid and future birth dates are rejected before the terms check.
+# Paste a full ISO date: per-field erase is unreliable with auto-advance and
+# backspace focusPrevious on the split inputs (see Maestro command traces).
 - scrollUntilVisible:
-    element: "Year"
+    element:
+      id: "sign-up-dob-year"
     direction: UP
-- tapOn: "Day"
-- eraseText: 2
-- inputText: "31"
-- tapOn: "Month"
-- eraseText: 2
-- inputText: "02"
+- tapOn:
+    id: "sign-up-dob-month"
+- eraseText: 10
+- inputText: "1998-13-31"
 - hideKeyboard
 - scrollUntilVisible:
     element:
@@ -98,19 +101,19 @@ tags:
     direction: DOWN
 - tapOn:
     id: "sign-up-submit"
+- scrollUntilVisible:
+    element: "Enter a valid date of birth."
+    direction: UP
+    timeout: 10000
 - assertVisible: "Enter a valid date of birth."
 - scrollUntilVisible:
-    element: "Year"
+    element:
+      id: "sign-up-dob-year"
     direction: UP
-- tapOn: "Day"
-- eraseText: 2
-- inputText: "01"
-- tapOn: "Month"
-- eraseText: 2
-- inputText: "01"
-- tapOn: "Year"
-- eraseText: 4
-- inputText: "2099"
+- tapOn:
+    id: "sign-up-dob-month"
+- eraseText: 10
+- inputText: "2099-01-01"
 - hideKeyboard
 - scrollUntilVisible:
     element:
@@ -118,19 +121,19 @@ tags:
     direction: DOWN
 - tapOn:
     id: "sign-up-submit"
+- scrollUntilVisible:
+    element: "Date of birth can't be in the future."
+    direction: UP
+    timeout: 10000
 - assertVisible: "Date of birth can't be in the future."
 - scrollUntilVisible:
-    element: "Year"
+    element:
+      id: "sign-up-dob-year"
     direction: UP
-- tapOn: "Day"
-- eraseText: 2
-- inputText: "12"
-- tapOn: "Month"
-- eraseText: 2
-- inputText: "03"
-- tapOn: "Year"
-- eraseText: 4
-- inputText: "1998"
+- tapOn:
+    id: "sign-up-dob-month"
+- eraseText: 10
+- inputText: "1998-03-12"
 - hideKeyboard
 - scrollUntilVisible:
     element:
