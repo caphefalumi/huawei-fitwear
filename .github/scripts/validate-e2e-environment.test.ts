@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+
 import { validateE2EEnvironment } from "./validate-e2e-environment"
 
 const PROD_DB = "e7f57e76-0a1b-4a58-a4ff-acaaeb10586f"
@@ -77,9 +78,7 @@ test("rejects malformed D1 IDs or missing production D1 config", () => {
   expect(() =>
     validateE2EEnvironment({ ...config, E2E_D1_DATABASE_ID: "oops" }, wrangler()),
   ).toThrow(/UUID/)
-  expect(() =>
-    validateE2EEnvironment(config, { ...wrangler(), d1_databases: [] }),
-  ).toThrow(/D1/)
+  expect(() => validateE2EEnvironment(config, { ...wrangler(), d1_databases: [] })).toThrow(/D1/)
 })
 
 test("fails closed if staging D1 has not been provisioned", () => {
@@ -107,7 +106,7 @@ test("rejects staging resources pointing at production", () => {
 })
 
 test("rejects a malformed account email", () => {
-  expect(() => validateE2EEnvironment(
-    { ...config, MAESTRO_TEST_EMAIL: "not-email" }, wrangler(),
-  )).toThrow(/account email/)
+  expect(() =>
+    validateE2EEnvironment({ ...config, MAESTRO_TEST_EMAIL: "not-email" }, wrangler()),
+  ).toThrow(/account email/)
 })

@@ -184,14 +184,14 @@ Every E2E run uses an **x86_64 Android release APK matching the checked-out app 
 
 **Required staging configuration, before enabling the nightly workflow:**
 
-| GitHub Actions configuration | Purpose |
-| --- | --- |
-| Repository variable `E2E_API_URL` | HTTPS staging API, with isolated backend bindings |
-| Secret `E2E_D1_DATABASE_ID` | Staging Cloudflare D1 database UUID, distinct from production |
-| Secret `MAESTRO_TEST_EMAIL` | Dedicated account on the staging backend |
-| Secret `MAESTRO_TEST_PASSWORD` | Password for the staging account |
-| Secret `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account containing the staging D1 database |
-| Secret `CLOUDFLARE_API_TOKEN` | Token scoped to the staging database for the snapshot and cleanup |
+| GitHub Actions configuration      | Purpose                                                           |
+| --------------------------------- | ----------------------------------------------------------------- |
+| Repository variable `E2E_API_URL` | HTTPS staging API, with isolated backend bindings                 |
+| Secret `E2E_D1_DATABASE_ID`       | Staging Cloudflare D1 database UUID, distinct from production     |
+| Secret `MAESTRO_TEST_EMAIL`       | Dedicated account on the staging backend                          |
+| Secret `MAESTRO_TEST_PASSWORD`    | Password for the staging account                                  |
+| Secret `CLOUDFLARE_ACCOUNT_ID`    | Cloudflare account containing the staging D1 database             |
+| Secret `CLOUDFLARE_API_TOKEN`     | Token scoped to the staging database for the snapshot and cleanup |
 
 The validation job refuses missing settings, non-HTTPS URLs, the configured production API hostname, and the production D1 database UUID. **The hostname and database checks are safeguards, not a substitute for provisioning a genuinely separate staging Worker, D1 database, and other writable bindings.** Make sure the staging API truly uses the staging D1 database, KV, R2, and queues as needed, and never forwards writes to production. Avoid using production credentials or real customer accounts.
 
