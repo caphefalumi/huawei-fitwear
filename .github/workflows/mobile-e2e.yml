@@ -1,5 +1,6 @@
 name: Mobile E2E
 
+# No pull_request, push, or merge_group triggers: E2E is manual and nightly only.
 on:
   schedule:
     - cron: "0 1 * * *"
@@ -7,294 +8,230 @@ on:
   workflow_dispatch:
     inputs:
       include_tags:
-        description: Comma-separated Maestro tags (OR); leave blank to run every top-level flow
+        description: Comma-separated Maestro tags (OR); blank runs all top-level flows
         required: false
         type: string
         default: ""
-      force_rebuild:
-        description: Build a fresh Android release APK even when only Maestro flows changed
-        required: false
-        type: boolean
-        default: false
 
 permissions:
   contents: read
-  actions: write
 
 concurrency:
   group: mobile-e2e-dedicated-account
   cancel-in-progress: false
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  prepare:
-    name: Decide APK source
+  validate:
+    name: Validate isolated staging configuration
     runs-on: ubuntu-latest
-    outputs:
-      rebuild_apk: ${{ steps.plan.outputs.rebuild_apk }}
+    timeout-minutes: 5
     steps:
-      - name: Checkout repository
-        if: github.event_name != 'schedule'
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Detect mobile app changes
-        if: github.event_name != 'schedule' && inputs.force_rebuild != true
-        id: filter
-        uses: dorny/paths-filter@v4
-        with:
-          base: main
-          filters: |
-            rebuild_apk:
-              - 'apps/mobile/**'
-              - '!apps/mobile/tests/**'
-              - '!apps/mobile/README.md'
-              - 'package.json'
-              - 'bun.lock'
-
-      - name: Plan APK build
-        id: plan
+      - name: Restrict E2E dispatch to main
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          FORCE_REBUILD: ${{ inputs.force_rebuild }}
-          FILTER_REBUILD: ${{ steps.filter.outputs.rebuild_apk }}
+          REF: ${{ github.ref }}
         run: |
-          if [[ "$EVENT_NAME" == "schedule" || "$FORCE_REBUILD" == "true" || "$FILTER_REBUILD" == "true" ]]; then
-            echo "rebuild_apk=true" >> "$GITHUB_OUTPUT"
-            echo "A fresh Android release APK will be built."
-          else
-            echo "rebuild_apk=false" >> "$GITHUB_OUTPUT"
-            echo "Reusing the latest successful fitwear-release-apk from this branch, or main if needed."
+          if [[ "$REF" != "refs/heads/main" ]]; then
+            echo "::error::Mobile E2E runs must use main (trusted code with staging credentials)."
+            exit 1
           fi
 
-  build:
-    needs: prepare
-    if: needs.prepare.outputs.rebuild_apk == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          fetch-depth: 0
           persist-credentials: false
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: latest
+          bun-version: 1.4.4
 
-      - name: Cache Bun packages
-        uses: actions/cache@v6
+      - name: Check E2E configuration and isolation
+        env:
+          E2E_API_URL: ${{ vars.E2E_API_URL }}
+          E2E_D1_DATABASE_ID: ${{ secrets.E2E_D1_DATABASE_ID }}
+          MAESTRO_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
+          MAESTRO_TEST_PASSWORD: ${{ secrets.MAESTRO_TEST_PASSWORD }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: bun .github/scripts/validate-e2e-environment.ts
+
+  build:
+    name: Build Android release APK
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      EXPO_PUBLIC_API_URL: ${{ vars.E2E_API_URL }}
+      EXPO_NO_TELEMETRY: "1"
+      EXPO_NONINTERACTIVE: "1"
+      CI: "true"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.4.4
 
       - name: Install workspace dependencies
         run: bun install --frozen-lockfile
 
-      - name: Setup Java for Android build
-        uses: actions/setup-java@v6
+      - name: Setup Java
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Generate Android project
         working-directory: apps/mobile
-        env:
-          EXPO_PUBLIC_API_URL: https://fitwear.tm-project.id.vn/
         run: bunx expo prebuild --platform android --no-install
 
-      # Generate the wrapper first so setup-gradle can validate it.
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
 
-      - name: Build Android release APK
+      - name: Build Android release APK for emulator
         working-directory: apps/mobile/android
         env:
-          EXPO_PUBLIC_API_URL: https://fitwear.tm-project.id.vn/
           SENTRY_DISABLE_AUTO_UPLOAD: "true"
         run: ./gradlew assembleRelease --no-daemon --build-cache -Pandroid.enableMinifyInReleaseBuilds=false -PreactNativeArchitectures=x86_64
 
-      - name: Upload Android release APK
-        uses: actions/upload-artifact@v7
+      - name: Upload APK from this commit
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: fitwear-release-apk
           path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
-
-  fetch-apk:
-    name: Reuse prior release APK
-    needs: prepare
-    if: needs.prepare.outputs.rebuild_apk != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Download APK from last successful run on this branch
-        id: branch_apk
-        continue-on-error: true
-        uses: dawidd6/action-download-artifact@v11
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          workflow: mobile-e2e.yml
-          workflow_conclusion: success
-          name: fitwear-release-apk
-          branch: ${{ github.ref_name }}
-          path: reused-apk
-          if_no_artifact_found: fail
-
-      - name: Download APK from last successful run on main
-        if: steps.branch_apk.outcome != 'success'
-        uses: dawidd6/action-download-artifact@v11
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          workflow: mobile-e2e.yml
-          workflow_conclusion: success
-          name: fitwear-release-apk
-          branch: main
-          path: reused-apk
-          if_no_artifact_found: fail
-
-      - name: Publish APK for this workflow run
-        uses: actions/upload-artifact@v7
-        with:
-          name: fitwear-release-apk
-          path: reused-apk/app-release.apk
-          if-no-files-found: error
+          retention-days: 7
 
   e2e:
     name: Android Maestro E2E
-    needs: [prepare, build, fetch-apk]
-    if: |
-      always() &&
-      !cancelled() &&
-      needs.prepare.result == 'success' &&
-      (needs.build.result == 'success' || needs.build.result == 'skipped') &&
-      (needs.fetch-apk.result == 'success' || needs.fetch-apk.result == 'skipped')
+    needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          fetch-depth: 0
           persist-credentials: false
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: latest
+          bun-version: 1.4.4
 
       - name: Install workspace dependencies
         run: bun install --frozen-lockfile
 
-      - name: Verify Maestro reporting and cleanup
-        run: bun test ./.github/scripts/generate-maestro-summary.test.ts ./.github/scripts/cleanup-maestro-account.test.ts
+      - name: Verify E2E helper tests
+        run: >-
+          bun test
+          ./.github/scripts/generate-maestro-summary.test.ts
+          ./.github/scripts/cleanup-maestro-account.test.ts
+          ./.github/scripts/validate-e2e-environment.test.ts
 
-      - name: Download Android release APK
-        uses: actions/download-artifact@v8
+      - name: Download APK from this run
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: fitwear-release-apk
           path: apps/mobile/android/app/build/outputs/apk/release
 
-      - name: Enable KVM acceleration for Android E2E
+      - name: Enable KVM acceleration
         run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules || true
-          sudo udevadm trigger --name-match=kvm || true
-          [ -e /dev/kvm ] && sudo chmod 666 /dev/kvm || true
+          if [[ ! -e /dev/kvm ]]; then
+            echo "::error::Android KVM acceleration is not available."
+            exit 1
+          fi
+          sudo chmod 666 /dev/kvm
 
-      - name: Setup Java for Maestro
-        uses: actions/setup-java@v6
+      - name: Setup Java
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: Install Maestro CLI
+      - name: Install Maestro 2.12.0
+        env:
+          MAESTRO_VERSION: "2.12.0"
         run: |
-          export MAESTRO_VERSION=2.12.0
-          curl -fsSL https://get.maestro.mobile.dev | bash
+          curl --fail --location --silent --show-error --retry 3 https://get.maestro.mobile.dev | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
           "$HOME/.maestro/bin/maestro" --version
 
-      - name: Snapshot dedicated E2E account sessions
+      - name: Snapshot staging E2E account
         id: snapshot-account
         env:
           MAESTRO_CLEANUP_STATE: ${{ runner.temp }}/maestro-account-${{ github.run_id }}-${{ github.run_attempt }}.json
           MAESTRO_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
+          E2E_D1_DATABASE_ID: ${{ secrets.E2E_D1_DATABASE_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: bun .github/scripts/cleanup-maestro-account.ts snapshot
 
-      - name: Run selected Maestro E2E flows
-        uses: reactivecircus/android-emulator-runner@v2
+      - name: Execute Maestro flows on Android
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         env:
           MAESTRO_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
           MAESTRO_TEST_PASSWORD: ${{ secrets.MAESTRO_TEST_PASSWORD }}
           MAESTRO_INCLUDE_TAGS: ${{ inputs.include_tags }}
         with:
           api-level: 34
-          # These flows need no Google services. AOSP avoids Pixel Launcher's
-          # first-boot ANR dialog blocking the app on fresh Google API images.
           target: default
           arch: x86_64
-          # Without a device profile avdmanager falls back to the legacy
-          # 320x640 skin, smaller than any phone the app targets; the login and
-          # sign-up footers then sit outside the viewport.
           profile: pixel_6
           ram-size: 4096M
           heap-size: 512M
           disable-animations: true
           disable-linux-hw-accel: false
           emulator-options: -accel on -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: |
-            adb wait-for-device
-            adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
-            sleep 5
-            mkdir -p maestro-artifacts
-            test -n "$MAESTRO_TEST_EMAIL" && test -n "$MAESTRO_TEST_PASSWORD"
-            set +e; maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts -e MAESTRO_TEST_EMAIL="$MAESTRO_TEST_EMAIL" -e MAESTRO_TEST_PASSWORD="$MAESTRO_TEST_PASSWORD" ${MAESTRO_INCLUDE_TAGS:+--include-tags "$MAESTRO_INCLUDE_TAGS"} apps/mobile/tests/e2e; status=$?; cleanup_status=0; printf 'MAESTRO_EXIT_CODE=%s\n' "$status" >> "$GITHUB_ENV" || cleanup_status=$?; adb shell am force-stop com.fitwear.mobile || cleanup_status=$?; adb shell pm clear com.fitwear.mobile || cleanup_status=$?; adb shell cmd connectivity airplane-mode disable || cleanup_status=$?; if [ "$status" -eq 0 ]; then exit "$cleanup_status"; fi; exit 0
+          script: bash .github/scripts/run-maestro-android.sh
 
-      - name: Remove sessions created by Maestro
+      - name: Clean up staging account
         if: ${{ always() && steps.snapshot-account.outcome == 'success' }}
         env:
           MAESTRO_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
           MAESTRO_CLEANUP_STATE: ${{ runner.temp }}/maestro-account-${{ github.run_id }}-${{ github.run_attempt }}.json
+          E2E_D1_DATABASE_ID: ${{ secrets.E2E_D1_DATABASE_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: bun .github/scripts/cleanup-maestro-account.ts cleanup
 
-      - name: Upload Maestro recording video
+      - name: Upload recording videos
         id: upload-recording
-        if: always()
-        uses: actions/upload-artifact@v7
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: fitwear-e2e-recording-${{ github.run_attempt }}
           path: maestro-artifacts/**/*.mp4
           if-no-files-found: ignore
+          retention-days: 7
 
-      - name: Upload Maestro test artifacts and recordings
+      - name: Upload JUnit, screenshots, and diagnostics
         id: upload-artifacts
-        if: always()
-        uses: actions/upload-artifact@v7
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: maestro-e2e-artifacts-${{ github.run_attempt }}
           path: maestro-artifacts/
-          if-no-files-found: ignore
+          if-no-files-found: warn
+          retention-days: 7
 
-      - name: Generate Maestro E2E summary
-        if: always()
+      - name: Publish Maestro results
+        if: ${{ always() }}
         env:
           RECORDING_URL: ${{ steps.upload-recording.outputs.artifact-url }}
           ARTIFACTS_URL: ${{ steps.upload-artifacts.outputs.artifact-url }}
           MAESTRO_EXIT_CODE: ${{ env.MAESTRO_EXIT_CODE }}
         run: bun .github/scripts/generate-maestro-summary.ts
 
-      - name: Fail job when Maestro reported test failures
-        if: ${{ always() && env.MAESTRO_EXIT_CODE != '' && env.MAESTRO_EXIT_CODE != '0' }}
-        run: |
-          echo "::error title=Maestro E2E failed::Process exited with code ${MAESTRO_EXIT_CODE}. See the job summary and uploaded artifacts for flow results."
-          exit "${MAESTRO_EXIT_CODE}"
+      - name: Require passing Maestro and valid JUnit
+        if: ${{ always() }}
+        env:
+          MAESTRO_EXIT_CODE: ${{ env.MAESTRO_EXIT_CODE }}
+        run: bun .github/scripts/verify-maestro-result.ts
