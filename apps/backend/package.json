@@ -19,13 +19,13 @@
     "email:sync-resend": "bun run scripts/sync-resend-templates.ts"
   },
   "dependencies": {
-    "@elysia/openapi": "^1.4.16",
-    "@elysiajs/cors": "^1.4.2",
+    "@elysia/openapi": "^1.4.17",
+    "@elysiajs/cors": "^1.4.3",
     "@sinclair/typebox": "^0.34.52",
     "bcryptjs": "^3.0.3",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.45.4",
-    "elysia": "^1.4.30"
+    "elysia": "^1.4.31"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",
