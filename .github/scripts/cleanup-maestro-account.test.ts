@@ -367,3 +367,15 @@ test("D1 errors identify the failed lookup without leaking response messages", a
     "D1 account lookup failed (HTTP 400; codes: 7500)",
   )
 })
+
+test("D1 schema diagnostics expose only a safe category", async () => {
+  const fetcher = (async () =>
+    Response.json(
+      { errors: [{ code: 7500, message: "no such table: sensitive-secret" }] },
+      { status: 400 },
+    )) as typeof fetch
+  const query = createD1Query({ cloudflareAccountId, databaseId, token, fetcher })
+  await expect(query('SELECT "id" FROM "user" WHERE "email" = ?', [email])).rejects.toThrow(
+    "D1 account lookup failed (HTTP 400; codes: 7500; missing table)",
+  )
+})
