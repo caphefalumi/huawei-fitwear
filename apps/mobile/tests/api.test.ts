@@ -1,6 +1,15 @@
 import axios, { AxiosError, CanceledError, type AxiosResponse } from "axios"
 
-import { ApiError, apiErrorMessage, apiRequest, onSessionExpired, setApiToken } from "@/lib/api"
+import {
+  ApiError,
+  apiErrorMessage,
+  apiRequest,
+  onSessionExpired,
+  setApiToken,
+  userFacingAuthError,
+  userFacingPasswordResetError,
+  userFacingSessionError,
+} from "@/lib/api"
 
 import { request } from "./http-adapter"
 
@@ -64,6 +73,42 @@ test("an old request cannot expire a newly signed-in account", async () => {
   unsubscribe()
 })
 
+test("userFacingSessionError never surfaces private session API text", () => {
+  expect(userFacingSessionError(new ApiError("jwt malformed kid=xyz", 401))).toBe(
+    "Your session expired. Sign in again.",
+  )
+  expect(userFacingSessionError(new ApiError("timeout", 0, "TIMEOUT"))).toBe(
+    "Could not restore your session. Sign in again when you're back online.",
+  )
+})
+
+test("userFacingPasswordResetError never surfaces private reset API text", () => {
+  expect(userFacingPasswordResetError(new ApiError("otp hash mismatch", 400), "verify")).toBe(
+    "This reset code is invalid or expired.",
+  )
+  expect(userFacingPasswordResetError(new ApiError("token uuid leaked", 400), "complete")).toBe(
+    "This reset token is invalid or expired. Request a new code.",
+  )
+  expect(userFacingPasswordResetError(new Error("Reset failed"), "complete")).toBe(
+    "Could not reset your password. Try again.",
+  )
+})
+
+test("userFacingAuthError maps known auth status codes and never returns private API text", () => {
+  expect(userFacingAuthError(new ApiError("db constraint users_email_key", 409, "API_ERROR"))).toBe(
+    "This email is already linked to an account. Sign in or use a different email.",
+  )
+  expect(
+    userFacingAuthError(new ApiError("internal: bcrypt compare failed", 401, "API_ERROR")),
+  ).toBe("We could not sign you in. Check your email and password and try again.")
+  expect(userFacingAuthError(new ApiError("employee id 8841 not allowed", 403, "API_ERROR"))).toBe(
+    "You don't have access to this account.",
+  )
+  expect(userFacingAuthError(new ApiError("unknown", 418, "TEAPOT"))).toBe(
+    "Something went wrong. Try again.",
+  )
+})
+
 test("maps network and timeout errors to user-safe retryable error types", async () => {
   request.mockRejectedValueOnce(new AxiosError("offline", "ERR_NETWORK"))
   await expect(apiRequest("/meals")).rejects.toMatchObject({ code: "NETWORK_ERROR", status: 0 })
@@ -72,6 +117,9 @@ test("maps network and timeout errors to user-safe retryable error types", async
   expect(failure).toMatchObject({ code: "TIMEOUT", retryable: true })
   expect(apiErrorMessage(failure, "your meals")).toBe(
     "Loading your meals took too long. Try again.",
+  )
+  expect(apiErrorMessage(failure, "your meal", "save")).toBe(
+    "Saving your meal took too long. Your entries are still here. Try again.",
   )
 })
 

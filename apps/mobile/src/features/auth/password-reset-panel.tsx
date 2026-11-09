@@ -1,6 +1,7 @@
 import { Text, TextInput, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
+import { PASSWORD_FIELD_HELPER } from "@/lib/form-validation"
 
 import { AuthField } from "./auth-field"
 import { AuthColors, authStyles as styles } from "./login-styles"
@@ -138,8 +139,8 @@ export function PasswordResetPanel({
             />
             <Text accessibilityLiveRegion="polite" style={styles.passwordRequirement}>
               {Array.from(newPassword).length >= 8
-                ? "✓ Requirement met: at least 8 characters."
-                : "• At least 8 characters."}
+                ? `✓ ${PASSWORD_FIELD_HELPER}`
+                : `• ${PASSWORD_FIELD_HELPER}`}
             </Text>
           </>
         ) : (

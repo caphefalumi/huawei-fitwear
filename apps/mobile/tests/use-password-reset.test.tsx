@@ -77,7 +77,7 @@ test("failed completion preserves the reset password; success invokes completion
   await act(async () => result.current!.setNewPassword("ReplacementPassword123!"))
   await act(async () => result.current!.submit())
 
-  expect(result.current!.error).toBe("Reset failed")
+  expect(result.current!.error).toBe("Could not reset your password. Try again.")
   expect(result.current!.newPassword).toBe("ReplacementPassword123!")
   expect(onCompleted).not.toHaveBeenCalled()
 

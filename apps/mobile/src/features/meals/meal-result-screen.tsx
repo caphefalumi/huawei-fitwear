@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { FetchErrorState } from "@/components/fetch-states"
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, SectionHeading } from "@/components/ui"
+import { apiErrorMessage } from "@/lib/api"
 import { Palette as C } from "@/theme"
 
 import { MealPhoto } from "./meal-photo"
@@ -51,8 +52,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
       if (active.current) after?.()
     } catch (cause) {
       Sentry.captureException(cause)
-      if (active.current)
-        setActionError(cause instanceof Error ? cause.message : "Could not save your change.")
+      if (active.current) setActionError(apiErrorMessage(cause, "your meal", "save"))
     } finally {
       if (active.current) setPending(false)
     }
@@ -124,6 +124,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           <FetchErrorState
             title="Could not save your meal"
             message={meals.actionError}
+            retrySuccessMessage="Saved. Your meal is up to date."
             onRetry={async () => {
               await meals.retryAction()
               setActionError(null)
@@ -134,6 +135,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           <FetchErrorState
             title="Could not refresh meal data"
             message={meals.error}
+            retrySuccessMessage="Meal data refreshed."
             onRetry={meals.refresh}
           />
         ) : null}

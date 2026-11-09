@@ -6,6 +6,7 @@ import { RadioList } from "@/components/radio-list"
 import { Sheet, SheetActions, SheetField } from "@/components/sheet"
 import { WheelPicker } from "@/components/wheel-picker"
 import { ACTIVITIES, GOALS, PERIOD_AREA, useHealth, type Sex } from "@/features/health"
+import { apiErrorMessage } from "@/lib/api"
 import { Palette as C } from "@/theme"
 
 const ACTIVITY_OPTIONS = Object.values(ACTIVITIES)
@@ -36,8 +37,7 @@ function useSave(onClose: () => void) {
       if (active.current) onClose()
     } catch (cause) {
       Sentry.captureException(cause)
-      if (active.current)
-        setError(`${cause instanceof Error ? cause.message : "Could not save."} Please try again.`)
+      if (active.current) setError(apiErrorMessage(cause, "your profile", "save"))
     } finally {
       busy.current = false
       if (active.current) setPending(false)

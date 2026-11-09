@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button } from "@/components/ui"
+import { apiErrorMessage } from "@/lib/api"
 import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
@@ -91,7 +92,7 @@ export function ReviewItemScreen() {
       else router.navigate("/meal")
     } catch (cause) {
       Sentry.captureException(cause)
-      if (active.current) setError(cause instanceof Error ? cause.message : "Could not save item.")
+      if (active.current) setError(apiErrorMessage(cause, "this item", "save"))
     } finally {
       if (active.current) setSaving(false)
     }

@@ -12,16 +12,16 @@ import {
   Platform,
   ScrollView,
   Text,
-  useWindowDimensions,
   View,
   type TextInputInstance,
 } from "react-native"
 import { KeyboardAvoidingView } from "react-native-keyboard-controller"
-import Animated, { FadeIn, FadeOut, useReducedMotion } from "react-native-reanimated"
+import Animated, { useReducedMotion } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
 import { ApiError } from "@/lib/api"
+import { validateEmail } from "@/lib/form-validation"
 import { useMarkInteractive } from "@/lib/observe"
 
 import { AuthField } from "./auth-field"
@@ -41,13 +41,14 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
   const insets = useSafeAreaInsets()
   const isFocused = useIsFocused()
   const reducedMotion = useReducedMotion()
-  const { fontScale } = useWindowDimensions()
   const { signIn, pending, error: authError } = useAuth()
   useMarkInteractive()
   const handleCreateAccount = onCreateAccount ?? (() => router.replace("/(auth)/sign-up"))
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [validationError, setValidationError] = useState<string | null>(authError)
+  const [validationError, setValidationError] = useState<string | null>(null)
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [showEmailError, setShowEmailError] = useState(false)
   const [fieldError, setFieldError] = useState<string | null>(null)
   const [failedAttempts, setFailedAttempts] = useState(0)
   const [submitting, setSubmitting] = useState(false)
@@ -80,9 +81,15 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
     }
   }, [])
 
+  useEffect(() => {
+    if (authError) setValidationError(authError)
+  }, [authError])
+
   function clearLoginError() {
     setFieldError(null)
     setValidationError(null)
+    setEmailError(null)
+    setShowEmailError(false)
   }
 
   function focusEmail() {
@@ -100,9 +107,12 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
 
   async function submit() {
     if (submittingRef.current || pending || lockoutKind !== null) return
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      clearLoginError()
-      setValidationError("Enter a valid email address.")
+    const nextEmailError = validateEmail(email)
+    if (nextEmailError) {
+      setValidationError(null)
+      setFieldError(null)
+      setEmailError(nextEmailError)
+      setShowEmailError(true)
       focusEmail()
       return
     }
@@ -186,19 +196,11 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
                   label="Email address"
                   inputRef={emailInput}
                   value={email}
-                  error={validationError === "Enter a valid email address."}
-                  errorMessage={
-                    validationError === "Enter a valid email address." ? validationError : undefined
-                  }
-                  aria-invalid={validationError === "Enter a valid email address."}
-                  aria-describedby={
-                    validationError === "Enter a valid email address."
-                      ? "login-email-error"
-                      : undefined
-                  }
-                  accessibilityHint={
-                    validationError === "Enter a valid email address." ? validationError : undefined
-                  }
+                  error={showEmailError && emailError !== null}
+                  errorMessage={showEmailError ? (emailError ?? undefined) : undefined}
+                  errorHintId="login-email-error"
+                  aria-invalid={showEmailError && emailError !== null}
+                  aria-describedby={showEmailError && emailError ? "login-email-error" : undefined}
                   placeholder="example@gmail.com"
                   keyboardType="email-address"
                   returnKeyType="next"
@@ -209,20 +211,18 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
                   editable={!loginDisabled}
                   submitBehavior="submit"
                   onChangeText={(value) => {
-                    clearLoginError()
+                    setValidationError(null)
+                    setFieldError(null)
                     setEmail(value)
+                    if (showEmailError) setEmailError(validateEmail(value))
+                  }}
+                  onBlur={() => {
+                    if (!email.trim()) return
+                    setShowEmailError(true)
+                    setEmailError(validateEmail(email))
                   }}
                   onSubmitEditing={() => passwordInput.current?.focus()}
                 />
-                {validationError === "Enter a valid email address." ? (
-                  <Text
-                    nativeID="login-email-error"
-                    accessibilityLiveRegion="polite"
-                    style={styles.error}
-                  >
-                    Enter a valid email address.
-                  </Text>
-                ) : null}
               </View>
 
               <Animated.View
@@ -251,47 +251,19 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
                   autoCapitalize="none"
                   submitBehavior="submit"
                   error={fieldError !== null}
-                  errorMessage="Re-enter your password."
+                  errorMessage={fieldError ?? undefined}
+                  errorHintId="login-password-error"
                   aria-invalid={fieldError !== null}
                   aria-describedby={fieldError ? "login-password-error" : undefined}
                   editable={!loginDisabled}
                   onChangeText={(value) => {
-                    clearLoginError()
+                    setFieldError(null)
                     setPassword(value)
                   }}
                   onSubmitEditing={() => {
                     void submit()
                   }}
                 />
-                <View style={[styles.errorSpace, { minHeight: 32 * fontScale + 4 }]}>
-                  {fieldError ? (
-                    <Animated.View
-                      entering={reducedMotion ? undefined : FadeIn.duration(150)}
-                      exiting={reducedMotion ? undefined : FadeOut.duration(100)}
-                      style={styles.errorRow}
-                    >
-                      <SymbolView
-                        name={{
-                          ios: "exclamationmark.triangle.fill",
-                          android: "warning",
-                          web: "warning",
-                        }}
-                        size={16}
-                        tintColor={AuthColors.error}
-                        accessible={false}
-                      />
-                      <Text
-                        nativeID="login-password-error"
-                        selectable
-                        accessibilityRole={Platform.OS === "web" ? "alert" : undefined}
-                        accessibilityLiveRegion={Platform.OS === "ios" ? "none" : "polite"}
-                        style={styles.credentialError}
-                      >
-                        {fieldError}
-                      </Text>
-                    </Animated.View>
-                  ) : null}
-                </View>
               </Animated.View>
             </View>
 
@@ -312,7 +284,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
                 </Pressable>
               </View>
             ) : null}
-            {validationError && validationError !== "Enter a valid email address." ? (
+            {validationError ? (
               <View style={styles.errorBanner}>
                 <Text selectable accessibilityLiveRegion="polite" style={styles.bannerText}>
                   {validationError}

@@ -2,6 +2,9 @@ import * as Sentry from "@sentry/react-native"
 import { useEffect, useRef, useState } from "react"
 import { AppState } from "react-native"
 
+import { userFacingPasswordResetError } from "@/lib/api"
+import { validateEmail, validatePassword } from "@/lib/form-validation"
+
 import { useAuth } from "./auth-hooks"
 
 type PasswordResetOptions = {
@@ -97,7 +100,7 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
       Sentry.captureException(cause)
       if (!mounted.current) return
       setCode("")
-      setError(cause instanceof Error ? cause.message : "This reset code is invalid or expired.")
+      setError(userFacingPasswordResetError(cause, "verify"))
     } finally {
       if (mounted.current) setPending(false)
     }
@@ -116,7 +119,7 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
     } catch (cause) {
       Sentry.captureException(cause)
       if (!mounted.current) return
-      setError(cause instanceof Error ? cause.message : "Could not resend the reset code.")
+      setError(userFacingPasswordResetError(cause, "request"))
     } finally {
       if (mounted.current) setPending(false)
     }
@@ -124,8 +127,9 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
 
   async function submit() {
     if (pending) return
-    if (!email.trim()) {
-      setError("Enter your email address.")
+    const emailError = validateEmail(email)
+    if (emailError) {
+      setError(emailError)
       return
     }
     if (step === "email") {
@@ -141,7 +145,7 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
       } catch (cause) {
         Sentry.captureException(cause)
         if (!mounted.current) return
-        setError(cause instanceof Error ? cause.message : "Could not request a password reset.")
+        setError(userFacingPasswordResetError(cause, "request"))
       } finally {
         if (mounted.current) setPending(false)
       }
@@ -151,13 +155,9 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
       void verify(code)
       return
     }
-    if (Array.from(newPassword).length < 8) {
-      setError("Password must contain at least 8 characters.")
-      return
-    }
-    const passwordBytes = encodeURIComponent(newPassword).replace(/%[0-9A-F]{2}/gi, "x").length
-    if (passwordBytes > 72) {
-      setError("Password must not exceed 72 UTF-8 bytes.")
+    const passwordError = validatePassword(newPassword)
+    if (passwordError) {
+      setError(passwordError)
       return
     }
     if (!token) {
@@ -175,7 +175,7 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
     } catch (cause) {
       Sentry.captureException(cause)
       if (!mounted.current) return
-      setError(cause instanceof Error ? cause.message : "Could not reset your password.")
+      setError(userFacingPasswordResetError(cause, "complete"))
     } finally {
       if (mounted.current) setPending(false)
     }

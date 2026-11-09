@@ -6,6 +6,7 @@ import { Pressable } from "@/components/pressable"
 import { useAuth } from "@/features/auth"
 import { apiErrorMessage } from "@/lib/api"
 import { useMarkInteractive } from "@/lib/observe"
+import { refetchThrowing } from "@/lib/query-retry"
 import { Palette as C } from "@/theme"
 
 import { MealResultScreen } from "./meal-result-screen"
@@ -50,7 +51,10 @@ export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: ()
                 : "Could not load this meal"
             }
             message={error}
-            onRetry={() => detailQuery.refetch()}
+            retrySuccessMessage="Meal loaded."
+            onRetry={async () => {
+              await refetchThrowing(() => detailQuery.refetch())
+            }}
             retrying={detailQuery.isFetching}
             onBack={onBack}
           />
