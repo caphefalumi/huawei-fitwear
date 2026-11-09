@@ -11,6 +11,11 @@ on:
         required: false
         type: string
         default: ""
+      force_rebuild:
+        description: Build a fresh Android release APK even when only Maestro flows changed
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -21,7 +26,51 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  prepare:
+    name: Decide APK source
+    runs-on: ubuntu-latest
+    outputs:
+      rebuild_apk: ${{ steps.plan.outputs.rebuild_apk }}
+    steps:
+      - name: Checkout repository
+        if: github.event_name != 'schedule'
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Detect mobile app changes
+        if: github.event_name != 'schedule' && inputs.force_rebuild != true
+        id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          base: main
+          filters: |
+            rebuild_apk:
+              - 'apps/mobile/**'
+              - '!apps/mobile/tests/**'
+              - '!apps/mobile/README.md'
+              - 'package.json'
+              - 'bun.lock'
+
+      - name: Plan APK build
+        id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          FORCE_REBUILD: ${{ inputs.force_rebuild }}
+          FILTER_REBUILD: ${{ steps.filter.outputs.rebuild_apk }}
+        run: |
+          if [[ "$EVENT_NAME" == "schedule" || "$FORCE_REBUILD" == "true" || "$FILTER_REBUILD" == "true" ]]; then
+            echo "rebuild_apk=true" >> "$GITHUB_OUTPUT"
+            echo "A fresh Android release APK will be built."
+          else
+            echo "rebuild_apk=false" >> "$GITHUB_OUTPUT"
+            echo "Reusing the latest successful fitwear-release-apk from this branch, or main if needed."
+          fi
+
   build:
+    needs: prepare
+    if: needs.prepare.outputs.rebuild_apk == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -77,9 +126,54 @@ jobs:
           path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
+  fetch-apk:
+    name: Reuse prior release APK
+    needs: prepare
+    if: needs.prepare.outputs.rebuild_apk != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download APK from last successful run on this branch
+        id: branch_apk
+        continue-on-error: true
+        uses: dawidd6/action-download-artifact@v11
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: mobile-e2e.yml
+          workflow_conclusion: success
+          name: fitwear-release-apk
+          branch: ${{ github.ref_name }}
+          path: reused-apk
+          if_no_artifact_found: fail
+
+      - name: Download APK from last successful run on main
+        if: steps.branch_apk.outcome != 'success'
+        uses: dawidd6/action-download-artifact@v11
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: mobile-e2e.yml
+          workflow_conclusion: success
+          name: fitwear-release-apk
+          branch: main
+          path: reused-apk
+          if_no_artifact_found: fail
+
+      - name: Publish APK for this workflow run
+        uses: actions/upload-artifact@v7
+        with:
+          name: fitwear-release-apk
+          path: reused-apk/app-release.apk
+          if-no-files-found: error
+
   e2e:
     name: Android Maestro E2E
-    needs: build
+    needs: [prepare, build, fetch-apk]
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.prepare.result == 'success' &&
+      (needs.build.result == 'success' || needs.build.result == 'skipped') &&
+      (needs.fetch-apk.result == 'success' || needs.fetch-apk.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -162,7 +256,7 @@ jobs:
             sleep 5
             mkdir -p maestro-artifacts
             test -n "$MAESTRO_TEST_EMAIL" && test -n "$MAESTRO_TEST_PASSWORD"
-            set +e; maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts -e MAESTRO_TEST_EMAIL="$MAESTRO_TEST_EMAIL" -e MAESTRO_TEST_PASSWORD="$MAESTRO_TEST_PASSWORD" ${MAESTRO_INCLUDE_TAGS:+--include-tags "$MAESTRO_INCLUDE_TAGS"} apps/mobile/tests/e2e; status=$?; cleanup_status=0; printf 'MAESTRO_EXIT_CODE=%s\n' "$status" >> "$GITHUB_ENV" || cleanup_status=$?; adb shell am force-stop com.fitwear.mobile || cleanup_status=$?; adb shell pm clear com.fitwear.mobile || cleanup_status=$?; adb shell cmd connectivity airplane-mode disable || cleanup_status=$?; if [ "$status" -ne 0 ]; then exit "$status"; fi; exit "$cleanup_status"
+            set +e; maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts -e MAESTRO_TEST_EMAIL="$MAESTRO_TEST_EMAIL" -e MAESTRO_TEST_PASSWORD="$MAESTRO_TEST_PASSWORD" ${MAESTRO_INCLUDE_TAGS:+--include-tags "$MAESTRO_INCLUDE_TAGS"} apps/mobile/tests/e2e; status=$?; cleanup_status=0; printf 'MAESTRO_EXIT_CODE=%s\n' "$status" >> "$GITHUB_ENV" || cleanup_status=$?; adb shell am force-stop com.fitwear.mobile || cleanup_status=$?; adb shell pm clear com.fitwear.mobile || cleanup_status=$?; adb shell cmd connectivity airplane-mode disable || cleanup_status=$?; if [ "$status" -eq 0 ]; then exit "$cleanup_status"; fi; exit 0
 
       - name: Remove sessions created by Maestro
         if: ${{ always() && steps.snapshot-account.outcome == 'success' }}
@@ -198,3 +292,9 @@ jobs:
           ARTIFACTS_URL: ${{ steps.upload-artifacts.outputs.artifact-url }}
           MAESTRO_EXIT_CODE: ${{ env.MAESTRO_EXIT_CODE }}
         run: bun .github/scripts/generate-maestro-summary.ts
+
+      - name: Fail job when Maestro reported test failures
+        if: ${{ always() && env.MAESTRO_EXIT_CODE != '' && env.MAESTRO_EXIT_CODE != '0' }}
+        run: |
+          echo "::error title=Maestro E2E failed::Process exited with code ${MAESTRO_EXIT_CODE}. See the job summary and uploaded artifacts for flow results."
+          exit "${MAESTRO_EXIT_CODE}"

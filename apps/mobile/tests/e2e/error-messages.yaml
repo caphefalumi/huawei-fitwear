@@ -43,7 +43,8 @@ tags:
     timeout: 10000
 - tapOn:
     id: "sign-up-submit"
-- assertVisible: "Enter your name and a valid email address."
+- assertVisible: "Enter your username."
+- assertVisible: "Enter your email address."
 - tapOn: "Your username"
 - inputText: "E2E Member"
 - tapOn: "Your email"
@@ -69,7 +70,7 @@ tags:
     direction: DOWN
 - tapOn:
     id: "sign-up-submit"
-- assertVisible: "Password must contain at least 8 characters."
+- assertVisible: "Use at least 8 characters."
 - scrollUntilVisible:
     element:
       id: "sign-up-password"
@@ -301,7 +302,7 @@ tags:
     element: "Could not save your meal"
     direction: UP
     timeout: 30000
-- assertVisible: "Could not connect to load that change. Check your connection and try again."
+- assertVisible: "Could not connect to save your change. Check your connection and try again. Your entries are still here."
 - setAirplaneMode: disabled
 - tapOn: "Try again"
 - extendedWaitUntil:

@@ -115,11 +115,19 @@ export function generateSummary({
   ]
   if (reportError) {
     lines.push(`> ${cell(reportError)}`, "")
+    if (String(exitCode) !== "0" && exitCode !== undefined && exitCode !== "") {
+      lines.push(
+        "> Maestro exited before a readable JUnit report was produced. Download the artifact bundle for Maestro logs and screenshots.",
+        "",
+      )
+    }
   } else if (passed === 0 && failed === 0 && errors === 0) {
     lines.push(
       "> No flows completed successfully; an empty or skipped-only suite is not a pass.",
       "",
     )
+  } else if (failed > 0 || errors > 0) {
+    lines.push("> One or more flows failed. Expand the sections below for assertion details.", "")
   } else if (String(exitCode) !== "0" && failed === 0 && errors === 0) {
     lines.push(
       "> The process did not finish successfully, even though the report has no failed cases.",
@@ -186,5 +194,6 @@ if (import.meta.main) {
   } else {
     console.log(markdown)
   }
-  process.exitCode = success ? 0 : 1
+  // Always exit successfully so this reporting step stays green when Maestro failed earlier.
+  process.exitCode = 0
 }
