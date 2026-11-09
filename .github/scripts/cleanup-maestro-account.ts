@@ -4,11 +4,12 @@ import path from "node:path"
 type QueryResult = { results: Record<string, unknown>[]; meta: { changes: number } }
 type Query = (sql: string, params: string[]) => Promise<QueryResult>
 type Snapshot = {
-  version: 1
+  version: 2
   cloudflareAccountId: string
   databaseId: string
   userId: string
   sessionIds: string[]
+  mealIds: string[]
 }
 type Options = {
   email: string
@@ -72,17 +73,20 @@ function readSnapshot(options: Options): Snapshot {
   try {
     state = JSON.parse(fs.readFileSync(options.statePath, "utf8"))
   } catch {
-    throw new Error("Cleanup snapshot is missing or unreadable; refusing to delete sessions")
+    throw new Error("Cleanup snapshot is missing or unreadable; refusing to delete account data")
   }
+  const validIds = (ids: unknown) =>
+    Array.isArray(ids) &&
+    ids.every((id: unknown) => typeof id === "string" && id.length > 0) &&
+    new Set(ids).size === ids.length
   if (
-    state?.version !== 1 ||
+    state?.version !== 2 ||
     state.cloudflareAccountId !== options.cloudflareAccountId ||
     state.databaseId !== options.databaseId ||
     typeof state.userId !== "string" ||
     !state.userId ||
-    !Array.isArray(state.sessionIds) ||
-    !state.sessionIds.every((id: unknown) => typeof id === "string" && id.length > 0) ||
-    new Set(state.sessionIds).size !== state.sessionIds.length
+    !validIds(state.sessionIds) ||
+    !validIds(state.mealIds)
   ) {
     throw new Error("Cleanup snapshot is invalid or targets a different database")
   }
@@ -98,51 +102,96 @@ async function accountId({ query, email }: Options, expectedId?: string) {
   return id
 }
 
+function idsFrom(results: unknown[], label: string) {
+  return results.map((row) => {
+    const id = (row as { id?: unknown }).id
+    if (typeof id !== "string" || !id) throw new Error(`D1 returned an invalid ${label} ID`)
+    return id
+  })
+}
+
 async function sessionIds(query: Query, userId: string) {
   const { results } = await query('SELECT "id" FROM "session" WHERE "userId" = ?', [userId])
-  return results.map((row) => {
-    if (typeof row.id !== "string" || !row.id) throw new Error("D1 returned an invalid session ID")
-    return row.id
-  })
+  return idsFrom(results, "session")
+}
+
+async function mealIds(query: Query, userId: string) {
+  const { results } = await query('SELECT "id" FROM "meal_logs" WHERE "userId" = ?', [userId])
+  return idsFrom(results, "meal log")
 }
 
 export async function runAccountCommand(command: "snapshot" | "cleanup", options: Options) {
   if (command === "snapshot") {
     const userId = await accountId(options)
-    const ids = await sessionIds(options.query, userId)
+    const sessions = await sessionIds(options.query, userId)
+    const meals = await mealIds(options.query, userId)
     await accountId(options, userId)
     const state: Snapshot = {
-      version: 1,
+      version: 2,
       cloudflareAccountId: options.cloudflareAccountId,
       databaseId: options.databaseId,
       userId,
-      sessionIds: ids,
+      sessionIds: sessions,
+      mealIds: meals,
     }
     // Exclusive creation prevents accidentally replacing the pre-run baseline.
     fs.writeFileSync(options.statePath, JSON.stringify(state), { mode: 0o600, flag: "wx" })
-    return { baselineSessions: ids.length, deletedSessions: 0 }
+    return {
+      baselineSessions: sessions.length,
+      deletedSessions: 0,
+      baselineMeals: meals.length,
+      deletedMeals: 0,
+    }
   }
 
   // Load and validate before making any API request, especially on a failed snapshot step.
   const state = readSnapshot(options)
   await accountId(options, state.userId)
-  const baseline = new Set(state.sessionIds)
-  const created = (await sessionIds(options.query, state.userId)).filter((id) => !baseline.has(id))
+  const baselineSessions = new Set(state.sessionIds)
+  const baselineMeals = new Set(state.mealIds)
+  const createdSessions = (await sessionIds(options.query, state.userId)).filter(
+    (id) => !baselineSessions.has(id),
+  )
+  const createdMeals = (await mealIds(options.query, state.userId)).filter(
+    (id) => !baselineMeals.has(id),
+  )
   let deletedSessions = 0
-  // D1 permits 100 bound parameters: one account ID plus at most 99 session IDs.
-  for (let offset = 0; offset < created.length; offset += 99) {
-    const chunk = created.slice(offset, offset + 99)
+  let deletedMeals = 0
+  // D1 permits 100 bound parameters: one account ID plus at most 99 IDs.
+  for (let offset = 0; offset < createdSessions.length; offset += 99) {
+    const chunk = createdSessions.slice(offset, offset + 99)
     const result = await options.query(
       `DELETE FROM "session" WHERE "userId" = ? AND "id" IN (${chunk.map(() => "?").join(", ")})`,
       [state.userId, ...chunk],
     )
     deletedSessions += result.meta.changes
   }
+  // Delete items explicitly: do not depend on D1 enforcing the schema's cascade.
+  for (let offset = 0; offset < createdMeals.length; offset += 99) {
+    const chunk = createdMeals.slice(offset, offset + 99)
+    await options.query(
+      `DELETE FROM "meal_items" WHERE "mealLogId" IN (${chunk.map(() => "?").join(", ")})`,
+      chunk,
+    )
+    const result = await options.query(
+      `DELETE FROM "meal_logs" WHERE "userId" = ? AND "id" IN (${chunk.map(() => "?").join(", ")})`,
+      [state.userId, ...chunk],
+    )
+    deletedMeals += result.meta.changes
+  }
   await accountId(options, state.userId)
-  if ((await sessionIds(options.query, state.userId)).some((id) => !baseline.has(id))) {
+  if ((await sessionIds(options.query, state.userId)).some((id) => !baselineSessions.has(id))) {
     throw new Error("New E2E sessions remain after cleanup")
   }
-  return { baselineSessions: baseline.size, deletedSessions }
+  if ((await mealIds(options.query, state.userId)).some((id) => !baselineMeals.has(id))) {
+    throw new Error("New E2E meals remain after cleanup")
+  }
+  return {
+    baselineSessions: baselineSessions.size,
+    deletedSessions,
+    baselineMeals: baselineMeals.size,
+    deletedMeals,
+  }
 }
 
 function requiredEnv(name: string) {
@@ -178,7 +227,7 @@ if (import.meta.main) {
       query: createD1Query({ cloudflareAccountId, databaseId, token }),
     })
     console.log(
-      `E2E account ${command}: account preserved; ${counts.baselineSessions} baseline sessions; ${counts.deletedSessions} new sessions deleted`,
+      `E2E account ${command}: account preserved; ${counts.baselineSessions} baseline sessions; ${counts.deletedSessions} new sessions deleted; ${counts.baselineMeals} baseline meals; ${counts.deletedMeals} new meals deleted`,
     )
   } catch (error) {
     console.error(error instanceof Error ? error.message : "E2E account cleanup failed")

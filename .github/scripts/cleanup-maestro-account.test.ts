@@ -20,8 +20,25 @@ function addSession(id: string, userId = "dedicated-user") {
   ).run(id, `secret-session-token-${id}`, userId)
 }
 
+function addMeal(id: string, userId = "dedicated-user") {
+  db.query(
+    'INSERT INTO "meal_logs" ("id", "userId", "targetDate", "mealType", "loggedAt", "createdAt") VALUES (?, ?, ?, ?, 1, 1)',
+  ).run(id, userId, "2026-11-09", "lunch")
+  db.query(
+    'INSERT INTO "meal_items" ("id", "mealLogId", "foodName", "estimatedWeightG", "caloriesKcal", "proteinG", "carbsG", "fatG", "createdAt") VALUES (?, ?, ?, 100, 100, 1, 1, 1, 1)',
+  ).run(`item-${id}`, id, `Food ${id}`)
+}
+
 function retainedIds() {
   return db.query('SELECT "id" FROM "session" ORDER BY "id"').all()
+}
+
+function retainedMealIds() {
+  return db.query('SELECT "id" FROM "meal_logs" ORDER BY "id"').all()
+}
+
+function retainedItems() {
+  return db.query('SELECT "id", "mealLogId" FROM "meal_items" ORDER BY "id"').all()
 }
 
 beforeEach(() => {
@@ -45,8 +62,7 @@ beforeEach(() => {
       'INSERT INTO "user" ("id", "email", "password", "createdAt", "updatedAt") VALUES (?, ?, ?, 1, 1)',
     ).run(id, address, "existing-password-hash")
   }
-  db.exec(`INSERT INTO "meal_logs" ("id", "userId", "targetDate", "mealType", "loggedAt", "createdAt")
-    VALUES ('existing-meal', 'dedicated-user', '2026-11-09', 'lunch', 1, 1)`)
+  addMeal("existing-meal")
   addSession("existing-session")
   addSession("other-session", "other-user")
   requests = []
@@ -84,21 +100,26 @@ function options() {
   }
 }
 
-test("cleanup preserves baseline sessions, other users, account and data across repeated runs", async () => {
+test("cleanup preserves baseline data and removes only a passing run's session and meal", async () => {
   const opts = options()
   const accountsBefore = db.query('SELECT * FROM "user" ORDER BY "id"').all()
-  const mealsBefore = db.query('SELECT * FROM "meal_logs"').all()
+  const mealsBefore = db
+    .query('SELECT * FROM "meal_logs" WHERE "userId" = ? ORDER BY "id"')
+    .all("dedicated-user")
   expect(await runAccountCommand("snapshot", opts)).toEqual({
     baselineSessions: 1,
     deletedSessions: 0,
+    baselineMeals: 1,
+    deletedMeals: 0,
   })
   const state = fs.readFileSync(opts.statePath, "utf8")
   expect(JSON.parse(state)).toEqual({
-    version: 1,
+    version: 2,
     cloudflareAccountId,
     databaseId,
     userId: "dedicated-user",
     sessionIds: ["existing-session"],
+    mealIds: ["existing-meal"],
   })
   for (const secret of [email, token, "existing-password-hash", "secret-session-token"]) {
     expect(state).not.toContain(secret)
@@ -108,37 +129,66 @@ test("cleanup preserves baseline sessions, other users, account and data across 
   // Cross the D1 100-parameter ceiling and include SQL-looking IDs to prove binding.
   for (let i = 0; i < 205; i++) addSession(`new-${i}' OR 1=1 --`)
   addSession("other-new-session", "other-user")
+  addMeal("run-meal-0' OR 1=1 --")
+  for (let i = 1; i < 205; i++) addMeal(`run-meal-${i}' OR 1=1 --`)
+  addMeal("other-new-meal", "other-user")
   expect(await runAccountCommand("cleanup", opts)).toEqual({
     baselineSessions: 1,
     deletedSessions: 205,
+    baselineMeals: 1,
+    deletedMeals: 205,
   })
   expect(retainedIds()).toEqual([
     { id: "existing-session" },
     { id: "other-new-session" },
     { id: "other-session" },
   ])
+  expect(retainedMealIds()).toEqual([{ id: "existing-meal" }, { id: "other-new-meal" }])
+  expect(retainedItems()).toEqual([
+    { id: "item-existing-meal", mealLogId: "existing-meal" },
+    { id: "item-other-new-meal", mealLogId: "other-new-meal" },
+  ])
   expect(db.query('SELECT * FROM "user" ORDER BY "id"').all()).toEqual(accountsBefore)
-  expect(db.query('SELECT * FROM "meal_logs"').all()).toEqual(mealsBefore)
-  const deletes = requests.filter(({ sql }) => sql.startsWith("DELETE"))
-  expect(deletes).toHaveLength(3)
-  expect(deletes.every(({ params }) => params.length <= 100)).toBe(true)
   expect(
-    deletes.every(({ sql, params }) => !sql.includes("new-") && params[0] === "dedicated-user"),
+    db.query('SELECT * FROM "meal_logs" WHERE "userId" = ? ORDER BY "id"').all("dedicated-user"),
+  ).toEqual(mealsBefore)
+  const deletes = requests.filter(({ sql }) => sql.startsWith("DELETE"))
+  expect(deletes).toHaveLength(9)
+  expect(deletes.every(({ params }) => params.length <= 100)).toBe(true)
+  expect(deletes.every(({ sql }) => !sql.includes("new-") && !sql.includes("run-meal-"))).toBe(true)
+  expect(
+    deletes
+      .filter(({ sql }) => sql.includes('"session"') || sql.includes('"meal_logs"'))
+      .every(({ params }) => params[0] === "dedicated-user"),
   ).toBe(true)
   expect(await runAccountCommand("cleanup", opts)).toEqual({
     baselineSessions: 1,
     deletedSessions: 0,
+    baselineMeals: 1,
+    deletedMeals: 0,
   })
   expect(fs.readFileSync(opts.statePath, "utf8")).toBe(state)
 })
 
-test("an empty baseline removes only newly created sessions", async () => {
+test("an empty baseline removes only a failed run's session and leaves meals alone", async () => {
   const opts = options()
   db.exec('DELETE FROM "session" WHERE "userId" = \'dedicated-user\'')
-  await runAccountCommand("snapshot", opts)
+  expect(await runAccountCommand("snapshot", opts)).toEqual({
+    baselineSessions: 0,
+    deletedSessions: 0,
+    baselineMeals: 1,
+    deletedMeals: 0,
+  })
   addSession("new-session")
-  expect((await runAccountCommand("cleanup", opts)).deletedSessions).toBe(1)
+  expect(await runAccountCommand("cleanup", opts)).toEqual({
+    baselineSessions: 0,
+    deletedSessions: 1,
+    baselineMeals: 1,
+    deletedMeals: 0,
+  })
   expect(retainedIds()).toEqual([{ id: "other-session" }])
+  expect(retainedMealIds()).toEqual([{ id: "existing-meal" }])
+  expect(retainedItems()).toEqual([{ id: "item-existing-meal", mealLogId: "existing-meal" }])
   expect(db.query('SELECT "id" FROM "user" WHERE "email" = ?').get(email)).toEqual({
     id: "dedicated-user",
   })
@@ -156,6 +206,26 @@ test.each([undefined, "not-json", "{}"])(
     expect(retainedIds()).toEqual(before)
   },
 )
+
+test("an older snapshot without meal IDs fails before API access", async () => {
+  const opts = options()
+  fs.writeFileSync(
+    opts.statePath,
+    JSON.stringify({
+      version: 1,
+      cloudflareAccountId,
+      databaseId,
+      userId: "dedicated-user",
+      sessionIds: ["existing-session"],
+    }),
+  )
+  addSession("new-session")
+  addMeal("new-meal")
+  await expect(runAccountCommand("cleanup", opts)).rejects.toThrow(/snapshot/)
+  expect(requests).toHaveLength(0)
+  expect(retainedIds()).toContainEqual({ id: "new-session" })
+  expect(retainedMealIds()).toContainEqual({ id: "new-meal" })
+})
 
 test("a snapshot cannot be overwritten by a later baseline", async () => {
   const opts = options()
@@ -248,6 +318,7 @@ test("failed cleanup keeps its original baseline and can safely resume", async (
   await runAccountCommand("snapshot", opts)
   const state = fs.readFileSync(opts.statePath, "utf8")
   addSession("new-session")
+  addMeal("new-meal")
   const query = opts.query
   opts.query = (sql, params) => {
     if (sql.startsWith("DELETE")) return Promise.reject(new Error("D1 deletion failed"))
@@ -255,9 +326,15 @@ test("failed cleanup keeps its original baseline and can safely resume", async (
   }
   await expect(runAccountCommand("cleanup", opts)).rejects.toThrow("D1 deletion failed")
   expect(retainedIds()).toContainEqual({ id: "new-session" })
+  expect(retainedMealIds()).toContainEqual({ id: "new-meal" })
   expect(fs.readFileSync(opts.statePath, "utf8")).toBe(state)
   opts.query = query
-  expect((await runAccountCommand("cleanup", opts)).deletedSessions).toBe(1)
+  expect(await runAccountCommand("cleanup", opts)).toMatchObject({
+    deletedSessions: 1,
+    deletedMeals: 1,
+  })
+  expect(retainedMealIds()).toEqual([{ id: "existing-meal" }])
+  expect(retainedItems()).toEqual([{ id: "item-existing-meal", mealLogId: "existing-meal" }])
 })
 
 test("cleanup resumes after one delete chunk succeeds and the next fails", async () => {
