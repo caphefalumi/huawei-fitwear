@@ -11,9 +11,7 @@ test("throwIfRefetchFailed rejects failed React Query refetch results", () => {
 })
 
 test("refetchThrowing propagates failed refetches to retry handlers", async () => {
-  const refetch = jest
-    .fn()
-    .mockResolvedValue(refetchResult(true, new Error("still failing")))
+  const refetch = jest.fn().mockResolvedValue(refetchResult(true, new Error("still failing")))
   await expect(refetchThrowing(refetch)).rejects.toThrow("still failing")
 })
 
