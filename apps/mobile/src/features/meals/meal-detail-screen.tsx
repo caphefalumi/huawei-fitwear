@@ -5,6 +5,7 @@ import { FetchErrorState, LoadingSkeleton } from "@/components/fetch-states"
 import { Pressable } from "@/components/pressable"
 import { useAuth } from "@/features/auth"
 import { apiErrorMessage } from "@/lib/api"
+import { refetchThrowing } from "@/lib/query-retry"
 import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
@@ -51,7 +52,9 @@ export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: ()
             }
             message={error}
             retrySuccessMessage="Meal loaded."
-            onRetry={() => detailQuery.refetch()}
+            onRetry={async () => {
+              await refetchThrowing(() => detailQuery.refetch())
+            }}
             retrying={detailQuery.isFetching}
             onBack={onBack}
           />

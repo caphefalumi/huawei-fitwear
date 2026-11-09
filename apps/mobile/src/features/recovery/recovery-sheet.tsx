@@ -82,10 +82,7 @@ export function RecoverySheet({
       if (active.current) onClose()
     } catch (cause) {
       Sentry.captureException(cause)
-      if (active.current)
-        setError(
-          apiErrorMessage(cause, "your recovery plan", "save"),
-        )
+      if (active.current) setError(apiErrorMessage(cause, "your recovery plan", "save"))
     } finally {
       busy.current = false
       if (active.current) setPending(false)

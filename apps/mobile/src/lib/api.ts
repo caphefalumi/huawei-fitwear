@@ -117,10 +117,7 @@ const PASSWORD_RESET_FALLBACK: Record<PasswordResetPhase, string> = {
   complete: "Could not reset your password. Try again.",
 }
 
-export function userFacingPasswordResetError(
-  error: unknown,
-  phase: PasswordResetPhase,
-): string {
+export function userFacingPasswordResetError(error: unknown, phase: PasswordResetPhase): string {
   if (!(error instanceof ApiError)) {
     return PASSWORD_RESET_FALLBACK[phase]
   }

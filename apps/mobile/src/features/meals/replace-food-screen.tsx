@@ -62,8 +62,7 @@ export function ReplaceFoodScreen() {
       if (active.current) router.back()
     } catch (cause) {
       Sentry.captureException(cause)
-      if (active.current)
-        setError(apiErrorMessage(cause, "this food", "save"))
+      if (active.current) setError(apiErrorMessage(cause, "this food", "save"))
     } finally {
       if (active.current) setSaving(false)
     }

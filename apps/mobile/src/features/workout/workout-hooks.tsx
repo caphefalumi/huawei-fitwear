@@ -3,6 +3,7 @@ import { createContext, useContext, type ReactNode } from "react"
 
 import { useAuth } from "@/features/auth"
 import { apiErrorMessage } from "@/lib/api"
+import { refetchAllThrowing } from "@/lib/query-retry"
 
 import {
   fetchExerciseCatalog,
@@ -170,7 +171,7 @@ function useWorkoutState(): WorkoutState {
     },
   })
   const refresh = async () => {
-    await Promise.all([catalogQuery.refetch(), historyQuery.refetch()])
+    await refetchAllThrowing(catalogQuery.refetch, historyQuery.refetch)
   }
   const loadMore = async () => {
     if (historyQuery.hasNextPage) await historyQuery.fetchNextPage()

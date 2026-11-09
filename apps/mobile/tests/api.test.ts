@@ -83,12 +83,12 @@ test("userFacingSessionError never surfaces private session API text", () => {
 })
 
 test("userFacingPasswordResetError never surfaces private reset API text", () => {
-  expect(
-    userFacingPasswordResetError(new ApiError("otp hash mismatch", 400), "verify"),
-  ).toBe("This reset code is invalid or expired.")
-  expect(
-    userFacingPasswordResetError(new ApiError("token uuid leaked", 400), "complete"),
-  ).toBe("This reset token is invalid or expired. Request a new code.")
+  expect(userFacingPasswordResetError(new ApiError("otp hash mismatch", 400), "verify")).toBe(
+    "This reset code is invalid or expired.",
+  )
+  expect(userFacingPasswordResetError(new ApiError("token uuid leaked", 400), "complete")).toBe(
+    "This reset token is invalid or expired. Request a new code.",
+  )
   expect(userFacingPasswordResetError(new Error("Reset failed"), "complete")).toBe(
     "Could not reset your password. Try again.",
   )
