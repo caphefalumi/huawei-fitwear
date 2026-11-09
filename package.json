@@ -40,8 +40,8 @@
     "@xmldom/xmldom": "^0.9.12",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
-    "oxfmt": "^0.76.0",
-    "oxlint": "^1.91.0"
+    "oxfmt": "^0.77.0",
+    "oxlint": "^1.92.0"
   },
   "overrides": {
     "flow-parser": "0.338.0"
