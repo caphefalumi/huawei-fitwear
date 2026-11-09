@@ -86,11 +86,14 @@ tags:
     element: "Year"
     direction: UP
 - tapOn: "Day"
-- eraseText: 2
+- eraseText: 10
 - inputText: "31"
 - tapOn: "Month"
-- eraseText: 2
+- eraseText: 10
 - inputText: "02"
+- tapOn: "Year"
+- eraseText: 10
+- inputText: "1998"
 - hideKeyboard
 - scrollUntilVisible:
     element:
@@ -98,6 +101,10 @@ tags:
     direction: DOWN
 - tapOn:
     id: "sign-up-submit"
+- scrollUntilVisible:
+    element: "Enter a valid date of birth."
+    direction: UP
+    timeout: 10000
 - assertVisible: "Enter a valid date of birth."
 - scrollUntilVisible:
     element: "Year"
@@ -118,6 +125,10 @@ tags:
     direction: DOWN
 - tapOn:
     id: "sign-up-submit"
+- scrollUntilVisible:
+    element: "Date of birth can't be in the future."
+    direction: UP
+    timeout: 10000
 - assertVisible: "Date of birth can't be in the future."
 - scrollUntilVisible:
     element: "Year"
