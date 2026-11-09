@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
-import { AREA_JOINTS, PERIOD_AREA, useActiveInjuries } from "@/features/recovery"
+import { affects, injuryTitle, useActiveInjuries } from "@/features/recovery"
 import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
@@ -100,9 +100,7 @@ export function ExerciseGuideScreen() {
           cues: exercise.cues,
         }
       : GUIDES["bench-press"])
-  const injury = useActiveInjuries().find(
-    (active) => active.area === PERIOD_AREA || exercise?.joints.includes(AREA_JOINTS[active.area]),
-  )
+  const injury = useActiveInjuries().find((active) => !exercise || affects(active.area, exercise))
   const [load, setLoad] = useState(guide.load)
 
   function adjust(direction: -1 | 1) {
@@ -181,8 +179,7 @@ export function ExerciseGuideScreen() {
         <View style={styles.warning}>
           <Image source={icons.shieldCheck} style={styles.warningIcon} contentFit="contain" />
           <Text style={styles.warningText}>
-            {injury.area === PERIOD_AREA ? "Period recovery is on" : `${injury.area} is recovering`}
-            . Review only; stop if you feel pain.
+            {injuryTitle([injury])}: review only, stop if you feel pain.
           </Text>
         </View>
       ) : null}

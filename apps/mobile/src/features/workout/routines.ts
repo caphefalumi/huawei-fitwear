@@ -1,11 +1,12 @@
 import { dateKey } from "@/features/health"
 import {
-  AREA_JOINTS,
+  affects,
   isActive,
+  isWholeBody,
   PERIOD_AREA,
-  periodPhase,
+  phaseOn,
+  UNWELL_AREA,
   type Injury,
-  type Joint,
 } from "@/features/recovery"
 
 import { CATALOG, type CatalogExercise, type MuscleGroup } from "./catalog"
@@ -139,20 +140,17 @@ function sessionFor(
   today: string,
   allLight: boolean,
 ) {
-  const active = input.injuries.filter((injury) => isActive(injury, today))
-  const jointsFor = (mode: Injury["mode"]) =>
-    active.flatMap((injury): Joint[] =>
-      injury.area !== PERIOD_AREA && injury.mode === mode ? [AREA_JOINTS[injury.area]] : [],
-    )
-  const excluded = jointsFor("exclude")
-  const light = jointsFor("light")
+  const inPhase = (phase: "exclude" | "light") =>
+    input.injuries.filter((injury) => !isWholeBody(injury.area) && phaseOn(injury, today) === phase)
+  const excluded = inPhase("exclude")
+  const light = inPhase("light")
   const setsFor = (exercise: CatalogExercise) =>
-    allLight || exercise.joints.some((joint) => light.includes(joint)) ? 2 : 3
+    allLight || light.some((injury) => affects(injury.area, exercise)) ? 2 : 3
 
   const pool = CATALOG.filter(
     (exercise) =>
       IN_DAY[kind](exercise.muscles[0]) &&
-      !exercise.joints.some((joint) => excluded.includes(joint)),
+      !excluded.some((injury) => affects(injury.area, exercise)),
   )
   const rank = (exercise: CatalogExercise) =>
     (input.likes.includes(exercise.key) ? 0 : 2) + (exercise.compound ? 0 : 1)
@@ -191,14 +189,16 @@ const mondayIndex = (date: Date) => (date.getDay() + 6) % 7
 /** The routine on a calendar day, or the rest day when nothing is scheduled. */
 export function routineOn(date: Date, input: PlanInput): Routine {
   const today = dateKey(date)
-  const period = input.injuries.map((injury) => periodPhase(injury, today)).find(Boolean)
-  if (period === "rest") return REST_DAY
+  const wholeBody = (area: Injury["area"]) =>
+    input.injuries.find((injury) => injury.area === area && isActive(injury, today))
+  const period = wholeBody(PERIOD_AREA)
+  if (period && phaseOn(period, today) === "exclude") return REST_DAY
   const schedule = WEEK[Math.min(Math.max(input.sessions ?? 3, 1), 7)]
   const slot = schedule.findIndex(([weekday]) => weekday === mondayIndex(date))
   if (slot < 0) return REST_DAY
   const kind = schedule[slot][1]
   const variant = schedule.slice(0, slot).filter(([, other]) => other === kind).length
-  return sessionFor(kind, variant, input, today, period === "light")
+  return sessionFor(kind, variant, input, today, !!period || !!wholeBody(UNWELL_AREA))
 }
 
 export function routinesFor(input: PlanInput, date = new Date()): RoutinePair {

@@ -1,4 +1,4 @@
-import { createInjury, PERIOD_AREA, type Injury } from "@/features/recovery"
+import { createInjury, PERIOD_AREA, UNWELL_AREA, type Injury } from "@/features/recovery"
 import { CATALOG, REST_DAY, routineOn, routinesFor, type PlanInput } from "@/features/workout"
 
 // 2026-11-09 is a Monday.
@@ -15,9 +15,10 @@ const base: PlanInput = {
 const keys = (input: PlanInput, date = monday) => routineOn(date, input).exercises.map((e) => e.key)
 const joints = (key: string) => CATALOG.find((exercise) => exercise.key === key)?.joints ?? []
 const injury = (patch: Partial<Injury>): Injury => ({
-  ...createInjury("Knee", "2026-11-09"),
+  ...createInjury("Knee", "Mild", "2026-11-09"),
   ...patch,
 })
+const excluded = { excludeDays: 7, lightDays: 0 }
 
 test("spreads three full-body sessions over Monday, Wednesday and Friday", () => {
   const names = [0, 1, 2, 3, 4, 5, 6].map((offset) => routineOn(day(offset), base).name)
@@ -55,7 +56,7 @@ test("fits fewer exercises into shorter sessions", () => {
 })
 
 test("removes every exercise that loads an excluded joint", () => {
-  const picked = keys({ ...base, injuries: [injury({ mode: "exclude" })] })
+  const picked = keys({ ...base, injuries: [injury(excluded)] })
   expect(picked.length).toBeGreaterThan(0)
   expect(picked.some((key) => joints(key).includes("knee"))).toBe(false)
 })
@@ -69,14 +70,14 @@ test("drops to two sets only on exercises that load a light joint", () => {
 })
 
 test("ignores injuries outside their dates and keeps permanent ones", () => {
-  const ended = injury({ mode: "exclude", startDate: "2026-10-01", endDate: "2026-10-08" })
+  const ended = injury({ ...excluded, startDate: "2026-10-01" })
   expect(keys({ ...base, injuries: [ended] })).toEqual(keys(base))
-  const permanent = injury({ mode: "exclude", startDate: "2026-01-01", endDate: null })
+  const permanent = injury({ ...excluded, startDate: "2026-01-01", permanent: "exclude" })
   expect(keys({ ...base, injuries: [permanent] })).not.toEqual(keys(base))
 })
 
 test("rests four period days, then trains light for three", () => {
-  const period = createInjury(PERIOD_AREA, "2026-11-09")
+  const period = createInjury(PERIOD_AREA, "Mild", "2026-11-09")
   const input = { ...base, sessions: 7, injuries: [period] }
   expect([0, 1, 2, 3].map((offset) => routineOn(day(offset), input))).toEqual([
     REST_DAY,
@@ -104,6 +105,22 @@ test("keeps a disliked exercise when its group has nothing else", () => {
   const coreKeys = CATALOG.filter((exercise) => exercise.group === "Core").map((e) => e.key)
   const picked = keys({ ...base, minutes: 90, dislikes: coreKeys })
   expect(picked.some((key) => coreKeys.includes(key))).toBe(true)
+})
+
+test("excludes first, then trains light, as recovery moves on", () => {
+  const knee = injury({ excludeDays: 2, lightDays: 7 })
+  const input = { ...base, injuries: [knee] }
+  expect(keys(input).some((key) => joints(key).includes("knee"))).toBe(false)
+  const later = routineOn(day(2), input).exercises
+  const kneeSets = later.filter((e) => joints(e.key).includes("knee")).map((e) => e.prescription)
+  expect(kneeSets.length).toBeGreaterThan(0)
+  expect(kneeSets.every((sets) => sets.startsWith("2x"))).toBe(true)
+})
+
+test("trains every exercise light while feeling unwell", () => {
+  const unwell = createInjury(UNWELL_AREA, "Mild", "2026-11-09")
+  const routine = routineOn(monday, { ...base, injuries: [unwell] })
+  expect(routine.exercises.every((exercise) => exercise.prescription.startsWith("2x"))).toBe(true)
 })
 
 test("finds the next training day and names active injuries", () => {

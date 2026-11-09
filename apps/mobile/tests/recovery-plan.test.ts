@@ -1,10 +1,12 @@
 import {
+  affects,
   createInjury,
   injuryEffect,
   injuryTitle,
   isActive,
   PERIOD_AREA,
-  periodPhase,
+  phaseOn,
+  UNWELL_AREA,
   useInjuries,
 } from "@/features/recovery"
 
@@ -16,41 +18,64 @@ jest.mock("@/features/auth/auth-hooks", () => ({ useAuth: jest.fn() }))
 
 beforeEach(() => useInjuries.setState({ injuries: [] }))
 
-test("new injuries start light for seven days", () => {
-  expect(createInjury("Knee", "2026-11-08")).toEqual({
+const start = "2026-11-08"
+
+test("severity sets the exclude and light phases", () => {
+  expect(createInjury("Knee", "Mild", start)).toEqual({
     area: "Knee",
-    mode: "light",
-    startDate: "2026-11-08",
-    endDate: "2026-11-14",
+    startDate: start,
+    excludeDays: 0,
+    lightDays: 7,
+    permanent: null,
   })
+  expect(createInjury("Knee", "Moderate", start)).toMatchObject({ excludeDays: 3, lightDays: 7 })
+  expect(createInjury("Knee", "Severe", start)).toMatchObject({ excludeDays: 7, lightDays: 14 })
 })
 
-test("an injury is active from its start through its end date, or forever without one", () => {
-  const knee = createInjury("Knee", "2026-11-08")
-  expect(isActive(knee, "2026-11-07")).toBe(false)
-  expect(isActive(knee, "2026-11-14")).toBe(true)
-  expect(isActive(knee, "2026-11-15")).toBe(false)
-  expect(isActive({ ...knee, endDate: null }, "2030-01-01")).toBe(true)
+test("recovery runs exclude, then light, then back to normal", () => {
+  const knee = createInjury("Knee", "Moderate", start)
+  expect(phaseOn(knee, "2026-11-07")).toBeNull()
+  expect(phaseOn(knee, "2026-11-10")).toBe("exclude")
+  expect(phaseOn(knee, "2026-11-11")).toBe("light")
+  expect(phaseOn(knee, "2026-11-17")).toBe("light")
+  expect(isActive(knee, "2026-11-18")).toBe(false)
+  expect(phaseOn({ ...knee, permanent: "light" }, "2030-01-01")).toBe("light")
+  expect(phaseOn({ ...knee, permanent: "exclude" }, "2030-01-01")).toBe("exclude")
 })
 
-test("period recovery rests four days, then trains light for three", () => {
-  const period = createInjury(PERIOD_AREA, "2026-11-08")
-  expect(period.endDate).toBe("2026-11-14")
-  expect(periodPhase(period, "2026-11-11")).toBe("rest")
-  expect(periodPhase(period, "2026-11-12")).toBe("light")
-  expect(periodPhase(period, "2026-11-14")).toBe("light")
-  expect(periodPhase(period, "2026-11-15")).toBeNull()
+test("period rests four days then trains light for three; unwell is light for three", () => {
+  const period = createInjury(PERIOD_AREA, "Mild", start)
+  expect(phaseOn(period, "2026-11-11")).toBe("exclude")
+  expect(phaseOn(period, "2026-11-12")).toBe("light")
+  expect(isActive(period, "2026-11-15")).toBe(false)
+  expect(createInjury(UNWELL_AREA, "Severe", start)).toMatchObject({ excludeDays: 0, lightDays: 3 })
 })
 
-test("describes each injury by what changes in the plan", () => {
-  const shoulder = createInjury("Shoulder")
-  expect(injuryEffect(shoulder)).toBe("Shoulder exercises: 3 → 2 sets")
-  expect(injuryEffect({ ...shoulder, mode: "exclude" })).toBe(
-    "Shoulder exercises are removed from your plan",
+test("areas match exercises by joint or muscle tag", () => {
+  const curl = { joints: ["hip", "knee"], muscles: ["hamstrings"] }
+  expect(affects("Hamstring", curl)).toBe(true)
+  expect(affects("Knee", curl)).toBe(true)
+  expect(affects("Calf", curl)).toBe(false)
+  expect(affects(UNWELL_AREA, curl)).toBe(true)
+})
+
+test("describes what changes in the plan today", () => {
+  const knee = createInjury("Knee", "Moderate", start)
+  expect(injuryEffect(knee, start)).toBe(
+    "Knee exercises are removed from your plan until Nov 10, then 3 → 2 sets until Nov 17",
   )
-  expect(injuryEffect(createInjury(PERIOD_AREA))).toBe("Rest 4 days, then light 3 days")
-  expect(injuryTitle([shoulder])).toBe("Shoulder recovery")
-  expect(injuryTitle([shoulder, createInjury("Knee")])).toBe("2 injuries")
+  expect(injuryEffect(knee, "2026-11-12")).toBe("Knee exercises: 3 → 2 sets until Nov 17")
+  expect(injuryEffect({ ...knee, permanent: "exclude" }, start)).toBe(
+    "Knee exercises are removed from your plan",
+  )
+  expect(injuryEffect(createInjury(PERIOD_AREA, "Mild", start), start)).toBe(
+    "Rest until Nov 11, then 3 → 2 sets until Nov 14",
+  )
+  expect(injuryEffect(createInjury(UNWELL_AREA, "Mild", start), start)).toBe(
+    "All exercises: 3 → 2 sets until Nov 10",
+  )
+  expect(injuryTitle([knee])).toBe("Knee recovery")
+  expect(injuryTitle([knee, createInjury("Calf")])).toBe("2 injuries")
 })
 
 test("adds each area once and removes it again", () => {

@@ -1,15 +1,20 @@
 export {
-  AREA_JOINTS,
-  INJURY_AREAS,
+  AREA_GROUPS,
   PERIOD_AREA,
+  SEVERITIES,
+  UNWELL_AREA,
   addDays,
+  affects,
   createInjury,
   daysBetween,
   injuryEffect,
   injuryTitle,
   isActive,
-  periodPhase,
+  isWholeBody,
+  phaseEnd,
+  phaseOn,
+  shortDate,
   useActiveInjuries,
   useInjuries,
 } from "./injuries"
-export type { Injury, InjuryArea, InjuryMode, Joint } from "./injuries"
+export type { BodyArea, Injury, InjuryArea, Joint, Phase, Severity } from "./injuries"

@@ -52,35 +52,44 @@ test("likes, dislikes and resets exercises with undo", async () => {
   expect(router.push).toHaveBeenCalledWith("/exercise-guide?name=bench-press")
 })
 
-test("adds an injury, switches it to exclude and saves", async () => {
+test("adds a moderate knee injury and saves only after a change", async () => {
   const screen = await render(<InjuriesScreen />)
-  expect(screen.getByText("No injuries")).toBeTruthy()
+  expect(screen.getByText("Got a sore spot? Add it and we'll go easier on that area.")).toBeTruthy()
+  expect(screen.getByRole("button", { name: "Save" })).toBeDisabled()
 
   await fireEvent.press(screen.getByText("+ Add injury"))
+  expect(screen.getByText("NOT AN INJURY")).toBeTruthy()
   await fireEvent.press(screen.getByLabelText("Knee"))
-  expect(screen.getByText("Knee exercises: 3 → 2 sets")).toBeTruthy()
-  expect(screen.getByText(/Until .* \((7 days)\)/)).toBeTruthy()
+  await fireEvent.press(screen.getByRole("radio", { name: /Moderate/ }))
+  await fireEvent.press(screen.getByText("Add"))
+  expect(
+    screen.getByText(/^Knee exercises are removed from your plan until .*, then 3 → 2 sets/),
+  ).toBeTruthy()
+  expect(screen.getByLabelText(/^Exclude, Until/)).toBeTruthy()
 
-  await fireEvent.press(screen.getByRole("radio", { name: "Exclude" }))
-  expect(screen.getByText("Knee exercises are removed from your plan")).toBeTruthy()
-
-  await fireEvent.press(screen.getByText("Save"))
+  await fireEvent.press(screen.getByRole("button", { name: "Save" }))
   expect(useInjuries.getState().injuries).toEqual([
-    expect.objectContaining({ area: "Knee", mode: "exclude", startDate: dateKey() }),
+    expect.objectContaining({ area: "Knee", excludeDays: 3, lightDays: 7, startDate: dateKey() }),
   ])
   expect(router.back).toHaveBeenCalled()
 })
 
-test("makes an injury permanent from the calendar sheet", async () => {
+test("skips the exclude phase and makes light permanent", async () => {
   useInjuries.setState({
-    injuries: [{ area: "Shoulder", mode: "light", startDate: dateKey(), endDate: null }],
+    injuries: [
+      { area: "Shoulder", startDate: dateKey(), excludeDays: 3, lightDays: 7, permanent: null },
+    ],
   })
   const screen = await render(<InjuriesScreen />)
-  expect(screen.getByText("Permanent")).toBeTruthy()
-  await fireEvent.press(screen.getByText("Change"))
-  expect(screen.getByText("Stays in your plan until you remove it.")).toBeTruthy()
-  await fireEvent(screen.getByLabelText("Permanent"), "valueChange", false)
-  expect(screen.getByText(/7 days\. Back to normal on/)).toBeTruthy()
+  await fireEvent.press(screen.getByLabelText(/^Exclude, Until/))
+  await fireEvent(screen.getByLabelText("Skip this phase"), "valueChange", true)
+  expect(screen.getByText("This phase is skipped.")).toBeTruthy()
   await fireEvent.press(screen.getByText("OK"))
-  expect(screen.getByText(/Until .* \(7 days\)/)).toBeTruthy()
+  expect(screen.getByText(/^Shoulder exercises: 3 → 2 sets until/)).toBeTruthy()
+
+  await fireEvent.press(screen.getByLabelText(/^Light, Until/))
+  await fireEvent(screen.getByLabelText("Permanent"), "valueChange", true)
+  await fireEvent.press(screen.getByText("OK"))
+  expect(screen.getByText("Shoulder exercises: 3 → 2 sets")).toBeTruthy()
+  expect(screen.getByLabelText("Light, Permanent")).toBeTruthy()
 })

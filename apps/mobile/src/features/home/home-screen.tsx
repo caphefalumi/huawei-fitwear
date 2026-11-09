@@ -184,7 +184,9 @@ export function HomeScreen() {
           <Image source={icons.shieldCheck} style={styles.recoveryIcon} contentFit="contain" />
           <View style={styles.recoveryText}>
             <Text style={styles.recoveryTitle}>{injuryTitle(injuries)}</Text>
-            <Text style={styles.recoverySub}>{injuries.map(injuryEffect).join("\n")}</Text>
+            <Text style={styles.recoverySub}>
+              {injuries.map((injury) => injuryEffect(injury)).join("\n")}
+            </Text>
           </View>
           <Image source={icons.chevronRight} style={styles.recoveryChevron} contentFit="contain" />
         </Pressable>

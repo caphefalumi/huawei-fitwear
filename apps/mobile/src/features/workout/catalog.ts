@@ -300,7 +300,16 @@ export const CATALOG: CatalogExercise[] = [
     equipment: "barbell",
     compound: true,
     muscles: ["quads", "glutes", "hamstrings", "abs", "erectors"],
-    joints: ["knee", "hip", "ankle", "lumbar spine", "shoulder", "elbow", "wrist"],
+    joints: [
+      "cervical spine",
+      "knee",
+      "hip",
+      "ankle",
+      "lumbar spine",
+      "shoulder",
+      "elbow",
+      "wrist",
+    ],
     reps: 10,
     unit: "reps",
     cues: [
@@ -442,7 +451,7 @@ export const CATALOG: CatalogExercise[] = [
     equipment: "dumbbell",
     compound: true,
     muscles: ["front delt", "side delt", "triceps"],
-    joints: ["shoulder", "elbow", "wrist"],
+    joints: ["cervical spine", "shoulder", "elbow", "wrist"],
     reps: 10,
     unit: "reps",
     cues: [
@@ -463,7 +472,7 @@ export const CATALOG: CatalogExercise[] = [
     equipment: "machine",
     compound: true,
     muscles: ["front delt", "side delt", "triceps"],
-    joints: ["shoulder", "elbow", "wrist"],
+    joints: ["cervical spine", "shoulder", "elbow", "wrist"],
     reps: 12,
     unit: "reps",
     cues: [
@@ -665,7 +674,7 @@ export const CATALOG: CatalogExercise[] = [
     equipment: "cable",
     compound: false,
     muscles: ["abs"],
-    joints: ["lumbar spine"],
+    joints: ["cervical spine", "lumbar spine"],
     reps: 12,
     unit: "reps",
     cues: [
@@ -728,7 +737,7 @@ export const CATALOG: CatalogExercise[] = [
     equipment: "bodyweight",
     compound: false,
     muscles: ["abs", "hip flexors"],
-    joints: ["shoulder", "elbow", "wrist", "hip", "lumbar spine"],
+    joints: ["cervical spine", "shoulder", "elbow", "wrist", "hip", "lumbar spine"],
     reps: 10,
     unit: "reps",
     cues: [

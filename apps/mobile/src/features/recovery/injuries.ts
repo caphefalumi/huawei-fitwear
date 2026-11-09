@@ -2,34 +2,80 @@ import { create } from "zustand"
 
 import { dateKey } from "@/features/health"
 
-export type Joint = "shoulder" | "elbow" | "wrist" | "lumbar spine" | "hip" | "knee" | "ankle"
+export type Joint =
+  | "cervical spine"
+  | "shoulder"
+  | "elbow"
+  | "wrist"
+  | "lumbar spine"
+  | "hip"
+  | "knee"
+  | "ankle"
 
 export const PERIOD_AREA = "In period"
-/** Areas map 1:1 to exercise joint tags; the planner treats left and right the same. */
-export const AREA_JOINTS = {
-  Shoulder: "shoulder",
-  Elbow: "elbow",
-  Wrist: "wrist",
-  "Lower back": "lumbar spine",
-  Hip: "hip",
-  Knee: "knee",
-  Ankle: "ankle",
-} as const satisfies Record<string, Joint>
-export type InjuryArea = keyof typeof AREA_JOINTS | typeof PERIOD_AREA
-export const INJURY_AREAS = [...Object.keys(AREA_JOINTS), PERIOD_AREA] as InjuryArea[]
+export const UNWELL_AREA = "Feeling unwell"
 
-export type InjuryMode = "light" | "exclude"
-/** `endDate` is the last adjusted day, inclusive; `null` means permanent. */
+/** Which exercise tags each body area matches; left and right are treated the same. */
+const AREA_TAGS = {
+  Neck: { joints: ["cervical spine"] },
+  Shoulder: { joints: ["shoulder"] },
+  Elbow: { joints: ["elbow"] },
+  Wrist: { joints: ["wrist"] },
+  "Lower back": { joints: ["lumbar spine"] },
+  Hip: { joints: ["hip"] },
+  Hamstring: { muscles: ["hamstrings"] },
+  Knee: { joints: ["knee"] },
+  Calf: { muscles: ["calves"] },
+  Ankle: { joints: ["ankle"] },
+} as const satisfies Record<string, { joints?: Joint[]; muscles?: string[] }>
+
+export type BodyArea = keyof typeof AREA_TAGS
+export type InjuryArea = BodyArea | typeof PERIOD_AREA | typeof UNWELL_AREA
+
+export const AREA_GROUPS: { title: string; areas: InjuryArea[] }[] = [
+  { title: "Upper", areas: ["Neck", "Shoulder", "Elbow", "Wrist"] },
+  { title: "Lower", areas: ["Lower back", "Hip", "Hamstring", "Knee", "Calf", "Ankle"] },
+  { title: "Not an injury", areas: [PERIOD_AREA, UNWELL_AREA] },
+]
+
+/** Period and feeling unwell change the whole session, not one area. */
+export const isWholeBody = (area: InjuryArea): area is typeof PERIOD_AREA | typeof UNWELL_AREA =>
+  area === PERIOD_AREA || area === UNWELL_AREA
+
+/** Whether an injury in `area` affects an exercise with these tags. */
+export function affects(area: InjuryArea, exercise: { joints: string[]; muscles: string[] }) {
+  if (isWholeBody(area)) return true
+  const tags: { joints?: readonly string[]; muscles?: readonly string[] } = AREA_TAGS[area]
+  return (
+    !!tags.joints?.some((joint) => exercise.joints.includes(joint)) ||
+    !!tags.muscles?.some((muscle) => exercise.muscles.includes(muscle))
+  )
+}
+
+export type Phase = "exclude" | "light"
+
+/**
+ * Recovery runs Exclude for `excludeDays`, then Light for `lightDays`, then back to normal.
+ * For period recovery the Exclude phase means a rest day. `permanent` keeps one phase forever.
+ */
 export type Injury = {
   area: InjuryArea
-  mode: InjuryMode
   startDate: string
-  endDate: string | null
+  excludeDays: number
+  lightDays: number
+  permanent: Phase | null
 }
+
+export const SEVERITIES = {
+  Mild: { excludeDays: 0, lightDays: 7 },
+  Moderate: { excludeDays: 3, lightDays: 7 },
+  Severe: { excludeDays: 7, lightDays: 14 },
+} as const
+export type Severity = keyof typeof SEVERITIES
 
 export const PERIOD_REST_DAYS = 4
 export const PERIOD_LIGHT_DAYS = 3
-const DEFAULT_DAYS = 7
+const UNWELL_LIGHT_DAYS = 3
 
 export function addDays(key: string, days: number) {
   const date = new Date(`${key}T12:00:00`)
@@ -42,32 +88,62 @@ export function daysBetween(from: string, to: string) {
   return Math.round((new Date(`${to}T12:00:00`).getTime() - start) / 86400000)
 }
 
-export function createInjury(area: InjuryArea, today = dateKey()): Injury {
-  const days = area === PERIOD_AREA ? PERIOD_REST_DAYS + PERIOD_LIGHT_DAYS : DEFAULT_DAYS
-  return { area, mode: "light", startDate: today, endDate: addDays(today, days - 1) }
+export const shortDate = (key: string) =>
+  new Date(`${key}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+
+export function createInjury(
+  area: InjuryArea,
+  severity: Severity = "Mild",
+  today = dateKey(),
+): Injury {
+  const days =
+    area === PERIOD_AREA
+      ? { excludeDays: PERIOD_REST_DAYS, lightDays: PERIOD_LIGHT_DAYS }
+      : area === UNWELL_AREA
+        ? { excludeDays: 0, lightDays: UNWELL_LIGHT_DAYS }
+        : SEVERITIES[severity]
+  return { area, startDate: today, ...days, permanent: null }
 }
 
-export const isActive = (injury: Injury, today = dateKey()) =>
-  injury.startDate <= today && (injury.endDate === null || today <= injury.endDate)
-
-/** Period recovery rests for the first days, then trains light. */
-export function periodPhase(injury: Injury, today = dateKey()): "rest" | "light" | null {
-  if (injury.area !== PERIOD_AREA || !isActive(injury, today)) return null
-  return daysBetween(injury.startDate, today) < PERIOD_REST_DAYS ? "rest" : "light"
+/** The phase on `today`, or null before the start and after recovery ends. */
+export function phaseOn(injury: Injury, today = dateKey()): Phase | null {
+  const day = daysBetween(injury.startDate, today)
+  if (day < 0) return null
+  if (day < injury.excludeDays) return "exclude"
+  if (injury.permanent) return injury.permanent
+  return day < injury.excludeDays + injury.lightDays ? "light" : null
 }
+
+export const isActive = (injury: Injury, today = dateKey()) => phaseOn(injury, today) !== null
+
+/** Last day (inclusive) of a phase. */
+export const phaseEnd = (injury: Injury, phase: Phase) =>
+  addDays(
+    injury.startDate,
+    (phase === "exclude" ? injury.excludeDays : injury.excludeDays + injury.lightDays) - 1,
+  )
 
 export function injuryTitle(injuries: Injury[]) {
   if (injuries.length !== 1) return `${injuries.length} injuries`
-  return injuries[0].area === PERIOD_AREA ? "Period recovery" : `${injuries[0].area} recovery`
+  const { area } = injuries[0]
+  return area === PERIOD_AREA ? "Period recovery" : area === UNWELL_AREA ? area : `${area} recovery`
 }
 
-/** What changes in the user's plan, in their words. */
-export function injuryEffect(injury: Injury) {
-  if (injury.area === PERIOD_AREA)
-    return `Rest ${PERIOD_REST_DAYS} days, then light ${PERIOD_LIGHT_DAYS} days`
-  return injury.mode === "light"
-    ? `${injury.area} exercises: 3 → 2 sets`
-    : `${injury.area} exercises are removed from your plan`
+/** What changes in the user's plan today, in their words. */
+export function injuryEffect(injury: Injury, today = dateKey()) {
+  const phase = phaseOn(injury, today) ?? (injury.excludeDays ? "exclude" : "light")
+  const until = (end: Phase) =>
+    injury.permanent === end ? "" : ` until ${shortDate(phaseEnd(injury, end))}`
+  const subject = isWholeBody(injury.area) ? "All exercises" : `${injury.area} exercises`
+  const light = `${subject}: 3 → 2 sets${until("light")}`
+  if (phase === "light") return light
+  const removed =
+    injury.area === PERIOD_AREA
+      ? `Rest${until("exclude")}`
+      : `${subject} are removed from your plan${until("exclude")}`
+  return injury.permanent === "exclude" || !injury.lightDays
+    ? removed
+    : `${removed}, then 3 → 2 sets${until("light")}`
 }
 
 type InjuriesState = {

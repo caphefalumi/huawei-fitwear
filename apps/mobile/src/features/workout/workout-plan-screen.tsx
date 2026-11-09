@@ -125,7 +125,9 @@ export function WorkoutPlanScreen() {
             <Image source={icons.shieldCheck} style={styles.recoveryIcon} contentFit="contain" />
             <View style={styles.recoveryCopy}>
               <Text style={styles.recoveryTitle}>Recovery</Text>
-              <Text style={styles.recoverySub}>{injuries.map(injuryEffect).join("\n")}</Text>
+              <Text style={styles.recoverySub}>
+                {injuries.map((injury) => injuryEffect(injury)).join("\n")}
+              </Text>
             </View>
           </Pressable>
         </Animated.View>
