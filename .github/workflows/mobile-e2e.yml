@@ -12,6 +12,11 @@ on:
         required: false
         type: string
         default: ""
+      force_rebuild:
+        description: Bypass APK cache and build from source
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -75,32 +80,75 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Fingerprint Android APK build inputs
+        id: fingerprint
+        run: |
+          # Tracked mobile code and dependencies, excluding tests/docs.
+          # The staging API URL is bundled into the APK, so include it.
+          key="$({ git ls-files -s -z -- \
+            apps/mobile package.json bun.lock .github/workflows/mobile-e2e.yml \
+            ':(exclude)apps/mobile/tests/**' \
+            ':(exclude)apps/mobile/README.md'; \
+            printf '%s' "$EXPO_PUBLIC_API_URL"; } | sha256sum | cut -d' ' -f1)"
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+
+      - name: Restore APK with identical build inputs
+        id: apk-cache
+        if: inputs.force_rebuild != true
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          key: android-e2e-apk-v1-${{ runner.os }}-${{ steps.fingerprint.outputs.key }}
+
       - name: Setup Bun
+        if: steps.apk-cache.outputs.cache-hit != 'true'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: 1.4.4
 
       - name: Install workspace dependencies
+        if: steps.apk-cache.outputs.cache-hit != 'true'
         run: bun install --frozen-lockfile
 
       - name: Setup Java
+        if: steps.apk-cache.outputs.cache-hit != 'true'
         uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Generate Android project
+        if: steps.apk-cache.outputs.cache-hit != 'true'
         working-directory: apps/mobile
         run: bunx expo prebuild --platform android --no-install
 
       - name: Setup Gradle
+        if: steps.apk-cache.outputs.cache-hit != 'true'
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
 
       - name: Build Android release APK for emulator
+        if: steps.apk-cache.outputs.cache-hit != 'true'
         working-directory: apps/mobile/android
         env:
           SENTRY_DISABLE_AUTO_UPLOAD: "true"
         run: ./gradlew assembleRelease --no-daemon --build-cache -Pandroid.enableMinifyInReleaseBuilds=false -PreactNativeArchitectures=x86_64
+
+      - name: Save APK for future test-only changes
+        if: steps.apk-cache.outputs.cache-hit != 'true' && inputs.force_rebuild != true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          key: android-e2e-apk-v1-${{ runner.os }}-${{ steps.fingerprint.outputs.key }}
+
+      - name: Record Android build or reuse
+        env:
+          CACHE_HIT: ${{ steps.apk-cache.outputs.cache-hit }}
+        run: |
+          if [[ "$CACHE_HIT" == "true" ]]; then
+            echo "### Android APK: reused cache for identical build inputs" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Android APK: fresh build from source" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload APK from this commit
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
