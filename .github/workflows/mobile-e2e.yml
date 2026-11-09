@@ -162,7 +162,7 @@ jobs:
             sleep 5
             mkdir -p maestro-artifacts
             test -n "$MAESTRO_TEST_EMAIL" && test -n "$MAESTRO_TEST_PASSWORD"
-            set +e; maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts -e MAESTRO_TEST_EMAIL="$MAESTRO_TEST_EMAIL" -e MAESTRO_TEST_PASSWORD="$MAESTRO_TEST_PASSWORD" ${MAESTRO_INCLUDE_TAGS:+--include-tags "$MAESTRO_INCLUDE_TAGS"} apps/mobile/tests/e2e; status=$?; cleanup_status=0; printf 'MAESTRO_EXIT_CODE=%s\n' "$status" >> "$GITHUB_ENV" || cleanup_status=$?; adb shell am force-stop com.fitwear.mobile || cleanup_status=$?; adb shell pm clear com.fitwear.mobile || cleanup_status=$?; adb shell cmd connectivity airplane-mode disable || cleanup_status=$?; if [ "$status" -ne 0 ]; then exit "$status"; fi; exit "$cleanup_status"
+            set +e; maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts -e MAESTRO_TEST_EMAIL="$MAESTRO_TEST_EMAIL" -e MAESTRO_TEST_PASSWORD="$MAESTRO_TEST_PASSWORD" ${MAESTRO_INCLUDE_TAGS:+--include-tags "$MAESTRO_INCLUDE_TAGS"} apps/mobile/tests/e2e; status=$?; cleanup_status=0; printf 'MAESTRO_EXIT_CODE=%s\n' "$status" >> "$GITHUB_ENV" || cleanup_status=$?; adb shell am force-stop com.fitwear.mobile || cleanup_status=$?; adb shell pm clear com.fitwear.mobile || cleanup_status=$?; adb shell cmd connectivity airplane-mode disable || cleanup_status=$?; if [ "$status" -eq 0 ]; then exit "$cleanup_status"; fi; exit 0
 
       - name: Remove sessions created by Maestro
         if: ${{ always() && steps.snapshot-account.outcome == 'success' }}
@@ -198,3 +198,9 @@ jobs:
           ARTIFACTS_URL: ${{ steps.upload-artifacts.outputs.artifact-url }}
           MAESTRO_EXIT_CODE: ${{ env.MAESTRO_EXIT_CODE }}
         run: bun .github/scripts/generate-maestro-summary.ts
+
+      - name: Fail job when Maestro reported test failures
+        if: ${{ always() && env.MAESTRO_EXIT_CODE != '' && env.MAESTRO_EXIT_CODE != '0' }}
+        run: |
+          echo "::error title=Maestro E2E failed::Process exited with code ${MAESTRO_EXIT_CODE}. See the job summary and uploaded artifacts for flow results."
+          exit "${MAESTRO_EXIT_CODE}"

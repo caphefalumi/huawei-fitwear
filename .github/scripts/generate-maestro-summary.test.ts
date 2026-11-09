@@ -33,6 +33,23 @@ test("new flows are listed without known names or suite counters", () => {
   expect(markdown).not.toContain("fitness.yaml")
 })
 
+test("maestro exit code 1 still yields a full failed-flow summary", () => {
+  writeReport(`<testsuites><testsuite tests="2" failures="1">
+    <testcase name="fitness" time="10"/>
+    <testcase name="error-messages" file="error-messages.yaml" time="44" status="FAILURE">
+      <failure message="Assertion is false">Assertion is false: &quot;Enter your username.&quot; is visible</failure>
+    </testcase>
+    </testsuite></testsuites>`)
+  const { markdown, success } = generateSummary({ artifactsDir, exitCode: "1" })
+  expect(success).toBe(false)
+  expect(markdown).toContain("**Status:** Failed")
+  expect(markdown).toContain("2 total; 1 passed, 1 failed, 0 errors, 0 skipped")
+  expect(markdown).toContain("**Maestro exit code:** 1")
+  expect(markdown).toContain("One or more flows failed")
+  expect(markdown).toContain("error-messages: Failed")
+  expect(markdown).toContain("Enter your username.")
+})
+
 test("failure bodies, errors, and skips override a zero process exit", () => {
   writeReport(`<testsuites><testsuite tests="4" failures="1">
     <testcase name="ok"/>
