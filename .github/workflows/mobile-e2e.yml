@@ -45,6 +45,7 @@ jobs:
         uses: dorny/paths-filter@v4
         with:
           base: main
+          predicate-quantifier: some-with-excludes
           filters: |
             rebuild_apk:
               - 'apps/mobile/**'
@@ -59,14 +60,8 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           FORCE_REBUILD: ${{ inputs.force_rebuild }}
           FILTER_REBUILD: ${{ steps.filter.outputs.rebuild_apk }}
-        run: |
-          if [[ "$EVENT_NAME" == "schedule" || "$FORCE_REBUILD" == "true" || "$FILTER_REBUILD" == "true" ]]; then
-            echo "rebuild_apk=true" >> "$GITHUB_OUTPUT"
-            echo "A fresh Android release APK will be built."
-          else
-            echo "rebuild_apk=false" >> "$GITHUB_OUTPUT"
-            echo "Reusing the latest successful fitwear-release-apk from this branch, or main if needed."
-          fi
+          GH_TOKEN: ${{ github.token }}
+        run: bun .github/scripts/e2e-apk-plan.ts
 
   build:
     needs: prepare
@@ -192,7 +187,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Verify Maestro reporting and cleanup
-        run: bun test ./.github/scripts/generate-maestro-summary.test.ts ./.github/scripts/cleanup-maestro-account.test.ts
+        run: bun test ./.github/scripts/generate-maestro-summary.test.ts ./.github/scripts/cleanup-maestro-account.test.ts ./.github/scripts/e2e-apk-plan.test.ts
 
       - name: Download Android release APK
         uses: actions/download-artifact@v8
