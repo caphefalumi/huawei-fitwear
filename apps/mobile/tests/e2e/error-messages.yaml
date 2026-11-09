@@ -22,6 +22,20 @@ tags:
     visible: "Hi, welcome back."
     timeout: 20000
 
+# Empty-email reset validation stops before the request, so the dedicated
+# account is never emailed.
+- tapOn: "Forgot password?"
+- extendedWaitUntil:
+    visible: "Reset your password."
+    timeout: 10000
+- hideKeyboard
+- tapOn: "Send reset code"
+- assertVisible: "Enter your email address."
+- tapOn: "Back to log in"
+- extendedWaitUntil:
+    visible: "Hi, welcome back."
+    timeout: 10000
+
 # Sign-up client validation before credential login (submit stays enabled; errors from submit()).
 - tapOn: "Sign up"
 - extendedWaitUntil:
@@ -64,6 +78,58 @@ tags:
     id: "sign-up-password"
 - eraseText: 100
 - inputText: "password123"
+- hideKeyboard
+
+# Invalid and future birth dates are rejected before the terms check.
+- scrollUntilVisible:
+    element: "Year"
+    direction: UP
+- tapOn: "Day"
+- eraseText: 2
+- inputText: "31"
+- tapOn: "Month"
+- eraseText: 2
+- inputText: "02"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "sign-up-submit"
+    direction: DOWN
+- tapOn:
+    id: "sign-up-submit"
+- assertVisible: "Enter a valid date"
+- scrollUntilVisible:
+    element: "Year"
+    direction: UP
+- tapOn: "Day"
+- eraseText: 2
+- inputText: "01"
+- tapOn: "Month"
+- eraseText: 2
+- inputText: "01"
+- tapOn: "Year"
+- eraseText: 4
+- inputText: "2099"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "sign-up-submit"
+    direction: DOWN
+- tapOn:
+    id: "sign-up-submit"
+- assertVisible: "Date can't be in the future"
+- scrollUntilVisible:
+    element: "Year"
+    direction: UP
+- tapOn: "Day"
+- eraseText: 2
+- inputText: "12"
+- tapOn: "Month"
+- eraseText: 2
+- inputText: "03"
+- tapOn: "Year"
+- eraseText: 4
+- inputText: "1998"
 - hideKeyboard
 - scrollUntilVisible:
     element:
@@ -187,6 +253,92 @@ tags:
     timeout: 20000
 - tapOn: "Add item"
 - assertVisible: "Enter a name, positive amount and all nutrition values (zero is allowed)."
+
+# Offline meal save fails without losing the draft; retry persists it. The daily
+# kcal value is unique so the history assertion proves the retried write.
+- scrollUntilVisible:
+    element: "Food or drink name"
+    direction: UP
+- tapOn: "Food or drink name"
+- inputText: "E2E Offline Meal"
+- tapOn: "Amount, g"
+- inputText: "100"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Energy, kcal"
+    direction: DOWN
+- tapOn: "Energy, kcal"
+- inputText: "9876"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Protein, g"
+    direction: DOWN
+- tapOn: "Protein, g"
+- inputText: "1"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Carbs, g"
+    direction: DOWN
+- tapOn: "Carbs, g"
+- inputText: "1"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Fat, g"
+    direction: DOWN
+- tapOn: "Fat, g"
+- inputText: "1"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Add item"
+    direction: DOWN
+- tapOn: "Add item"
+- extendedWaitUntil:
+    visible: "Log Meal"
+    timeout: 20000
+- setAirplaneMode: enabled
+- tapOn: "Log Meal"
+- scrollUntilVisible:
+    element: "Could not save your meal"
+    direction: UP
+    timeout: 30000
+- assertVisible: "Could not connect to load that change. Check your connection and try again."
+- setAirplaneMode: disabled
+- tapOn: "Try again"
+- extendedWaitUntil:
+    notVisible: "Could not save your meal"
+    timeout: 30000
+# The error clears as soon as the retry starts; the draft only empties once the
+# save resolves, so wait for the cleared list before restarting the app.
+- scrollUntilVisible:
+    element: "No items yet.*"
+    direction: DOWN
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 30000
+- tapOn:
+    id: "tab-meals"
+- extendedWaitUntil:
+    visible: "Meals"
+    timeout: 20000
+# The first history fetch after a cold start can trail the emulator's radio
+# reconnect, so allow it longer than the default assertion timeout.
+- extendedWaitUntil:
+    visible: "9876 kcal"
+    timeout: 60000
+
+# Remove the logged meal so later flows still see the account's empty history.
+- tapOn: "9876 kcal"
+- extendedWaitUntil:
+    visible: "Back to Meal"
+    timeout: 10000
+- tapOn:
+    text: "Delete"
+    index: 0
+- extendedWaitUntil:
+    notVisible: "9876 kcal"
+    timeout: 30000
 
 - stopRecording
 - stopApp
