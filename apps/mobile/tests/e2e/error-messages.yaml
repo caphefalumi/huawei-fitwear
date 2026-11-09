@@ -85,10 +85,10 @@ tags:
     element: "Year"
     direction: UP
 - tapOn: "Day"
-- eraseText: 100
+- eraseText: 2
 - inputText: "31"
 - tapOn: "Month"
-- eraseText: 100
+- eraseText: 2
 - inputText: "02"
 - hideKeyboard
 - scrollUntilVisible:
@@ -102,13 +102,13 @@ tags:
     element: "Year"
     direction: UP
 - tapOn: "Day"
-- eraseText: 100
+- eraseText: 2
 - inputText: "01"
 - tapOn: "Month"
-- eraseText: 100
+- eraseText: 2
 - inputText: "01"
 - tapOn: "Year"
-- eraseText: 100
+- eraseText: 4
 - inputText: "2099"
 - hideKeyboard
 - scrollUntilVisible:
@@ -122,13 +122,13 @@ tags:
     element: "Year"
     direction: UP
 - tapOn: "Day"
-- eraseText: 100
+- eraseText: 2
 - inputText: "12"
 - tapOn: "Month"
-- eraseText: 100
+- eraseText: 2
 - inputText: "03"
 - tapOn: "Year"
-- eraseText: 100
+- eraseText: 4
 - inputText: "1998"
 - hideKeyboard
 - scrollUntilVisible:
