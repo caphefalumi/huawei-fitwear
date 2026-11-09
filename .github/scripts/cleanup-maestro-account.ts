@@ -213,11 +213,18 @@ if (import.meta.main) {
     const config = JSON.parse(
       fs.readFileSync(path.join(import.meta.dir, "../../apps/backend/wrangler.json"), "utf8"),
     )
-    const databaseId = config.d1_databases?.find(
+    const productionDatabaseId = config.d1_databases?.find(
       (binding: { binding: string }) => binding.binding === "DB",
     )?.database_id
-    if (typeof databaseId !== "string" || !databaseId) {
-      throw new Error("Backend Wrangler configuration has no DB database ID")
+    const databaseId = requiredEnv("E2E_D1_DATABASE_ID")
+    if (typeof productionDatabaseId !== "string" || !productionDatabaseId) {
+      throw new Error("Backend Wrangler configuration has no production DB database ID")
+    }
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(databaseId)) {
+      throw new Error("E2E_D1_DATABASE_ID must be a valid UUID")
+    }
+    if (databaseId.toLowerCase() === productionDatabaseId.toLowerCase()) {
+      throw new Error("Refusing to run account cleanup against the production D1 database")
     }
     const counts = await runAccountCommand(command, {
       email,
