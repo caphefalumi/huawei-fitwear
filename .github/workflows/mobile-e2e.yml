@@ -12,6 +12,11 @@ on:
         required: false
         type: string
         default: ""
+      provision_account:
+        description: One-time creation of the dedicated account in an empty staging user table
+        required: false
+        type: boolean
+        default: false
       force_rebuild:
         description: Bypass APK cache and build from source
         required: false
@@ -73,7 +78,7 @@ jobs:
         run: bun .github/scripts/check-empty-staging.ts
 
       - name: Install dependencies to initialize empty staging
-        if: steps.staging-database.outputs.empty == 'true'
+        if: steps.staging-database.outputs.empty == 'true' || inputs.provision_account == true
         run: bun install --frozen-lockfile
 
       - name: Apply migrations to empty staging database
@@ -82,6 +87,16 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: bun run --cwd apps/backend db:migrate:staging
+
+      - name: Provision dedicated account in empty staging
+        if: inputs.provision_account == true
+        env:
+          MAESTRO_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
+          MAESTRO_TEST_PASSWORD: ${{ secrets.MAESTRO_TEST_PASSWORD }}
+          E2E_D1_DATABASE_ID: ${{ secrets.E2E_D1_DATABASE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bun .github/scripts/provision-e2e-account.ts
 
       - name: Check staging account and schema before building
         env:
