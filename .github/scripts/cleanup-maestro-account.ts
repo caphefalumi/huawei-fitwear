@@ -188,6 +188,26 @@ export async function runAccountCommand(command: "snapshot" | "cleanup", options
   const createdMeals = (await mealIds(options.query, state.userId)).filter(
     (id) => !baselineMeals.has(id),
   )
+  // Report only the numeric value of the synthetic E2E meal before cleanup.
+  // This distinguishes input errors from history rendering or API errors.
+  if (createdMeals.length) {
+    try {
+      for (let offset = 0; offset < createdMeals.length; offset += 99) {
+        const chunk = createdMeals.slice(offset, offset + 99)
+        const { results } = await options.query(
+          `SELECT "caloriesKcal" FROM "meal_items" WHERE "foodName" = ? AND "mealLogId" IN (${chunk.map(() => "?").join(", ")})`,
+          ["E2E Offline Meal", ...chunk],
+        )
+        for (const row of results) {
+          if (typeof row.caloriesKcal === "number" && Number.isFinite(row.caloriesKcal)) {
+            console.log(`Synthetic E2E meal calories: ${row.caloriesKcal}`)
+          }
+        }
+      }
+    } catch {
+      console.log("Synthetic E2E meal diagnostics unavailable.")
+    }
+  }
   let deletedSessions = 0
   let deletedMeals = 0
   // D1 permits 100 bound parameters: one account ID plus at most 99 IDs.
