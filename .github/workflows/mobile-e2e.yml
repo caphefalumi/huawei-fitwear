@@ -149,6 +149,7 @@ jobs:
           else
             echo "### Android APK: fresh build from source" >> "$GITHUB_STEP_SUMMARY"
           fi
+
       - name: Upload APK from this commit
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
