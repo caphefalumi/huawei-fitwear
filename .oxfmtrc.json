@@ -7,6 +7,6 @@
     "apps/mobile/android/**",
     "apps/mobile/ios/**",
     "apps/watch/**",
-    "docs/**"
+    "**/docs/**"
   ]
 }

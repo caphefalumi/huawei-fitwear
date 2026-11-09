@@ -6,11 +6,11 @@ How the Fitwear mobile app is tested in GitHub Actions: unit checks on pull requ
 
 ## Workflow overview
 
-| Workflow | File | Triggers | Purpose |
-| --- | --- | --- | --- |
-| **Mobile CI** | `.github/workflows/mobile-ci.yml` | `pull_request` → `main`, merge group, `workflow_dispatch` | Typecheck + Jest when `apps/mobile/**` (or root lockfile) changes |
-| **Mobile Build** | `.github/workflows/mobile-build.yml` | `workflow_dispatch` | Optional debug APK (Windows) and/or iOS Simulator build (macOS) |
-| **Mobile E2E** | `.github/workflows/mobile-e2e.yml` | Cron + `workflow_dispatch` | Release APK + Android emulator + Maestro flows |
+| Workflow         | File                                 | Triggers                                                  | Purpose                                                           |
+| ---------------- | ------------------------------------ | --------------------------------------------------------- | ----------------------------------------------------------------- |
+| **Mobile CI**    | `.github/workflows/mobile-ci.yml`    | `pull_request` → `main`, merge group, `workflow_dispatch` | Typecheck + Jest when `apps/mobile/**` (or root lockfile) changes |
+| **Mobile Build** | `.github/workflows/mobile-build.yml` | `workflow_dispatch`                                       | Optional debug APK (Windows) and/or iOS Simulator build (macOS)   |
+| **Mobile E2E**   | `.github/workflows/mobile-e2e.yml`   | Cron + `workflow_dispatch`                                | Release APK + Android emulator + Maestro flows                    |
 
 Mobile CI does **not** run Maestro. E2E is nightly and manual only.
 
@@ -73,19 +73,19 @@ Not used by the E2E pipeline (E2E builds or reuses a **release** APK on Linux).
 
 ## Job 1: Decide APK source (`prepare`)
 
-1. **Checkout** — only when `github.event_name != 'schedule'` *(see [Known limitations](#known-limitations))*.
+1. **Checkout** — only when `github.event_name != 'schedule'` _(see [Known limitations](#known-limitations))_.
 2. **paths-filter** (non-schedule, `force_rebuild` false): diff vs `main` for app sources — `apps/mobile/**` excluding `apps/mobile/tests/**` and `apps/mobile/README.md`, plus `package.json` and `bun.lock`.
 3. **Plan APK build** — `bun .github/scripts/e2e-apk-plan.ts` → output `rebuild_apk`.
 
 ### APK plan logic (`e2e-apk-plan.ts`)
 
-| Condition | `rebuild_apk` |
-| --- | --- |
-| `schedule` event | `true` |
-| `force_rebuild` input | `true` |
-| `filter.rebuild_apk` on `main` branch | `true` |
-| App sources unchanged since last successful **`build`** job on branch (then `main`) | `false` |
-| No prior successful build to reuse | `true` |
+| Condition                                                                           | `rebuild_apk` |
+| ----------------------------------------------------------------------------------- | ------------- |
+| `schedule` event                                                                    | `true`        |
+| `force_rebuild` input                                                               | `true`        |
+| `filter.rebuild_apk` on `main` branch                                               | `true`        |
+| App sources unchanged since last successful **`build`** job on branch (then `main`) | `false`       |
+| No prior successful build to reuse                                                  | `true`        |
 
 Long-lived feature branches use git diff from the **last successful build SHA** on that branch (or `main`), not only paths-filter vs `main`, so flow-only changes can skip Gradle.
 
@@ -144,12 +144,12 @@ Requires secrets: `MAESTRO_TEST_EMAIL`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCO
 
 ### Reporting and failure semantics
 
-| Step | Role |
-| --- | --- |
-| **Record Maestro exit code** | `record-maestro-exit.ts` reads `maestro-exit-code.txt` → `steps.maestro.outputs.exit_code` and `MAESTRO_EXIT_CODE` |
-| **Upload recordings / artifacts** | MP4s and full `maestro-artifacts/` (attempt-suffixed names) |
-| **Generate Maestro E2E summary** | Parses JUnit → GitHub **job summary** (flow table, failure details, recording links) |
-| **Fail job when Maestro reported test failures** | `exit` with recorded code if non-zero |
+| Step                                             | Role                                                                                                               |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| **Record Maestro exit code**                     | `record-maestro-exit.ts` reads `maestro-exit-code.txt` → `steps.maestro.outputs.exit_code` and `MAESTRO_EXIT_CODE` |
+| **Upload recordings / artifacts**                | MP4s and full `maestro-artifacts/` (attempt-suffixed names)                                                        |
+| **Generate Maestro E2E summary**                 | Parses JUnit → GitHub **job summary** (flow table, failure details, recording links)                               |
+| **Fail job when Maestro reported test failures** | `exit` with recorded code if non-zero                                                                              |
 
 Summary generator always exits 0 so reporting does not mask a failed test step.
 
@@ -157,10 +157,10 @@ Summary generator always exits 0 so reporting does not mask a failed test step.
 
 ## Maestro flows (repository)
 
-| Flow | Path | Tags |
-| --- | --- | --- |
-| Error messages & validation | `apps/mobile/tests/e2e/error-messages.yaml` | `e2e`, `errors` |
-| Fitness / auth journey | `apps/mobile/tests/e2e/fitness.yaml` | `e2e`, `fitness` |
+| Flow                        | Path                                        | Tags             |
+| --------------------------- | ------------------------------------------- | ---------------- |
+| Error messages & validation | `apps/mobile/tests/e2e/error-messages.yaml` | `e2e`, `errors`  |
+| Fitness / auth journey      | `apps/mobile/tests/e2e/fitness.yaml`        | `e2e`, `fitness` |
 
 **App id:** `com.fitwear.mobile`.
 
@@ -196,24 +196,24 @@ Release APK for parity with CI: build with `EXPO_PUBLIC_API_URL` pointing at the
 
 ## GitHub secrets
 
-| Secret | Used for |
-| --- | --- |
-| `MAESTRO_TEST_EMAIL` | Login/sign-up flows; D1 snapshot/cleanup identity |
-| `MAESTRO_TEST_PASSWORD` | Maestro `-e` injection |
-| `CLOUDFLARE_API_TOKEN` | D1 HTTP API (cleanup) |
-| `CLOUDFLARE_ACCOUNT_ID` | D1 HTTP API (cleanup) |
-| `GITHUB_TOKEN` | Default; artifact download across runs (`actions: write`) |
+| Secret                  | Used for                                                  |
+| ----------------------- | --------------------------------------------------------- |
+| `MAESTRO_TEST_EMAIL`    | Login/sign-up flows; D1 snapshot/cleanup identity         |
+| `MAESTRO_TEST_PASSWORD` | Maestro `-e` injection                                    |
+| `CLOUDFLARE_API_TOKEN`  | D1 HTTP API (cleanup)                                     |
+| `CLOUDFLARE_ACCOUNT_ID` | D1 HTTP API (cleanup)                                     |
+| `GITHUB_TOKEN`          | Default; artifact download across runs (`actions: write`) |
 
 ---
 
 ## Helper scripts (`.github/scripts/`)
 
-| Script | Purpose |
-| --- | --- |
-| `e2e-apk-plan.ts` | Decide `rebuild_apk`; gh + git integration |
-| `record-maestro-exit.ts` | Bridge emulator runner → workflow outputs |
-| `generate-maestro-summary.ts` | JUnit → step summary markdown |
-| `cleanup-maestro-account.ts` | `snapshot` / `cleanup` for D1 hygiene |
+| Script                        | Purpose                                    |
+| ----------------------------- | ------------------------------------------ |
+| `e2e-apk-plan.ts`             | Decide `rebuild_apk`; gh + git integration |
+| `record-maestro-exit.ts`      | Bridge emulator runner → workflow outputs  |
+| `generate-maestro-summary.ts` | JUnit → step summary markdown              |
+| `cleanup-maestro-account.ts`  | `snapshot` / `cleanup` for D1 hygiene      |
 
 Each has a matching `*.test.ts` run in the E2E job before emulator work.
 
@@ -236,11 +236,11 @@ gh workflow run mobile-e2e.yml -f force_rebuild=true
 
 ## Artifacts
 
-| Name | Contents |
-| --- | --- |
-| `fitwear-release-apk` | `app-release.apk` (build or reused) |
+| Name                              | Contents                                 |
+| --------------------------------- | ---------------------------------------- |
+| `fitwear-release-apk`             | `app-release.apk` (build or reused)      |
 | `maestro-e2e-artifacts-<attempt>` | JUnit, logs, screenshots, exit code file |
-| `fitwear-e2e-recording-<attempt>` | Flow MP4s when recorded |
+| `fitwear-e2e-recording-<attempt>` | Flow MP4s when recorded                  |
 
 Job summary links to artifact URLs when upload steps succeed.
 
@@ -274,4 +274,4 @@ Merge gates depend on repository branch protection; E2E is not wired into `pull_
 - Operational detail and UX notes for flows: `apps/mobile/README.md` (E2E section).
 - Backend D1 binding: `apps/backend/wrangler.json` (`DB`).
 
-*Generated from repository state; workflow source of truth: `.github/workflows/mobile-e2e.yml`.*
+_Generated from repository state; workflow source of truth: `.github/workflows/mobile-e2e.yml`._
