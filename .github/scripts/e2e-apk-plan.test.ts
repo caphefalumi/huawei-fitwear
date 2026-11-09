@@ -50,6 +50,19 @@ test("reuses APK when app sources are unchanged since last build", () => {
   expect(decision.reason).toContain("def5678")
 })
 
+test("feature branches ignore main-based path filter and rely on last build sha", () => {
+  const decision = shouldRebuildApk({
+    ...deps,
+    eventName: "workflow_dispatch",
+    forceRebuild: false,
+    filterRebuild: true,
+    branch: "fix/e2e-apk-freshness",
+    headSha: "aaa",
+    hasAppChangesSince: () => false,
+  })
+  expect(decision.rebuild).toBe(false)
+})
+
 test("rebuilds when flows changed but app sources changed after the last APK build", () => {
   const decision = shouldRebuildApk({
     ...deps,

@@ -40,7 +40,8 @@ export function shouldRebuildApk(input: ApkPlanInput): { rebuild: boolean; reaso
   if (input.forceRebuild) {
     return { rebuild: true, reason: "force_rebuild was requested." }
   }
-  if (input.filterRebuild) {
+  // paths-filter is diff vs main; long-lived branches would always match app paths.
+  if (input.filterRebuild && input.branch === "main") {
     return { rebuild: true, reason: "App sources changed compared to main." }
   }
 
