@@ -269,6 +269,10 @@ tags:
     direction: DOWN
 - tapOn: "Energy, kcal"
 - inputText: "9876"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Protein, g"
+    direction: DOWN
 - tapOn: "Protein, g"
 - inputText: "1"
 - hideKeyboard
@@ -277,6 +281,10 @@ tags:
     direction: DOWN
 - tapOn: "Carbs, g"
 - inputText: "1"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Fat, g"
+    direction: DOWN
 - tapOn: "Fat, g"
 - inputText: "1"
 - hideKeyboard
@@ -299,9 +307,6 @@ tags:
 - extendedWaitUntil:
     notVisible: "Could not save your meal"
     timeout: 30000
-- scrollUntilVisible:
-    element: "No items yet.*"
-    direction: DOWN
 - stopApp
 - launchApp
 - extendedWaitUntil:
