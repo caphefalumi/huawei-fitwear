@@ -116,10 +116,30 @@ tags:
     direction: UP
     timeout: 10000
 - assertVisible: "Enter a valid date of birth."
+# Start with blank fields so auto-advance and text selection cannot retain a prior date.
+- stopApp
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Explore the app"
+    timeout: 30000
+- tapOn: "Sign in"
+- extendedWaitUntil:
+    visible: "Hi, welcome back."
+    timeout: 20000
+- tapOn: "Sign up"
+- extendedWaitUntil:
+    visible: "Create account"
+    timeout: 10000
+- tapOn: "Your username"
+- inputText: "E2E Member"
+- tapOn: "Your email"
+- inputText: "e2e.member@fitwear.dev"
+- hideKeyboard
 - scrollUntilVisible:
     element:
       id: "sign-up-dob-year"
-    direction: UP
+    direction: DOWN
 - tapOn:
     id: "sign-up-dob-year"
 - inputText: "2099"
@@ -132,6 +152,14 @@ tags:
 - hideKeyboard
 - scrollUntilVisible:
     element:
+      id: "sign-up-password"
+    direction: DOWN
+- tapOn:
+    id: "sign-up-password"
+- inputText: "password123"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
       id: "sign-up-submit"
     direction: DOWN
 - tapOn:
@@ -141,10 +169,30 @@ tags:
     direction: UP
     timeout: 10000
 - assertVisible: "Date of birth can't be in the future."
+# Start with blank fields so auto-advance and text selection cannot retain a prior date.
+- stopApp
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Explore the app"
+    timeout: 30000
+- tapOn: "Sign in"
+- extendedWaitUntil:
+    visible: "Hi, welcome back."
+    timeout: 20000
+- tapOn: "Sign up"
+- extendedWaitUntil:
+    visible: "Create account"
+    timeout: 10000
+- tapOn: "Your username"
+- inputText: "E2E Member"
+- tapOn: "Your email"
+- inputText: "e2e.member@fitwear.dev"
+- hideKeyboard
 - scrollUntilVisible:
     element:
       id: "sign-up-dob-year"
-    direction: UP
+    direction: DOWN
 - tapOn:
     id: "sign-up-dob-year"
 - inputText: "1998"
@@ -154,6 +202,14 @@ tags:
 - tapOn:
     id: "sign-up-dob-day"
 - inputText: "12"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "sign-up-password"
+    direction: DOWN
+- tapOn:
+    id: "sign-up-password"
+- inputText: "password123"
 - hideKeyboard
 - scrollUntilVisible:
     element:
