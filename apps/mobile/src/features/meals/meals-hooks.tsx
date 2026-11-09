@@ -279,6 +279,8 @@ export function MealsProvider({ children }: { children: ReactNode }) {
   }
   const writeMutation = useMutation({
     mutationKey: [...mealsQueryKeys.all(userId ?? "signed-out"), "write"],
+    // Interactive saves must report offline failures, not queue until reconnect.
+    networkMode: "always",
     mutationFn: (input: WriteMutationInput) => writeMeal(input),
     onMutate: async ({ path, method, body }) => {
       if (!userId) return undefined

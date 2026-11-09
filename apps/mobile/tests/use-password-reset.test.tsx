@@ -47,6 +47,20 @@ test("password reset cooldown blocks resend and releases it after expiry", async
   expect(mockAuth.requestPasswordReset).toHaveBeenCalledTimes(2)
 })
 
+test("an empty reset email is rejected before sending a reset request", async () => {
+  const { result } = await renderHook(() =>
+    usePasswordReset({ email: "", onStart: jest.fn(), onCompleted: jest.fn() }),
+  )
+  await waitFor(() => expect(result.current).not.toBeNull())
+
+  await act(async () => result.current!.start())
+  await act(async () => result.current!.submit())
+
+  expect(result.current!.error).toBe("Enter your email address.")
+  expect(result.current!.step).toBe("email")
+  expect(mockAuth.requestPasswordReset).not.toHaveBeenCalled()
+})
+
 test("failed completion preserves the reset password; success invokes completion only once", async () => {
   const onCompleted = jest.fn()
   const { result } = await renderHook(() =>
