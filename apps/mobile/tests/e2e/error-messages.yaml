@@ -97,7 +97,7 @@ tags:
     direction: DOWN
 - tapOn:
     id: "sign-up-submit"
-- assertVisible: "Enter a valid date"
+- assertVisible: "Enter a valid date of birth."
 - scrollUntilVisible:
     element: "Year"
     direction: UP
@@ -117,7 +117,7 @@ tags:
     direction: DOWN
 - tapOn:
     id: "sign-up-submit"
-- assertVisible: "Date can't be in the future"
+- assertVisible: "Date of birth can't be in the future."
 - scrollUntilVisible:
     element: "Year"
     direction: UP

@@ -13,6 +13,7 @@ import {
   useHealth,
   type RecoveryPlan,
 } from "@/features/health"
+import { apiErrorMessage } from "@/lib/api"
 import { Palette as C } from "@/theme"
 
 const icons = {
@@ -81,10 +82,7 @@ export function RecoverySheet({
       if (active.current) onClose()
     } catch (cause) {
       Sentry.captureException(cause)
-      if (active.current)
-        setError(
-          `${cause instanceof Error ? cause.message : "Could not save recovery."} Please try again.`,
-        )
+      if (active.current) setError(apiErrorMessage(cause, "your recovery plan", "save"))
     } finally {
       busy.current = false
       if (active.current) setPending(false)

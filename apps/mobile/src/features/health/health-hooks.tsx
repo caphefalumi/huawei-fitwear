@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useState, type ReactNode } from
 
 import { useAuth } from "@/features/auth"
 import { apiErrorMessage } from "@/lib/api"
+import { refetchAllThrowing } from "@/lib/query-retry"
 
 import { fetchRecovery, fetchWeights, putRecovery, putWeight, type RecoveryRow } from "./health-api"
 
@@ -174,7 +175,7 @@ export function HealthProvider({ children }: { children: ReactNode }) {
   const { refetch: refetchWeights } = weightsQuery
   const { refetch: refetchRecovery } = recoveryQuery
   const refresh = useCallback(async () => {
-    await Promise.all([refetchWeights(), refetchRecovery()])
+    await refetchAllThrowing(refetchWeights, refetchRecovery)
   }, [refetchWeights, refetchRecovery])
   const saveWeight = async (weightKg: number) => {
     await saveWeightMutation.mutateAsync(weightKg)

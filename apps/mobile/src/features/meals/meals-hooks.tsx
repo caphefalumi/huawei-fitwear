@@ -12,6 +12,7 @@ import { AppState } from "react-native"
 
 import { useAuth } from "@/features/auth"
 import { apiErrorMessage } from "@/lib/api"
+import { refetchAllThrowing } from "@/lib/query-retry"
 
 import { useMealClientStore } from "./meal-client.store"
 import {
@@ -258,7 +259,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
   const { refetch: refetchHistory } = historyQuery
   const { refetch: refetchSummary } = summaryQuery
   const refresh = useCallback(async () => {
-    await Promise.all([refetchHistory(), refetchSummary()])
+    await refetchAllThrowing(refetchHistory, refetchSummary)
   }, [refetchHistory, refetchSummary])
   const invalidateMeals = async (_result: unknown, variables: { path: string; method: string }) => {
     if (!userId) return
@@ -316,7 +317,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
   const error = [historyQuery.error, summaryQuery.error].find((cause) => cause instanceof Error)
   const errorMessage = error ? apiErrorMessage(error, "your meals") : null
   const actionError = writeMutation.error
-    ? apiErrorMessage(writeMutation.error, "that change")
+    ? apiErrorMessage(writeMutation.error, "that change", "save")
     : null
   const retryAction = async () => {
     if (writeMutation.variables) await writeMutation.mutateAsync(writeMutation.variables)

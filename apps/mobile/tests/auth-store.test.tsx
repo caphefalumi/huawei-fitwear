@@ -132,7 +132,9 @@ test("failed login stays signed out and surfaces server error", async () => {
     })
   })
   expect(result.current.user).toBeNull()
-  expect(result.current.error).toBe("Invalid email or password")
+  expect(result.current.error).toBe(
+    "We could not sign you in. Check your email and password and try again.",
+  )
   expect(saved.setToken).not.toHaveBeenCalled()
 })
 

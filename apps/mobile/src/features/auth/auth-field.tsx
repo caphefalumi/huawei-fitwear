@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
   type TextInputInstance,
   type TextInputProps,
@@ -89,14 +90,17 @@ export function AuthField({
   error = false,
   inputRef,
   errorMessage,
+  errorHintId,
   colors = defaultColors,
   style,
   ...inputProps
-}: AuthFieldProps) {
+}: AuthFieldProps & { errorHintId?: string }) {
   const reducedMotion = useReducedMotion()
+  const { fontScale } = useWindowDimensions()
   const [passwordVisible, setPasswordVisible] = useState(false)
   const [focused, setFocused] = useState(false)
   const disabled = inputProps.editable === false
+  const showMessage = error && errorMessage ? errorMessage : helper
   return (
     <View style={[styles.field, disabled && { opacity: 0.38 }]}>
       <Text style={[styles.label, { color: colors.textMuted }]}>{label}</Text>
@@ -105,7 +109,7 @@ export function AuthField({
           styles.box,
           {
             backgroundColor: colors.surface,
-            borderWidth: !disabled && (error || focused) ? 2 : 1,
+            borderWidth: !disabled && error ? 2 : !disabled && focused ? 2 : 1,
             borderColor: disabled
               ? colors.border
               : error
@@ -167,7 +171,23 @@ export function AuthField({
           <Image source={icon} style={styles.icon} contentFit="contain" accessible={false} />
         ) : null}
       </Animated.View>
-      {helper ? <Text style={[styles.helper, { color: colors.textMuted }]}>{helper}</Text> : null}
+      {(helper || errorMessage) && (
+        <View style={{ minHeight: Math.ceil(16 * fontScale) + 4 }}>
+          {showMessage ? (
+            <Text
+              nativeID={error && errorMessage ? errorHintId : undefined}
+              accessibilityRole={error && errorMessage ? "alert" : undefined}
+              accessibilityLiveRegion={error && errorMessage ? "polite" : undefined}
+              style={[
+                styles.helper,
+                { color: error && errorMessage ? colors.error : colors.textMuted },
+              ]}
+            >
+              {showMessage}
+            </Text>
+          ) : null}
+        </View>
+      )}
     </View>
   )
 }

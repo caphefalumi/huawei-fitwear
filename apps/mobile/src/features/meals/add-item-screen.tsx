@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, SectionHeading } from "@/components/ui"
+import { apiErrorMessage } from "@/lib/api"
 import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
@@ -103,7 +104,7 @@ export function AddItemScreen() {
       if (active.current) router.back()
     } catch (cause) {
       Sentry.captureException(cause)
-      if (active.current) setError(cause instanceof Error ? cause.message : "Could not add item.")
+      if (active.current) setError(apiErrorMessage(cause, "this item", "save"))
     } finally {
       if (active.current) setSaving(false)
     }

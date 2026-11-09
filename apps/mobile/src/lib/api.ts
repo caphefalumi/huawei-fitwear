@@ -20,17 +20,28 @@ export class ApiError extends Error {
   }
 }
 
-export function apiErrorMessage(error: unknown, subject = "your data"): string {
+export type ApiErrorIntent = "load" | "save"
+
+export function apiErrorMessage(
+  error: unknown,
+  subject = "your data",
+  intent: ApiErrorIntent = "load",
+): string {
+  const saveSubject = subject === "your data" || subject === "that change" ? "your change" : subject
   if (!(error instanceof ApiError)) {
-    return subject === "that change"
-      ? "Could not save your change. Try again."
+    return intent === "save"
+      ? `Could not save ${saveSubject}. Try again.`
       : `Could not load ${subject}. Try again.`
   }
   if (error.status === 0 && error.code === "TIMEOUT") {
-    return `Loading ${subject} took too long. Try again.`
+    return intent === "save"
+      ? `Saving ${saveSubject} took too long. Your entries are still here. Try again.`
+      : `Loading ${subject} took too long. Try again.`
   }
   if (error.status === 0 || error.code === "NETWORK_ERROR") {
-    return `Could not connect to load ${subject}. Check your connection and try again.`
+    return intent === "save"
+      ? `Could not connect to save ${saveSubject}. Check your connection and try again. Your entries are still here.`
+      : `Could not connect to load ${subject}. Check your connection and try again.`
   }
   if (error.status === 401) return "Your session expired. Sign in again."
   if (error.status === 403) return "You don't have access to this information."
@@ -40,7 +51,113 @@ export function apiErrorMessage(error: unknown, subject = "your data"): string {
     return "Some information needs attention. Check the fields and try again."
   }
   if (error.status >= 500) return "Something went wrong on our end. Try again."
-  return `Could not load ${subject}. Try again.`
+  return intent === "save"
+    ? `Could not save ${saveSubject}. Try again.`
+    : `Could not load ${subject}. Try again.`
+}
+
+const AUTH_ERROR_FALLBACK = "Something went wrong. Try again."
+
+/** Owned copy for auth flows — never surface raw API `message` values. */
+const AUTH_ERRORS_BY_CODE: Record<string, string> = {
+  INVALID_SESSION: "Could not complete sign-in. Try again.",
+  ACCOUNT_LOCKED: "Account locked. Reset your password to regain access.",
+  RATE_LIMITED: "Too many attempts. Reset your password or try again later.",
+  NETWORK_ERROR: "Can't connect. Check your connection and try again.",
+  TIMEOUT: "Can't connect. Check your connection and try again.",
+}
+
+const AUTH_ERRORS_BY_STATUS: Record<number, string> = {
+  400: "Check the information you entered and try again.",
+  401: "We could not sign you in. Check your email and password and try again.",
+  403: "You don't have access to this account.",
+  404: "We could not find an account with that information.",
+  409: "This email is already linked to an account. Sign in or use a different email.",
+  410: "Account deletion has completed. Create a new account to continue.",
+  422: "Some information needs attention. Check the fields and try again.",
+  429: "Too many requests. Wait a moment, then try again.",
+  503: "Sign-in is temporarily unavailable. Try again later.",
+}
+
+export function userFacingAuthError(error: unknown): string {
+  if (!(error instanceof ApiError)) {
+    return AUTH_ERROR_FALLBACK
+  }
+  const byCode = AUTH_ERRORS_BY_CODE[error.code]
+  if (byCode) return byCode
+  if (error.status >= 500) {
+    return "Something went wrong on our end. Try again."
+  }
+  const byStatus = AUTH_ERRORS_BY_STATUS[error.status]
+  if (byStatus) return byStatus
+  return AUTH_ERROR_FALLBACK
+}
+
+export function userFacingSessionError(error: unknown): string {
+  if (!(error instanceof ApiError)) {
+    return "Could not restore your session. Sign in again."
+  }
+  if (error.code === "NETWORK_ERROR" || error.code === "TIMEOUT") {
+    return "Could not restore your session. Sign in again when you're back online."
+  }
+  if (error.status === 401) {
+    return "Your session expired. Sign in again."
+  }
+  if (error.status >= 500) {
+    return "Something went wrong on our end. Sign in again."
+  }
+  return "Could not restore your session. Sign in again."
+}
+
+export type PasswordResetPhase = "request" | "verify" | "complete"
+
+const PASSWORD_RESET_FALLBACK: Record<PasswordResetPhase, string> = {
+  request: "Could not request a password reset. Try again.",
+  verify: "This reset code is invalid or expired.",
+  complete: "Could not reset your password. Try again.",
+}
+
+export function userFacingPasswordResetError(error: unknown, phase: PasswordResetPhase): string {
+  if (!(error instanceof ApiError)) {
+    return PASSWORD_RESET_FALLBACK[phase]
+  }
+  const byCode = AUTH_ERRORS_BY_CODE[error.code]
+  if (byCode) return byCode
+  if (error.status >= 500) {
+    return "Something went wrong on our end. Try again."
+  }
+  if (error.status === 429) {
+    return AUTH_ERRORS_BY_STATUS[429]
+  }
+  if (phase === "verify" && (error.status === 400 || error.status === 422)) {
+    return "This reset code is invalid or expired."
+  }
+  if (phase === "complete" && error.status === 400) {
+    return "This reset token is invalid or expired. Request a new code."
+  }
+  if (phase === "complete" && error.status === 422) {
+    return AUTH_ERRORS_BY_STATUS[422]
+  }
+  if (phase === "request" && error.status === 503) {
+    return "Password reset is temporarily unavailable. Try again later."
+  }
+  if (error.status === 400 || error.status === 422) {
+    return AUTH_ERRORS_BY_STATUS[error.status]
+  }
+  return PASSWORD_RESET_FALLBACK[phase]
+}
+
+export function userFacingAccountDeleteError(error: unknown): string {
+  if (!(error instanceof ApiError)) {
+    return "Could not delete your account. Try again."
+  }
+  if (error.code === "NETWORK_ERROR" || error.code === "TIMEOUT") {
+    return "Could not connect to delete your account. Check your connection and try again."
+  }
+  if (error.status >= 500) {
+    return "Something went wrong on our end. Try again."
+  }
+  return "Could not delete your account. Try again."
 }
 
 const REQUEST_TIMEOUT_MS = 12_000

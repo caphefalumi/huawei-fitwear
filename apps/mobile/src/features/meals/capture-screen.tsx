@@ -11,6 +11,7 @@ import { Pressable } from "@/components/pressable"
 import { Sheet } from "@/components/sheet"
 import { BackHeader, Button } from "@/components/ui"
 import { pickImage, validatePickedImage } from "@/features/camera"
+import { ApiError, apiErrorMessage } from "@/lib/api"
 import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
@@ -61,8 +62,13 @@ export function MealCaptureScreen() {
       if (picked && active.current) setImage(picked)
     } catch (cause) {
       Sentry.captureException(cause)
-      if (active.current)
-        setError(cause instanceof Error ? cause.message : "Could not open image picker.")
+      if (active.current) {
+        setError(
+          cause instanceof ApiError
+            ? apiErrorMessage(cause, "your photo library")
+            : "Could not open your photo library. Try again.",
+        )
+      }
     }
   }
   async function takePhoto() {
@@ -75,8 +81,15 @@ export function MealCaptureScreen() {
       if (active.current) setImage(validated)
     } catch (cause) {
       Sentry.captureException(cause)
-      if (active.current)
-        setError(cause instanceof Error ? cause.message : "Could not capture photo. Try again.")
+      if (active.current) {
+        setError(
+          cause instanceof ApiError
+            ? apiErrorMessage(cause, "the photo")
+            : cause instanceof Error
+              ? cause.message
+              : "Could not capture photo. Try again.",
+        )
+      }
     }
   }
   async function analyze() {
@@ -105,9 +118,11 @@ export function MealCaptureScreen() {
       Sentry.captureException(cause)
       if (active.current && current === request.current)
         setError(
-          cause instanceof Error
-            ? cause.message
-            : "Photo analysis is unavailable. You can enter nutrition manually.",
+          cause instanceof ApiError
+            ? apiErrorMessage(cause, "meal analysis")
+            : cause instanceof Error
+              ? cause.message
+              : "Photo analysis is unavailable. You can enter nutrition manually.",
         )
     }
   }
