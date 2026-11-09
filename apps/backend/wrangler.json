@@ -64,6 +64,57 @@
     "RESEND_PASSWORD_RESET_TEMPLATE_ID": "27bd1568-5767-48f6-945d-df68851bafc3"
   },
   "env": {
+    "production": {
+      "name": "fitwear-backend",
+      "workers_dev": true,
+      "preview_urls": false,
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "fitwear-d1",
+          "database_id": "e7f57e76-0a1b-4a58-a4ff-acaaeb10586f"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "fitwear_kv",
+          "id": "2127ca61a1d64d8e94029989785ad853"
+        }
+      ],
+      "ai": {
+        "binding": "AI"
+      },
+      "r2_buckets": [
+        {
+          "binding": "MEAL_IMAGES",
+          "bucket_name": "fitwear-meal-images"
+        }
+      ],
+      "queues": {
+        "producers": [
+          {
+            "binding": "EMAIL_QUEUE",
+            "queue": "fitwear-email"
+          }
+        ],
+        "consumers": [
+          {
+            "queue": "fitwear-email",
+            "max_batch_size": 10,
+            "max_batch_timeout": 5,
+            "max_retries": 5,
+            "retry_delay": 60,
+            "dead_letter_queue": "fitwear-email-dlq",
+            "max_concurrency": 1
+          }
+        ]
+      },
+      "vars": {
+        "RESEND_FROM": "VoocHealth <fitwear@tm-project.id.vn>",
+        "RESEND_WELCOME_TEMPLATE_ID": "b1323c4b-a7b4-4fae-9e70-a4894604ef3d",
+        "RESEND_PASSWORD_RESET_TEMPLATE_ID": "27bd1568-5767-48f6-945d-df68851bafc3"
+      }
+    },
     "staging": {
       "name": "fitwear-backend-staging",
       "workers_dev": true,
