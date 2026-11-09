@@ -251,7 +251,23 @@ jobs:
             sleep 5
             mkdir -p maestro-artifacts
             test -n "$MAESTRO_TEST_EMAIL" && test -n "$MAESTRO_TEST_PASSWORD"
-            set +e; maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts -e MAESTRO_TEST_EMAIL="$MAESTRO_TEST_EMAIL" -e MAESTRO_TEST_PASSWORD="$MAESTRO_TEST_PASSWORD" ${MAESTRO_INCLUDE_TAGS:+--include-tags "$MAESTRO_INCLUDE_TAGS"} apps/mobile/tests/e2e; status=$?; cleanup_status=0; printf 'MAESTRO_EXIT_CODE=%s\n' "$status" >> "$GITHUB_ENV" || cleanup_status=$?; adb shell am force-stop com.fitwear.mobile || cleanup_status=$?; adb shell pm clear com.fitwear.mobile || cleanup_status=$?; adb shell cmd connectivity airplane-mode disable || cleanup_status=$?; if [ "$status" -eq 0 ]; then exit "$cleanup_status"; fi; exit 0
+            set +e; maestro test --format junit --output maestro-artifacts/report.xml --test-output-dir maestro-artifacts -e MAESTRO_TEST_EMAIL="$MAESTRO_TEST_EMAIL" -e MAESTRO_TEST_PASSWORD="$MAESTRO_TEST_PASSWORD" ${MAESTRO_INCLUDE_TAGS:+--include-tags "$MAESTRO_INCLUDE_TAGS"} apps/mobile/tests/e2e; status=$?; cleanup_status=0; printf '%s\n' "$status" > maestro-artifacts/maestro-exit-code.txt; adb shell am force-stop com.fitwear.mobile || cleanup_status=$?; adb shell pm clear com.fitwear.mobile || cleanup_status=$?; adb shell cmd connectivity airplane-mode disable || cleanup_status=$?; if [ "$status" -eq 0 ]; then exit "$cleanup_status"; fi; exit 0
+
+      # android-emulator-runner does not propagate GITHUB_ENV to later job steps.
+      - name: Record Maestro exit code
+        id: maestro
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ ! -f maestro-artifacts/maestro-exit-code.txt ]; then
+            echo "exit_code=1" >> "$GITHUB_OUTPUT"
+            echo "MAESTRO_EXIT_CODE=1" >> "$GITHUB_ENV"
+            echo "::warning::Maestro exit code file missing; treating the run as failed."
+            exit 0
+          fi
+          code=$(tr -d '[:space:]' < maestro-artifacts/maestro-exit-code.txt)
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          echo "MAESTRO_EXIT_CODE=$code" >> "$GITHUB_ENV"
 
       - name: Remove sessions created by Maestro
         if: ${{ always() && steps.snapshot-account.outcome == 'success' }}
@@ -289,7 +305,7 @@ jobs:
         run: bun .github/scripts/generate-maestro-summary.ts
 
       - name: Fail job when Maestro reported test failures
-        if: ${{ always() && env.MAESTRO_EXIT_CODE != '' && env.MAESTRO_EXIT_CODE != '0' }}
+        if: ${{ always() && steps.maestro.outputs.exit_code != '' && steps.maestro.outputs.exit_code != '0' }}
         run: |
-          echo "::error title=Maestro E2E failed::Process exited with code ${MAESTRO_EXIT_CODE}. See the job summary and uploaded artifacts for flow results."
-          exit "${MAESTRO_EXIT_CODE}"
+          echo "::error title=Maestro E2E failed::Process exited with code ${{ steps.maestro.outputs.exit_code }}. See the job summary and uploaded artifacts for flow results."
+          exit "${{ steps.maestro.outputs.exit_code }}"

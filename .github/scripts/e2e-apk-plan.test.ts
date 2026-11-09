@@ -10,9 +10,25 @@ const deps = {
 }
 
 test("schedule and explicit force always rebuild", () => {
-  expect(shouldRebuildApk({ ...deps, eventName: "schedule", forceRebuild: false, filterRebuild: false, branch: "main", headSha: "aaa" }).rebuild).toBe(true)
   expect(
-    shouldRebuildApk({ ...deps, eventName: "workflow_dispatch", forceRebuild: true, filterRebuild: false, branch: "main", headSha: "aaa" }).rebuild,
+    shouldRebuildApk({
+      ...deps,
+      eventName: "schedule",
+      forceRebuild: false,
+      filterRebuild: false,
+      branch: "main",
+      headSha: "aaa",
+    }).rebuild,
+  ).toBe(true)
+  expect(
+    shouldRebuildApk({
+      ...deps,
+      eventName: "workflow_dispatch",
+      forceRebuild: true,
+      filterRebuild: false,
+      branch: "main",
+      headSha: "aaa",
+    }).rebuild,
   ).toBe(true)
 })
 

@@ -44,8 +44,7 @@ export function shouldRebuildApk(input: ApkPlanInput): { rebuild: boolean; reaso
     return { rebuild: true, reason: "App sources changed compared to main." }
   }
 
-  const branches =
-    input.branch === "main" ? ["main"] : [input.branch, "main"]
+  const branches = input.branch === "main" ? ["main"] : [input.branch, "main"]
   for (const branch of branches) {
     const buildSha = findLastApkBuildSha(branch, input)
     if (!buildSha) continue
@@ -103,7 +102,14 @@ function defaultRunHeadSha(runId: string) {
 }
 
 function defaultRunBuildConclusion(runId: string) {
-  return ghJson(["run", "view", runId, "--json=jobs", "--jq", '.jobs[] | select(.name=="build") | .conclusion'])
+  return ghJson([
+    "run",
+    "view",
+    runId,
+    "--json=jobs",
+    "--jq",
+    '.jobs[] | select(.name=="build") | .conclusion',
+  ])
 }
 
 if (import.meta.main) {
@@ -124,8 +130,7 @@ if (import.meta.main) {
 
   fs.appendFileSync(
     reasonPath,
-    `rebuild_apk=${decision.rebuild}\n` +
-      `plan_reason<<EOF\n${decision.reason}\nEOF\n`,
+    `rebuild_apk=${decision.rebuild}\n` + `plan_reason<<EOF\n${decision.reason}\nEOF\n`,
   )
   console.log(decision.reason)
 }
