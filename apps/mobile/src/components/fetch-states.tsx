@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native"
+import { AccessibilityInfo, ActivityIndicator, StyleSheet, Text, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
 import { Palette as C } from "@/theme"
@@ -40,27 +40,43 @@ export function FetchErrorState({
   onRetry,
   retrying = false,
   onBack,
+  retrySuccessMessage = "Updated successfully.",
+  onRetrySuccess,
 }: {
   title?: string
   message: string
   onRetry?: () => void | Promise<unknown>
   retrying?: boolean
   onBack?: () => void
+  retrySuccessMessage?: string
+  onRetrySuccess?: () => void
 }) {
   const [busy, setBusy] = useState(false)
+  const [recovered, setRecovered] = useState(false)
   const retryLock = useRef(false)
   const runRetry = async () => {
     if (!onRetry || retryLock.current || retrying) return
     retryLock.current = true
     setBusy(true)
+    setRecovered(false)
     try {
       await onRetry()
+      setRecovered(true)
+      onRetrySuccess?.()
+      void AccessibilityInfo.announceForAccessibility(retrySuccessMessage)
     } catch {
       // Keep the visible error; the caller retains the failed state.
     } finally {
       retryLock.current = false
       setBusy(false)
     }
+  }
+  if (recovered) {
+    return (
+      <View accessibilityRole="summary" accessibilityLiveRegion="polite" style={styles.success}>
+        <Text style={styles.successTitle}>{retrySuccessMessage}</Text>
+      </View>
+    )
   }
   return (
     <View accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>
@@ -134,4 +150,13 @@ const styles = StyleSheet.create({
   retryText: { color: C.onAccent, fontSize: 15, fontWeight: "600" },
   back: { minHeight: 48, justifyContent: "center", paddingHorizontal: 8 },
   backText: { color: C.accent, fontSize: 15, fontWeight: "600" },
+  success: {
+    gap: 4,
+    borderColor: C.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    backgroundColor: C.surface,
+    padding: 16,
+  },
+  successTitle: { color: C.text, fontSize: 14, lineHeight: 20, fontWeight: "600" },
 })

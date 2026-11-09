@@ -20,17 +20,29 @@ export class ApiError extends Error {
   }
 }
 
-export function apiErrorMessage(error: unknown, subject = "your data"): string {
+export type ApiErrorIntent = "load" | "save"
+
+export function apiErrorMessage(
+  error: unknown,
+  subject = "your data",
+  intent: ApiErrorIntent = "load",
+): string {
+  const saveSubject =
+    subject === "your data" || subject === "that change" ? "your change" : subject
   if (!(error instanceof ApiError)) {
-    return subject === "that change"
-      ? "Could not save your change. Try again."
+    return intent === "save"
+      ? `Could not save ${saveSubject}. Try again.`
       : `Could not load ${subject}. Try again.`
   }
   if (error.status === 0 && error.code === "TIMEOUT") {
-    return `Loading ${subject} took too long. Try again.`
+    return intent === "save"
+      ? `Saving ${saveSubject} took too long. Your entries are still here. Try again.`
+      : `Loading ${subject} took too long. Try again.`
   }
   if (error.status === 0 || error.code === "NETWORK_ERROR") {
-    return `Could not connect to load ${subject}. Check your connection and try again.`
+    return intent === "save"
+      ? `Could not connect to save ${saveSubject}. Check your connection and try again. Your entries are still here.`
+      : `Could not connect to load ${subject}. Check your connection and try again.`
   }
   if (error.status === 401) return "Your session expired. Sign in again."
   if (error.status === 403) return "You don't have access to this information."
@@ -40,7 +52,35 @@ export function apiErrorMessage(error: unknown, subject = "your data"): string {
     return "Some information needs attention. Check the fields and try again."
   }
   if (error.status >= 500) return "Something went wrong on our end. Try again."
-  return `Could not load ${subject}. Try again.`
+  return intent === "save"
+    ? `Could not save ${saveSubject}. Try again.`
+    : `Could not load ${subject}. Try again.`
+}
+
+export function userFacingAuthError(error: unknown): string {
+  if (!(error instanceof ApiError)) {
+    return "Something went wrong. Try again."
+  }
+  if (error.code === "NETWORK_ERROR" || error.code === "TIMEOUT") {
+    return "Can't connect. Check your connection and try again."
+  }
+  if (error.status >= 500) {
+    return "Something went wrong on our end. Try again."
+  }
+  if (error.status === 400 || error.status === 422) {
+    return "Some information needs attention. Check the fields and try again."
+  }
+  if (error.code === "INVALID_SESSION") {
+    return "Could not complete sign-in. Try again."
+  }
+  const message = error.message.trim()
+  if (!message) {
+    return "Something went wrong. Try again."
+  }
+  if (/utf-?8|stack trace|internal server/i.test(message)) {
+    return "Something went wrong. Try again."
+  }
+  return message
 }
 
 const REQUEST_TIMEOUT_MS = 12_000

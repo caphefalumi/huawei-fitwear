@@ -212,7 +212,7 @@ function useWorkoutState(): WorkoutState {
   )
   const error = errorCause ? apiErrorMessage(errorCause, "your workouts") : null
   const actionError = writeMutation.error
-    ? apiErrorMessage(writeMutation.error, "that change")
+    ? apiErrorMessage(writeMutation.error, "that change", "save")
     : null
   const retryAction = async () => {
     if (writeMutation.variables) await writeMutation.mutateAsync(writeMutation.variables)

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ElementRef } from "react"
-import { StyleSheet, Text, TextInput, View } from "react-native"
+import { StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native"
 
-import { Palette as AuthColors } from "@/theme"
+import { AuthColors } from "./login-styles"
 
 const ORDER = new Intl.DateTimeFormat(undefined, {
   day: "numeric",
@@ -24,19 +24,25 @@ export function DateOfBirthField({
   value,
   onChange,
   error,
+  showError = false,
   editable = true,
+  onBlurField,
 }: {
   value: string
   onChange: (isoDate: string) => void
   error?: string | null
+  showError?: boolean
   editable?: boolean
+  onBlurField?: () => void
 }) {
+  const { fontScale } = useWindowDimensions()
   const refs = useRef<Record<keyof DateParts, ElementRef<typeof TextInput> | null>>({
     day: null,
     month: null,
     year: null,
   })
   const [parts, setParts] = useState(() => parseISO(value))
+  const [focusedField, setFocusedField] = useState<keyof DateParts | null>(null)
   useEffect(() => {
     if (value) setParts(parseISO(value))
   }, [value])
@@ -96,47 +102,73 @@ export function DateOfBirthField({
 
   const fieldWidths = { day: 1, month: 1, year: 2 } as const
   const placeholders = { day: "DD", month: "MM", year: "YYYY" } as const
+  const showMessage = showError && error
 
   return (
     <View style={styles.group}>
       <Text style={styles.label}>Date of birth</Text>
       <View style={styles.row}>
-        {ORDER.map((field, index) => (
-          <TextInput
-            key={field}
-            ref={(node) => {
-              refs.current[field] = node
-            }}
-            accessibilityLabel={field === "day" ? "Day" : field === "month" ? "Month" : "Year"}
-            accessibilityHint="Enter numbers only"
-            keyboardType="number-pad"
-            inputMode="numeric"
-            maxLength={field === "year" ? 8 : 10}
-            placeholder={placeholders[field]}
-            placeholderTextColor={AuthColors.textMuted}
-            value={parts[field]}
-            editable={editable}
-            selectTextOnFocus
-            returnKeyType={index === ORDER.length - 1 ? "done" : "next"}
-            onChangeText={(text) => handleInput(field, text)}
-            onBlur={() => {
-              if (field !== "year" && parts[field].length === 1) {
-                commit({ ...parts, [field]: parts[field].padStart(2, "0") })
-              }
-            }}
-            onKeyPress={({ nativeEvent }) => {
-              if (nativeEvent.key === "Backspace" && !parts[field]) focusPrevious(field)
-            }}
-            onSubmitEditing={() => refs.current[ORDER[index + 1] ?? field]?.focus()}
-            style={[styles.input, error && styles.inputError, { flex: fieldWidths[field] }]}
-          />
-        ))}
+        {ORDER.map((field, index) => {
+          const invalid = Boolean(showMessage)
+          const focused = focusedField === field
+          return (
+            <TextInput
+              key={field}
+              ref={(node) => {
+                refs.current[field] = node
+              }}
+              accessibilityLabel={field === "day" ? "Day" : field === "month" ? "Month" : "Year"}
+              accessibilityHint="Enter numbers only"
+              keyboardType="number-pad"
+              inputMode="numeric"
+              maxLength={field === "year" ? 8 : 10}
+              placeholder={placeholders[field]}
+              placeholderTextColor={AuthColors.textMuted}
+              value={parts[field]}
+              editable={editable}
+              selectTextOnFocus
+              returnKeyType={index === ORDER.length - 1 ? "done" : "next"}
+              onChangeText={(text) => handleInput(field, text)}
+              onFocus={() => setFocusedField(field)}
+              onBlur={() => {
+                setFocusedField((current) => (current === field ? null : current))
+                if (field !== "year" && parts[field].length === 1) {
+                  commit({ ...parts, [field]: parts[field].padStart(2, "0") })
+                }
+                if (field === "year") onBlurField?.()
+              }}
+              onKeyPress={({ nativeEvent }) => {
+                if (nativeEvent.key === "Backspace" && !parts[field]) focusPrevious(field)
+              }}
+              onSubmitEditing={() => refs.current[ORDER[index + 1] ?? field]?.focus()}
+              style={[
+                styles.input,
+                {
+                  flex: fieldWidths[field],
+                  borderWidth: invalid ? 2 : focused ? 2 : 1,
+                  borderColor: invalid
+                    ? AuthColors.error
+                    : focused
+                      ? AuthColors.accent
+                      : AuthColors.border,
+                },
+              ]}
+            />
+          )
+        })}
       </View>
-      {error ? (
-        <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>
-          {error}
-        </Text>
-      ) : null}
+      <View style={{ minHeight: Math.ceil(18 * fontScale) + 2 }}>
+        {showMessage ? (
+          <Text
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+            nativeID="sign-up-birthdate-error"
+            style={styles.error}
+          >
+            {error}
+          </Text>
+        ) : null}
+      </View>
     </View>
   )
 }
@@ -149,14 +181,11 @@ const styles = StyleSheet.create({
     minWidth: 0,
     minHeight: 54,
     paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: AuthColors.border,
     borderRadius: 10,
     backgroundColor: AuthColors.surface,
     color: AuthColors.text,
     fontSize: 16,
     textAlign: "center",
   },
-  inputError: { borderColor: AuthColors.accent, borderWidth: 2 },
-  error: { color: AuthColors.accent, fontSize: 13, lineHeight: 18 },
+  error: { color: AuthColors.error, fontSize: 13, lineHeight: 18 },
 })

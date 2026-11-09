@@ -73,6 +73,9 @@ test("maps network and timeout errors to user-safe retryable error types", async
   expect(apiErrorMessage(failure, "your meals")).toBe(
     "Loading your meals took too long. Try again.",
   )
+  expect(apiErrorMessage(failure, "your meal", "save")).toBe(
+    "Saving your meal took too long. Your entries are still here. Try again.",
+  )
 })
 
 test("rejects non-API destinations before sending a request", async () => {

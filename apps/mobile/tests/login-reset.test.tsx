@@ -450,7 +450,7 @@ test("requires successful OTP verification before collecting a password and comp
   expect(await screen.findByLabelText("New password")).toBeTruthy()
   expect(screen.getByText("• At least 8 characters.")).toBeTruthy()
   await fireEvent.changeText(screen.getByLabelText("New password"), "password1")
-  expect(screen.getByText("✓ Requirement met: at least 8 characters.")).toBeTruthy()
+  expect(screen.getByText("✓ At least 8 characters.")).toBeTruthy()
   await fireEvent.press(screen.getByRole("button", { name: "Show password" }))
   expect(screen.getByLabelText("New password").props.secureTextEntry).toBe(false)
   await fireEvent.press(screen.getByLabelText("Hide password"))

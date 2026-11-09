@@ -11,7 +11,7 @@ import {
 } from "react"
 import { AppState } from "react-native"
 
-import { ApiError, onSessionExpired, setApiToken } from "@/lib/api"
+import { ApiError, onSessionExpired, setApiToken, userFacingAuthError } from "@/lib/api"
 import { sessionStorage } from "@/lib/storage"
 
 import {
@@ -229,9 +229,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setAuthenticated(true)
       } catch (cause) {
         if (!(cause instanceof ApiError && cause.status < 500)) Sentry.captureException(cause)
-        setError(
-          cause instanceof Error ? cause.message : "Authentication failed. Please try again.",
-        )
+        setError(userFacingAuthError(cause))
         throw cause
       } finally {
         busy.current = false

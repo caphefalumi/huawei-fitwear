@@ -2,6 +2,8 @@ import * as Sentry from "@sentry/react-native"
 import { useEffect, useRef, useState } from "react"
 import { AppState } from "react-native"
 
+import { validateEmail, validatePassword } from "@/lib/form-validation"
+
 import { useAuth } from "./auth-hooks"
 
 type PasswordResetOptions = {
@@ -124,8 +126,9 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
 
   async function submit() {
     if (pending) return
-    if (!email.trim()) {
-      setError("Enter your email address.")
+    const emailError = validateEmail(email)
+    if (emailError) {
+      setError(emailError)
       return
     }
     if (step === "email") {
@@ -151,13 +154,9 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
       void verify(code)
       return
     }
-    if (Array.from(newPassword).length < 8) {
-      setError("Password must contain at least 8 characters.")
-      return
-    }
-    const passwordBytes = encodeURIComponent(newPassword).replace(/%[0-9A-F]{2}/gi, "x").length
-    if (passwordBytes > 72) {
-      setError("Password must not exceed 72 UTF-8 bytes.")
+    const passwordError = validatePassword(newPassword)
+    if (passwordError) {
+      setError(passwordError)
       return
     }
     if (!token) {

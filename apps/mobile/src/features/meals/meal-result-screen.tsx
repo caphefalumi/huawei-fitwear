@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { FetchErrorState } from "@/components/fetch-states"
+import { apiErrorMessage } from "@/lib/api"
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, SectionHeading } from "@/components/ui"
 import { Palette as C } from "@/theme"
@@ -52,7 +53,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
     } catch (cause) {
       Sentry.captureException(cause)
       if (active.current)
-        setActionError(cause instanceof Error ? cause.message : "Could not save your change.")
+        setActionError(apiErrorMessage(cause, "your meal", "save"))
     } finally {
       if (active.current) setPending(false)
     }
@@ -124,6 +125,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           <FetchErrorState
             title="Could not save your meal"
             message={meals.actionError}
+            retrySuccessMessage="Saved. Your meal is up to date."
             onRetry={async () => {
               await meals.retryAction()
               setActionError(null)
@@ -134,6 +136,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           <FetchErrorState
             title="Could not refresh meal data"
             message={meals.error}
+            retrySuccessMessage="Meal data refreshed."
             onRetry={meals.refresh}
           />
         ) : null}

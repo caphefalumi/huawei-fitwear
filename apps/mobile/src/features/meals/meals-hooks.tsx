@@ -316,7 +316,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
   const error = [historyQuery.error, summaryQuery.error].find((cause) => cause instanceof Error)
   const errorMessage = error ? apiErrorMessage(error, "your meals") : null
   const actionError = writeMutation.error
-    ? apiErrorMessage(writeMutation.error, "that change")
+    ? apiErrorMessage(writeMutation.error, "that change", "save")
     : null
   const retryAction = async () => {
     if (writeMutation.variables) await writeMutation.mutateAsync(writeMutation.variables)
