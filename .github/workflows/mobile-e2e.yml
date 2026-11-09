@@ -64,6 +64,25 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: bun .github/scripts/validate-e2e-environment.ts
 
+      - name: Check whether staging database is empty
+        id: staging-database
+        env:
+          E2E_D1_DATABASE_ID: ${{ secrets.E2E_D1_DATABASE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bun .github/scripts/check-empty-staging.ts
+
+      - name: Install dependencies to initialize empty staging
+        if: steps.staging-database.outputs.empty == 'true'
+        run: bun install --frozen-lockfile
+
+      - name: Apply migrations to empty staging database
+        if: steps.staging-database.outputs.empty == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bun run --cwd apps/backend db:migrate:staging
+
       - name: Check staging account and schema before building
         env:
           MAESTRO_CLEANUP_STATE: ${{ runner.temp }}/maestro-preflight-${{ github.run_id }}-${{ github.run_attempt }}.json
