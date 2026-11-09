@@ -49,11 +49,14 @@ tags:
 - inputText: "E2E Member"
 - tapOn: "Your email"
 - inputText: "e2e.member@fitwear.dev"
-- tapOn: "Day"
+- tapOn:
+    id: "sign-up-dob-day"
 - inputText: "12"
-- tapOn: "Month"
+- tapOn:
+    id: "sign-up-dob-month"
 - inputText: "03"
-- tapOn: "Year"
+- tapOn:
+    id: "sign-up-dob-year"
 - inputText: "1998"
 - hideKeyboard
 - scrollUntilVisible:
@@ -83,16 +86,20 @@ tags:
 
 # Invalid and future birth dates are rejected before the terms check.
 - scrollUntilVisible:
-    element: "Year"
+    element:
+      id: "sign-up-dob-year"
     direction: UP
-- tapOn: "Day"
-- eraseText: 10
+- tapOn:
+    id: "sign-up-dob-day"
+- eraseText: 2
 - inputText: "31"
-- tapOn: "Month"
-- eraseText: 10
-- inputText: "02"
-- tapOn: "Year"
-- eraseText: 10
+- tapOn:
+    id: "sign-up-dob-month"
+- eraseText: 2
+- inputText: "13"
+- tapOn:
+    id: "sign-up-dob-year"
+- eraseText: 4
 - inputText: "1998"
 - hideKeyboard
 - scrollUntilVisible:
@@ -107,15 +114,19 @@ tags:
     timeout: 10000
 - assertVisible: "Enter a valid date of birth."
 - scrollUntilVisible:
-    element: "Year"
+    element:
+      id: "sign-up-dob-year"
     direction: UP
-- tapOn: "Day"
+- tapOn:
+    id: "sign-up-dob-day"
 - eraseText: 2
 - inputText: "01"
-- tapOn: "Month"
+- tapOn:
+    id: "sign-up-dob-month"
 - eraseText: 2
 - inputText: "01"
-- tapOn: "Year"
+- tapOn:
+    id: "sign-up-dob-year"
 - eraseText: 4
 - inputText: "2099"
 - hideKeyboard
@@ -131,15 +142,19 @@ tags:
     timeout: 10000
 - assertVisible: "Date of birth can't be in the future."
 - scrollUntilVisible:
-    element: "Year"
+    element:
+      id: "sign-up-dob-year"
     direction: UP
-- tapOn: "Day"
+- tapOn:
+    id: "sign-up-dob-day"
 - eraseText: 2
 - inputText: "12"
-- tapOn: "Month"
+- tapOn:
+    id: "sign-up-dob-month"
 - eraseText: 2
 - inputText: "03"
-- tapOn: "Year"
+- tapOn:
+    id: "sign-up-dob-year"
 - eraseText: 4
 - inputText: "1998"
 - hideKeyboard

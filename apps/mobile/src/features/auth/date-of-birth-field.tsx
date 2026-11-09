@@ -124,6 +124,13 @@ export function DateOfBirthField({
                 }
               }}
               accessibilityLabel={field === "day" ? "Day" : field === "month" ? "Month" : "Year"}
+              testID={
+                field === "day"
+                  ? "sign-up-dob-day"
+                  : field === "month"
+                    ? "sign-up-dob-month"
+                    : "sign-up-dob-year"
+              }
               accessibilityHint="Enter numbers only"
               keyboardType="number-pad"
               inputMode="numeric"

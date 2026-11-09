@@ -33,7 +33,6 @@ jobs:
       rebuild_apk: ${{ steps.plan.outputs.rebuild_apk }}
     steps:
       - name: Checkout repository
-        if: github.event_name != 'schedule'
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
