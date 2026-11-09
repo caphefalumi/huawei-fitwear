@@ -42,7 +42,30 @@ export function createD1Query({
     } catch {
       throw new Error("D1 request failed")
     }
-    if (!response.ok) throw new Error(`D1 request failed (HTTP ${response.status})`)
+    if (!response.ok) {
+      // Report only numeric Cloudflare error codes, never messages or query parameters.
+      let codes: number[] = []
+      try {
+        const body = await response.json()
+        if (Array.isArray(body?.errors)) {
+          codes = body.errors
+            .map((error: { code?: unknown }) => error?.code)
+            .filter(Number.isSafeInteger)
+        }
+      } catch {
+        // A non-JSON response still has a useful HTTP status.
+      }
+      const operation = sql.startsWith('SELECT "id" FROM "user"')
+        ? "account lookup"
+        : sql.startsWith('SELECT "id" FROM "session"')
+          ? "session lookup"
+          : sql.startsWith('SELECT "id" FROM "meal_logs"')
+            ? "meal lookup"
+            : "cleanup"
+      throw new Error(
+        `D1 ${operation} failed (HTTP ${response.status}${codes.length ? `; codes: ${codes.join(", ")}` : ""})`,
+      )
+    }
     let body
     try {
       body = await response.json()

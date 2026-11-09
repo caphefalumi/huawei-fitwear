@@ -355,3 +355,15 @@ test("cleanup resumes after one delete chunk succeeds and the next fails", async
   expect((await runAccountCommand("cleanup", opts)).deletedSessions).toBe(6)
   expect(retainedIds()).toEqual([{ id: "existing-session" }, { id: "other-session" }])
 })
+
+test("D1 errors identify the failed lookup without leaking response messages", async () => {
+  const fetcher = (async () =>
+    Response.json(
+      { errors: [{ code: 7500, message: "sensitive SQL or credentials" }] },
+      { status: 400 },
+    )) as typeof fetch
+  const query = createD1Query({ cloudflareAccountId, databaseId, token, fetcher })
+  await expect(query('SELECT "id" FROM "user" WHERE "email" = ?', [email])).rejects.toThrow(
+    "D1 account lookup failed (HTTP 400; codes: 7500)",
+  )
+})

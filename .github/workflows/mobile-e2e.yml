@@ -86,7 +86,7 @@ jobs:
           # Tracked mobile code and dependencies, excluding tests/docs.
           # The staging API URL is bundled into the APK, so include it.
           key="$({ git ls-files -s -z -- \
-            apps/mobile package.json bun.lock .github/workflows/mobile-e2e.yml \
+            apps/mobile package.json bun.lock .github/workflows/mobile-e2e.yml .github/actions/setup/action.yml \
             ':(exclude)apps/mobile/tests/**' \
             ':(exclude)apps/mobile/README.md'; \
             printf '%s' "$EXPO_PUBLIC_API_URL"; } | sha256sum | cut -d' ' -f1)"
@@ -100,15 +100,9 @@ jobs:
           path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
           key: android-e2e-apk-v1-${{ runner.os }}-${{ steps.fingerprint.outputs.key }}
 
-      - name: Setup Bun
+      - name: Setup workspace
         if: steps.apk-cache.outputs.cache-hit != 'true'
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version: 1.4.4
-
-      - name: Install workspace dependencies
-        if: steps.apk-cache.outputs.cache-hit != 'true'
-        run: bun install --frozen-lockfile
+        uses: ./.github/actions/setup
 
       - name: Setup Java
         if: steps.apk-cache.outputs.cache-hit != 'true'
@@ -169,13 +163,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version: 1.4.4
-
-      - name: Install workspace dependencies
-        run: bun install --frozen-lockfile
+      - name: Setup workspace
+        uses: ./.github/actions/setup
 
       - name: Verify E2E helper tests
         run: >-
