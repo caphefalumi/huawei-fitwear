@@ -45,12 +45,22 @@ export function createD1Query({
     if (!response.ok) {
       // Report only numeric Cloudflare error codes, never messages or query parameters.
       let codes: number[] = []
+      let reason = ""
       try {
         const body = await response.json()
         if (Array.isArray(body?.errors)) {
           codes = body.errors
             .map((error: { code?: unknown }) => error?.code)
             .filter(Number.isSafeInteger)
+          const messages = body.errors.map((error: { message?: unknown }) =>
+            typeof error?.message === "string" ? error.message : "",
+          )
+          if (messages.some((message: string) => /no such table/i.test(message)))
+            reason = "; missing table"
+          else if (messages.some((message: string) => /no such column/i.test(message)))
+            reason = "; missing column"
+          else if (messages.some((message: string) => /syntax error/i.test(message)))
+            reason = "; SQL syntax error"
         }
       } catch {
         // A non-JSON response still has a useful HTTP status.
@@ -63,7 +73,7 @@ export function createD1Query({
             ? "meal lookup"
             : "cleanup"
       throw new Error(
-        `D1 ${operation} failed (HTTP ${response.status}${codes.length ? `; codes: ${codes.join(", ")}` : ""})`,
+        `D1 ${operation} failed (HTTP ${response.status}${codes.length ? `; codes: ${codes.join(", ")}` : ""}${reason})`,
       )
     }
     let body
