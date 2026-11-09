@@ -85,22 +85,16 @@ tags:
 - hideKeyboard
 
 # Invalid and future birth dates are rejected before the terms check.
+# Paste a full ISO date: per-field erase is unreliable with auto-advance and
+# backspace focusPrevious on the split inputs (see Maestro command traces).
 - scrollUntilVisible:
     element:
       id: "sign-up-dob-year"
     direction: UP
 - tapOn:
-    id: "sign-up-dob-day"
-- eraseText: 2
-- inputText: "31"
-- tapOn:
-    id: "sign-up-dob-month"
-- eraseText: 2
-- inputText: "13"
-- tapOn:
     id: "sign-up-dob-year"
-- eraseText: 4
-- inputText: "1998"
+- eraseText: 10
+- inputText: "1998-13-31"
 - hideKeyboard
 - scrollUntilVisible:
     element:
@@ -118,17 +112,9 @@ tags:
       id: "sign-up-dob-year"
     direction: UP
 - tapOn:
-    id: "sign-up-dob-day"
-- eraseText: 2
-- inputText: "01"
-- tapOn:
-    id: "sign-up-dob-month"
-- eraseText: 2
-- inputText: "01"
-- tapOn:
     id: "sign-up-dob-year"
-- eraseText: 4
-- inputText: "2099"
+- eraseText: 10
+- inputText: "2099-01-01"
 - hideKeyboard
 - scrollUntilVisible:
     element:
@@ -146,17 +132,9 @@ tags:
       id: "sign-up-dob-year"
     direction: UP
 - tapOn:
-    id: "sign-up-dob-day"
-- eraseText: 2
-- inputText: "12"
-- tapOn:
-    id: "sign-up-dob-month"
-- eraseText: 2
-- inputText: "03"
-- tapOn:
     id: "sign-up-dob-year"
-- eraseText: 4
-- inputText: "1998"
+- eraseText: 10
+- inputText: "1998-03-12"
 - hideKeyboard
 - scrollUntilVisible:
     element:
