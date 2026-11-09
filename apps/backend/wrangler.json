@@ -3,7 +3,9 @@
   "name": "fitwear-backend",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-26",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "workers_dev": true,
   "preview_urls": true,
   "observability": {
