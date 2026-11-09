@@ -117,7 +117,10 @@ export function validateE2EEnvironment(
   ) {
     throw new Error("E2E_API_URL must not target a production API host")
   }
-  if (hostname.endsWith(".workers.dev") && !hostname.startsWith(stageWorker.toLowerCase() + ".")) {
+  if (
+    hostname.endsWith(".workers.dev") &&
+    !hostname.startsWith(stageWorker.toLowerCase() + ".")
+  ) {
     throw new Error("E2E_API_URL workers.dev hostname must match the staging Worker")
   }
   if (!env.MAESTRO_TEST_EMAIL!.includes("@")) {
