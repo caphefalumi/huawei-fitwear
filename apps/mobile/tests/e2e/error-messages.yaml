@@ -402,14 +402,15 @@ tags:
 - extendedWaitUntil:
     visible: "Meals"
     timeout: 20000
+# The card combines its title, date, and calories into one accessible label.
 # The first history fetch after a cold start can trail the emulator's radio
 # reconnect, so allow it longer than the default assertion timeout.
 - extendedWaitUntil:
-    visible: "9876 kcal"
+    visible: ".*9876 kcal.*"
     timeout: 60000
 
 # Remove the logged meal so later flows still see the account's empty history.
-- tapOn: "9876 kcal"
+- tapOn: ".*9876 kcal.*"
 - extendedWaitUntil:
     visible: "Back to Meal"
     timeout: 10000
@@ -417,7 +418,7 @@ tags:
     text: "Delete"
     index: 0
 - extendedWaitUntil:
-    notVisible: "9876 kcal"
+    notVisible: ".*9876 kcal.*"
     timeout: 30000
 
 - stopRecording
