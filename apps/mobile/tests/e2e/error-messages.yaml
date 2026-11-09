@@ -54,9 +54,14 @@ tags:
       id: "sign-up-dob-month"
     direction: UP
 - tapOn:
+    id: "sign-up-dob-year"
+- inputText: "1998"
+- tapOn:
     id: "sign-up-dob-month"
-- eraseText: 10
-- inputText: "1998-03-12"
+- inputText: "03"
+- tapOn:
+    id: "sign-up-dob-day"
+- inputText: "12"
 - hideKeyboard
 - scrollUntilVisible:
     element:
@@ -84,16 +89,21 @@ tags:
 - hideKeyboard
 
 # Invalid and future birth dates are rejected before the terms check.
-# Paste a full ISO date: per-field erase is unreliable with auto-advance and
-# backspace focusPrevious on the split inputs (see Maestro command traces).
+# Enter each selected field separately. Android inputText types characters and
+# auto-advance moves focus before a whole ISO date can reach one input.
 - scrollUntilVisible:
     element:
       id: "sign-up-dob-year"
     direction: UP
 - tapOn:
+    id: "sign-up-dob-year"
+- inputText: "1998"
+- tapOn:
     id: "sign-up-dob-month"
-- eraseText: 10
-- inputText: "1998-13-31"
+- inputText: "02"
+- tapOn:
+    id: "sign-up-dob-day"
+- inputText: "31"
 - hideKeyboard
 - scrollUntilVisible:
     element:
@@ -111,9 +121,14 @@ tags:
       id: "sign-up-dob-year"
     direction: UP
 - tapOn:
+    id: "sign-up-dob-year"
+- inputText: "2099"
+- tapOn:
     id: "sign-up-dob-month"
-- eraseText: 10
-- inputText: "2099-01-01"
+- inputText: "01"
+- tapOn:
+    id: "sign-up-dob-day"
+- inputText: "01"
 - hideKeyboard
 - scrollUntilVisible:
     element:
@@ -131,9 +146,14 @@ tags:
       id: "sign-up-dob-year"
     direction: UP
 - tapOn:
+    id: "sign-up-dob-year"
+- inputText: "1998"
+- tapOn:
     id: "sign-up-dob-month"
-- eraseText: 10
-- inputText: "1998-03-12"
+- inputText: "03"
+- tapOn:
+    id: "sign-up-dob-day"
+- inputText: "12"
 - hideKeyboard
 - scrollUntilVisible:
     element:
