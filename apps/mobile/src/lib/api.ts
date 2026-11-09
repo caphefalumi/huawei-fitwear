@@ -27,8 +27,7 @@ export function apiErrorMessage(
   subject = "your data",
   intent: ApiErrorIntent = "load",
 ): string {
-  const saveSubject =
-    subject === "your data" || subject === "that change" ? "your change" : subject
+  const saveSubject = subject === "your data" || subject === "that change" ? "your change" : subject
   if (!(error instanceof ApiError)) {
     return intent === "save"
       ? `Could not save ${saveSubject}. Try again.`
@@ -57,30 +56,41 @@ export function apiErrorMessage(
     : `Could not load ${subject}. Try again.`
 }
 
+const AUTH_ERROR_FALLBACK = "Something went wrong. Try again."
+
+/** Owned copy for auth flows — never surface raw API `message` values. */
+const AUTH_ERRORS_BY_CODE: Record<string, string> = {
+  INVALID_SESSION: "Could not complete sign-in. Try again.",
+  ACCOUNT_LOCKED: "Account locked. Reset your password to regain access.",
+  RATE_LIMITED: "Too many attempts. Reset your password or try again later.",
+  NETWORK_ERROR: "Can't connect. Check your connection and try again.",
+  TIMEOUT: "Can't connect. Check your connection and try again.",
+}
+
+const AUTH_ERRORS_BY_STATUS: Record<number, string> = {
+  400: "Check the information you entered and try again.",
+  401: "We could not sign you in. Check your email and password and try again.",
+  403: "You don't have access to this account.",
+  404: "We could not find an account with that information.",
+  409: "This email is already linked to an account. Sign in or use a different email.",
+  410: "Account deletion has completed. Create a new account to continue.",
+  422: "Some information needs attention. Check the fields and try again.",
+  429: "Too many requests. Wait a moment, then try again.",
+  503: "Sign-in is temporarily unavailable. Try again later.",
+}
+
 export function userFacingAuthError(error: unknown): string {
   if (!(error instanceof ApiError)) {
-    return "Something went wrong. Try again."
+    return AUTH_ERROR_FALLBACK
   }
-  if (error.code === "NETWORK_ERROR" || error.code === "TIMEOUT") {
-    return "Can't connect. Check your connection and try again."
-  }
+  const byCode = AUTH_ERRORS_BY_CODE[error.code]
+  if (byCode) return byCode
   if (error.status >= 500) {
     return "Something went wrong on our end. Try again."
   }
-  if (error.status === 400 || error.status === 422) {
-    return "Some information needs attention. Check the fields and try again."
-  }
-  if (error.code === "INVALID_SESSION") {
-    return "Could not complete sign-in. Try again."
-  }
-  const message = error.message.trim()
-  if (!message) {
-    return "Something went wrong. Try again."
-  }
-  if (/utf-?8|stack trace|internal server/i.test(message)) {
-    return "Something went wrong. Try again."
-  }
-  return message
+  const byStatus = AUTH_ERRORS_BY_STATUS[error.status]
+  if (byStatus) return byStatus
+  return AUTH_ERROR_FALLBACK
 }
 
 const REQUEST_TIMEOUT_MS = 12_000

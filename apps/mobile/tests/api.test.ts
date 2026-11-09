@@ -1,6 +1,13 @@
 import axios, { AxiosError, CanceledError, type AxiosResponse } from "axios"
 
-import { ApiError, apiErrorMessage, apiRequest, onSessionExpired, setApiToken } from "@/lib/api"
+import {
+  ApiError,
+  apiErrorMessage,
+  apiRequest,
+  onSessionExpired,
+  setApiToken,
+  userFacingAuthError,
+} from "@/lib/api"
 
 import { request } from "./http-adapter"
 
@@ -62,6 +69,21 @@ test("an old request cannot expire a newly signed-in account", async () => {
   await apiRequest("/meals")
   expect(request.mock.calls[1][0]?.headers).toHaveProperty("Authorization", "Bearer new-account")
   unsubscribe()
+})
+
+test("userFacingAuthError maps known auth status codes and never returns private API text", () => {
+  expect(userFacingAuthError(new ApiError("db constraint users_email_key", 409, "API_ERROR"))).toBe(
+    "This email is already linked to an account. Sign in or use a different email.",
+  )
+  expect(
+    userFacingAuthError(new ApiError("internal: bcrypt compare failed", 401, "API_ERROR")),
+  ).toBe("We could not sign you in. Check your email and password and try again.")
+  expect(
+    userFacingAuthError(new ApiError("employee id 8841 not allowed", 403, "API_ERROR")),
+  ).toBe("You don't have access to this account.")
+  expect(userFacingAuthError(new ApiError("unknown", 418, "TEAPOT"))).toBe(
+    "Something went wrong. Try again.",
+  )
 })
 
 test("maps network and timeout errors to user-safe retryable error types", async () => {
