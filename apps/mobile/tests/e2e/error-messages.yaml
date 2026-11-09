@@ -319,5 +319,18 @@ tags:
     timeout: 20000
 - assertVisible: "9876 kcal"
 
+# Remove the logged meal so later flows still see the account's empty history.
+- tapOn: "9876 kcal"
+- extendedWaitUntil:
+    visible: "Back to Meal"
+    timeout: 10000
+- tapOn:
+    text: "Delete"
+    index: 0
+- extendedWaitUntil:
+    visible: "Meals"
+    timeout: 10000
+- assertNotVisible: "9876 kcal"
+
 - stopRecording
 - stopApp
