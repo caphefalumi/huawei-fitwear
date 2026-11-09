@@ -293,7 +293,7 @@ tags:
     commands:
       - tapOn: "Sign in"
 - extendedWaitUntil:
-    visible: "Could not reach the server. Check your connection and try again."
+    visible: "Could not restore your session. Sign in again when you're back online."
     timeout: 10000
 - assertNotVisible:
     id: "tab-profile"
