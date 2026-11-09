@@ -186,5 +186,6 @@ if (import.meta.main) {
   } else {
     console.log(markdown)
   }
-  process.exitCode = success ? 0 : 1
+  // Always exit successfully so this reporting step stays green when Maestro failed earlier.
+  process.exitCode = 0
 }

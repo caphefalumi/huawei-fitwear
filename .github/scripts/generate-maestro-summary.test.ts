@@ -102,14 +102,15 @@ test("all recordings keep their flow-relative paths", () => {
   expect(markdown).toContain("https://example.test/bundle")
 })
 
-test("CLI appends its summary and propagates missing-report failure", () => {
+test("CLI appends its summary even when Maestro failed or report is missing", () => {
   const script = path.join(import.meta.dir, "generate-maestro-summary.ts")
   const summaryFile = path.join(tempDir, "summary.md")
   writeFileSync(summaryFile, "Previous step\n")
-  const env = { ...process.env, MAESTRO_EXIT_CODE: "0", GITHUB_STEP_SUMMARY: summaryFile }
-  const failed = Bun.spawnSync([process.execPath, script], { cwd: tempDir, env })
-  expect(failed.exitCode).toBe(1)
+  const env = { ...process.env, MAESTRO_EXIT_CODE: "1", GITHUB_STEP_SUMMARY: summaryFile }
+  const missingReport = Bun.spawnSync([process.execPath, script], { cwd: tempDir, env })
+  expect(missingReport.exitCode).toBe(0)
   expect(readFileSync(summaryFile, "utf8")).toContain("JUnit report unavailable")
+  expect(readFileSync(summaryFile, "utf8")).toContain("**Maestro exit code:** 1")
   writeReport('<testsuite><testcase name="new-flow"/></testsuite>')
   const passed = Bun.spawnSync([process.execPath, script], { cwd: tempDir, env })
   expect(passed.exitCode).toBe(0)
