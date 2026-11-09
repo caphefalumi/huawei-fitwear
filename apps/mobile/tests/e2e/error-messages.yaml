@@ -307,6 +307,11 @@ tags:
 - extendedWaitUntil:
     notVisible: "Could not save your meal"
     timeout: 30000
+# The error clears as soon as the retry starts; the draft only empties once the
+# save resolves, so wait for the cleared list before restarting the app.
+- scrollUntilVisible:
+    element: "No items yet.*"
+    direction: DOWN
 - stopApp
 - launchApp
 - extendedWaitUntil:
