@@ -5,6 +5,11 @@ on:
     - cron: "0 2 * * *"
       timezone: Asia/Ho_Chi_Minh
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: List what would be deleted without deleting anything
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -12,28 +17,63 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   cleanup:
-    name: Invalidate and purge old caches
+    name: Purge superseded and orphaned caches
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Invalidate stale caches
+      - name: Purge caches
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
         run: |
-          echo "Deleting superseded caches (only the newest cache per key family is kept)..."
-          gh cache list --limit 1000 --json id,key,createdAt | jq -r '
-            def ts: sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601;
-            map(. + {t: (.createdAt | ts), family: (.key | sub("-[0-9a-f]{8,}(-[0-9]+)*$"; ""))})
-            | group_by(.family)[]
-            | sort_by(.t) | .[:-1][] | .id
-          ' | while read -r cache_id; do
-            if [ -n "$cache_id" ]; then
-              echo "Deleting stale cache ID: $cache_id"
-              gh cache delete "$cache_id" || true
+          set -euo pipefail
+
+          gh cache list --limit 1000 --sort created_at --order desc \
+            --json id,key,ref,createdAt,sizeInBytes > caches.json
+
+          # Refs that still exist: open PR merge refs and current branches
+          {
+            gh pr list --state open --limit 1000 --json number \
+              --jq '.[] | "refs/pull/\(.number)/merge"'
+            gh api "repos/$GH_REPO/branches" --paginate \
+              --jq '.[] | "refs/heads/\(.name)"'
+          } > live_refs.txt
+
+          # Safety: never run the orphan check against an empty list
+          if [ ! -s live_refs.txt ]; then
+            echo "No live refs found, aborting to avoid deleting everything." >&2
+            exit 1
+          fi
+
+          jq -r --rawfile live live_refs.txt '
+            ($live | split("\n") | map(select(length > 0))) as $refs
+            | def orphaned:
+                (.ref | test("^refs/(pull|heads)/"))
+                and (.ref as $r | any($refs[]; . == $r) | not);
+              map(. + {family: (.key | sub("-[0-9a-f]{8,}(-[0-9]+)*$"; ""))})
+            | ( map(select(orphaned)        | {id, key, size: .sizeInBytes, reason: "orphaned"})
+              + ( map(select(orphaned | not))
+                  | group_by([.ref, .family])
+                  | map(sort_by(.createdAt) | .[:-1][]
+                        | {id, key, size: .sizeInBytes, reason: "superseded"}) ) )
+            | .[] | [.id, .reason, .size, .key] | @tsv
+          ' caches.json > to_delete.tsv
+
+          count=0; bytes=0
+          while IFS=$'\t' read -r id reason size key; do
+            echo "[$reason] $key (id=$id, $((size / 1048576)) MiB)"
+            if [ "$DRY_RUN" != "true" ]; then
+              gh cache delete "$id" || echo "::warning::Failed to delete cache $id"
             fi
-          done
+            count=$((count + 1)); bytes=$((bytes + size))
+          done < to_delete.tsv
+
+          verb=$([ "$DRY_RUN" = "true" ] && echo "Would delete" || echo "Deleted")
+          msg="$verb $count caches, $((bytes / 1048576)) MiB"
+          echo "$msg"
+          echo "### Cache cleanup: $msg" >> "$GITHUB_STEP_SUMMARY"
