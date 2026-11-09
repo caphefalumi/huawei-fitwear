@@ -215,6 +215,7 @@ gh workflow run mobile-e2e.yml --ref main -f force_rebuild=true
 Omitting `include_tags` runs all top-level YAML flows. E2E runs are globally serialized for the dedicated account and never cancel an existing run.
 
 The workflow uploads the build-input-matched APK, per-attempt JUnit reports, screenshots, diagnostics, and opt-in recordings for **7 days**. The job summary lists flow outcomes, durations, and failure details. Missing, invalid, empty, or failed JUnit reports fail the workflow. The emulator is stopped, application storage is cleared, and airplane mode is disabled before the test job ends. Any required account cleanup failure also fails the job.
+
 Helper regression tests can be run from the repository root:
 
 ```bash
