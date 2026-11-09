@@ -39,6 +39,14 @@ test("accepts pasted ISO with an invalid month from the year field", async () =>
   await fireEvent.changeText(screen.getByLabelText("Year"), "1998-13-31")
 
   expect(onChange).toHaveBeenLastCalledWith("1998-13-31")
+})
+
+test("accepts a full ISO paste from the month field", async () => {
+  const screen = await render(<DateOfBirthField value="" onChange={onChange} />)
+
+  await fireEvent.changeText(screen.getByLabelText("Month"), "1998-13-31")
+
+  expect(onChange).toHaveBeenLastCalledWith("1998-13-31")
   expect(screen.getByLabelText("Day").props.value).toBe("31")
   expect(screen.getByLabelText("Month").props.value).toBe("13")
   expect(screen.getByLabelText("Year").props.value).toBe("1998")

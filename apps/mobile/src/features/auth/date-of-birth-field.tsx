@@ -96,12 +96,9 @@ export function DateOfBirthField({
     const invalidSecondDigit =
       nextDigits.length === 1 &&
       grew &&
-      ((field === "day" && Number(nextDigits) >= 4) || (field === "month" && Number(nextDigits) >= 2))
-    if (
-      field !== "year" &&
-      grew &&
-      (nextDigits.length >= limit || invalidSecondDigit)
-    ) {
+      ((field === "day" && Number(nextDigits) >= 4) ||
+        (field === "month" && Number(nextDigits) >= 2))
+    if (field !== "year" && grew && (nextDigits.length >= limit || invalidSecondDigit)) {
       if (field === "day" && next.day.length === 1) next.day = next.day.padStart(2, "0")
       if (field === "month" && next.month.length === 1) next.month = next.month.padStart(2, "0")
       commit(next)
@@ -151,7 +148,7 @@ export function DateOfBirthField({
               accessibilityHint="Enter numbers only"
               keyboardType="number-pad"
               inputMode="numeric"
-              maxLength={field === "year" ? 8 : 10}
+              maxLength={12}
               placeholder={placeholders[field]}
               placeholderTextColor={AuthColors.textMuted}
               value={parts[field]}

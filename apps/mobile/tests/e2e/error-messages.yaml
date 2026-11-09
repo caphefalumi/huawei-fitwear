@@ -49,15 +49,14 @@ tags:
 - inputText: "E2E Member"
 - tapOn: "Your email"
 - inputText: "e2e.member@fitwear.dev"
-- tapOn:
-    id: "sign-up-dob-day"
-- inputText: "12"
+- scrollUntilVisible:
+    element:
+      id: "sign-up-dob-month"
+    direction: UP
 - tapOn:
     id: "sign-up-dob-month"
-- inputText: "03"
-- tapOn:
-    id: "sign-up-dob-year"
-- inputText: "1998"
+- eraseText: 10
+- inputText: "1998-03-12"
 - hideKeyboard
 - scrollUntilVisible:
     element:
@@ -92,7 +91,7 @@ tags:
       id: "sign-up-dob-year"
     direction: UP
 - tapOn:
-    id: "sign-up-dob-year"
+    id: "sign-up-dob-month"
 - eraseText: 10
 - inputText: "1998-13-31"
 - hideKeyboard
@@ -112,7 +111,7 @@ tags:
       id: "sign-up-dob-year"
     direction: UP
 - tapOn:
-    id: "sign-up-dob-year"
+    id: "sign-up-dob-month"
 - eraseText: 10
 - inputText: "2099-01-01"
 - hideKeyboard
@@ -132,7 +131,7 @@ tags:
       id: "sign-up-dob-year"
     direction: UP
 - tapOn:
-    id: "sign-up-dob-year"
+    id: "sign-up-dob-month"
 - eraseText: 10
 - inputText: "1998-03-12"
 - hideKeyboard
