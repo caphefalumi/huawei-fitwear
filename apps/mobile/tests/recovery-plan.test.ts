@@ -43,11 +43,19 @@ test("recovery runs exclude, then light, then back to normal", () => {
   expect(phaseOn({ ...knee, permanent: "exclude" }, "2030-01-01")).toBe("exclude")
 })
 
-test("period rests four days then trains light for three; unwell is light for three", () => {
-  const period = createInjury(PERIOD_AREA, "Mild", start)
-  expect(phaseOn(period, "2026-11-11")).toBe("exclude")
-  expect(phaseOn(period, "2026-11-12")).toBe("light")
-  expect(isActive(period, "2026-11-15")).toBe(false)
+test("period follows how the user feels; unwell is light for three", () => {
+  expect(createInjury(PERIOD_AREA, "Okay, just go easier", start)).toMatchObject({
+    excludeDays: 0,
+    lightDays: 3,
+  })
+  const rough = createInjury(PERIOD_AREA, "Rough", start)
+  expect(phaseOn(rough, "2026-11-09")).toBe("exclude")
+  expect(phaseOn(rough, "2026-11-10")).toBe("light")
+  expect(isActive(rough, "2026-11-13")).toBe(false)
+  expect(createInjury(PERIOD_AREA, undefined, start)).toMatchObject({
+    excludeDays: 1,
+    lightDays: 3,
+  })
   expect(createInjury(UNWELL_AREA, "Severe", start)).toMatchObject({ excludeDays: 0, lightDays: 3 })
 })
 
@@ -68,8 +76,11 @@ test("describes what changes in the plan today", () => {
   expect(injuryEffect({ ...knee, permanent: "exclude" }, start)).toBe(
     "Knee exercises are removed from your plan",
   )
-  expect(injuryEffect(createInjury(PERIOD_AREA, "Mild", start), start)).toBe(
-    "Rest until Nov 11, then 3 → 2 sets until Nov 14",
+  expect(injuryEffect(createInjury(PERIOD_AREA, "Tired or crampy", start), start)).toBe(
+    "Rest today, then all exercises 3 → 2 sets until Nov 11",
+  )
+  expect(injuryEffect(createInjury(PERIOD_AREA, "Rough", start), start)).toBe(
+    "Rest until Nov 9, then all exercises 3 → 2 sets until Nov 12",
   )
   expect(injuryEffect(createInjury(UNWELL_AREA, "Mild", start), start)).toBe(
     "All exercises: 3 → 2 sets until Nov 10",

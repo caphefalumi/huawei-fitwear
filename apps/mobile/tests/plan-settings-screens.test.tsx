@@ -74,6 +74,23 @@ test("adds a moderate knee injury and saves only after a change", async () => {
   expect(router.back).toHaveBeenCalled()
 })
 
+test("adds period from how the user feels, with rest days and no permanent option", async () => {
+  const screen = await render(<InjuriesScreen />)
+  await fireEvent.press(screen.getByText("+ Add injury"))
+  await fireEvent.press(screen.getByLabelText("In period"))
+  expect(screen.getByText("How are you feeling?")).toBeTruthy()
+  await fireEvent.press(screen.getByText("Add"))
+  expect(screen.getByText(/^Rest today, then all exercises 3 → 2 sets until/)).toBeTruthy()
+
+  await fireEvent.press(screen.getByLabelText(/^Rest, Until/))
+  expect(screen.getByText("Rest until when?")).toBeTruthy()
+  expect(screen.queryByLabelText("Permanent")).toBeNull()
+  await fireEvent.press(screen.getByText("Cancel"))
+
+  await fireEvent.press(screen.getByLabelText(/^Start, /))
+  expect(screen.getByText("Started when?")).toBeTruthy()
+})
+
 test("skips the exclude phase and makes light permanent", async () => {
   useInjuries.setState({
     injuries: [

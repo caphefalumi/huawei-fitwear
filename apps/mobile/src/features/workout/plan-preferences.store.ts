@@ -1,17 +1,28 @@
 import { create } from "zustand"
 
-import { useHealth } from "@/features/health"
+import { useHealth, type Sex } from "@/features/health"
 import { useInjuries } from "@/features/recovery"
 
-import { routinesFor } from "./routines"
+import { routinesFor, type Emphasis, type Experience } from "./routines"
 
 export const SESSION_MINUTES = [30, 45, 60, 90]
+export const EMPHASES: readonly Emphasis[] = ["Balanced", "Lower body"]
+export const EXPERIENCES: readonly Experience[] = ["Beginner", "Regular"]
+
+/** The user's emphasis, or lower body by default for women. */
+export const emphasisFor = (chosen: Emphasis | null, sex: Sex | null): Emphasis =>
+  chosen ?? (sex === "Female" ? "Lower body" : "Balanced")
 
 type Snapshot = { likes: string[]; dislikes: string[] }
 type PlanPreferencesState = Snapshot & {
   minutes: number
+  /** Null until the user picks one, so the default can follow their sex. */
+  emphasis: Emphasis | null
+  experience: Experience
   hintDismissed: boolean
   setMinutes: (minutes: number) => void
+  setEmphasis: (emphasis: Emphasis) => void
+  setExperience: (experience: Experience) => void
   /** Like, or back to neutral when already liked. */
   toggleLike: (key: string) => void
   /** Dislike, or back to neutral when already disliked. */
@@ -27,10 +38,14 @@ const without = (keys: string[], key: string) => keys.filter((other) => other !=
 /** Session-scoped mock until plan preferences are stored on the server. */
 export const usePlanPreferences = create<PlanPreferencesState>((set, get) => ({
   minutes: 45,
+  emphasis: null,
+  experience: "Regular",
   likes: [],
   dislikes: [],
   hintDismissed: false,
   setMinutes: (minutes) => set({ minutes }),
+  setEmphasis: (emphasis) => set({ emphasis }),
+  setExperience: (experience) => set({ experience }),
   toggleLike: (key) =>
     set((state) => ({
       likes: state.likes.includes(key) ? without(state.likes, key) : [...state.likes, key],
@@ -54,11 +69,20 @@ export const usePlanPreferences = create<PlanPreferencesState>((set, get) => ({
 
 /** Today's and the next routine from the user's plan settings. */
 export function useRoutines(date = new Date()) {
-  const { plan } = useHealth()
+  const { plan, sex } = useHealth()
   const injuries = useInjuries((state) => state.injuries)
-  const { minutes, likes, dislikes } = usePlanPreferences()
+  const { minutes, likes, dislikes, emphasis, experience } = usePlanPreferences()
   return routinesFor(
-    { sessions: plan.sessions, goal: plan.goal, minutes, injuries, likes, dislikes },
+    {
+      sessions: plan.sessions,
+      goal: plan.goal,
+      minutes,
+      injuries,
+      likes,
+      dislikes,
+      emphasis: emphasisFor(emphasis, sex),
+      experience,
+    },
     date,
   )
 }

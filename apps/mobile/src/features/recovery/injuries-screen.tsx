@@ -1,10 +1,11 @@
 import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useState } from "react"
-import { StyleSheet, Switch, Text, View } from "react-native"
+import { StyleSheet, Text, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
 import { Sheet, SheetActions } from "@/components/sheet"
+import { Toggle } from "@/components/toggle"
 import { BackHeader, Button, PageHeading, Screen } from "@/components/ui"
 import { dateKey, useHealth } from "@/features/health"
 import { useMarkInteractive } from "@/lib/observe"
@@ -17,18 +18,21 @@ import {
   daysBetween,
   injuryEffect,
   isActive,
-  isWholeBody,
   PERIOD_AREA,
   phaseEnd,
   phaseOn,
   SEVERITIES,
   shortDate,
+  UNWELL_AREA,
   useInjuries,
   type Injury,
   type InjuryArea,
+  type PeriodFeeling,
   type Phase,
   type Severity,
 } from "./injuries"
+import { OptionList } from "./option-list"
+import { PeriodSheet } from "./period-sheet"
 
 const ICONS: Record<InjuryArea, number> = {
   Neck: require("@/assets/images/recovery/joint-neck.svg"),
@@ -50,8 +54,17 @@ const SEVERITY_COPY: Record<Severity, string> = {
   Moderate: "Skip it for 3 days, then light for 7",
   Severe: "Skip it for 7 days, then light for 14",
 }
-const PHASE_LABEL: Record<Phase, string> = { exclude: "Exclude", light: "Light" }
+const SEVERITY_OPTIONS = (Object.keys(SEVERITIES) as Severity[]).map((value) => ({
+  value,
+  detail: SEVERITY_COPY[value],
+}))
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"]
+const DOT = 17
+
+/** Period recovery rests instead of excluding single exercises. */
+const phaseLabel = (area: InjuryArea, phase: Phase) =>
+  phase === "light" ? "Light" : area === PERIOD_AREA ? "Rest" : "Exclude"
+type EditTarget = Phase | "start"
 
 const toDate = (key: string) => new Date(`${key}T12:00:00`)
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`
@@ -71,20 +84,22 @@ function monthGrid(month: Date) {
   return cells
 }
 
-/** Picks when one phase ends, skips it, or keeps it for good. */
+/** Picks when recovery started, or when one phase ends, skips it, or keeps it for good. */
 function PhaseSheet({
   injury,
-  phase,
+  target,
   today,
   onClose,
   onDone,
 }: {
   injury: Injury | null
-  phase: Phase
+  target: EditTarget
   today: string
   onClose: () => void
   onDone: (next: Injury) => void
 }) {
+  const editingStart = target === "start"
+  const phase: Phase = target === "start" ? "exclude" : target
   const start = injury ? phaseStart(injury, phase) : today
   const first = start > today ? start : today
   const [skip, setSkip] = useState(
@@ -92,6 +107,7 @@ function PhaseSheet({
   )
   const [permanent, setPermanent] = useState(injury?.permanent === phase)
   const [picked, setPicked] = useState(() => {
+    if (editingStart) return injury?.startDate ?? today
     const end = injury && phaseDays(injury, phase) ? phaseEnd(injury, phase) : addDays(first, 6)
     return end < first ? first : end
   })
@@ -100,6 +116,10 @@ function PhaseSheet({
 
   function done() {
     if (!injury) return
+    if (editingStart) {
+      onDone({ ...injury, startDate: picked })
+      return
+    }
     const length = skip ? 0 : permanent ? Math.max(phaseDays(injury, phase), 1) : days
     const keep = injury.permanent === phase ? null : injury.permanent
     onDone({
@@ -109,40 +129,56 @@ function PhaseSheet({
     })
   }
 
+  const isDisabled = (key: string) => (editingStart ? key > today : key < first)
+  const confirm = editingStart
+    ? `Started ${shortDate(picked)}. The later dates move with it.`
+    : skip
+      ? "This phase is skipped."
+      : permanent
+        ? "Stays in your plan until you remove it."
+        : `${plural(days, "day")}, until ${shortDate(picked)}.`
+  const title = !injury
+    ? ""
+    : editingStart
+      ? "Started when?"
+      : `${phaseLabel(injury.area, phase)} until when?`
+
   return (
-    <Sheet visible={!!injury} title={`${PHASE_LABEL[phase]} until when?`} onClose={onClose}>
-      <View style={styles.switchRow}>
-        <View style={styles.switchCopy}>
-          <Text style={styles.switchTitle}>Skip this phase</Text>
-          <Text style={styles.muted}>
-            {phase === "exclude" ? "Go straight to light training" : "Go straight back to normal"}
-          </Text>
+    <Sheet visible={!!injury} title={title} onClose={onClose}>
+      {editingStart ? null : (
+        <View style={styles.switchRow}>
+          <View style={styles.switchCopy}>
+            <Text style={styles.switchTitle}>Skip this phase</Text>
+            <Text style={styles.muted}>
+              {phase === "exclude" ? "Go straight to light training" : "Go straight back to normal"}
+            </Text>
+          </View>
+          <Toggle
+            accessibilityLabel="Skip this phase"
+            value={skip}
+            onValueChange={(value) => {
+              setSkip(value)
+              if (value) setPermanent(false)
+            }}
+          />
         </View>
-        <Switch
-          accessibilityLabel="Skip this phase"
-          value={skip}
-          onValueChange={(value) => {
-            setSkip(value)
-            if (value) setPermanent(false)
-          }}
-          trackColor={{ true: C.accent }}
-        />
-      </View>
-      <View style={styles.switchRow}>
-        <View style={styles.switchCopy}>
-          <Text style={styles.switchTitle}>Permanent</Text>
-          <Text style={styles.muted}>Keep this until you remove it</Text>
+      )}
+      {editingStart || injury?.area === PERIOD_AREA ? null : (
+        <View style={styles.switchRow}>
+          <View style={styles.switchCopy}>
+            <Text style={styles.switchTitle}>Permanent</Text>
+            <Text style={styles.muted}>Keep this until you remove it</Text>
+          </View>
+          <Toggle
+            accessibilityLabel="Permanent"
+            value={permanent}
+            onValueChange={(value) => {
+              setPermanent(value)
+              if (value) setSkip(false)
+            }}
+          />
         </View>
-        <Switch
-          accessibilityLabel="Permanent"
-          value={permanent}
-          onValueChange={(value) => {
-            setPermanent(value)
-            if (value) setSkip(false)
-          }}
-          trackColor={{ true: C.accent }}
-        />
-      </View>
+      )}
 
       {skip || permanent ? null : (
         <View style={styles.calendar}>
@@ -173,9 +209,9 @@ function PhaseSheet({
             ))}
             {monthGrid(month).map((key, index) => {
               if (!key) return <View key={`pad${index}`} style={styles.cell} />
-              const disabled = key < first
+              const disabled = isDisabled(key)
               const selected = key === picked
-              const inRange = key >= start && key < picked
+              const inRange = !editingStart && key >= start && key < picked
               return (
                 <Pressable
                   key={key}
@@ -201,13 +237,7 @@ function PhaseSheet({
         </View>
       )}
 
-      <Text style={styles.confirm}>
-        {skip
-          ? "This phase is skipped."
-          : permanent
-            ? "Stays in your plan until you remove it."
-            : `${plural(days, "day")}, until ${shortDate(picked)}.`}
-      </Text>
+      <Text style={styles.confirm}>{confirm}</Text>
       <SheetActions
         primaryLabel="OK"
         secondaryLabel="Cancel"
@@ -229,7 +259,7 @@ function AddInjurySheet({
   added: InjuryArea[]
   showPeriod: boolean
   onClose: () => void
-  onAdd: (area: InjuryArea, severity?: Severity) => void
+  onAdd: (area: InjuryArea, option?: Severity | PeriodFeeling) => void
 }) {
   const [area, setArea] = useState<InjuryArea | null>(null)
   const [severity, setSeverity] = useState<Severity>("Mild")
@@ -238,26 +268,23 @@ function AddInjurySheet({
     onClose()
   }
 
+  if (area === PERIOD_AREA)
+    return (
+      <PeriodSheet
+        visible={visible}
+        onClose={close}
+        onBack={() => setArea(null)}
+        onAdd={(feeling) => {
+          onAdd(area, feeling)
+          setArea(null)
+        }}
+      />
+    )
+
   if (area)
     return (
       <Sheet visible={visible} title={`How bad is your ${area.toLowerCase()}?`} onClose={close}>
-        <View style={styles.severities} accessibilityRole="radiogroup">
-          {(Object.keys(SEVERITIES) as Severity[]).map((option) => {
-            const selected = option === severity
-            return (
-              <Pressable
-                key={option}
-                accessibilityRole="radio"
-                accessibilityState={{ selected }}
-                style={[styles.severity, selected && styles.severitySelected]}
-                onPress={() => setSeverity(option)}
-              >
-                <Text style={styles.switchTitle}>{option}</Text>
-                <Text style={styles.muted}>{SEVERITY_COPY[option]}</Text>
-              </Pressable>
-            )
-          })}
-        </View>
+        <OptionList options={SEVERITY_OPTIONS} value={severity} onChange={setSeverity} />
         <Text style={styles.muted}>You can change each phase anytime.</Text>
         <SheetActions
           primaryLabel="Add"
@@ -289,7 +316,7 @@ function AddInjurySheet({
                     accessibilityState={{ disabled: done }}
                     accessibilityLabel={done ? `${item}, already added` : item}
                     onPress={() => {
-                      if (isWholeBody(item)) onAdd(item)
+                      if (item === UNWELL_AREA) onAdd(item)
                       else {
                         setSeverity("Mild")
                         setArea(item)
@@ -309,7 +336,7 @@ function AddInjurySheet({
   )
 }
 
-/** Exclude, Light and back-to-normal steps; body areas can edit each phase. */
+/** Three dots: when recovery started, when Exclude ends and when Light ends. */
 function Timeline({
   injury,
   today,
@@ -317,50 +344,94 @@ function Timeline({
 }: {
   injury: Injury
   today: string
-  onEdit?: (phase: Phase) => void
+  onEdit: (target: EditTarget) => void
 }) {
   const current = phaseOn(injury, today)
-  const phases: Phase[] = injury.permanent === "exclude" ? ["exclude"] : ["exclude", "light"]
-  const normalFrom = addDays(injury.startDate, injury.excludeDays + injury.lightDays)
+  const lightFrom = addDays(injury.startDate, injury.excludeDays)
+  const normalFrom = addDays(lightFrom, injury.lightDays)
+  const unreachable = (phase: Phase) => phase === "light" && injury.permanent === "exclude"
+  const on = (phase: Phase) =>
+    !unreachable(phase) && (injury.permanent === phase || phaseDays(injury, phase) > 0)
+
+  const stop = (phase: Phase) => {
+    const label = phaseLabel(injury.area, phase)
+    if (unreachable(phase)) return { date: "–", caption: "", a11y: `${label}, Not reached` }
+    if (injury.permanent === phase)
+      return { date: "Ongoing", caption: "Permanent", a11y: `${label}, Permanent` }
+    if (!phaseDays(injury, phase))
+      return { date: "Skipped", caption: "", a11y: `${label}, Skipped` }
+    const next = phase === "exclude" && on("light") ? "Light from" : "Normal from"
+    return {
+      date: shortDate(phase === "exclude" ? lightFrom : normalFrom),
+      caption: next,
+      a11y: `${label}, Until ${shortDate(phaseEnd(injury, phase))}`,
+    }
+  }
+
+  // Where today sits on the line, in percent; hidden for a permanent phase.
+  let marker: number | null = null
+  if (current && injury.permanent !== current) {
+    const length = phaseDays(injury, current)
+    const into = Math.min(daysBetween(phaseStart(injury, current), today) + 0.5, length) / length
+    marker = ((current === "exclude" ? 0 : 0.5) + into * 0.5) * 100
+  }
+
+  const phases: Phase[] = ["exclude", "light"]
   return (
     <View style={styles.timeline}>
-      {phases.map((phase) => {
-        const days = phaseDays(injury, phase)
-        const skipped = !days && injury.permanent !== phase
-        const detail =
-          injury.permanent === phase
-            ? "Permanent"
-            : skipped
-              ? "Skipped"
-              : `Until ${shortDate(phaseEnd(injury, phase))}`
-        return (
-          <Pressable
-            key={phase}
-            disabled={!onEdit}
-            style={[
-              styles.step,
-              current === phase && styles.stepCurrent,
-              skipped && styles.stepSkipped,
-            ]}
-            accessibilityLabel={`${PHASE_LABEL[phase]}, ${detail}`}
-            accessibilityHint={onEdit ? "Change this phase" : undefined}
-            onPress={() => onEdit?.(phase)}
-          >
-            <Text style={[styles.stepLabel, current === phase && styles.stepLabelCurrent]}>
-              {PHASE_LABEL[phase]}
+      <View style={styles.segmentLabels}>
+        {phases.map((phase) => {
+          const label = phaseLabel(injury.area, phase)
+          return (
+            <Text key={phase} style={[styles.segmentLabel, !on(phase) && styles.off]}>
+              {on(phase) ? label : `No ${label.toLowerCase()}`}
             </Text>
-            <Text style={[styles.stepDetail, current === phase && styles.stepLabelCurrent]}>
-              {detail}
-            </Text>
-          </Pressable>
-        )
-      })}
-      {injury.permanent ? null : (
-        <View style={styles.step}>
-          <Text style={styles.stepLabel}>Normal</Text>
-          <Text style={styles.stepDetail}>From {shortDate(normalFrom)}</Text>
+          )
+        })}
+      </View>
+      <View>
+        <View style={styles.lines}>
+          <View style={[styles.line, on("exclude") && styles.lineExclude]} />
+          <View style={[styles.line, on("light") && styles.lineLight]} />
+          {marker === null ? null : (
+            <View accessibilityLabel="Today" style={[styles.marker, { left: `${marker}%` }]} />
+          )}
         </View>
-      )}
+        <View style={styles.stops}>
+          <Pressable
+            style={[styles.stop, styles.stopStart]}
+            accessibilityLabel={`Start, ${shortDate(injury.startDate)}`}
+            accessibilityHint="Change when this started"
+            onPress={() => onEdit("start")}
+          >
+            <View style={[styles.dot, styles.dotStart]} />
+            <Text style={styles.stopDate}>{shortDate(injury.startDate)}</Text>
+            <Text style={styles.stopCaption}>Start</Text>
+          </Pressable>
+          {phases.map((phase) => {
+            const { date, caption, a11y } = stop(phase)
+            const dotStyle = !on(phase)
+              ? styles.dotOff
+              : phase === "exclude"
+                ? styles.dotExclude
+                : styles.dotLight
+            return (
+              <Pressable
+                key={phase}
+                disabled={unreachable(phase)}
+                style={[styles.stop, phase === "exclude" ? styles.stopMiddle : styles.stopEnd]}
+                accessibilityLabel={a11y}
+                accessibilityHint={unreachable(phase) ? undefined : "Change this phase"}
+                onPress={() => onEdit(phase)}
+              >
+                <View style={[styles.dot, dotStyle]} />
+                <Text style={[styles.stopDate, !on(phase) && styles.off]}>{date}</Text>
+                {caption ? <Text style={styles.stopCaption}>{caption}</Text> : null}
+              </Pressable>
+            )
+          })}
+        </View>
+      </View>
     </View>
   )
 }
@@ -373,23 +444,20 @@ function InjuryCard({
 }: {
   injury: Injury
   today: string
-  onEdit: (phase: Phase) => void
+  onEdit: (target: EditTarget) => void
   onRemove: () => void
 }) {
-  const editable = injury.area !== PERIOD_AREA
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Image source={ICONS[injury.area]} style={styles.cardIcon} contentFit="contain" />
-        <Text style={styles.cardTitle}>
-          {injury.area === PERIOD_AREA ? "Period recovery" : injury.area}
-        </Text>
+        <Text style={styles.cardTitle}>{injury.area === PERIOD_AREA ? "Period" : injury.area}</Text>
         <Pressable hitSlop={10} accessibilityLabel={`Remove ${injury.area}`} onPress={onRemove}>
           <Text style={styles.remove}>Remove</Text>
         </Pressable>
       </View>
       <Text style={styles.effect}>{injuryEffect(injury, today)}</Text>
-      <Timeline injury={injury} today={today} onEdit={editable ? onEdit : undefined} />
+      <Timeline injury={injury} today={today} onEdit={onEdit} />
     </View>
   )
 }
@@ -405,7 +473,7 @@ export function InjuriesScreen() {
   )
   const [draft, setDraft] = useState(initial)
   const [adding, setAdding] = useState(false)
-  const [editing, setEditing] = useState<{ area: InjuryArea; phase: Phase } | null>(null)
+  const [editing, setEditing] = useState<{ area: InjuryArea; target: EditTarget } | null>(null)
   const changed = JSON.stringify(draft) !== JSON.stringify(initial)
   const editingInjury = draft.find((injury) => injury.area === editing?.area) ?? null
 
@@ -420,7 +488,7 @@ export function InjuriesScreen() {
             key={injury.area}
             injury={injury}
             today={today}
-            onEdit={(phase) => setEditing({ area: injury.area, phase })}
+            onEdit={(target) => setEditing({ area: injury.area, target })}
             onRemove={() => setDraft((items) => items.filter((item) => item.area !== injury.area))}
           />
         ))
@@ -451,15 +519,15 @@ export function InjuriesScreen() {
         added={draft.map((injury) => injury.area)}
         showPeriod={sex === "Female"}
         onClose={() => setAdding(false)}
-        onAdd={(area, severity) => {
-          setDraft((items) => [...items, createInjury(area, severity, today)])
+        onAdd={(area, option) => {
+          setDraft((items) => [...items, createInjury(area, option, today)])
           setAdding(false)
         }}
       />
       <PhaseSheet
-        key={editing ? `${editing.area}-${editing.phase}` : "none"}
+        key={editing ? `${editing.area}-${editing.target}` : "none"}
         injury={editingInjury}
-        phase={editing?.phase ?? "exclude"}
+        target={editing?.target ?? "exclude"}
         today={today}
         onClose={() => setEditing(null)}
         onDone={(next) => {
@@ -476,6 +544,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     color: C.textMuted,
+  },
+  off: {
+    color: C.track,
   },
   empty: {
     backgroundColor: C.surface,
@@ -519,37 +590,93 @@ const styles = StyleSheet.create({
     color: C.text,
   },
   timeline: {
-    flexDirection: "row",
     gap: 6,
   },
-  step: {
+  segmentLabels: {
+    flexDirection: "row",
+  },
+  segmentLabel: {
     flex: 1,
-    borderRadius: 12,
-    backgroundColor: C.background,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    textAlign: "center",
+    fontSize: 11,
+    fontWeight: "600",
+    color: C.textMuted,
+  },
+  lines: {
+    position: "absolute",
+    top: DOT / 2 - 1.5,
+    left: DOT / 2,
+    right: DOT / 2,
+    height: 3,
+    flexDirection: "row",
+  },
+  line: {
+    flex: 1,
+    backgroundColor: C.border,
+  },
+  lineExclude: {
+    backgroundColor: C.accent,
+  },
+  lineLight: {
+    backgroundColor: C.accentSoft,
+  },
+  marker: {
+    position: "absolute",
+    top: -4,
+    width: 11,
+    height: 11,
+    marginLeft: -5.5,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: C.accent,
+    backgroundColor: C.surface,
+  },
+  stops: {
+    flexDirection: "row",
+  },
+  stop: {
+    flex: 1,
     gap: 2,
   },
-  stepCurrent: {
+  stopStart: {
+    alignItems: "flex-start",
+  },
+  stopMiddle: {
+    alignItems: "center",
+  },
+  stopEnd: {
+    alignItems: "flex-end",
+  },
+  dot: {
+    width: DOT,
+    height: DOT,
+    borderRadius: DOT / 2,
+    borderWidth: 3,
+    backgroundColor: C.surface,
+    marginBottom: 4,
+  },
+  dotStart: {
+    borderColor: C.accent,
     backgroundColor: C.accent,
+  },
+  dotExclude: {
     borderColor: C.accent,
   },
-  stepSkipped: {
-    opacity: 0.5,
+  dotLight: {
+    borderColor: C.accentSoft,
   },
-  stepLabel: {
+  dotOff: {
+    borderColor: C.track,
+    borderStyle: "dashed",
+  },
+  stopDate: {
     fontSize: 12,
     fontWeight: "600",
     color: C.text,
   },
-  stepDetail: {
+  stopCaption: {
     fontSize: 11,
     color: C.textMuted,
-  },
-  stepLabelCurrent: {
-    color: C.onAccent,
   },
   safety: {
     fontSize: 11,
@@ -664,19 +791,5 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: C.text,
     textAlign: "center",
-  },
-  severities: {
-    gap: 8,
-  },
-  severity: {
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: C.border,
-    padding: 14,
-    gap: 2,
-  },
-  severitySelected: {
-    borderColor: C.accent,
-    backgroundColor: C.accentTint,
   },
 })

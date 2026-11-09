@@ -1,6 +1,7 @@
 import { dateKey } from "@/features/health"
 import {
   affects,
+  daysBetween,
   isActive,
   isWholeBody,
   PERIOD_AREA,
@@ -9,7 +10,10 @@ import {
   type Injury,
 } from "@/features/recovery"
 
-import { CATALOG, type CatalogExercise, type MuscleGroup } from "./catalog"
+import { CATALOG, findExercise, type CatalogExercise, type MuscleGroup } from "./catalog"
+
+export type Emphasis = "Balanced" | "Lower body"
+export type Experience = "Beginner" | "Regular"
 
 export type Routine = {
   name: string
@@ -32,66 +36,152 @@ export type PlanInput = {
   injuries: Injury[]
   likes: string[]
   dislikes: string[]
+  emphasis?: Emphasis
+  experience?: Experience
 }
 
-type DayKind = "Full Body A" | "Full Body B" | "Upper" | "Lower" | "Push" | "Pull" | "Legs"
+/** One template slot: the first liked option wins, else the first; beginners get `beginner`. */
+type Slot = { options: string[]; beginner?: string }
+const slot = (options: string | string[], beginner?: string): Slot => ({
+  options: [options].flat(),
+  beginner,
+})
+
+/** Curated sessions from the planner spec; injuries, dislikes and experience swap single slots. */
+const TEMPLATES = {
+  "Full Body A": [
+    slot("barbell-squat", "goblet-squat"),
+    slot("machine-chest-press"),
+    slot("seated-cable-row"),
+    slot("romanian-deadlift"),
+    slot("lateral-raise"),
+    slot("plank"),
+  ],
+  "Full Body B": [
+    slot("leg-press"),
+    slot("shoulder-press"),
+    slot("lat-pulldown"),
+    slot("hip-thrust"),
+    slot("seated-leg-curl"),
+    slot(["cable-curl", "triceps-pushdown"]),
+  ],
+  "Upper A": [
+    slot("machine-chest-press"),
+    slot("seated-cable-row"),
+    slot("shoulder-press"),
+    slot("triceps-pushdown"),
+    slot("cable-curl"),
+  ],
+  "Lower A": [
+    slot("hip-thrust"),
+    slot("romanian-deadlift"),
+    slot("bulgarian-split-squat"),
+    slot("seated-leg-curl"),
+    slot("cable-glute-kickback"),
+  ],
+  "Upper B": [
+    slot("incline-dumbbell-press"),
+    slot("lat-pulldown"),
+    slot("chest-supported-row"),
+    slot("lateral-raise"),
+    slot("face-pull"),
+    slot("overhead-rope-extension"),
+  ],
+  "Lower B": [
+    slot("barbell-squat", "goblet-squat"),
+    slot("walking-lunge"),
+    slot("leg-extension"),
+    slot("hip-abduction-machine"),
+    slot("calf-raise"),
+  ],
+  Push: [
+    slot("machine-chest-press"),
+    slot("incline-dumbbell-press"),
+    slot("shoulder-press"),
+    slot("lateral-raise"),
+    slot("triceps-pushdown"),
+    slot("overhead-rope-extension"),
+  ],
+  Pull: [
+    slot("lat-pulldown"),
+    slot("seated-cable-row"),
+    slot("face-pull"),
+    slot("rear-delt-fly"),
+    slot("cable-curl"),
+    slot("hammer-curl"),
+  ],
+  Legs: [
+    slot("barbell-squat", "leg-press"),
+    slot("romanian-deadlift"),
+    slot("hip-thrust"),
+    slot("walking-lunge", "leg-extension"),
+    slot("seated-leg-curl"),
+    slot("calf-raise"),
+  ],
+  Upper: [
+    slot("dumbbell-press"),
+    slot("lat-pulldown"),
+    slot("machine-shoulder-press"),
+    slot("machine-row"),
+    slot("lateral-raise"),
+    slot("triceps-pushdown"),
+  ],
+  Lower: [
+    slot("leg-press"),
+    slot("hip-thrust"),
+    slot("bulgarian-split-squat"),
+    slot("seated-leg-curl"),
+    slot("cable-glute-kickback"),
+    slot("calf-raise"),
+  ],
+} satisfies Record<string, Slot[]>
+type DayKind = keyof typeof TEMPLATES | "Full Body"
+
+/** Lower-body emphasis swaps the last single in Full Body A for glute work. */
+const LOWER_BODY_SWAPS: Partial<Record<DayKind, Record<string, string>>> = {
+  "Full Body A": { plank: "cable-glute-kickback" },
+}
 
 /** Training weekdays (0 = Monday) and the session on each. */
-const WEEK: Record<number, [number, DayKind][]> = {
-  1: [[0, "Full Body A"]],
-  2: [
-    [0, "Full Body A"],
-    [3, "Full Body B"],
-  ],
-  3: [
-    [0, "Full Body A"],
-    [2, "Full Body B"],
-    [4, "Full Body A"],
-  ],
-  4: [
-    [0, "Upper"],
-    [1, "Lower"],
-    [3, "Upper"],
-    [4, "Lower"],
-  ],
-  5: [
-    [0, "Push"],
-    [1, "Pull"],
-    [2, "Legs"],
-    [4, "Upper"],
-    [5, "Lower"],
-  ],
-  6: [
-    [0, "Push"],
-    [1, "Pull"],
-    [2, "Legs"],
-    [3, "Push"],
-    [4, "Pull"],
-    [5, "Legs"],
-  ],
-  7: [
-    [0, "Push"],
-    [1, "Pull"],
-    [2, "Legs"],
-    [3, "Push"],
-    [4, "Pull"],
-    [5, "Legs"],
-    [6, "Full Body A"],
-  ],
+function weekFor(sessions: number, emphasis: Emphasis): [number, DayKind][] {
+  const lower = emphasis === "Lower body"
+  switch (sessions) {
+    case 1:
+      return [[0, "Full Body"]]
+    case 2:
+      return [
+        [0, "Full Body"],
+        [3, "Full Body"],
+      ]
+    case 3:
+      return [
+        [0, "Full Body"],
+        [2, "Full Body"],
+        [4, "Full Body"],
+      ]
+    case 4:
+      return [
+        [0, "Upper A"],
+        [1, "Lower A"],
+        [3, "Upper B"],
+        [4, "Lower B"],
+      ]
+    case 5: {
+      const days: DayKind[] = lower
+        ? ["Lower A", "Push", "Pull", "Lower B", "Upper"]
+        : ["Push", "Pull", "Legs", "Upper", "Lower"]
+      return days.map((kind, weekday) => [weekday, kind])
+    }
+    default: {
+      const days: DayKind[] = lower
+        ? ["Push", "Pull", "Lower A", "Push", "Pull", "Lower B"]
+        : ["Push", "Pull", "Legs", "Push", "Pull", "Legs"]
+      return days.map((kind, weekday) => [weekday, kind])
+    }
+  }
 }
-const PUSH = ["chest", "front delt", "side delt", "triceps"]
-const PULL = ["lats", "mid back", "upper back", "rear delt", "biceps"]
-const isLower = (muscle: string) => !PUSH.includes(muscle) && !PULL.includes(muscle)
-const IN_DAY: Record<DayKind, (primary: string) => boolean> = {
-  "Full Body A": () => true,
-  "Full Body B": () => true,
-  Upper: (muscle) => !isLower(muscle),
-  Lower: isLower,
-  Push: (muscle) => PUSH.includes(muscle),
-  Pull: (muscle) => PULL.includes(muscle),
-  Legs: isLower,
-}
-/** Larger groups claim slots first. */
+
+/** Larger groups first in the browse grid. */
 const GROUP_PRIORITY: MuscleGroup[] = ["Legs", "Back", "Chest", "Shoulders", "Arms", "Core"]
 const REST_SECONDS: Record<string, number> = { "Lose fat": 60, Maintain: 75, "Build muscle": 90 }
 const COMPOUND_EXTRA_REST = 30
@@ -99,7 +189,10 @@ const SET_SECONDS = 40
 const WARM_UP_MINUTES = 5
 const SETUP_MINUTES = 1
 const MAX_EXERCISES = 6
-const SHORT_SESSION_MINUTES = 45
+const MAX_SESSIONS = 6
+const BEGINNER_MAX_COMPOUNDS = 3
+/** A Monday used to alternate Full Body A and B from week to week. */
+const FIRST_WEEK = "2024-01-01"
 
 export const REST_DAY: Routine = { name: "Rest day", sets: 0, minutes: 0, exercises: [] }
 
@@ -107,6 +200,9 @@ function exerciseMinutes(exercise: CatalogExercise, sets: number, goal: string) 
   const rest = (REST_SECONDS[goal] ?? 75) + (exercise.compound ? COMPOUND_EXTRA_REST : 0)
   return (sets * (SET_SECONDS + rest)) / 60 + SETUP_MINUTES
 }
+
+const prescription = (exercise: CatalogExercise, sets: number) =>
+  `${sets}x${exercise.unit === "seconds" ? "30–45s" : "8–12"}`
 
 function buildRoutine(
   name: string,
@@ -126,61 +222,120 @@ function buildRoutine(
     exercises: picked.map((exercise) => ({
       key: exercise.key,
       name: exercise.name,
-      prescription: `${setsFor(exercise)}x${exercise.reps}${exercise.unit === "seconds" ? "s" : ""}`,
+      prescription: prescription(exercise, setsFor(exercise)),
       ...(likes.includes(exercise.key) ? { liked: true } : {}),
     })),
   }
 }
 
-/** Picks exercises round-robin across groups until the session time or slot cap runs out. */
+const exercise = (key: string) => {
+  const found = findExercise(key)
+  if (!found) throw new Error(`Unknown exercise ${key}`)
+  return found
+}
+
+/** Fills a template, swaps blocked slots for the same muscle, then trims to the session time. */
 function sessionFor(
-  kind: DayKind,
-  variant: number,
+  kind: keyof typeof TEMPLATES,
   input: PlanInput,
   today: string,
   allLight: boolean,
 ) {
+  const beginner = input.experience === "Beginner"
+  const lowerBody = input.emphasis === "Lower body"
   const inPhase = (phase: "exclude" | "light") =>
     input.injuries.filter((injury) => !isWholeBody(injury.area) && phaseOn(injury, today) === phase)
   const excluded = inPhase("exclude")
   const light = inPhase("light")
-  const setsFor = (exercise: CatalogExercise) =>
-    allLight || light.some((injury) => affects(injury.area, exercise)) ? 2 : 3
-
-  const pool = CATALOG.filter(
-    (exercise) =>
-      IN_DAY[kind](exercise.muscles[0]) &&
-      !excluded.some((injury) => affects(injury.area, exercise)),
-  )
-  const rank = (exercise: CatalogExercise) =>
-    (input.likes.includes(exercise.key) ? 0 : 2) + (exercise.compound ? 0 : 1)
-  let groups = GROUP_PRIORITY.map((group) => {
-    const options = pool.filter((exercise) => exercise.group === group)
-    // Disliked exercises only stay when the group has nothing else.
-    const allowed = options.filter((exercise) => !input.dislikes.includes(exercise.key))
-    const sorted = (allowed.length ? allowed : options).sort((a, b) => rank(a) - rank(b))
-    const shift = sorted.length ? variant % sorted.length : 0
-    return [...sorted.slice(shift), ...sorted.slice(0, shift)]
-  }).filter((options) => options.length)
-  // Short full-body sessions cannot fit every group, so the B session leads with the other half.
-  if (kind.startsWith("Full Body") && input.minutes < SHORT_SESSION_MINUTES && variant % 2) {
-    const half = Math.ceil(groups.length / 2)
-    groups = [...groups.slice(half), ...groups.slice(0, half)]
-  }
+  const isExcluded = (item: CatalogExercise) =>
+    excluded.some((injury) => affects(injury.area, item))
+  const liked = (item: CatalogExercise) => input.likes.includes(item.key)
+  const disliked = (item: CatalogExercise) => input.dislikes.includes(item.key)
 
   const picked: CatalogExercise[] = []
-  let budget = input.minutes - WARM_UP_MINUTES
-  for (let round = 0; picked.length < MAX_EXERCISES; round++) {
-    const candidates = groups.flatMap((options) => (options[round] ? [options[round]] : []))
-    if (!candidates.length) break
-    for (const exercise of candidates) {
-      const cost = exerciseMinutes(exercise, setsFor(exercise), input.goal)
-      if (picked.length >= MAX_EXERCISES || (cost > budget && picked.length)) continue
-      picked.push(exercise)
-      budget -= cost
+  /** Best free exercise for the same muscle, then the same group; liked ones first. */
+  const substitute = (
+    original: CatalogExercise,
+    accept: (item: CatalogExercise) => boolean = () => true,
+  ) => {
+    const score = (item: CatalogExercise) =>
+      (liked(item) ? 0 : 4) +
+      (item.muscles[0] === original.muscles[0] ? 0 : 2) +
+      (item.compound === original.compound ? 0 : 1)
+    return CATALOG.filter(
+      (item) =>
+        item.key !== original.key &&
+        !picked.includes(item) &&
+        (item.muscles[0] === original.muscles[0] || item.group === original.group) &&
+        !isExcluded(item) &&
+        !disliked(item) &&
+        accept(item),
+    ).sort((a, b) => score(a) - score(b))[0]
+  }
+
+  const swaps = lowerBody ? (LOWER_BODY_SWAPS[kind] ?? {}) : {}
+  for (const { options, beginner: easier } of TEMPLATES[kind]) {
+    const key =
+      (beginner && easier) ||
+      options.find((option) => input.likes.includes(option)) ||
+      options.find((option) => !input.dislikes.includes(option)) ||
+      options[0]
+    let choice: CatalogExercise | undefined = exercise(swaps[key] ?? key)
+    if (picked.includes(choice)) continue
+    // A liked exercise for the same muscle takes the slot.
+    if (!liked(choice)) {
+      const original = choice
+      const favourite = substitute(
+        original,
+        (item) =>
+          liked(item) &&
+          item.muscles[0] === original.muscles[0] &&
+          item.compound === original.compound,
+      )
+      if (favourite) choice = favourite
+    }
+    if (isExcluded(choice) || disliked(choice)) {
+      // Disliked exercises only stay when nothing else fits; injured ones never stay.
+      choice = substitute(choice) ?? (isExcluded(choice) ? undefined : choice)
+    }
+    if (choice) picked.push(choice)
+  }
+
+  if (beginner) {
+    // Beginners lift at most three compounds; later ones become singles for the same muscle.
+    for (let index = picked.length - 1; index >= 0; index--) {
+      if (picked.filter((item) => item.compound).length <= BEGINNER_MAX_COMPOUNDS) break
+      if (!picked[index].compound) continue
+      const single = substitute(picked[index], (item) => !item.compound)
+      if (single) picked[index] = single
+      else picked.splice(index, 1)
     }
   }
   picked.sort((a, b) => Number(b.compound) - Number(a.compound))
+
+  const extraSets = new Set(
+    lowerBody && !beginner ? picked.filter((item) => item.muscles[0] === "glutes") : [],
+  )
+  const setsFor = (item: CatalogExercise) => {
+    const sets = (beginner && !item.compound ? 2 : 3) + (extraSets.has(item) ? 1 : 0)
+    return allLight || light.some((injury) => affects(injury.area, item)) ? Math.min(sets, 2) : sets
+  }
+  const total = () =>
+    picked.reduce(
+      (sum, item) => sum + exerciseMinutes(item, setsFor(item), input.goal),
+      WARM_UP_MINUTES,
+    )
+  picked.splice(MAX_EXERCISES)
+  // Over time: drop singles from the end, then extra glute sets, then compounds from the end.
+  const droppable = (item: CatalogExercise) =>
+    !item.compound && !(lowerBody && item.muscles[0] === "glutes")
+  while (total() > input.minutes && picked.length > 1) {
+    const single = picked.map(droppable).lastIndexOf(true)
+    const [extra] = [...extraSets].reverse()
+    if (single >= 0) picked.splice(single, 1)
+    else if (extra) extraSets.delete(extra)
+    else picked.pop()
+  }
   return buildRoutine(kind, picked, setsFor, input.goal, input.likes)
 }
 
@@ -193,12 +348,17 @@ export function routineOn(date: Date, input: PlanInput): Routine {
     input.injuries.find((injury) => injury.area === area && isActive(injury, today))
   const period = wholeBody(PERIOD_AREA)
   if (period && phaseOn(period, today) === "exclude") return REST_DAY
-  const schedule = WEEK[Math.min(Math.max(input.sessions ?? 3, 1), 7)]
+  const sessions = Math.min(Math.max(input.sessions ?? 3, 1), MAX_SESSIONS)
+  const schedule = weekFor(sessions, input.emphasis ?? "Balanced")
   const slot = schedule.findIndex(([weekday]) => weekday === mondayIndex(date))
   if (slot < 0) return REST_DAY
-  const kind = schedule[slot][1]
-  const variant = schedule.slice(0, slot).filter(([, other]) => other === kind).length
-  return sessionFor(kind, variant, input, today, !!period || !!wholeBody(UNWELL_AREA))
+  let kind = schedule[slot][1]
+  if (kind === "Full Body") {
+    // A and B alternate across weeks too: A-B-A, then B-A-B.
+    const week = Math.floor(daysBetween(FIRST_WEEK, today) / 7)
+    kind = (week * schedule.length + slot) % 2 ? "Full Body B" : "Full Body A"
+  }
+  return sessionFor(kind, input, today, !!period || !!wholeBody(UNWELL_AREA))
 }
 
 export function routinesFor(input: PlanInput, date = new Date()): RoutinePair {
@@ -226,7 +386,7 @@ export const GROUP_ROUTINES: Record<string, Routine> = Object.fromEntries(
     group.toLowerCase(),
     buildRoutine(
       group,
-      CATALOG.filter((exercise) => exercise.group === group),
+      CATALOG.filter((item) => item.group === group),
       () => 3,
       "Maintain",
       [],

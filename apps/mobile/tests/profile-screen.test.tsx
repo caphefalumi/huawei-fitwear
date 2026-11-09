@@ -1,6 +1,5 @@
 import { act, fireEvent, render } from "@testing-library/react-native"
 import { router } from "expo-router"
-import { Alert } from "react-native"
 
 import { useAuth } from "@/features/auth"
 import { useHealth } from "@/features/health"
@@ -17,8 +16,14 @@ jest.mock("@/features/health", () => ({
   ...jest.requireActual("@/features/health"),
   useHealth: jest.fn(),
 }))
+jest.mock("react-native-keyboard-controller", () => {
+  const { View } = require("react-native")
+  return { KeyboardAvoidingView: View }
+})
 jest.mock("@/features/profile/sheets", () => ({
   ActivitySheet: () => null,
+  EmphasisSheet: () => null,
+  ExperienceSheet: () => null,
   FrequencySheet: () => null,
   GoalSheet: () => null,
   HeightSheet: () => null,
@@ -79,19 +84,25 @@ test("keeps identity visible and retries after a health load error", async () =>
   expect(refresh).toHaveBeenCalledTimes(1)
 })
 
-test("requires explicit consent before turning on period recovery", async () => {
-  const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {})
+test("asks how the user feels before turning on period recovery", async () => {
   const screen = await render(<ProfileScreen />)
   expect(screen.getByRole("button", { name: "Period recovery, Off" })).toBeTruthy()
   await fireEvent.press(screen.getByRole("button", { name: "Period recovery, Off" }))
 
-  const buttons = alert.mock.calls[0]?.[2]
-  expect(buttons?.map((button) => button.text)).toEqual(["Not now", "Turn on"])
+  expect(screen.getByText("How are you feeling?")).toBeTruthy()
   expect(useInjuries.getState().injuries).toEqual([])
-  await act(async () => buttons?.[1]?.onPress?.())
-  expect(useInjuries.getState().injuries.map((injury) => injury.area)).toEqual([PERIOD_AREA])
+  await fireEvent.press(screen.getByRole("radio", { name: /Rough/ }))
+  await fireEvent.press(screen.getByText("Add"))
+  expect(useInjuries.getState().injuries).toEqual([
+    expect.objectContaining({ area: PERIOD_AREA, excludeDays: 2, lightDays: 3 }),
+  ])
   expect(screen.getByRole("button", { name: "Period recovery, On" })).toBeTruthy()
-  alert.mockRestore()
+})
+
+test("shows emphasis and experience, defaulting women to lower body", async () => {
+  const screen = await render(<ProfileScreen />)
+  expect(screen.getByRole("button", { name: "Emphasis, Lower body" })).toBeTruthy()
+  expect(screen.getByRole("button", { name: "Experience, Regular" })).toBeTruthy()
 })
 test("opens exercise preferences and injuries from the plan section", async () => {
   const screen = await render(<ProfileScreen />)

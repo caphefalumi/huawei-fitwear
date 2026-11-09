@@ -2,21 +2,23 @@ import * as Sentry from "@sentry/react-native"
 import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useState } from "react"
-import { Alert, StyleSheet, Text, View } from "react-native"
+import { StyleSheet, Text, View } from "react-native"
 import Animated, { FadeInUp } from "react-native-reanimated"
 
 import { Pressable } from "@/components/pressable"
 import { Button, PageHeading, Screen } from "@/components/ui"
 import { useAuth } from "@/features/auth"
 import { useHealth } from "@/features/health"
-import { PERIOD_AREA, useActiveInjuries, useInjuries } from "@/features/recovery"
-import { usePlanPreferences } from "@/features/workout"
+import { PERIOD_AREA, PeriodSheet, useActiveInjuries, useInjuries } from "@/features/recovery"
+import { emphasisFor, usePlanPreferences } from "@/features/workout"
 import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
 import { useDeveloperMode } from "./developer-mode.store"
 import {
   ActivitySheet,
+  EmphasisSheet,
+  ExperienceSheet,
   FrequencySheet,
   GoalSheet,
   HeightSheet,
@@ -68,6 +70,8 @@ type OpenSheet =
   | "activity"
   | "target"
   | "session"
+  | "emphasis"
+  | "experience"
   | null
 
 export function ProfileScreen() {
@@ -81,12 +85,13 @@ export function ProfileScreen() {
   const addInjury = useInjuries((state) => state.add)
   const removeInjury = useInjuries((state) => state.remove)
   const inPeriod = injuries.some((injury) => injury.area === PERIOD_AREA)
-  const { minutes, likes, dislikes } = usePlanPreferences()
+  const { minutes, likes, dislikes, emphasis, experience } = usePlanPreferences()
   const preferencesLabel =
     likes.length || dislikes.length ? `${likes.length} liked, ${dislikes.length} disliked` : "None"
   const injuriesLabel =
     injuries.length > 1 ? `${injuries.length} active` : (injuries[0]?.area ?? "None")
   const [openSheet, setOpenSheet] = useState<OpenSheet>(null)
+  const [periodSheet, setPeriodSheet] = useState(false)
   const sexLabel = sex ?? "Not set"
   const weightLabel = weightKg === null ? "Not set" : `${weightKg.toFixed(1)} kg`
   const heightLabel = heightCm === null ? "Not set" : `${heightCm} cm`
@@ -163,6 +168,16 @@ export function ProfileScreen() {
             label="Session length"
             value={`${minutes} min`}
             onPress={() => setOpenSheet("session")}
+          />
+          <ProfileRow
+            label="Emphasis"
+            value={emphasisFor(emphasis, sex)}
+            onPress={() => setOpenSheet("emphasis")}
+          />
+          <ProfileRow
+            label="Experience"
+            value={experience}
+            onPress={() => setOpenSheet("experience")}
           />
           <ProfileRow
             label="Exercise preferences"
@@ -243,20 +258,7 @@ export function ProfileScreen() {
             label={inPeriod ? "My period has ended" : "I am in my period"}
             variant={inPeriod ? "secondary" : "primary"}
             style={inPeriod ? styles.periodButtonActive : undefined}
-            onPress={() => {
-              if (inPeriod) {
-                removeInjury(PERIOD_AREA)
-              } else {
-                Alert.alert(
-                  "Period recovery",
-                  "Used only to adjust your plan. You can turn it off any time.",
-                  [
-                    { text: "Not now", style: "cancel" },
-                    { text: "Turn on", onPress: () => addInjury(PERIOD_AREA) },
-                  ],
-                )
-              }
-            }}
+            onPress={() => (inPeriod ? removeInjury(PERIOD_AREA) : setPeriodSheet(true))}
           />
         </Animated.View>
       ) : null}
@@ -269,6 +271,18 @@ export function ProfileScreen() {
       {openSheet === "activity" ? <ActivitySheet visible onClose={close} /> : null}
       {openSheet === "target" ? <TargetWeightSheet visible onClose={close} /> : null}
       {openSheet === "session" ? <SessionLengthSheet visible onClose={close} /> : null}
+      {openSheet === "emphasis" ? <EmphasisSheet visible onClose={close} /> : null}
+      {periodSheet ? (
+        <PeriodSheet
+          visible
+          onClose={() => setPeriodSheet(false)}
+          onAdd={(feeling) => {
+            addInjury(PERIOD_AREA, feeling)
+            setPeriodSheet(false)
+          }}
+        />
+      ) : null}
+      {openSheet === "experience" ? <ExperienceSheet visible onClose={close} /> : null}
     </Screen>
   )
 }

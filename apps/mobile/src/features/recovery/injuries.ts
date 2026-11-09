@@ -73,8 +73,13 @@ export const SEVERITIES = {
 } as const
 export type Severity = keyof typeof SEVERITIES
 
-export const PERIOD_REST_DAYS = 4
-export const PERIOD_LIGHT_DAYS = 3
+/** Period is not an injury: how the user feels sets the rest and light days. */
+export const PERIOD_FEELINGS = {
+  "Okay, just go easier": { excludeDays: 0, lightDays: 3 },
+  "Tired or crampy": { excludeDays: 1, lightDays: 3 },
+  Rough: { excludeDays: 2, lightDays: 3 },
+} as const
+export type PeriodFeeling = keyof typeof PERIOD_FEELINGS
 const UNWELL_LIGHT_DAYS = 3
 
 export function addDays(key: string, days: number) {
@@ -91,17 +96,18 @@ export function daysBetween(from: string, to: string) {
 export const shortDate = (key: string) =>
   new Date(`${key}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })
 
+/** `option` is a severity for body areas and a feeling for period. */
 export function createInjury(
   area: InjuryArea,
-  severity: Severity = "Mild",
+  option?: Severity | PeriodFeeling,
   today = dateKey(),
 ): Injury {
   const days =
     area === PERIOD_AREA
-      ? { excludeDays: PERIOD_REST_DAYS, lightDays: PERIOD_LIGHT_DAYS }
+      ? (PERIOD_FEELINGS[option as PeriodFeeling] ?? PERIOD_FEELINGS["Tired or crampy"])
       : area === UNWELL_AREA
         ? { excludeDays: 0, lightDays: UNWELL_LIGHT_DAYS }
-        : SEVERITIES[severity]
+        : (SEVERITIES[option as Severity] ?? SEVERITIES.Mild)
   return { area, startDate: today, ...days, permanent: null }
 }
 
@@ -134,22 +140,25 @@ export function injuryEffect(injury: Injury, today = dateKey()) {
   const phase = phaseOn(injury, today) ?? (injury.excludeDays ? "exclude" : "light")
   const until = (end: Phase) =>
     injury.permanent === end ? "" : ` until ${shortDate(phaseEnd(injury, end))}`
-  const subject = isWholeBody(injury.area) ? "All exercises" : `${injury.area} exercises`
+  const wholeBody = isWholeBody(injury.area)
+  const subject = wholeBody ? "All exercises" : `${injury.area} exercises`
   const light = `${subject}: 3 → 2 sets${until("light")}`
   if (phase === "light") return light
   const removed =
-    injury.area === PERIOD_AREA
-      ? `Rest${until("exclude")}`
-      : `${subject} are removed from your plan${until("exclude")}`
+    injury.area !== PERIOD_AREA
+      ? `${subject} are removed from your plan${until("exclude")}`
+      : phaseEnd(injury, "exclude") === today && injury.permanent !== "exclude"
+        ? "Rest today"
+        : `Rest${until("exclude")}`
   return injury.permanent === "exclude" || !injury.lightDays
     ? removed
-    : `${removed}, then 3 → 2 sets${until("light")}`
+    : `${removed}, then ${wholeBody ? "all exercises " : ""}3 → 2 sets${until("light")}`
 }
 
 type InjuriesState = {
   injuries: Injury[]
   save: (next: Injury[]) => void
-  add: (area: InjuryArea) => void
+  add: (area: InjuryArea, option?: Severity | PeriodFeeling) => void
   remove: (area: InjuryArea) => void
 }
 
@@ -157,11 +166,11 @@ type InjuriesState = {
 export const useInjuries = create<InjuriesState>((set) => ({
   injuries: [],
   save: (injuries) => set({ injuries }),
-  add: (area) =>
+  add: (area, option) =>
     set((state) =>
       state.injuries.some((injury) => injury.area === area)
         ? state
-        : { injuries: [...state.injuries, createInjury(area)] },
+        : { injuries: [...state.injuries, createInjury(area, option)] },
     ),
   remove: (area) =>
     set((state) => ({ injuries: state.injuries.filter((injury) => injury.area !== area) })),

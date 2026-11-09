@@ -191,6 +191,27 @@ export const CATALOG: CatalogExercise[] = [
     ],
   },
   {
+    key: "push-up",
+    name: "Push-up",
+    group: "Chest",
+    equipment: "bodyweight",
+    compound: true,
+    muscles: ["chest", "front delt", "triceps", "abs"],
+    joints: ["shoulder", "elbow", "wrist"],
+    reps: 10,
+    unit: "reps",
+    cues: [
+      {
+        title: "Pick your height",
+        detail: "Put your hands on a bench or bar to make it easier; go lower as you get stronger.",
+      },
+      {
+        title: "One straight line",
+        detail: "Brace so head, hips and heels stay in line, then lower your chest and push away.",
+      },
+    ],
+  },
+  {
     key: "lat-pulldown",
     name: "Lat pulldown",
     group: "Back",
@@ -290,6 +311,27 @@ export const CATALOG: CatalogExercise[] = [
       {
         title: "Elbows wide",
         detail: "Pull the rope toward your forehead, separating the ends without leaning backward.",
+      },
+    ],
+  },
+  {
+    key: "chest-supported-row",
+    name: "Chest-supported row",
+    group: "Back",
+    equipment: "dumbbell",
+    compound: true,
+    muscles: ["mid back", "lats", "biceps", "rear delt"],
+    joints: ["shoulder", "elbow", "wrist"],
+    reps: 10,
+    unit: "reps",
+    cues: [
+      {
+        title: "Chest on the pad",
+        detail: "Lie face down on an incline bench so your lower back stays out of it.",
+      },
+      {
+        title: "Pull to the ribs",
+        detail: "Row the weights toward your lower ribs, squeeze your shoulder blades, then lower.",
       },
     ],
   },
@@ -441,6 +483,111 @@ export const CATALOG: CatalogExercise[] = [
       {
         title: "Full control",
         detail: "Lift heels, pause at the top and lower slowly without bouncing.",
+      },
+    ],
+  },
+  {
+    key: "goblet-squat",
+    name: "Goblet squat",
+    group: "Legs",
+    equipment: "dumbbell",
+    compound: true,
+    muscles: ["quads", "glutes", "abs"],
+    joints: ["knee", "hip", "ankle", "lumbar spine"],
+    reps: 10,
+    unit: "reps",
+    cues: [
+      {
+        title: "Weight at the chest",
+        detail: "Hold one dumbbell upright against your chest with elbows pointing down.",
+      },
+      {
+        title: "Sit between the knees",
+        detail: "Squat down with your chest up and knees over toes, then stand through the feet.",
+      },
+    ],
+  },
+  {
+    key: "bulgarian-split-squat",
+    name: "Bulgarian split squat",
+    group: "Legs",
+    equipment: "dumbbell",
+    compound: true,
+    muscles: ["quads", "glutes", "hamstrings"],
+    joints: ["knee", "hip", "ankle", "lumbar spine"],
+    reps: 10,
+    unit: "reps",
+    cues: [
+      {
+        title: "Back foot on a bench",
+        detail: "Stand a long step in front of a bench and rest the top of your back foot on it.",
+      },
+      {
+        title: "Drop straight down",
+        detail: "Lower until the front thigh is about level, then push up through the front foot.",
+      },
+    ],
+  },
+  {
+    key: "walking-lunge",
+    name: "Walking lunge",
+    group: "Legs",
+    equipment: "dumbbell",
+    compound: true,
+    muscles: ["quads", "glutes", "hamstrings"],
+    joints: ["knee", "hip", "ankle"],
+    reps: 10,
+    unit: "reps",
+    cues: [
+      {
+        title: "Long, steady steps",
+        detail: "Step forward and lower the back knee toward the floor with your torso upright.",
+      },
+      {
+        title: "Drive through the front heel",
+        detail: "Push up and bring the back foot through into the next step.",
+      },
+    ],
+  },
+  {
+    key: "cable-glute-kickback",
+    name: "Cable glute kickback",
+    group: "Legs",
+    equipment: "cable",
+    compound: false,
+    muscles: ["glutes", "hamstrings"],
+    joints: ["hip", "lumbar spine"],
+    reps: 12,
+    unit: "reps",
+    cues: [
+      {
+        title: "Hinge and brace",
+        detail: "Strap the cuff to one ankle, hold the frame and lean forward slightly.",
+      },
+      {
+        title: "Kick back, not up",
+        detail: "Push the leg back with the glute without arching your lower back.",
+      },
+    ],
+  },
+  {
+    key: "hip-abduction-machine",
+    name: "Hip abduction machine",
+    group: "Legs",
+    equipment: "machine",
+    compound: false,
+    muscles: ["glutes"],
+    joints: ["hip"],
+    reps: 12,
+    unit: "reps",
+    cues: [
+      {
+        title: "Sit tall",
+        detail: "Sit back against the pad with the pads on the outside of your knees.",
+      },
+      {
+        title: "Push out slowly",
+        detail: "Press your knees apart, pause, then let them come back under control.",
       },
     ],
   },
@@ -601,6 +748,27 @@ export const CATALOG: CatalogExercise[] = [
       {
         title: "Extend overhead",
         detail: "Straighten elbows without flaring them, then bend slowly back.",
+      },
+    ],
+  },
+  {
+    key: "incline-dumbbell-curl",
+    name: "Incline dumbbell curl",
+    group: "Arms",
+    equipment: "dumbbell",
+    compound: false,
+    muscles: ["biceps"],
+    joints: ["elbow", "shoulder", "wrist"],
+    reps: 12,
+    unit: "reps",
+    cues: [
+      {
+        title: "Arms hang back",
+        detail: "Sit on a bench set around 45 degrees and let your arms hang straight down.",
+      },
+      {
+        title: "Curl without swinging",
+        detail: "Keep elbows still, curl up, then lower slowly to a full stretch.",
       },
     ],
   },

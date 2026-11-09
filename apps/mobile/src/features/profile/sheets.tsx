@@ -7,14 +7,20 @@ import { Sheet, SheetActions, SheetField } from "@/components/sheet"
 import { WheelPicker } from "@/components/wheel-picker"
 import { ACTIVITIES, GOALS, useHealth, type Sex } from "@/features/health"
 import { PERIOD_AREA, useInjuries } from "@/features/recovery"
-import { SESSION_MINUTES, usePlanPreferences } from "@/features/workout"
+import {
+  EMPHASES,
+  emphasisFor,
+  EXPERIENCES,
+  SESSION_MINUTES,
+  usePlanPreferences,
+} from "@/features/workout"
 import { apiErrorMessage } from "@/lib/api"
 import { Palette as C } from "@/theme"
 
 const ACTIVITY_OPTIONS = Object.values(ACTIVITIES)
 const GOAL_OPTIONS = Object.values(GOALS)
 const SEX_OPTIONS: readonly Sex[] = ["Male", "Female", "Rather not say"]
-const SESSION_VALUES = [1, 2, 3, 4, 5, 6, 7]
+const SESSION_VALUES = [1, 2, 3, 4, 5, 6]
 const HEIGHT_VALUES = Array.from({ length: 221 }, (_, index) => index + 80)
 type SheetProps = { visible: boolean; onClose: () => void; onDismiss?: () => void }
 
@@ -232,7 +238,9 @@ export function ActivitySheet({ visible, onClose, onDismiss }: SheetProps) {
 
 export function FrequencySheet({ visible, onClose, onDismiss }: SheetProps) {
   const { plan, savePlan } = useHealth()
-  const [draft, setDraft] = useState(plan.sessions ?? SESSION_VALUES[0])
+  const [draft, setDraft] = useState(
+    Math.min(plan.sessions ?? SESSION_VALUES[0], SESSION_VALUES.length),
+  )
   const action = useSave(onClose)
   return (
     <Sheet visible={visible} title="Workout frequency" onClose={action.close} onDismiss={onDismiss}>
@@ -283,6 +291,43 @@ export function SessionLengthSheet({ visible, onClose, onDismiss }: SheetProps) 
         }}
         onSecondary={action.close}
       />
+    </Sheet>
+  )
+}
+
+export function EmphasisSheet({ visible, onClose, onDismiss }: SheetProps) {
+  const { sex } = useHealth()
+  const emphasis = usePlanPreferences((state) => emphasisFor(state.emphasis, sex))
+  const setEmphasis = usePlanPreferences((state) => state.setEmphasis)
+  return (
+    <Sheet visible={visible} title="Emphasis" onClose={onClose} onDismiss={onDismiss}>
+      <RadioList
+        options={EMPHASES}
+        value={emphasis}
+        onChange={(next) => {
+          setEmphasis(next)
+          onClose()
+        }}
+      />
+      <Text style={styles.body}>Lower body gives glutes and hamstrings more of each session.</Text>
+    </Sheet>
+  )
+}
+
+export function ExperienceSheet({ visible, onClose, onDismiss }: SheetProps) {
+  const experience = usePlanPreferences((state) => state.experience)
+  const setExperience = usePlanPreferences((state) => state.setExperience)
+  return (
+    <Sheet visible={visible} title="Experience" onClose={onClose} onDismiss={onDismiss}>
+      <RadioList
+        options={EXPERIENCES}
+        value={experience}
+        onChange={(next) => {
+          setExperience(next)
+          onClose()
+        }}
+      />
+      <Text style={styles.body}>Beginner uses easier variations and fewer sets.</Text>
     </Sheet>
   )
 }
