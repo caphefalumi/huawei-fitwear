@@ -1,1 +1,1 @@
-export { MealsHistoryScreen as default } from "@/features/meals/meals-history-screen"
+export { MealsHistoryScreen as default } from "@/features/meals/screens/meals-history-screen"

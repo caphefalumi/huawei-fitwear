@@ -1,0 +1,265 @@
+import { router } from "expo-router"
+import { useEffect, useRef, useState } from "react"
+import { Animated, Easing, StyleSheet, Text, View } from "react-native"
+
+import { Pressable } from "@/components/pressable"
+import { BackHeader, Card, PageHeading, Screen } from "@/components/ui"
+import { useHealth } from "@/features/health"
+import { useMarkInteractive } from "@/lib/observe"
+import { Palette as C } from "@/theme"
+
+import { progressData, RANGES, type Range } from "../progress-data"
+import { WeightChart } from "../weight-chart"
+
+/** Bar grows with a spring each time it appears. */
+function ActivityBar({ height, index }: { height: number; index: number }) {
+  const anim = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    const t = Animated.timing(anim, {
+      toValue: height,
+      duration: 500,
+      delay: index * 60,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      useNativeDriver: false,
+    })
+    t.start()
+    return () => t.stop()
+  }, [anim, height, index])
+
+  return <Animated.View style={[styles.bar, { height: anim }]} />
+}
+
+export function ProgressScreen() {
+  useMarkInteractive()
+  const { weightKg, weights } = useHealth()
+  const [range, setRange] = useState<Range>("Month")
+  const data = progressData(range, weights, null)
+  const latestWeight = weightKg ?? data.weights.at(-1) ?? 0
+  const maxSessions = Math.max(1, ...data.bars.map((bar) => bar.sessions))
+
+  return (
+    <Screen>
+      <BackHeader label="Overview" onPress={() => router.back()} />
+
+      <PageHeading title="Your progress." />
+
+      <View style={styles.segments}>
+        {RANGES.map((item) => {
+          const active = item === range
+          return (
+            <Pressable
+              key={item}
+              style={[styles.segment, active && styles.segmentActive]}
+              onPress={() => setRange(item)}
+            >
+              <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>{item}</Text>
+            </Pressable>
+          )
+        })}
+      </View>
+
+      <Card>
+        <View style={styles.weightHeader}>
+          <Text style={styles.cardTitle}>Weight</Text>
+          <View style={styles.pill}>
+            <Text style={styles.pillText}>{data.delta}</Text>
+          </View>
+        </View>
+
+        <Text style={styles.bigValue}>{latestWeight.toFixed(1)} kg</Text>
+
+        <WeightChart key={range} weights={data.weights} />
+
+        <View style={styles.dates}>
+          {data.dates.map((date) => (
+            <Text key={date} style={styles.dateLabel}>
+              {date}
+            </Text>
+          ))}
+        </View>
+
+        <Text style={styles.cardNote}>Goal 70.0 kg · Updated Oct 7</Text>
+      </Card>
+
+      <Card>
+        <View style={styles.weightHeader}>
+          <Text style={styles.cardTitle}>Training activity</Text>
+          <Text style={styles.cardNote}>{data.sessionsNote}</Text>
+        </View>
+
+        <View key={range} style={styles.bars}>
+          {data.bars.map((week, i) => (
+            <View key={week.label} style={styles.barColumn}>
+              <ActivityBar height={12 + (week.sessions / maxSessions) * 48} index={i} />
+              <Text style={styles.dateLabel}>{week.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.durationRow}>
+          <Text style={styles.bigValue}>{data.duration}</Text>
+          <Text style={styles.cardNote}>{data.durationNote}</Text>
+        </View>
+
+        <Text style={styles.cardNote}>
+          Logged sessions and total workout time. Weighted exercises are tracked separately in your
+          workout history.
+        </Text>
+      </Card>
+
+      <Card>
+        <View style={styles.weightHeader}>
+          <Text style={styles.cardTitle}>Body composition</Text>
+          <Text style={styles.cardNote}>Oct 7</Text>
+        </View>
+
+        <View style={styles.compositionRow}>
+          <View style={styles.compositionItem}>
+            <Text style={styles.compositionValue}>19.4%</Text>
+            <Text style={styles.compositionLabel}>Body fat</Text>
+            <Text style={styles.compositionDelta}>−0.6 pp / month</Text>
+          </View>
+          <View style={styles.compositionItem}>
+            <Text style={styles.compositionValue}>32.8 kg</Text>
+            <Text style={styles.compositionLabel}>Muscle mass</Text>
+            <Text style={styles.compositionDelta}>+0.3 kg / month</Text>
+          </View>
+        </View>
+
+        <Text style={styles.cardNote}>Personal-scale estimates, not a diagnosis.</Text>
+      </Card>
+
+      <Card>
+        <Text style={styles.cardTitle}>Accuracy &amp; personalization</Text>
+        <Text style={styles.cardNote}>
+          Basic body info gives you a starting nutrition estimate. Adding daily activity and goals
+          helps personalize your plan. More details live in Profile.
+        </Text>
+        <Pressable onPress={() => router.push("/profile")} hitSlop={8}>
+          <Text style={styles.link}>Profile</Text>
+        </Pressable>
+      </Card>
+    </Screen>
+  )
+}
+
+const styles = StyleSheet.create({
+  segments: {
+    flexDirection: "row",
+    backgroundColor: C.card,
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+  },
+  segment: {
+    flex: 1,
+    height: 32,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  segmentActive: {
+    backgroundColor: C.surface,
+  },
+  segmentLabel: {
+    fontSize: 12,
+    color: C.textMuted,
+  },
+  segmentLabelActive: {
+    fontWeight: "600",
+    color: C.accent,
+  },
+  weightHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: C.text,
+  },
+  pill: {
+    backgroundColor: C.accentTint,
+    borderRadius: 100,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  pillText: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: C.accent,
+  },
+  bigValue: {
+    fontSize: 34,
+    fontWeight: "600",
+    color: C.text,
+  },
+  dates: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  dateLabel: {
+    fontSize: 9,
+    color: C.textMuted,
+  },
+  cardNote: {
+    fontSize: 11,
+    color: C.textMuted,
+    flexShrink: 1,
+  },
+  bars: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  barColumn: {
+    flex: 1,
+    alignItems: "center",
+    gap: 6,
+  },
+  bar: {
+    width: "100%",
+    borderRadius: 6,
+    backgroundColor: C.accentTint,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  durationRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 8,
+  },
+  compositionRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  compositionItem: {
+    flex: 1,
+    backgroundColor: C.previewTint,
+    borderRadius: 16,
+    padding: 12,
+    gap: 3,
+  },
+  compositionValue: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: C.text,
+  },
+  compositionLabel: {
+    fontSize: 11,
+    color: C.textMuted,
+  },
+  compositionDelta: {
+    fontSize: 10,
+    color: C.accent,
+  },
+  link: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: C.accent,
+  },
+})

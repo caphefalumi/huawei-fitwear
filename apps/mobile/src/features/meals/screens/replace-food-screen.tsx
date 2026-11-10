@@ -1,0 +1,234 @@
+import * as Sentry from "@sentry/react-native"
+import { router, useLocalSearchParams } from "expo-router"
+import { useEffect, useRef, useState } from "react"
+import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+
+import { Pressable } from "@/components/pressable"
+import { BackHeader, SectionHeading } from "@/components/ui"
+import { apiErrorMessage } from "@/lib/api"
+import { useMarkInteractive } from "@/lib/observe"
+import { Palette as C } from "@/theme"
+
+import {
+  useFoodSearch,
+  estimatePortion,
+  splitDetail,
+  useMeals,
+  type FoodEntry,
+} from "../meals-hooks"
+import { SearchInput } from "../meals-ui"
+
+export function ReplaceFoodScreen() {
+  useMarkInteractive()
+  const insets = useSafeAreaInsets()
+  const params = useLocalSearchParams<{ id?: string; log?: string }>()
+  const { items, history, updateItem } = useMeals()
+  const current = (
+    params.log ? history.find((meal) => meal.id === params.log)?.items : items
+  )?.find((item) => item.id === params.id)
+  const [query, setQuery] = useState("")
+
+  const { matches, loading, error: searchError } = useFoodSearch(query)
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const active = useRef(true)
+  useEffect(() => {
+    active.current = true
+    return () => {
+      active.current = false
+    }
+  }, [])
+
+  async function replace(food: FoodEntry) {
+    if (!current || saving) return
+    const amount = splitDetail(current.detail).amount || 100
+    const estimate = estimatePortion(food, amount)
+    setSaving(true)
+    setError(null)
+    try {
+      await updateItem(
+        current.id,
+        {
+          ...current,
+          name: food.name,
+          detail: `${amount}${food.unit}`,
+          kcal: estimate.kcal,
+          macros: { protein: estimate.protein, carbs: estimate.carbs, fat: estimate.fat },
+          glyph: food.glyph,
+        },
+        params.log,
+      )
+      if (active.current) router.back()
+    } catch (cause) {
+      Sentry.captureException(cause)
+      if (active.current) setError(apiErrorMessage(cause, "this food", "save"))
+    } finally {
+      if (active.current) setSaving(false)
+    }
+  }
+
+  return (
+    <ScrollView
+      style={styles.screen}
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
+      ]}
+    >
+      <BackHeader
+        label="Lunch"
+        onPress={() => router.back()}
+        actionLabel="Cancel"
+        onAction={() => router.back()}
+      />
+
+      <View style={styles.heading}>
+        <Text accessibilityRole="header" style={styles.title}>
+          Search food
+        </Text>
+        <Text style={styles.subtitle}>Select a replacement from the database.</Text>
+      </View>
+      {error || searchError ? (
+        <Text accessibilityRole="alert" style={styles.footnote}>
+          {error ?? searchError}
+        </Text>
+      ) : null}
+      {!loading && query.trim() && !matches.length ? (
+        <Text style={styles.footnote}>No matching foods.</Text>
+      ) : null}
+
+      <View style={styles.currentCard}>
+        <Text style={styles.currentEyebrow}>CURRENT ITEM · NOT REPLACED YET</Text>
+        <Text style={styles.currentName}>
+          {current ? `${current.name} · ${current.detail}` : "No item selected"}
+        </Text>
+        <Text style={styles.currentNote}>Your meal stays unchanged until you confirm.</Text>
+      </View>
+
+      <SearchInput
+        value={query}
+        onChangeText={setQuery}
+        onClear={() => setQuery("")}
+        placeholder="rice"
+        size={19}
+      />
+
+      {matches.length > 0 ? (
+        <>
+          <SectionHeading title="Database results" actionLabel={`${matches.length} matches`} />
+
+          {matches.map((food) => (
+            <View key={food.id} style={styles.resultCard}>
+              <View style={styles.resultTop}>
+                <Text style={styles.resultName}>{food.name}</Text>
+                <Pressable
+                  accessibilityLabel={`Replace ${current?.name ?? "item"} with ${food.name}`}
+                  accessibilityState={{ busy: saving }}
+                  disabled={saving}
+                  onPress={() => replace(food)}
+                  hitSlop={8}
+                >
+                  <Text style={styles.resultSelect}>Select</Text>
+                </Pressable>
+              </View>
+              <Text style={styles.resultServing}>{food.serving}</Text>
+              <Text style={styles.resultMacros}>
+                {food.per100.kcal} kcal · P {food.per100.protein}g · C {food.per100.carbs}g · F{" "}
+                {food.per100.fat}g
+              </Text>
+            </View>
+          ))}
+        </>
+      ) : null}
+
+      <Text style={styles.footnote}>
+        Select a food, then review its amount before confirming the replacement.
+      </Text>
+    </ScrollView>
+  )
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: C.background,
+  },
+  content: {
+    paddingHorizontal: 24,
+    gap: 16,
+  },
+  heading: {
+    gap: 6,
+    marginTop: -4,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "400",
+    color: C.text,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: C.textMuted,
+  },
+  currentCard: {
+    backgroundColor: C.surface,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 14,
+    padding: 16,
+    gap: 6,
+  },
+  currentEyebrow: {
+    fontSize: 11,
+    letterSpacing: 0.3,
+    color: C.textMuted,
+  },
+  currentName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: C.text,
+  },
+  currentNote: {
+    fontSize: 11,
+    color: C.textMuted,
+  },
+  resultCard: {
+    backgroundColor: C.surface,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 14,
+    padding: 16,
+    gap: 6,
+  },
+  resultTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  resultName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: C.text,
+  },
+  resultSelect: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: C.accent,
+  },
+  resultServing: {
+    fontSize: 11,
+    color: C.textMuted,
+  },
+  resultMacros: {
+    fontSize: 10,
+    color: C.textMuted,
+  },
+  footnote: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: C.textMuted,
+  },
+})

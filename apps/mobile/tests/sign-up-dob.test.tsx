@@ -1,7 +1,7 @@
 import { fireEvent, render } from "@testing-library/react-native"
 
 import { useAuth } from "@/features/auth"
-import { SignUpScreen } from "@/features/auth/sign-up-screen"
+import { SignUpScreen } from "@/features/auth/screens/sign-up-screen"
 
 jest.mock("react-native-reanimated", () => ({
   __esModule: true,
