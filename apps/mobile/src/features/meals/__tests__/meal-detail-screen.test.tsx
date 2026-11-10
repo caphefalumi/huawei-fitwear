@@ -1,9 +1,9 @@
-import { act, fireEvent, render, waitFor } from "@testing-library/react-native"
+import { act, fireEvent, waitFor } from "@testing-library/react-native"
 
 import { useMeals } from "@/features/meals"
 import { MealDetailScreen } from "@/features/meals/screens/meal-detail-screen"
 import { apiRequest } from "@/lib/api/client"
-import { createQueryWrapper } from "@/tests/utils/query-wrapper"
+import { renderWithProviders } from "@/test-utils/render"
 
 jest.mock("@/features/meals/hooks/meals-hooks", () => ({
   fromApiMeal: (meal: unknown) => meal,
@@ -42,9 +42,7 @@ test("loads a meal by encoded route ID and retries a failed request", async () =
     .mockImplementationOnce(() => initialRequest.promise)
     .mockResolvedValueOnce({ name: "Saved meal" } as never)
   const onBack = jest.fn()
-  const screen = await render(<MealDetailScreen logId="meal/42" onBack={onBack} />, {
-    wrapper: createQueryWrapper(),
-  })
+  const screen = await renderWithProviders(<MealDetailScreen logId="meal/42" onBack={onBack} />)
 
   expect(screen.getByRole("header", { name: "Meal" })).toBeTruthy()
   await waitFor(() => expect(screen.getByLabelText(/loading meal/i)).toBeTruthy())

@@ -130,7 +130,11 @@ jobs:
           # The staging API URL is bundled into the APK, so include it.
           key="$({ git ls-files -s -z -- \
             apps/mobile package.json bun.lock .github/workflows/mobile-e2e.yml .github/actions/setup/action.yml \
-            ':(exclude)apps/mobile/tests/**' \
+            ':(exclude)apps/mobile/e2e/**' \
+            ':(exclude)apps/mobile/src/test-utils/**' \
+            ':(exclude,glob)apps/mobile/src/**/__tests__/**' \
+            ':(exclude)apps/mobile/jest.config.ts' \
+            ':(exclude)apps/mobile/jest-setup.ts' \
             ':(exclude)apps/mobile/README.md'; \
             printf '%s' "$EXPO_PUBLIC_API_URL"; } | sha256sum | cut -d' ' -f1)"
           echo "key=$key" >> "$GITHUB_OUTPUT"

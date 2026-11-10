@@ -43,4 +43,4 @@ maestro test \
   -e "MAESTRO_TEST_EMAIL=$MAESTRO_TEST_EMAIL" \
   -e "MAESTRO_TEST_PASSWORD=$MAESTRO_TEST_PASSWORD" \
   "${args[@]}" \
-  apps/mobile/tests/e2e
+  apps/mobile/e2e
