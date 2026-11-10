@@ -6,7 +6,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Sheet } from "@/components/ui/sheet"
 import { Palette as C } from "@/theme"
 
-import { rescaleItem, splitDetail, type MealItem } from "./meals-hooks"
+import { rescaleItem, splitDetail, type MealItem } from "../hooks/meals-hooks"
 import { icons } from "./meals-ui"
 
 export function MealOptionsSheet({

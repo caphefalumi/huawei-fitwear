@@ -17,8 +17,8 @@ export {
   shortDate,
   useActiveInjuries,
   useInjuries,
-} from "./injuries"
-export { PeriodSheet } from "./period-sheet"
+} from "./hooks/injuries"
+export { PeriodSheet } from "./components/period-sheet"
 export type {
   BodyArea,
   Injury,
@@ -27,4 +27,4 @@ export type {
   PeriodFeeling,
   Phase,
   Severity,
-} from "./injuries"
+} from "./hooks/injuries"

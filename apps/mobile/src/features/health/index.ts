@@ -7,5 +7,5 @@ export {
   HealthProvider,
   healthQueryKeys,
   useHealth,
-} from "./health-hooks"
-export type { PlanPreferences, Sex, WeightLog } from "./health-hooks"
+} from "./hooks/health-hooks"
+export type { PlanPreferences, Sex, WeightLog } from "./hooks/health-hooks"

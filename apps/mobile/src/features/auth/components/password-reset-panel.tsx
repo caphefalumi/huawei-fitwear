@@ -3,9 +3,9 @@ import { Text, TextInput, View } from "react-native"
 import { Pressable } from "@/components/ui/pressable"
 import { PASSWORD_FIELD_HELPER } from "@/lib/forms/form-validation"
 
+import type { PasswordResetState } from "../hooks/use-password-reset"
 import { AuthField } from "./auth-field"
 import { AuthColors, authStyles as styles } from "./login-styles"
-import type { PasswordResetState } from "./use-password-reset"
 
 export function PasswordResetPanel({
   email,

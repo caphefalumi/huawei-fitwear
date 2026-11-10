@@ -10,9 +10,9 @@ import { Pressable } from "@/components/ui/pressable"
 import { apiErrorMessage } from "@/lib/api/client"
 import { Palette as C } from "@/theme"
 
-import { MealPhoto } from "../meal-photo"
-import { MealRow } from "../meal-row"
-import { MealAmountSheet, MealOptionsSheet } from "../meal-sheets"
+import { MealPhoto } from "../components/meal-photo"
+import { MealRow } from "../components/meal-row"
+import { MealAmountSheet, MealOptionsSheet } from "../components/meal-sheets"
 import {
   mealTypeLabel,
   rescaleItem,
@@ -21,7 +21,7 @@ import {
   type MealItem,
   type MealLog,
   type MealType,
-} from "../meals-hooks"
+} from "../hooks/meals-hooks"
 
 export function MealResultScreen({ log }: { log?: MealLog }) {
   const insets = useSafeAreaInsets()

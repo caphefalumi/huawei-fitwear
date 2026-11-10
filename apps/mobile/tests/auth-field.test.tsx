@@ -1,6 +1,6 @@
 import { fireEvent, render } from "@testing-library/react-native"
 
-import { AuthField } from "@/features/auth/auth-field"
+import { AuthField } from "@/features/auth/components/auth-field"
 
 jest.mock("react-native-reanimated", () => ({
   __esModule: true,

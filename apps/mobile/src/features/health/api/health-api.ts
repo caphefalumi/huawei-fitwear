@@ -1,6 +1,6 @@
 import { apiRequest } from "@/lib/api/client"
 
-import type { WeightLog } from "./health-hooks"
+import type { WeightLog } from "../hooks/health-hooks"
 
 const healthEndpoints = {
   weights: "/health/weights",

@@ -10,7 +10,7 @@ import { useTheme } from "@/hooks/use-theme"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { BottomTabInset, tokens } from "@/theme"
 
-import { useWatchBle } from "../use-watch-ble"
+import { useWatchBle } from "../hooks/use-watch-ble"
 
 // ─── IMU packet type ──────────────────────────────────────────────────────────
 interface ImuPacket {

@@ -6,14 +6,14 @@ import { apiRequest } from "@/lib/api/client"
 
 import { createQueryWrapper } from "./query-wrapper"
 
-jest.mock("@/features/meals/meals-hooks", () => ({
+jest.mock("@/features/meals/hooks/meals-hooks", () => ({
   fromApiMeal: (meal: unknown) => meal,
   mealsQueryKeys: {
     detail: (userId: string, mealId: string) => ["meals", userId, "detail", mealId],
   },
   useMeals: jest.fn(),
 }))
-jest.mock("@/features/auth/auth-hooks", () => ({
+jest.mock("@/features/auth/hooks/auth-hooks", () => ({
   useAuth: () => ({ user: { id: "member-a" } }),
 }))
 jest.mock("@/lib/api/client", () => ({

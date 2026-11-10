@@ -14,8 +14,8 @@ import { Pressable } from "@/components/ui/pressable"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
-import { CATALOG, type CatalogExercise, type MuscleGroup } from "../catalog"
-import { usePlanPreferences } from "../plan-preferences.store"
+import { usePlanPreferences } from "../store/plan-preferences.store"
+import { CATALOG, type CatalogExercise, type MuscleGroup } from "../utils/catalog"
 
 const GROUPS: { group: MuscleGroup; icon: number }[] = [
   { group: "Chest", icon: require("@/assets/images/recovery/body-chest.svg") },

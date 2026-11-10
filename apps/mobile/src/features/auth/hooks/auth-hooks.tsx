@@ -33,14 +33,14 @@ import {
   sendSignOut,
   sendSignUp,
   sendUpdateUser,
-} from "./auth-api"
+} from "../api/auth-api"
 import type {
   AuthUser,
   AuthenticationSession,
   AuthenticationSessionResponse,
   SignUpBody,
   UpdateUserBody,
-} from "./types"
+} from "../types"
 export type {
   AuthUser,
   AuthenticationSession,
@@ -48,8 +48,8 @@ export type {
   SignUpBody,
   UpdateUserBody,
 }
-import { useAuthUiStore } from "./auth-ui-store"
-import { isLoggedIn } from "./is-logged-in"
+import { useAuthUiStore } from "../store/auth-ui-store"
+import { isLoggedIn } from "../utils/is-logged-in"
 
 export const APP_ROUTES = {
   welcome: "/",

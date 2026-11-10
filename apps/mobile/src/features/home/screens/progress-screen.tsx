@@ -8,8 +8,8 @@ import { useHealth } from "@/features/health"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
-import { progressData, RANGES, type Range } from "../progress-data"
-import { WeightChart } from "../weight-chart"
+import { WeightChart } from "../components/weight-chart"
+import { progressData, RANGES, type Range } from "../utils/progress-data"
 
 /** Bar grows with a spring each time it appears. */
 function ActivityBar({ height, index }: { height: number; index: number }) {

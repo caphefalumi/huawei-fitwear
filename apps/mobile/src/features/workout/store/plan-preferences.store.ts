@@ -3,7 +3,7 @@ import { create } from "zustand"
 import { useHealth, type Sex } from "@/features/health"
 import { useInjuries } from "@/features/recovery"
 
-import { routinesFor, type Emphasis, type Experience } from "./routines"
+import { routinesFor, type Emphasis, type Experience } from "../utils/routines"
 
 export const SESSION_MINUTES = [30, 45, 60, 90]
 export const EMPHASES: readonly Emphasis[] = ["Balanced", "Lower body"]

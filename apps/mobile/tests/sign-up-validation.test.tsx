@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react-native"
 import { useAuth } from "@/features/auth"
 import { SignUpScreen } from "@/features/auth/screens/sign-up-screen"
 
-jest.mock("@/features/auth/auth-hooks", () => ({
+jest.mock("@/features/auth/hooks/auth-hooks", () => ({
   APP_ROUTES: { login: "/login" },
   useAuth: jest.fn(),
 }))

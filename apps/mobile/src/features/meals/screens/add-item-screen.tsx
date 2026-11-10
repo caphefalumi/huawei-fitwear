@@ -11,14 +11,14 @@ import { apiErrorMessage } from "@/lib/api/client"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
+import { Box, Field, NutrientGrid, SearchInput, ValueInput, icons } from "../components/meals-ui"
 import {
   useFoodSearch,
   estimatePortion,
   useMeals,
   type FoodEntry,
   type MealEstimate,
-} from "../meals-hooks"
-import { Box, Field, NutrientGrid, SearchInput, ValueInput, icons } from "../meals-ui"
+} from "../hooks/meals-hooks"
 
 type NutrientKey = "energy" | "protein" | "carbs" | "fat"
 

@@ -5,7 +5,7 @@ import { BackHeader, Button, Card, PageHeading, Screen, SectionHeading } from "@
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
-import { GROUP_ROUTINES } from "../routines"
+import { GROUP_ROUTINES } from "../utils/routines"
 
 export function GroupPlanScreen() {
   useMarkInteractive()
