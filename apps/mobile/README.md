@@ -24,6 +24,8 @@ Forgot-password requests return the same message whether an account exists or no
 
 Sentry events disable default PII collection, omit request details, and strip breadcrumb content. Startup and navigation metrics use the Expo Router integration. EAS `preview` and `production` profiles enable source-map uploads; the plugin reads `organization` and `project` from `app.json`, so only `SENTRY_AUTH_TOKEN` (secret) must be set in the matching EAS environments. Source maps upload only on Expo's build servers, not with `eas build --local`.
 
+The **Mobile EAS Build** GitHub Actions workflow can be started manually for a selected platform and build profile. It runs CI first and requires a GitHub Actions `EXPO_TOKEN` secret with access to the EAS project. Preview and production builds also need the EAS environment configuration described above. Running the workflow starts a remote EAS build, which may consume build credits.
+
 Testing uses the `jest-expo` preset. `flow-parser` is pinned through an override because React Native's `0.327.0` package omits `dist/utils/isReservedWord.js`; `0.338.0` includes it. Revisit the override when the SDK's parser dependency is fixed.
 
 ---
