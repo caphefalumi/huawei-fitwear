@@ -8,7 +8,7 @@ test("feature boundary check rejects deep cross-feature imports through aliases 
   const feature = path.join(dir, "home")
   fs.mkdirSync(feature)
   const file = path.join(feature, "screen.ts")
-  const script = path.resolve(__dirname, "../scripts/check-feature-boundaries.cjs")
+  const script = path.resolve(__dirname, "../../../scripts/check-feature-boundaries.cjs")
   const check = () => spawnSync(process.execPath, [script, dir], { encoding: "utf8" })
   try {
     fs.writeFileSync(file, 'import "@/features/meals"\nimport "../meals"\nimport "./local"\n')

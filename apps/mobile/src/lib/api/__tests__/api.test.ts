@@ -11,11 +11,13 @@ import {
   userFacingSessionError,
 } from "@/lib/api/client"
 
-import { request } from "./http-adapter"
+import { request } from "../../../../tests/utils/http-adapter"
 
 jest.mock("axios", () => {
   const actual = jest.requireActual("axios")
-  actual.default.defaults.adapter = jest.requireActual("./http-adapter").httpAdapter
+  actual.default.defaults.adapter = jest.requireActual(
+    "../../../../tests/utils/http-adapter",
+  ).httpAdapter
   return actual
 })
 const response = (status: number, data: unknown, headers = {}) =>
