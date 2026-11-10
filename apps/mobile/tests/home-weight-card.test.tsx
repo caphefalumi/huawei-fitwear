@@ -20,7 +20,6 @@ jest.mock("@/features/workout", () => ({
   ...jest.requireActual("@/features/workout"),
   useWorkouts: jest.fn(),
 }))
-jest.mock("@/features/recovery", () => ({ RecoverySheet: () => null }))
 jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }))
@@ -29,7 +28,7 @@ test("home shows the latest logged weight and consumed calories", async () => {
   jest.mocked(useHealth).mockReturnValue({
     weightKg: 72,
     weightUpdated: true,
-    recovery: null,
+    plan: { goal: "Maintain", sessions: 3 },
     error: null,
     loading: false,
     refresh: jest.fn(),

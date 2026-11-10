@@ -5,7 +5,7 @@ import { useAuth } from "@/features/auth"
 import { apiErrorMessage } from "@/lib/api"
 import { refetchAllThrowing } from "@/lib/query-retry"
 
-import { fetchRecovery, fetchWeights, putRecovery, putWeight, type RecoveryRow } from "./health-api"
+import { fetchWeights, putWeight } from "./health-api"
 
 export type Sex = "Male" | "Female" | "Rather not say"
 export type PlanPreferences = {
@@ -15,19 +15,6 @@ export type PlanPreferences = {
   targetWeightKg: number | null
 }
 export type WeightLog = { id: string; loggedDate: string; weightKg: number }
-export type RecoveryPlan = {
-  area: string
-  note: string
-  restDays: number
-  lightDays: number
-  startDate: string
-  start: string
-  returnDate: string
-}
-export const PERIOD_AREA = "In period"
-const PERIOD_REST_DAYS = 3
-const PERIOD_LIGHT_DAYS = 4
-export const INJURY_AREAS = ["Right shoulder", "Left shoulder", "Lower back", "Right knee"]
 export const GOALS = {
   weight_loss: "Lose fat",
   maintenance: "Maintain",
@@ -52,55 +39,6 @@ export function dateLabel(value: string, days = 0) {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
 }
 
-function recoveryFromRow(row: RecoveryRow): RecoveryPlan {
-  return {
-    ...row,
-    note: row.note ?? "",
-    start: dateLabel(row.startDate),
-    returnDate: dateLabel(row.startDate, row.restDays + row.lightDays),
-  }
-}
-
-export function createRecovery(area: string): RecoveryPlan {
-  const period = area === PERIOD_AREA
-  return recoveryFromRow({
-    area,
-    note: "",
-    restDays: period ? PERIOD_REST_DAYS : 0,
-    lightDays: period ? PERIOD_LIGHT_DAYS : 0,
-    startDate: dateKey(),
-  })
-}
-
-export function recoveryRanges(recovery: RecoveryPlan) {
-  const range = (offset: number, count: number) =>
-    count === 0
-      ? "None"
-      : count === 1
-        ? dateLabel(recovery.startDate, offset)
-        : `${dateLabel(recovery.startDate, offset)} – ${dateLabel(recovery.startDate, offset + count - 1)}`
-  return { rest: range(0, recovery.restDays), light: range(recovery.restDays, recovery.lightDays) }
-}
-
-/** Fill (0–1) of the rest, rehab and return stages, measured in days since the plan started. */
-export function recoveryProgress(recovery: RecoveryPlan, now = new Date()) {
-  const [year, month, day] = recovery.startDate.split("-").map(Number)
-  const dayNumber = (date: Date) =>
-    Math.round(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000)
-  const elapsed = dayNumber(now) - dayNumber(new Date(year, month - 1, day))
-  const stage = (start: number, length: number) =>
-    length === 0 ? (elapsed >= start ? 1 : 0) : Math.max(0, Math.min(1, (elapsed - start) / length))
-  const total = recovery.restDays + recovery.lightDays
-  return [
-    stage(0, recovery.restDays),
-    stage(recovery.restDays, recovery.lightDays),
-    elapsed >= total ? 1 : 0,
-  ]
-}
-
-export const recoveryTitle = (recovery: RecoveryPlan) =>
-  recovery.area === PERIOD_AREA ? "Period recovery" : `${recovery.area} recovery`
-
 type HealthContextValue = {
   weightKg: number | null
   weights: WeightLog[]
@@ -112,8 +50,6 @@ type HealthContextValue = {
   saveSex: (next: Sex) => Promise<void>
   plan: PlanPreferences
   savePlan: (next: PlanPreferences) => Promise<void>
-  recovery: RecoveryPlan | null
-  saveRecovery: (next: RecoveryPlan | null) => Promise<void>
   loading: boolean
   refreshing: boolean
   error: string | null
@@ -124,7 +60,6 @@ const HealthContext = createContext<HealthContextValue | null>(null)
 export const healthQueryKeys = {
   all: (userId: string) => ["health", userId] as const,
   weights: (userId: string) => [...healthQueryKeys.all(userId), "weights"] as const,
-  recovery: (userId: string) => [...healthQueryKeys.all(userId), "recovery"] as const,
 }
 
 export function HealthProvider({ children }: { children: ReactNode }) {
@@ -137,21 +72,14 @@ export function HealthProvider({ children }: { children: ReactNode }) {
     enabled: Boolean(userId),
     networkMode: "always",
   })
-  const recoveryQuery = useQuery({
-    queryKey: userId ? healthQueryKeys.recovery(userId) : ["health", "signed-out", "recovery"],
-    queryFn: ({ signal }) => fetchRecovery(signal),
-    enabled: Boolean(userId),
-    networkMode: "always",
-  })
   const [weightUpdated, setWeightUpdated] = useState(false)
   const weights = weightsQuery.data ?? []
-  const recovery = recoveryQuery.data ? recoveryFromRow(recoveryQuery.data) : null
-  const loading = weightsQuery.isLoading || recoveryQuery.isLoading
-  const refreshing = (weightsQuery.isFetching || recoveryQuery.isFetching) && !loading
-  const errorCause = [weightsQuery.error, recoveryQuery.error].find(
-    (cause) => cause instanceof Error,
-  )
-  const error = errorCause ? apiErrorMessage(errorCause, "your health data") : null
+  const loading = weightsQuery.isLoading
+  const refreshing = weightsQuery.isFetching && !loading
+  const error =
+    weightsQuery.error instanceof Error
+      ? apiErrorMessage(weightsQuery.error, "your health data")
+      : null
   const saveWeightMutation = useMutation({
     mutationKey: [...healthQueryKeys.all(userId ?? "signed-out"), "save-weight"],
     mutationFn: async (weightKg: number) => putWeight(weightKg, dateKey()),
@@ -165,28 +93,16 @@ export function HealthProvider({ children }: { children: ReactNode }) {
       setWeightUpdated(true)
     },
   })
-  const saveRecoveryMutation = useMutation({
-    mutationKey: [...healthQueryKeys.all(userId ?? "signed-out"), "save-recovery"],
-    mutationFn: (next: RecoveryPlan | null) => putRecovery(next),
-    onSuccess: (next) => {
-      if (userId) queryClient.setQueryData(healthQueryKeys.recovery(userId), next)
-    },
-  })
   const { refetch: refetchWeights } = weightsQuery
-  const { refetch: refetchRecovery } = recoveryQuery
   const refresh = useCallback(async () => {
-    await refetchAllThrowing(refetchWeights, refetchRecovery)
-  }, [refetchWeights, refetchRecovery])
+    await refetchAllThrowing(refetchWeights)
+  }, [refetchWeights])
   const saveWeight = async (weightKg: number) => {
     await saveWeightMutation.mutateAsync(weightKg)
     await updateUser({})
   }
-  const saveRecovery = async (next: RecoveryPlan | null) => {
-    await saveRecoveryMutation.mutateAsync(next)
-  }
   const saveSex = async (next: Sex) => {
     await updateUser({ gender: next === "Male" ? "male" : next === "Female" ? "female" : "other" })
-    if (next !== "Female" && recovery?.area === PERIOD_AREA) await saveRecovery(null)
   }
   const savePlan = async (next: PlanPreferences) => {
     const fitnessGoal = (Object.keys(GOALS) as (keyof typeof GOALS)[]).find(
@@ -231,8 +147,6 @@ export function HealthProvider({ children }: { children: ReactNode }) {
         saveSex,
         plan,
         savePlan,
-        recovery,
-        saveRecovery,
         loading,
         error,
         refreshing,

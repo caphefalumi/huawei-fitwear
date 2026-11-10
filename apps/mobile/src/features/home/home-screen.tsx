@@ -6,10 +6,10 @@ import Animated, { FadeInUp } from "react-native-reanimated"
 
 import { Pressable } from "@/components/pressable"
 import { Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
-import { recoveryTitle, useHealth } from "@/features/health"
+import { useHealth } from "@/features/health"
 import { useMeals } from "@/features/meals"
-import { RecoverySheet } from "@/features/recovery"
-import { routinesFor } from "@/features/workout"
+import { injuryEffect, injuryTitle, useActiveInjuries } from "@/features/recovery"
+import { useRoutines } from "@/features/workout"
 import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
@@ -45,11 +45,11 @@ function useCountUp(target: number, duration = 600) {
 }
 
 export function HomeScreen() {
-  const { weightKg, weightUpdated, recovery } = useHealth()
+  const { weightKg, weightUpdated } = useHealth()
+  const injuries = useActiveInjuries()
   const { loggedKcal, loggedMacros } = useMeals()
   useMarkInteractive()
   const [bannerDismissed, setBannerDismissed] = useState(false)
-  const [recoveryOpen, setRecoveryOpen] = useState(false)
   const [visit, setVisit] = useState(0)
 
   useFocusEffect(useCallback(() => setVisit((v) => v + 1), []))
@@ -60,7 +60,7 @@ export function HomeScreen() {
   const consumedKcal = 1320 + loggedKcal
   const kcalLeft = targetKcal - consumedKcal
   const kcalShown = useCountUp(kcalLeft)
-  const today = routinesFor(recovery).today
+  const today = useRoutines().today
   const latestWeightKg = weightKg ?? DEMO_WEIGHTS[DEMO_WEIGHTS.length - 1]
   const weights =
     latestWeightKg >= 70 && latestWeightKg <= 74
@@ -79,13 +79,14 @@ export function HomeScreen() {
       <Animated.View entering={FadeInUp.duration(250)}>
         <Card style={styles.focus}>
           <Text style={styles.focusLine} numberOfLines={1}>
-            Today: {today.name} · {today.sets} sets · ~{today.minutes} min
+            Today: {today.name}
+            {today.exercises.length ? ` · ${today.sets} sets · ~${today.minutes} min` : ""}
           </Text>
           <Text style={styles.focusMuted} numberOfLines={1}>
             {kcalShown} kcal left
           </Text>
           <Text style={styles.focusMuted} numberOfLines={1}>
-            {recovery ? recoveryTitle(recovery) : "Watch connected"}
+            {injuries.length ? injuryTitle(injuries) : "Watch connected"}
           </Text>
           <View style={styles.weekDots}>
             {WEEK_ACTIVE.map((active, index) => (
@@ -178,20 +179,18 @@ export function HomeScreen() {
         </Pressable>
       </Animated.View>
 
-      {recovery ? (
-        <Pressable style={styles.recovery} onPress={() => setRecoveryOpen(true)}>
+      {injuries.length ? (
+        <Pressable style={styles.recovery} onPress={() => router.push("/injuries")}>
           <Image source={icons.shieldCheck} style={styles.recoveryIcon} contentFit="contain" />
           <View style={styles.recoveryText}>
-            <Text style={styles.recoveryTitle}>{recoveryTitle(recovery)}</Text>
+            <Text style={styles.recoveryTitle}>{injuryTitle(injuries)}</Text>
             <Text style={styles.recoverySub}>
-              {recovery.restDays} rest days · {recovery.lightDays} light days
+              {injuries.map((injury) => injuryEffect(injury)).join("\n")}
             </Text>
           </View>
           <Image source={icons.chevronRight} style={styles.recoveryChevron} contentFit="contain" />
         </Pressable>
       ) : null}
-
-      {recoveryOpen ? <RecoverySheet visible onClose={() => setRecoveryOpen(false)} /> : null}
 
       {weightUpdated ? (
         <Text style={styles.footnote}>Demo personal targets · estimates, not medical advice.</Text>

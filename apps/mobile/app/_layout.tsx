@@ -63,6 +63,8 @@ function RootNavigator() {
           <Stack.Screen name="capture" />
           <Stack.Screen name="chest-plan" />
           <Stack.Screen name="exercise-guide" />
+          <Stack.Screen name="exercise-preferences" />
+          <Stack.Screen name="injuries" />
           <Stack.Screen name="meal" />
           <Stack.Screen name="add-item" />
           <Stack.Screen name="review-item" />

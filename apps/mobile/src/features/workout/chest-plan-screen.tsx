@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from "react-native"
 
 import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
-import { useHealth } from "@/features/health"
+import { injuryTitle, useActiveInjuries } from "@/features/recovery"
 import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
@@ -62,7 +62,7 @@ const SUMMARY = [
 
 export function ChestPlanScreen() {
   useMarkInteractive()
-  const { recovery } = useHealth()
+  const injuries = useActiveInjuries()
   const [loads, setLoads] = useState<Record<string, number>>(() =>
     Object.fromEntries(EXERCISES.map((exercise) => [exercise.key, exercise.load])),
   )
@@ -81,10 +81,7 @@ export function ChestPlanScreen() {
     <Screen contentStyle={styles.content}>
       <BackHeader label="Workouts" onPress={() => router.back()} />
 
-      <PageHeading
-        title="Chest"
-        subtitle={recovery ? `Tentative return · ${recovery.returnDate}` : undefined}
-      />
+      <PageHeading title="Chest" subtitle={injuries.length ? injuryTitle(injuries) : undefined} />
 
       <Image
         source={require("@/assets/images/workout/chest-hero.png")}
@@ -101,12 +98,10 @@ export function ChestPlanScreen() {
         ))}
       </View>
 
-      {recovery ? (
+      {injuries.length ? (
         <View style={styles.restriction}>
           <Image source={icons.lock} style={styles.restrictionIcon} contentFit="contain" />
-          <Text style={styles.restrictionText}>
-            View only during {recovery.area.toLowerCase()} recovery.
-          </Text>
+          <Text style={styles.restrictionText}>View only while you recover.</Text>
         </View>
       ) : null}
 
@@ -169,7 +164,7 @@ export function ChestPlanScreen() {
       ))}
 
       <Button label="Start workout" onPress={() => router.push("/session")} />
-      {recovery ? (
+      {injuries.length ? (
         <Text style={styles.footnote}>Resume your regular plan when you’re ready.</Text>
       ) : null}
     </Screen>
