@@ -25,7 +25,7 @@ jobs:
     needs: ci
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     environment:
       name: production
       url: ${{ vars.PRODUCTION_API_URL }}
@@ -34,6 +34,16 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
+
+      - name: Validate Resend templates and release credentials
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          if [[ -z "$RESEND_API_KEY" ]]; then
+            echo "::error::RESEND_API_KEY is required for production release."
+            exit 1
+          fi
+          bun apps/backend/scripts/sync-resend-templates.ts --dry-run
 
       - name: Apply Cloudflare D1 migrations
         env:
@@ -52,3 +62,8 @@ jobs:
         env:
           HEALTH_URL: ${{ vars.PRODUCTION_HEALTH_URL }}
         run: curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-all-errors "$HEALTH_URL"
+
+      - name: Sync and publish Resend email templates
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: bun apps/backend/scripts/sync-resend-templates.ts
