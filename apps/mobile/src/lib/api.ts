@@ -1,7 +1,8 @@
 import axios from "axios"
-export const API_BASE_URL = (
-  process.env.EXPO_PUBLIC_API_URL ?? "https://fitwear.tm-project.id.vn"
-).replace(/\/$/, "")
+
+import { env } from "@/config/env"
+
+export const API_BASE_URL = env.apiUrl
 
 export class ApiError extends Error {
   constructor(
