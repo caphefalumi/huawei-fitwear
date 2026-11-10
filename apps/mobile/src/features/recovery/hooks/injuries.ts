@@ -96,19 +96,26 @@ export function daysBetween(from: string, to: string) {
 export const shortDate = (key: string) =>
   new Date(`${key}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })
 
-/** `option` is a severity for body areas and a feeling for period. */
-export function createInjury(
-  area: InjuryArea,
-  option?: Severity | PeriodFeeling,
-  today = dateKey(),
-): Injury {
+export type PhaseDays = { excludeDays: number; lightDays: number }
+/** A severity for body areas, a feeling for period, or custom days for either. */
+export type InjuryOption = Severity | PeriodFeeling | PhaseDays
+
+export function createInjury(area: InjuryArea, option?: InjuryOption, today = dateKey()): Injury {
   const days =
-    area === PERIOD_AREA
-      ? (PERIOD_FEELINGS[option as PeriodFeeling] ?? PERIOD_FEELINGS["Tired or crampy"])
-      : area === UNWELL_AREA
-        ? { excludeDays: 0, lightDays: UNWELL_LIGHT_DAYS }
-        : (SEVERITIES[option as Severity] ?? SEVERITIES.Mild)
-  return { area, startDate: today, ...days, permanent: null }
+    typeof option === "object"
+      ? option
+      : area === PERIOD_AREA
+        ? (PERIOD_FEELINGS[option as PeriodFeeling] ?? PERIOD_FEELINGS["Tired or crampy"])
+        : area === UNWELL_AREA
+          ? { excludeDays: 0, lightDays: UNWELL_LIGHT_DAYS }
+          : (SEVERITIES[option as Severity] ?? SEVERITIES.Mild)
+  return {
+    area,
+    startDate: today,
+    excludeDays: days.excludeDays,
+    lightDays: days.lightDays,
+    permanent: null,
+  }
 }
 
 /** The phase on `today`, or null before the start and after recovery ends. */
@@ -158,7 +165,7 @@ export function injuryEffect(injury: Injury, today = dateKey()) {
 type InjuriesState = {
   injuries: Injury[]
   save: (next: Injury[]) => void
-  add: (area: InjuryArea, option?: Severity | PeriodFeeling) => void
+  add: (area: InjuryArea, option?: InjuryOption) => void
   remove: (area: InjuryArea) => void
 }
 

@@ -23,8 +23,10 @@ export type {
   BodyArea,
   Injury,
   InjuryArea,
+  InjuryOption,
   Joint,
   PeriodFeeling,
+  PhaseDays,
   Phase,
   Severity,
 } from "./hooks/injuries"

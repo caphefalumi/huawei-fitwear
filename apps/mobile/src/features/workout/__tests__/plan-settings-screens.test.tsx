@@ -74,6 +74,23 @@ test("adds a moderate knee injury and saves only after a change", async () => {
   expect(router.back).toHaveBeenCalled()
 })
 
+test("adds an injury with custom days from the severity step", async () => {
+  const screen = await render(<InjuriesScreen />)
+  await fireEvent.press(screen.getByText("+ Add injury"))
+  await fireEvent.press(screen.getByLabelText("Knee"))
+  await fireEvent.press(screen.getByRole("radio", { name: /Custom/ }))
+  expect(screen.getByLabelText("Exclude, 0 days")).toBeTruthy()
+  expect(screen.getByLabelText("Light, 7 days")).toBeTruthy()
+  await fireEvent.press(screen.getByLabelText("More exclude days"))
+  await fireEvent.press(screen.getByLabelText("More exclude days"))
+  expect(screen.getByText(/^Knee exercises are removed from your plan until/)).toBeTruthy()
+  await fireEvent.press(screen.getByText("Add"))
+  await fireEvent.press(screen.getByRole("button", { name: "Save" }))
+  expect(useInjuries.getState().injuries).toEqual([
+    expect.objectContaining({ area: "Knee", excludeDays: 2, lightDays: 7 }),
+  ])
+})
+
 test("adds period from how the user feels, with rest days and no permanent option", async () => {
   const screen = await render(<InjuriesScreen />)
   await fireEvent.press(screen.getByText("+ Add injury"))
