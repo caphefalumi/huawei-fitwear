@@ -1,1 +1,1 @@
-bun run fmt
+bunx lint-staged
