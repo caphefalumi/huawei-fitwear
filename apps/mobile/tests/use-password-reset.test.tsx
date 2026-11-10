@@ -1,9 +1,9 @@
 import { act, renderHook, waitFor } from "@testing-library/react-native"
 
-import { useAuth } from "@/features/auth/auth-hooks"
-import { usePasswordReset } from "@/features/auth/use-password-reset"
+import { useAuth } from "@/features/auth/hooks/auth-hooks"
+import { usePasswordReset } from "@/features/auth/hooks/use-password-reset"
 
-jest.mock("@/features/auth/auth-hooks", () => ({ useAuth: jest.fn() }))
+jest.mock("@/features/auth/hooks/auth-hooks", () => ({ useAuth: jest.fn() }))
 
 const mockUseAuth = jest.mocked(useAuth)
 const mockAuth = {

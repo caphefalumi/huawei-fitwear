@@ -9,14 +9,14 @@ import {
   Subscription,
 } from "react-native-ble-plx"
 
-import { base64ToBytes, bytesToBase64, decodeUtf8Bytes, encodeUtf8Bytes } from "./codec"
 import {
   BLE_MAX_MESSAGE_BYTES,
   BLE_REQUESTED_MTU,
   BLE_SCAN_TIMEOUT_MS,
   FITWEAR_CHAR_MESSAGE_UUID,
   FITWEAR_SERVICE_UUID,
-} from "./constants"
+} from "../constants"
+import { base64ToBytes, bytesToBase64, decodeUtf8Bytes, encodeUtf8Bytes } from "../utils/codec"
 
 export type BleDirection = "phone-to-watch" | "watch-to-phone"
 export type WatchBleStatus = "disconnected" | "scanning" | "connecting" | "connected"

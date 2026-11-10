@@ -5,7 +5,7 @@ import { useAuth } from "@/features/auth"
 import { apiErrorMessage } from "@/lib/api/client"
 import { refetchAllThrowing } from "@/lib/query/retry"
 
-import { fetchWeights, putWeight } from "./health-api"
+import { fetchWeights, putWeight } from "../api/health-api"
 
 export type Sex = "Male" | "Female" | "Rather not say"
 export type PlanPreferences = {

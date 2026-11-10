@@ -7,7 +7,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
-import { useRoutines } from "../plan-preferences.store"
+import { useRoutines } from "../store/plan-preferences.store"
 
 function formatElapsed(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60)

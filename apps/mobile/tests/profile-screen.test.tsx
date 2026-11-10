@@ -3,11 +3,11 @@ import { router } from "expo-router"
 
 import { useAuth } from "@/features/auth"
 import { useHealth } from "@/features/health"
-import { useDeveloperMode } from "@/features/profile/developer-mode.store"
 import { ProfileScreen } from "@/features/profile/screens/profile-screen"
+import { useDeveloperMode } from "@/features/profile/store/developer-mode.store"
 import { PERIOD_AREA, useInjuries } from "@/features/recovery"
 
-jest.mock("@/features/auth/auth-hooks", () => ({ useAuth: jest.fn() }))
+jest.mock("@/features/auth/hooks/auth-hooks", () => ({ useAuth: jest.fn() }))
 jest.mock("@/lib/api/client", () => ({
   ...jest.requireActual("@/lib/api/client"),
   apiRequest: jest.fn(),
@@ -20,7 +20,7 @@ jest.mock("react-native-keyboard-controller", () => {
   const { View } = require("react-native")
   return { KeyboardAvoidingView: View }
 })
-jest.mock("@/features/profile/sheets", () => ({
+jest.mock("@/features/profile/components/sheets", () => ({
   ActivitySheet: () => null,
   EmphasisSheet: () => null,
   ExperienceSheet: () => null,

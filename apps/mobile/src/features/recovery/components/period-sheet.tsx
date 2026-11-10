@@ -4,7 +4,7 @@ import { StyleSheet, Text } from "react-native"
 import { Sheet, SheetActions } from "@/components/ui/sheet"
 import { Palette as C } from "@/theme"
 
-import { PERIOD_FEELINGS, type PeriodFeeling } from "./injuries"
+import { PERIOD_FEELINGS, type PeriodFeeling } from "../hooks/injuries"
 import { OptionList } from "./option-list"
 
 const days = (count: number) => `${count} ${count === 1 ? "day" : "days"}`

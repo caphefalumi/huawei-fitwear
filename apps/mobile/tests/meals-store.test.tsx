@@ -15,7 +15,7 @@ import {
   sumItems,
   type MealItem,
 } from "@/features/meals"
-import { useMealClientStore } from "@/features/meals/meal-client.store"
+import { useMealClientStore } from "@/features/meals/store/meal-client.store"
 import { apiRequest } from "@/lib/api/client"
 
 import { createQueryWrapper } from "./query-wrapper"
@@ -25,7 +25,7 @@ jest.mock("@/lib/api/client", () => ({
   ...jest.requireActual("@/lib/api/client"),
   apiRequest: jest.fn(),
 }))
-jest.mock("@/features/auth/auth-hooks", () => ({
+jest.mock("@/features/auth/hooks/auth-hooks", () => ({
   useAuth: () => ({ user: { id: mockUserId, updatedAt: "2026-11-01T00:00:00Z" } }),
 }))
 const request = apiRequest as jest.MockedFunction<

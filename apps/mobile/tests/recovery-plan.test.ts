@@ -14,7 +14,7 @@ jest.mock("@/lib/api/client", () => ({
   ...jest.requireActual("@/lib/api/client"),
   apiRequest: jest.fn(),
 }))
-jest.mock("@/features/auth/auth-hooks", () => ({ useAuth: jest.fn() }))
+jest.mock("@/features/auth/hooks/auth-hooks", () => ({ useAuth: jest.fn() }))
 
 beforeEach(() => useInjuries.setState({ injuries: [] }))
 

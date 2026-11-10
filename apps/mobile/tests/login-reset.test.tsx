@@ -4,11 +4,11 @@ import * as Haptics from "expo-haptics"
 import { AccessibilityInfo, AppState, StyleSheet, type AppStateStatus } from "react-native"
 
 import { useAuth } from "@/features/auth"
-import { AuthField } from "@/features/auth/auth-field"
+import { AuthField } from "@/features/auth/components/auth-field"
 import { LoginScreen } from "@/features/auth/screens/login-screen"
 import { ApiError } from "@/lib/api/client"
 
-jest.mock("@/features/auth/auth-hooks", () => ({
+jest.mock("@/features/auth/hooks/auth-hooks", () => ({
   APP_ROUTES: { signUp: "/sign-up" },
   useAuth: jest.fn(),
 }))

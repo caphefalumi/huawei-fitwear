@@ -8,8 +8,8 @@ import { useAuth } from "@/features/auth"
 import { apiErrorMessage } from "@/lib/api/client"
 import { Palette as C } from "@/theme"
 
-import { fetchMealPhoto } from "./meals-api"
-import { mealsQueryKeys } from "./meals-hooks"
+import { fetchMealPhoto } from "../api/meals-api"
+import { mealsQueryKeys } from "../hooks/meals-hooks"
 import { icons } from "./meals-ui"
 
 export function MealPhoto({

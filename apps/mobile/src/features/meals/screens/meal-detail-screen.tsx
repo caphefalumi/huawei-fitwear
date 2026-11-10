@@ -9,8 +9,8 @@ import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { refetchThrowing } from "@/lib/query/retry"
 import { Palette as C } from "@/theme"
 
-import { fetchMeal } from "../meals-api"
-import { fromApiMeal, mealsQueryKeys, useMeals } from "../meals-hooks"
+import { fetchMeal } from "../api/meals-api"
+import { fromApiMeal, mealsQueryKeys, useMeals } from "../hooks/meals-hooks"
 import { MealResultScreen } from "./meal-result-screen"
 
 export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: () => void }) {

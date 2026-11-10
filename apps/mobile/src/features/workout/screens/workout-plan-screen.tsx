@@ -10,8 +10,8 @@ import { injuryEffect, useActiveInjuries } from "@/features/recovery"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
-import { usePlanPreferences, useRoutines } from "../plan-preferences.store"
-import type { Routine } from "../routines"
+import { usePlanPreferences, useRoutines } from "../store/plan-preferences.store"
+import type { Routine } from "../utils/routines"
 
 const icons = {
   shieldCheck: require("@/assets/images/home/shield-check.svg"),

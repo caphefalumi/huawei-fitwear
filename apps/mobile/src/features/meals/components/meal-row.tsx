@@ -5,7 +5,7 @@ import { useReducedMotion } from "react-native-reanimated"
 import { Pressable } from "@/components/ui/pressable"
 import { Palette as C } from "@/theme"
 
-import type { MealItem } from "./meals-hooks"
+import type { MealItem } from "../hooks/meals-hooks"
 import { Glyph } from "./meals-ui"
 
 const ACTION_WIDTH = 88

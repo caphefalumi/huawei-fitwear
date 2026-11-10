@@ -9,7 +9,7 @@ import { affects, injuryTitle, useActiveInjuries } from "@/features/recovery"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
-import { findExercise } from "../catalog"
+import { findExercise } from "../utils/catalog"
 
 const icons = {
   play: require("@/assets/images/workout/play.svg"),

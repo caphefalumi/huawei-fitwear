@@ -14,7 +14,6 @@ import { useAuth } from "@/features/auth"
 import { apiErrorMessage } from "@/lib/api/client"
 import { refetchAllThrowing } from "@/lib/query/retry"
 
-import { useMealClientStore } from "./meal-client.store"
 import {
   fetchMeals,
   fetchMealSummary,
@@ -22,9 +21,10 @@ import {
   writeMeal,
   type ApiMeal,
   type ApiMealItem,
-} from "./meals-api"
+} from "../api/meals-api"
+import { useMealClientStore } from "../store/meal-client.store"
 
-export type { ApiMealItem } from "./meals-api"
+export type { ApiMealItem } from "../api/meals-api"
 
 export type Macros = { protein: number; carbs: number; fat: number }
 export type MealGlyph = "wheat" | "drumstick" | "carrot" | "droplet"

@@ -14,10 +14,10 @@ import {
 } from "@/lib/forms/form-validation"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 
-import { AuthField } from "../auth-field"
-import { APP_ROUTES, useAuth } from "../auth-hooks"
-import { DateOfBirthField } from "../date-of-birth-field"
-import { AuthColors } from "../login-styles"
+import { AuthField } from "../components/auth-field"
+import { DateOfBirthField } from "../components/date-of-birth-field"
+import { AuthColors } from "../components/login-styles"
+import { APP_ROUTES, useAuth } from "../hooks/auth-hooks"
 
 const icons = {
   check: require("@/assets/images/auth/check.svg"),

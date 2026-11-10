@@ -15,9 +15,9 @@ import { ApiError, apiErrorMessage } from "@/lib/api/client"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
-import { analyzeMeal } from "../meals-api"
-import { useMeals } from "../meals-hooks"
-import { icons } from "../meals-ui"
+import { analyzeMeal } from "../api/meals-api"
+import { icons } from "../components/meals-ui"
+import { useMeals } from "../hooks/meals-hooks"
 
 const TUTORIAL_STEPS = [
   { title: "Add a ruler", detail: "Place a 15 cm ruler beside the plate or cup." },

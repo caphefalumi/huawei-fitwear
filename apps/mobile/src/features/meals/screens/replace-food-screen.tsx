@@ -10,14 +10,14 @@ import { apiErrorMessage } from "@/lib/api/client"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
+import { SearchInput } from "../components/meals-ui"
 import {
   useFoodSearch,
   estimatePortion,
   splitDetail,
   useMeals,
   type FoodEntry,
-} from "../meals-hooks"
-import { SearchInput } from "../meals-ui"
+} from "../hooks/meals-hooks"
 
 export function ReplaceFoodScreen() {
   useMarkInteractive()
