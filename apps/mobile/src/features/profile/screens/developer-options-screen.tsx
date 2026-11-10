@@ -1,8 +1,8 @@
 import { router } from "expo-router"
 import { StyleSheet, Text, View } from "react-native"
 
-import { Toggle } from "@/components/toggle"
 import { BackHeader, PageHeading, Screen } from "@/components/ui"
+import { Toggle } from "@/components/ui/toggle"
 import { Palette as C } from "@/theme"
 
 import { type DeveloperFeature, useDeveloperMode } from "../developer-mode.store"

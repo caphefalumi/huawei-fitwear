@@ -1,9 +1,9 @@
 import { Image } from "expo-image"
 import { StyleSheet, Text, TextInput, View } from "react-native"
 
-import { Pressable } from "@/components/pressable"
-import { Sheet } from "@/components/sheet"
 import { Button } from "@/components/ui"
+import { Pressable } from "@/components/ui/pressable"
+import { Sheet } from "@/components/ui/sheet"
 import { Palette as C } from "@/theme"
 
 import { rescaleItem, splitDetail, type MealItem } from "./meals-hooks"

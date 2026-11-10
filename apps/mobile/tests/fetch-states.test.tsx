@@ -1,7 +1,7 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native"
 import { AccessibilityInfo } from "react-native"
 
-import { FetchErrorState } from "@/components/fetch-states"
+import { FetchErrorState } from "@/components/feedback/fetch-states"
 
 jest.spyOn(AccessibilityInfo, "announceForAccessibility").mockImplementation(() => {})
 

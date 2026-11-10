@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native"
 
-import { Pressable } from "@/components/pressable"
+import { Pressable } from "@/components/ui/pressable"
 import { Palette as C } from "@/theme"
 import { tokens } from "@/theme/tokens"
 

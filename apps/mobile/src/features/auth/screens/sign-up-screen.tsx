@@ -5,14 +5,14 @@ import { findNodeHandle, Platform, ScrollView, StyleSheet, Text, View } from "re
 import { AccessibilityInfo, type TextInputInstance } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable"
+import { Pressable } from "@/components/ui/pressable"
 import {
   PASSWORD_FIELD_HELPER,
   validateBirthDate,
   validateEmail,
   validatePassword,
-} from "@/lib/form-validation"
-import { useMarkInteractive } from "@/lib/observe"
+} from "@/lib/forms/form-validation"
+import { useMarkInteractive } from "@/lib/monitoring/observe"
 
 import { AuthField } from "../auth-field"
 import { APP_ROUTES, useAuth } from "../auth-hooks"

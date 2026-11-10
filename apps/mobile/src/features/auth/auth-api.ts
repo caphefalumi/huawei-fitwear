@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 
-import { apiRequest } from "@/lib/api"
+import { apiRequest } from "@/lib/api/client"
 
 import type {
   AuthUser,

@@ -9,9 +9,9 @@ import ReanimatedSwipeable, {
 } from "react-native-gesture-handler/ReanimatedSwipeable"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable"
 import { BackHeader, PageHeading, Screen, SectionHeading } from "@/components/ui"
-import { useMarkInteractive } from "@/lib/observe"
+import { Pressable } from "@/components/ui/pressable"
+import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
 import { CATALOG, type CatalogExercise, type MuscleGroup } from "../catalog"

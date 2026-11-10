@@ -2,7 +2,7 @@ import { Image } from "expo-image"
 import type { ReactNode } from "react"
 import { StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native"
 
-import { Pressable } from "@/components/pressable"
+import { Pressable } from "@/components/ui/pressable"
 import { Palette as C } from "@/theme"
 
 import type { MealGlyph } from "./meals-hooks"

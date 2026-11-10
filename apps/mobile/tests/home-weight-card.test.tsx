@@ -6,8 +6,8 @@ import { useMeals } from "@/features/meals"
 import { useWorkouts } from "@/features/workout"
 
 jest.mock("expo-router", () => ({ router: { push: jest.fn() }, useFocusEffect: jest.fn() }))
-jest.mock("@/lib/api", () => ({
-  ...jest.requireActual("@/lib/api"),
+jest.mock("@/lib/api/client", () => ({
+  ...jest.requireActual("@/lib/api/client"),
   apiRequest: jest.fn(),
 }))
 jest.mock("@/features/auth/auth-hooks", () => ({ useAuth: () => ({ user: { name: "Vooc" } }) }))

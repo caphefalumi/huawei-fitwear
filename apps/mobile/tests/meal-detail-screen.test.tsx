@@ -2,7 +2,7 @@ import { act, fireEvent, render, waitFor } from "@testing-library/react-native"
 
 import { useMeals } from "@/features/meals"
 import { MealDetailScreen } from "@/features/meals/screens/meal-detail-screen"
-import { apiRequest } from "@/lib/api"
+import { apiRequest } from "@/lib/api/client"
 
 import { createQueryWrapper } from "./query-wrapper"
 
@@ -16,8 +16,8 @@ jest.mock("@/features/meals/meals-hooks", () => ({
 jest.mock("@/features/auth/auth-hooks", () => ({
   useAuth: () => ({ user: { id: "member-a" } }),
 }))
-jest.mock("@/lib/api", () => ({
-  ...jest.requireActual("@/lib/api"),
+jest.mock("@/lib/api/client", () => ({
+  ...jest.requireActual("@/lib/api/client"),
   apiRequest: jest.fn(),
 }))
 jest.mock("@/features/meals/screens/meal-result-screen", () => {

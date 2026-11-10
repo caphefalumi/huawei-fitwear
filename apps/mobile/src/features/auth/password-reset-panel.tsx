@@ -1,7 +1,7 @@
 import { Text, TextInput, View } from "react-native"
 
-import { Pressable } from "@/components/pressable"
-import { PASSWORD_FIELD_HELPER } from "@/lib/form-validation"
+import { Pressable } from "@/components/ui/pressable"
+import { PASSWORD_FIELD_HELPER } from "@/lib/forms/form-validation"
 
 import { AuthField } from "./auth-field"
 import { AuthColors, authStyles as styles } from "./login-styles"

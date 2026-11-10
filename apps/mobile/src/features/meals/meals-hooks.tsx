@@ -11,8 +11,8 @@ import {
 import { AppState } from "react-native"
 
 import { useAuth } from "@/features/auth"
-import { apiErrorMessage } from "@/lib/api"
-import { refetchAllThrowing } from "@/lib/query-retry"
+import { apiErrorMessage } from "@/lib/api/client"
+import { refetchAllThrowing } from "@/lib/query/retry"
 
 import { useMealClientStore } from "./meal-client.store"
 import {

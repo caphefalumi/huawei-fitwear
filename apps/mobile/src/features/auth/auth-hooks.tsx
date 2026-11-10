@@ -19,7 +19,7 @@ import {
   userFacingAccountDeleteError,
   userFacingAuthError,
   userFacingSessionError,
-} from "@/lib/api"
+} from "@/lib/api/client"
 import { sessionStorage } from "@/lib/storage"
 
 import {

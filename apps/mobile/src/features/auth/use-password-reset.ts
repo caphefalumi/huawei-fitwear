@@ -2,8 +2,8 @@ import * as Sentry from "@sentry/react-native"
 import { useEffect, useRef, useState } from "react"
 import { AppState } from "react-native"
 
-import { userFacingPasswordResetError } from "@/lib/api"
-import { validateEmail, validatePassword } from "@/lib/form-validation"
+import { userFacingPasswordResetError } from "@/lib/api/client"
+import { validateEmail, validatePassword } from "@/lib/forms/form-validation"
 
 import { useAuth } from "./auth-hooks"
 

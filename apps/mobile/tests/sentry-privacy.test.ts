@@ -1,4 +1,4 @@
-import { sentryOptions } from "@/lib/sentry-options"
+import { sentryOptions } from "@/lib/monitoring/sentry-options"
 
 test("Sentry omits request, identity, custom context, tags, and breadcrumb content", async () => {
   expect(sentryOptions.sendDefaultPii).toBe(false)
