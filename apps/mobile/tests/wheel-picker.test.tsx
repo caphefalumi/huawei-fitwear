@@ -2,7 +2,7 @@ import { fireEvent, render } from "@testing-library/react-native"
 import { useState } from "react"
 import { Text } from "react-native"
 
-import { WheelPicker } from "@/components/wheel-picker"
+import { WheelPicker } from "@/components/ui/wheel-picker"
 
 function Frequency() {
   const [value, setValue] = useState(2)

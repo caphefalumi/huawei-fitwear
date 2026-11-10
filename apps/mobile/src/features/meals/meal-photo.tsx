@@ -3,9 +3,9 @@ import { Image, type ImageProps } from "expo-image"
 import { useEffect, useState } from "react"
 import { Text, View } from "react-native"
 
-import { Pressable } from "@/components/pressable"
+import { Pressable } from "@/components/ui/pressable"
 import { useAuth } from "@/features/auth"
-import { apiErrorMessage } from "@/lib/api"
+import { apiErrorMessage } from "@/lib/api/client"
 import { Palette as C } from "@/theme"
 
 import { fetchMealPhoto } from "./meals-api"

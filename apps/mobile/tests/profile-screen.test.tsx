@@ -8,8 +8,8 @@ import { ProfileScreen } from "@/features/profile/screens/profile-screen"
 import { PERIOD_AREA, useInjuries } from "@/features/recovery"
 
 jest.mock("@/features/auth/auth-hooks", () => ({ useAuth: jest.fn() }))
-jest.mock("@/lib/api", () => ({
-  ...jest.requireActual("@/lib/api"),
+jest.mock("@/lib/api/client", () => ({
+  ...jest.requireActual("@/lib/api/client"),
   apiRequest: jest.fn(),
 }))
 jest.mock("@/features/health", () => ({

@@ -3,12 +3,12 @@ import { router } from "expo-router"
 import { useState } from "react"
 import { StyleSheet, Text, View } from "react-native"
 
-import { Pressable } from "@/components/pressable"
-import { Sheet, SheetActions } from "@/components/sheet"
-import { Toggle } from "@/components/toggle"
 import { BackHeader, Button, PageHeading, Screen } from "@/components/ui"
+import { Pressable } from "@/components/ui/pressable"
+import { Sheet, SheetActions } from "@/components/ui/sheet"
+import { Toggle } from "@/components/ui/toggle"
 import { dateKey, useHealth } from "@/features/health"
-import { useMarkInteractive } from "@/lib/observe"
+import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
 import {

@@ -2,10 +2,10 @@ import { router } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { Animated, Easing, StyleSheet, Text, View } from "react-native"
 
-import { Pressable } from "@/components/pressable"
 import { BackHeader, Card, PageHeading, Screen } from "@/components/ui"
+import { Pressable } from "@/components/ui/pressable"
 import { useHealth } from "@/features/health"
-import { useMarkInteractive } from "@/lib/observe"
+import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
 import { progressData, RANGES, type Range } from "../progress-data"

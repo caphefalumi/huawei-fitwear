@@ -15,8 +15,8 @@ import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useReducedMotion } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { CloseButton } from "@/components/close-button"
-import { Pressable } from "@/components/pressable"
+import { CloseButton } from "@/components/ui/close-button"
+import { Pressable } from "@/components/ui/pressable"
 import { Palette as C } from "@/theme"
 
 type SheetProps = {

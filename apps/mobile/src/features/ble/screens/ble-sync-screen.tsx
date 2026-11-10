@@ -4,10 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Pressable, ScrollView, StyleSheet, TextInput, useColorScheme, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
-import { ThemedText } from "@/components/themed-text"
-import { ThemedView } from "@/components/themed-view"
+import { ThemedText } from "@/components/ui/themed-text"
+import { ThemedView } from "@/components/ui/themed-view"
 import { useTheme } from "@/hooks/use-theme"
-import { useMarkInteractive } from "@/lib/observe"
+import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { BottomTabInset, tokens } from "@/theme"
 
 import { useWatchBle } from "../use-watch-ble"

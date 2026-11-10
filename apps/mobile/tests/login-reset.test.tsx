@@ -6,7 +6,7 @@ import { AccessibilityInfo, AppState, StyleSheet, type AppStateStatus } from "re
 import { useAuth } from "@/features/auth"
 import { AuthField } from "@/features/auth/auth-field"
 import { LoginScreen } from "@/features/auth/screens/login-screen"
-import { ApiError } from "@/lib/api"
+import { ApiError } from "@/lib/api/client"
 
 jest.mock("@/features/auth/auth-hooks", () => ({
   APP_ROUTES: { signUp: "/sign-up" },

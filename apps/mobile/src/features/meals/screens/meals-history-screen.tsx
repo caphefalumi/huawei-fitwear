@@ -5,8 +5,8 @@ import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
 import Animated, { FadeInUp } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable"
-import { useMarkInteractive } from "@/lib/observe"
+import { Pressable } from "@/components/ui/pressable"
+import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
 import { useMeals, type MealLog } from "../meals-hooks"

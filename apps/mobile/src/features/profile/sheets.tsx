@@ -2,9 +2,9 @@ import * as Sentry from "@sentry/react-native"
 import { useEffect, useRef, useState } from "react"
 import { Alert, StyleSheet, Text, TextInput, View } from "react-native"
 
-import { RadioList } from "@/components/radio-list"
-import { Sheet, SheetActions, SheetField } from "@/components/sheet"
-import { WheelPicker } from "@/components/wheel-picker"
+import { RadioList } from "@/components/ui/radio-list"
+import { Sheet, SheetActions, SheetField } from "@/components/ui/sheet"
+import { WheelPicker } from "@/components/ui/wheel-picker"
 import { ACTIVITIES, GOALS, useHealth, type Sex } from "@/features/health"
 import { PERIOD_AREA, useInjuries } from "@/features/recovery"
 import {
@@ -14,7 +14,7 @@ import {
   SESSION_MINUTES,
   usePlanPreferences,
 } from "@/features/workout"
-import { apiErrorMessage } from "@/lib/api"
+import { apiErrorMessage } from "@/lib/api/client"
 import { Palette as C } from "@/theme"
 
 const ACTIVITY_OPTIONS = Object.values(ACTIVITIES)

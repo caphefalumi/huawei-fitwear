@@ -2,7 +2,7 @@ import { focusManager, onlineManager, QueryClient } from "@tanstack/react-query"
 import { addNetworkStateListener, getNetworkStateAsync } from "expo-network"
 import { AppState, Platform } from "react-native"
 
-import { ApiError } from "@/lib/api"
+import { ApiError } from "@/lib/api/client"
 
 const isOnline = (state: { isInternetReachable?: boolean | null; isConnected?: boolean | null }) =>
   state.isInternetReachable ?? state.isConnected ?? true

@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native"
 
-import { Pressable } from "@/components/pressable"
+import { Pressable } from "@/components/ui/pressable"
 import { Palette as C } from "@/theme"
 
 /** Bordered radio cards with a title and one line of detail. */

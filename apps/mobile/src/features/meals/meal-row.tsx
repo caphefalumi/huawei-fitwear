@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react"
 import { Animated, PanResponder, StyleSheet, Text, View } from "react-native"
 import { useReducedMotion } from "react-native-reanimated"
 
-import { Pressable } from "@/components/pressable"
+import { Pressable } from "@/components/ui/pressable"
 import { Palette as C } from "@/theme"
 
 import type { MealItem } from "./meals-hooks"

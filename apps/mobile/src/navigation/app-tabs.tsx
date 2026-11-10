@@ -11,7 +11,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated"
 
-import { Pressable } from "@/components/pressable"
+import { Pressable } from "@/components/ui/pressable"
 import { Palette as C } from "@/theme"
 
 type TabBarRenderer = NonNullable<ComponentProps<typeof Tabs>["tabBar"]>

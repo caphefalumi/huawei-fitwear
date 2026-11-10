@@ -3,10 +3,10 @@ import { useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable"
-import { Sheet, SheetActions } from "@/components/sheet"
+import { Pressable } from "@/components/ui/pressable"
+import { Sheet, SheetActions } from "@/components/ui/sheet"
 import { useAuth } from "@/features/auth"
-import { useMarkInteractive } from "@/lib/observe"
+import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
 export function AccountDataScreen() {

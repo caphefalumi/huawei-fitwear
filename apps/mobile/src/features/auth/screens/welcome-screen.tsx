@@ -2,8 +2,8 @@ import { router } from "expo-router"
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Pressable } from "@/components/pressable"
-import { useMarkInteractive } from "@/lib/observe"
+import { Pressable } from "@/components/ui/pressable"
+import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as AuthColors } from "@/theme"
 
 export function WelcomeScreen() {

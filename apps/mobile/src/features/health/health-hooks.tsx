@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react"
 
 import { useAuth } from "@/features/auth"
-import { apiErrorMessage } from "@/lib/api"
-import { refetchAllThrowing } from "@/lib/query-retry"
+import { apiErrorMessage } from "@/lib/api/client"
+import { refetchAllThrowing } from "@/lib/query/retry"
 
 import { fetchWeights, putWeight } from "./health-api"
 

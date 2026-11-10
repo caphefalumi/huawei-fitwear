@@ -2,9 +2,9 @@ import { router } from "expo-router"
 import { useEffect, useState } from "react"
 import { StyleSheet, Text, View } from "react-native"
 
-import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, Card, PageHeading, Screen } from "@/components/ui"
-import { useMarkInteractive } from "@/lib/observe"
+import { Pressable } from "@/components/ui/pressable"
+import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
 import { useRoutines } from "../plan-preferences.store"
