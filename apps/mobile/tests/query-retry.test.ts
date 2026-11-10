@@ -1,6 +1,6 @@
 import type { QueryObserverResult } from "@tanstack/react-query"
 
-import { refetchAllThrowing, refetchThrowing, throwIfRefetchFailed } from "@/lib/query-retry"
+import { refetchAllThrowing, refetchThrowing, throwIfRefetchFailed } from "@/lib/query/retry"
 
 function refetchResult(isError: boolean, error?: Error): QueryObserverResult<unknown, Error> {
   return { isError, error } as QueryObserverResult<unknown, Error>

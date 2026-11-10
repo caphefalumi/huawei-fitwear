@@ -1,8 +1,8 @@
 import { fireEvent, render } from "@testing-library/react-native"
 import { Text } from "react-native"
 
-import { CloseButton } from "@/components/close-button"
-import { Sheet } from "@/components/sheet"
+import { CloseButton } from "@/components/ui/close-button"
+import { Sheet } from "@/components/ui/sheet"
 
 jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),

@@ -7,14 +7,14 @@ import {
   workoutQueryKeys,
   type WorkoutSession,
 } from "@/features/workout"
-import { apiRequest } from "@/lib/api"
+import { apiRequest } from "@/lib/api/client"
 
 import { createQueryWrapper } from "./query-wrapper"
 
 let serverSessions: WorkoutSession[]
 
-jest.mock("@/lib/api", () => ({
-  ...jest.requireActual("@/lib/api"),
+jest.mock("@/lib/api/client", () => ({
+  ...jest.requireActual("@/lib/api/client"),
   apiRequest: jest.fn(),
 }))
 jest.mock("@/features/auth/auth-hooks", () => ({

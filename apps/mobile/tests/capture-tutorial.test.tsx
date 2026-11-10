@@ -21,8 +21,8 @@ jest.mock("@/features/camera", () => ({
   pickImage: jest.fn(),
   validatePickedImage: jest.requireActual("@/features/camera/image-picker").validatePickedImage,
 }))
-jest.mock("@/lib/api", () => ({
-  ...jest.requireActual("@/lib/api"),
+jest.mock("@/lib/api/client", () => ({
+  ...jest.requireActual("@/lib/api/client"),
   apiRequest: jest.fn(),
 }))
 jest.mock("@/features/meals/meals-hooks", () => ({ useMeals: jest.fn() }))

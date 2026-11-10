@@ -2,8 +2,8 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { createContext, useContext, type ReactNode } from "react"
 
 import { useAuth } from "@/features/auth"
-import { apiErrorMessage } from "@/lib/api"
-import { refetchAllThrowing } from "@/lib/query-retry"
+import { apiErrorMessage } from "@/lib/api/client"
+import { refetchAllThrowing } from "@/lib/query/retry"
 
 import {
   fetchExerciseCatalog,

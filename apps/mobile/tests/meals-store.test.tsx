@@ -16,13 +16,13 @@ import {
   type MealItem,
 } from "@/features/meals"
 import { useMealClientStore } from "@/features/meals/meal-client.store"
-import { apiRequest } from "@/lib/api"
+import { apiRequest } from "@/lib/api/client"
 
 import { createQueryWrapper } from "./query-wrapper"
 let mockUserId = "member-a"
 
-jest.mock("@/lib/api", () => ({
-  ...jest.requireActual("@/lib/api"),
+jest.mock("@/lib/api/client", () => ({
+  ...jest.requireActual("@/lib/api/client"),
   apiRequest: jest.fn(),
 }))
 jest.mock("@/features/auth/auth-hooks", () => ({

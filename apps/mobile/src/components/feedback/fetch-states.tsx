@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { AccessibilityInfo, ActivityIndicator, StyleSheet, Text, View } from "react-native"
 
-import { Pressable } from "@/components/pressable"
+import { Pressable } from "@/components/ui/pressable"
 import { Palette as C } from "@/theme"
 
 export function LoadingSkeleton({

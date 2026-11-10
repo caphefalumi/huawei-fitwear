@@ -10,8 +10,8 @@ import {
   useInjuries,
 } from "@/features/recovery"
 
-jest.mock("@/lib/api", () => ({
-  ...jest.requireActual("@/lib/api"),
+jest.mock("@/lib/api/client", () => ({
+  ...jest.requireActual("@/lib/api/client"),
   apiRequest: jest.fn(),
 }))
 jest.mock("@/features/auth/auth-hooks", () => ({ useAuth: jest.fn() }))

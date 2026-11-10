@@ -3,11 +3,11 @@ import { router } from "expo-router"
 import { StyleSheet, Text, View } from "react-native"
 import Animated, { FadeInUp } from "react-native-reanimated"
 
-import { Pressable } from "@/components/pressable"
 import { Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
+import { Pressable } from "@/components/ui/pressable"
 import { useHealth } from "@/features/health"
 import { injuryEffect, useActiveInjuries } from "@/features/recovery"
-import { useMarkInteractive } from "@/lib/observe"
+import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
 import { usePlanPreferences, useRoutines } from "../plan-preferences.store"

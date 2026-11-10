@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query"
 import { Text, View } from "react-native"
 
-import { FetchErrorState, LoadingSkeleton } from "@/components/fetch-states"
-import { Pressable } from "@/components/pressable"
+import { FetchErrorState, LoadingSkeleton } from "@/components/feedback/fetch-states"
+import { Pressable } from "@/components/ui/pressable"
 import { useAuth } from "@/features/auth"
-import { apiErrorMessage } from "@/lib/api"
-import { useMarkInteractive } from "@/lib/observe"
-import { refetchThrowing } from "@/lib/query-retry"
+import { apiErrorMessage } from "@/lib/api/client"
+import { useMarkInteractive } from "@/lib/monitoring/observe"
+import { refetchThrowing } from "@/lib/query/retry"
 import { Palette as C } from "@/theme"
 
 import { fetchMeal } from "../meals-api"

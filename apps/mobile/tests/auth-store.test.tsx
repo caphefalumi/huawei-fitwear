@@ -8,7 +8,7 @@ import {
   type AuthUser,
   type AuthenticationSessionResponse,
 } from "@/features/auth"
-import { setApiToken } from "@/lib/api"
+import { setApiToken } from "@/lib/api/client"
 import { sessionStorage } from "@/lib/storage"
 
 import { createQueryWrapper } from "./query-wrapper"

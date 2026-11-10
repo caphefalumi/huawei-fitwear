@@ -4,10 +4,10 @@ import { useEffect, useRef, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { FetchErrorState } from "@/components/fetch-states"
-import { Pressable } from "@/components/pressable"
+import { FetchErrorState } from "@/components/feedback/fetch-states"
 import { BackHeader, Button, SectionHeading } from "@/components/ui"
-import { apiErrorMessage } from "@/lib/api"
+import { Pressable } from "@/components/ui/pressable"
+import { apiErrorMessage } from "@/lib/api/client"
 import { Palette as C } from "@/theme"
 
 import { MealPhoto } from "../meal-photo"

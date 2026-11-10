@@ -1,7 +1,7 @@
 import { StyleSheet } from "react-native"
 import Svg, { Path } from "react-native-svg"
 
-import { Pressable } from "@/components/pressable"
+import { Pressable } from "@/components/ui/pressable"
 import { Palette as C } from "@/theme"
 
 /** Circular X button with a centered glyph; the hit area stays at least 44dp via hitSlop. */

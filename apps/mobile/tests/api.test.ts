@@ -9,7 +9,7 @@ import {
   userFacingAuthError,
   userFacingPasswordResetError,
   userFacingSessionError,
-} from "@/lib/api"
+} from "@/lib/api/client"
 
 import { request } from "./http-adapter"
 

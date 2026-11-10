@@ -3,10 +3,10 @@ import { router, useLocalSearchParams } from "expo-router"
 import { useState } from "react"
 import { StyleSheet, Text, View } from "react-native"
 
-import { Pressable } from "@/components/pressable"
 import { BackHeader, Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
+import { Pressable } from "@/components/ui/pressable"
 import { affects, injuryTitle, useActiveInjuries } from "@/features/recovery"
-import { useMarkInteractive } from "@/lib/observe"
+import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
 import { findExercise } from "../catalog"

@@ -1,4 +1,4 @@
-import { validateBirthDate, validateEmail, validatePassword } from "@/lib/form-validation"
+import { validateBirthDate, validateEmail, validatePassword } from "@/lib/forms/form-validation"
 
 test("validateEmail waits for actionable feedback", () => {
   expect(validateEmail("")).toBe("Enter your email address.")

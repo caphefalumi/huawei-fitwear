@@ -1,4 +1,4 @@
-import "@/lib/sentry"
+import "@/lib/monitoring/sentry"
 import "@/global.css"
 import * as Sentry from "@sentry/react-native"
 import { QueryClientProvider } from "@tanstack/react-query"
@@ -10,12 +10,12 @@ import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon"
-import { NetworkStatusBanner } from "@/components/network-status"
+import { NetworkStatusBanner } from "@/components/feedback/network-status"
 import { APP_ROUTES, AuthProvider, useAuth } from "@/features/auth"
 import { HealthProvider } from "@/features/health"
 import { MealsProvider } from "@/features/meals"
 import { WorkoutProvider } from "@/features/workout"
-import { queryClient } from "@/lib/query-client"
+import { queryClient } from "@/lib/query/client"
 
 SplashScreen.preventAutoHideAsync()
 
