@@ -19,13 +19,13 @@ jest.mock("expo-camera", () => {
 jest.mock("expo-router", () => ({ router: { push: jest.fn(), back: jest.fn() } }))
 jest.mock("@/features/camera", () => ({
   pickImage: jest.fn(),
-  validatePickedImage: jest.requireActual("@/features/camera/image-picker").validatePickedImage,
+  validatePickedImage: jest.requireActual("@/features/camera/api/image-picker").validatePickedImage,
 }))
 jest.mock("@/lib/api/client", () => ({
   ...jest.requireActual("@/lib/api/client"),
   apiRequest: jest.fn(),
 }))
-jest.mock("@/features/meals/meals-hooks", () => ({ useMeals: jest.fn() }))
+jest.mock("@/features/meals/hooks/meals-hooks", () => ({ useMeals: jest.fn() }))
 jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }))

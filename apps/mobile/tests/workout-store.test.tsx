@@ -17,7 +17,7 @@ jest.mock("@/lib/api/client", () => ({
   ...jest.requireActual("@/lib/api/client"),
   apiRequest: jest.fn(),
 }))
-jest.mock("@/features/auth/auth-hooks", () => ({
+jest.mock("@/features/auth/hooks/auth-hooks", () => ({
   useAuth: () => ({ user: { id: "member-a" } }),
 }))
 

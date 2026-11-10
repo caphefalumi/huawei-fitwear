@@ -24,18 +24,18 @@ import { ApiError } from "@/lib/api/client"
 import { validateEmail } from "@/lib/forms/form-validation"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 
-import { AuthField } from "../auth-field"
-import { useAuth } from "../auth-hooks"
+import { AuthField } from "../components/auth-field"
 import {
   AuthColors,
   authStyles as styles,
   credentialMessage,
   errorHaptic,
   shake,
-} from "../login-styles"
-import { PasswordResetPanel } from "../password-reset-panel"
-import { useLoginLockout } from "../use-login-lockout"
-import { usePasswordReset } from "../use-password-reset"
+} from "../components/login-styles"
+import { PasswordResetPanel } from "../components/password-reset-panel"
+import { useAuth } from "../hooks/auth-hooks"
+import { useLoginLockout } from "../hooks/use-login-lockout"
+import { usePasswordReset } from "../hooks/use-password-reset"
 
 export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void } = {}) {
   const insets = useSafeAreaInsets()

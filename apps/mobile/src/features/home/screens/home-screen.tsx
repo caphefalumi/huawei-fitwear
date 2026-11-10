@@ -13,9 +13,9 @@ import { useRoutines } from "@/features/workout"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
-import { NutritionRing } from "../ring"
-import { MacroBar } from "../ui"
-import { WeightChart } from "../weight-chart"
+import { NutritionRing } from "../components/ring"
+import { MacroBar } from "../components/ui"
+import { WeightChart } from "../components/weight-chart"
 
 const DEMO_WEIGHTS = [72.8, 72.5, 72.3, 72.1, 71.9, 71.7, 71.5]
 const WEEK_ACTIVE = [true, true, false, true, true, false, true]

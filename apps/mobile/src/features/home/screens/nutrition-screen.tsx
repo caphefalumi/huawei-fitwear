@@ -7,8 +7,8 @@ import { useMeals } from "@/features/meals"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
-import { NutritionRing } from "../ring"
-import { MacroBar } from "../ui"
+import { NutritionRing } from "../components/ring"
+import { MacroBar } from "../components/ui"
 
 export function NutritionScreen() {
   useMarkInteractive()

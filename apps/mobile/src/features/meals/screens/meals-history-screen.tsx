@@ -9,8 +9,8 @@ import { Pressable } from "@/components/ui/pressable"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
-import { useMeals, type MealLog } from "../meals-hooks"
-import { icons } from "../meals-ui"
+import { icons } from "../components/meals-ui"
+import { useMeals, type MealLog } from "../hooks/meals-hooks"
 
 type SortKey = "newest" | "kcal" | "protein" | "carbs" | "fat"
 

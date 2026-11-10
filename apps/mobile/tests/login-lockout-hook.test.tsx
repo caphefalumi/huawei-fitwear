@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react-native"
 import { AppState, type AppStateStatus } from "react-native"
 
-import { useLoginLockout } from "@/features/auth/use-login-lockout"
+import { useLoginLockout } from "@/features/auth/hooks/use-login-lockout"
 
 afterEach(() => {
   jest.useRealTimers()

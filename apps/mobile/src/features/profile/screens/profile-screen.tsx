@@ -14,7 +14,6 @@ import { emphasisFor, usePlanPreferences } from "@/features/workout"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
-import { useDeveloperMode } from "../developer-mode.store"
 import {
   ActivitySheet,
   EmphasisSheet,
@@ -26,7 +25,8 @@ import {
   SexSheet,
   TargetWeightSheet,
   WeightSheet,
-} from "../sheets"
+} from "../components/sheets"
+import { useDeveloperMode } from "../store/developer-mode.store"
 
 const icons = {
   chevronRight: require("@/assets/images/profile/chevron-right.svg"),

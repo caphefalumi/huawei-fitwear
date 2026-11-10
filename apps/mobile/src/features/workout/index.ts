@@ -1,5 +1,5 @@
 /** Public API. Screens are composed by route files directly. */
-export { CATALOG, findExercise, type CatalogExercise, type MuscleGroup } from "./catalog"
+export { CATALOG, findExercise, type CatalogExercise, type MuscleGroup } from "./utils/catalog"
 export {
   EMPHASES,
   emphasisFor,
@@ -7,7 +7,7 @@ export {
   SESSION_MINUTES,
   usePlanPreferences,
   useRoutines,
-} from "./plan-preferences.store"
+} from "./store/plan-preferences.store"
 export {
   GROUP_ROUTINES,
   REST_DAY,
@@ -18,8 +18,8 @@ export {
   type PlanInput,
   type Routine,
   type RoutinePair,
-} from "./routines"
-export { WorkoutProvider, useWorkouts, workoutQueryKeys } from "./workout-hooks"
+} from "./utils/routines"
+export { WorkoutProvider, useWorkouts, workoutQueryKeys } from "./hooks/workout-hooks"
 export type {
   Exercise,
   SessionWithSets,
@@ -27,4 +27,4 @@ export type {
   WorkoutSession,
   WorkoutSet,
   WorkoutState,
-} from "./workout-hooks"
+} from "./hooks/workout-hooks"

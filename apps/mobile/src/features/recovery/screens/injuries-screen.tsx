@@ -11,6 +11,8 @@ import { dateKey, useHealth } from "@/features/health"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
+import { OptionList } from "../components/option-list"
+import { PeriodSheet } from "../components/period-sheet"
 import {
   addDays,
   AREA_GROUPS,
@@ -30,9 +32,7 @@ import {
   type PeriodFeeling,
   type Phase,
   type Severity,
-} from "../injuries"
-import { OptionList } from "../option-list"
-import { PeriodSheet } from "../period-sheet"
+} from "../hooks/injuries"
 
 const ICONS: Record<InjuryArea, number> = {
   Neck: require("@/assets/images/recovery/joint-neck.svg"),

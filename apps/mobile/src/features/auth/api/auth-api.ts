@@ -8,7 +8,7 @@ import type {
   SignInBody,
   SignUpBody,
   UpdateUserBody,
-} from "./types"
+} from "../types"
 
 export const authQueryKeys = {
   session: ["auth", "session"] as const,

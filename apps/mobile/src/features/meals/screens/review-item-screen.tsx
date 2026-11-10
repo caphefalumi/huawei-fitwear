@@ -10,8 +10,8 @@ import { apiErrorMessage } from "@/lib/api/client"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
-import { splitDetail, useMeals } from "../meals-hooks"
-import { Box, Field, NutrientGrid, ValueInput } from "../meals-ui"
+import { Box, Field, NutrientGrid, ValueInput } from "../components/meals-ui"
+import { splitDetail, useMeals } from "../hooks/meals-hooks"
 
 type NutrientKey = "energy" | "protein" | "carbs" | "fat"
 

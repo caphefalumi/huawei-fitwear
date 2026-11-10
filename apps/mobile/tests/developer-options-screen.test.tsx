@@ -1,8 +1,8 @@
 import { fireEvent, render } from "@testing-library/react-native"
 import { router } from "expo-router"
 
-import { useDeveloperMode } from "@/features/profile/developer-mode.store"
 import { DeveloperOptionsScreen } from "@/features/profile/screens/developer-options-screen"
+import { useDeveloperMode } from "@/features/profile/store/developer-mode.store"
 
 jest.mock("expo-router", () => ({ router: { back: jest.fn() } }))
 jest.mock("react-native-safe-area-context", () => ({

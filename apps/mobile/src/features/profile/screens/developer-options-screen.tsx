@@ -5,7 +5,7 @@ import { BackHeader, PageHeading, Screen } from "@/components/ui"
 import { Toggle } from "@/components/ui/toggle"
 import { Palette as C } from "@/theme"
 
-import { type DeveloperFeature, useDeveloperMode } from "../developer-mode.store"
+import { type DeveloperFeature, useDeveloperMode } from "../store/developer-mode.store"
 
 const FEATURES: { key: DeveloperFeature; label: string; description: string }[] = [
   {

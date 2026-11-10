@@ -11,7 +11,7 @@ import {
   fetchWorkoutSession,
   writeWorkout,
   type WorkoutWriteInput,
-} from "./workout-api"
+} from "../api/workout-api"
 
 export type Exercise = {
   id: string

@@ -1,6 +1,6 @@
 import { apiRequest } from "@/lib/api/client"
 
-import type { FoodEntry, NutritionSummary } from "./meals-hooks"
+import type { FoodEntry, NutritionSummary } from "../hooks/meals-hooks"
 
 export type ApiMealItem = {
   id?: string
