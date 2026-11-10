@@ -10,7 +10,7 @@ import {
 } from "@/features/auth"
 import { setApiToken } from "@/lib/api/client"
 import { sessionStorage } from "@/lib/storage"
-import { createQueryWrapper } from "@/tests/utils/query-wrapper"
+import { createQueryWrapper } from "@/test-utils/query-wrapper"
 
 jest.mock("@/lib/storage", () => ({
   sessionStorage: { getToken: jest.fn(), setToken: jest.fn(), clearToken: jest.fn() },
@@ -50,10 +50,10 @@ function mockAuthenticationSession(
 
 jest.mock("axios", () => {
   const actual = jest.requireActual("axios")
-  actual.default.defaults.adapter = jest.requireActual("@/tests/utils/http-adapter").httpAdapter
+  actual.default.defaults.adapter = jest.requireActual("@/test-utils/http-adapter").httpAdapter
   return actual
 })
-import { request } from "@/tests/utils/http-adapter"
+import { request } from "@/test-utils/http-adapter"
 const saved = jest.mocked(sessionStorage)
 const user = mockAuthenticationUser
 const authenticated = () => mockAuthenticationSession()

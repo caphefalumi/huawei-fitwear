@@ -62,7 +62,7 @@ Not used by the E2E pipeline (E2E builds or reuses a **release** APK on Linux).
 
 - **Schedule:** `0 1 * * *` in timezone `Asia/Ho_Chi_Minh` (always builds a fresh APK).
 - **Manual:** `workflow_dispatch` inputs:
-  - `include_tags` — comma-separated Maestro tags (OR). Empty = all top-level flows under `apps/mobile/tests/e2e/`.
+  - `include_tags` — comma-separated Maestro tags (OR). Empty = all top-level flows under `apps/mobile/e2e/`.
   - `force_rebuild` — build a new release APK even when only flows/docs/tests changed.
 
 **Concurrency:** Group `mobile-e2e-dedicated-account`, `cancel-in-progress: false` so only one E2E run uses the dedicated account at a time.
@@ -124,7 +124,7 @@ Runs if `prepare` succeeded and `build` or `fetch-apk` succeeded/skipped as expe
 **Emulator script (high level)**
 
 1. `adb install -r` release APK.
-2. `maestro test` on `apps/mobile/tests/e2e` with JUnit output under `maestro-artifacts/`.
+2. `maestro test` on `apps/mobile/e2e` with JUnit output under `maestro-artifacts/`.
 3. Env: `MAESTRO_TEST_EMAIL`, `MAESTRO_TEST_PASSWORD`, optional `MAESTRO_INCLUDE_TAGS`.
 4. Write Maestro exit code to `maestro-artifacts/maestro-exit-code.txt`.
 5. On test failure the script still exits **0** from the emulator action so later steps can upload artifacts; the real exit code is recovered in a separate step.
@@ -159,12 +159,12 @@ Summary generator always exits 0 so reporting does not mask a failed test step.
 
 | Flow                        | Path                                        | Tags             |
 | --------------------------- | ------------------------------------------- | ---------------- |
-| Error messages & validation | `apps/mobile/tests/e2e/error-messages.yaml` | `e2e`, `errors`  |
-| Fitness / auth journey      | `apps/mobile/tests/e2e/fitness.yaml`        | `e2e`, `fitness` |
+| Error messages & validation | `apps/mobile/e2e/error-messages.yaml` | `e2e`, `errors`  |
+| Fitness / auth journey      | `apps/mobile/e2e/fitness.yaml`        | `e2e`, `fitness` |
 
 **App id:** `com.fitwear.mobile`.
 
-CI discovers **top-level** `.yaml`/`.yml` files in `tests/e2e/`. Put shared subflows in subdirectories so they are not run as separate top-level journeys.
+CI discovers **top-level** `.yaml`/`.yml` files in `e2e/`. Put shared subflows in subdirectories so they are not run as separate top-level journeys.
 
 **Conventions (from README):**
 
@@ -186,8 +186,8 @@ bun run test:e2e:errors       # error-messages.yaml only
 Pass credentials the same way CI does:
 
 ```bash
-maestro test -e MAESTRO_TEST_EMAIL=... -e MAESTRO_TEST_PASSWORD=... tests/e2e
-maestro test --include-tags fitness tests/e2e
+maestro test -e MAESTRO_TEST_EMAIL=... -e MAESTRO_TEST_PASSWORD=... e2e
+maestro test --include-tags fitness e2e
 ```
 
 Release APK for parity with CI: build with `EXPO_PUBLIC_API_URL` pointing at the same API host, install on an x86_64 emulator or device.
