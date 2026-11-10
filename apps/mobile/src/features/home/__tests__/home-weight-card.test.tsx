@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react-native"
+import { act, render } from "@testing-library/react-native"
 
 import { useHealth } from "@/features/health"
 import { HomeScreen } from "@/features/home/screens/home-screen"
@@ -49,8 +49,16 @@ test("home shows the latest logged weight and consumed calories", async () => {
     refresh: jest.fn(),
   } as never)
 
-  const screen = await render(<HomeScreen />)
+  jest.useFakeTimers()
+  try {
+    const screen = await render(<HomeScreen />)
+    await act(() => {
+      jest.advanceTimersByTime(600)
+    })
 
-  expect(screen.getByText("Logged Oct 8")).toBeTruthy()
-  expect(screen.getByText(/1,320 consumed/)).toBeTruthy()
+    expect(screen.getByText("Logged Oct 8")).toBeTruthy()
+    expect(screen.getByText(/1,320 consumed/)).toBeTruthy()
+  } finally {
+    jest.useRealTimers()
+  }
 })
