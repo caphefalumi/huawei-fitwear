@@ -262,7 +262,9 @@ test("deleting a meal item invalidates its cached parent detail", async () => {
   )
   await waitFor(() => expect(result.current.loading).toBe(false))
 
-  client.current!.setQueryData(detailKey, fromApiMeal(savedMeal))
+  await act(() => {
+    client.current!.setQueryData(detailKey, fromApiMeal(savedMeal))
+  })
   await act(async () => result.current.removeItem("saved-item", "meal-a"))
 
   expect(client.current!.getQueryState(detailKey)?.isInvalidated).toBe(true)
@@ -277,7 +279,7 @@ test("late responses for a previous account never populate the current account c
   const view = await renderHook(() => useMeals(), { wrapper: createQueryWrapper(MealsProvider) })
 
   mockUserId = "member-b"
-  view.rerender(undefined)
+  await view.rerender(undefined)
   await waitFor(() => expect(view.result.current.loading).toBe(false))
   await act(async () => pending.resolve({ meals: [savedMeal] }))
   expect(view.result.current.history).toEqual([])
