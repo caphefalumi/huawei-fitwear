@@ -4,7 +4,7 @@ React Native application built with **Expo** and **Expo Router**, serving as the
 
 ## Cloudflare API integration
 
-The API defaults to `https://fitwear.tm-project.id.vn`. To use a local backend, create `.env.local` in this directory with `EXPO_PUBLIC_API_URL=http://<computer-LAN-IP>:8787`, then restart Metro. Use `127.0.0.1` for web and your computer's LAN IP for a physical phone. Only public configuration belongs in `EXPO_PUBLIC_*`; never put API secrets there.
+The API defaults to `https://fitwear.tm-project.id.vn`. To use a local backend, copy `.env.example` to `.env.local` in this directory and set `EXPO_PUBLIC_API_URL=http://<computer-LAN-IP>:8787`, then restart Metro. The value must be an absolute HTTP(S) URL without credentials, a query, or a fragment. Use `127.0.0.1` for web and your computer's LAN IP for a physical phone. Only public configuration belongs in `EXPO_PUBLIC_*`; never put API secrets there.
 
 App accounts are separate from Expo accounts. Sign up with a real email-format address, password and birth date. Native session tokens use SecureStore; web sessions use localStorage and are validated with the server before private routes render. Signing out clears device state even when the network is unavailable.
 

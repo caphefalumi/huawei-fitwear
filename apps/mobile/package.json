@@ -6,7 +6,6 @@
   "scripts": {
     "start": "expo start --dev-client",
     "start:tunnel": "expo start --dev-client --tunnel",
-    "reset-project": "bun ./scripts/reset-project.ts",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "build:ios": "expo run:ios",
