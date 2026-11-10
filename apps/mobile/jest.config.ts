@@ -9,6 +9,7 @@ module.exports = {
   ],
   moduleNameMapper: {
     "^@/assets/(.*)$": "<rootDir>/assets/$1",
+    "^@/tests/(.*)$": "<rootDir>/tests/$1",
     "^@/(.*)$": "<rootDir>/src/$1",
   },
   clearMocks: true,
