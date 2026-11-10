@@ -11,6 +11,8 @@ export const Palette = {
   accent: "#9D2332",
   accentBorder: "#9D2232",
   accentTint: "#F5E8E8",
+  accentSoft: "#E2A6AD",
+  track: "#D6D0C9",
   previewTint: "#F7F5F2",
   onAccent: "#FFFFFF",
 } as const

@@ -2,16 +2,10 @@
 export {
   ACTIVITIES,
   GOALS,
-  INJURY_AREAS,
-  PERIOD_AREA,
-  createRecovery,
   dateKey,
   dateLabel,
   HealthProvider,
   healthQueryKeys,
-  recoveryProgress,
-  recoveryRanges,
-  recoveryTitle,
   useHealth,
 } from "./health-hooks"
-export type { PlanPreferences, RecoveryPlan, Sex, WeightLog } from "./health-hooks"
+export type { PlanPreferences, Sex, WeightLog } from "./health-hooks"

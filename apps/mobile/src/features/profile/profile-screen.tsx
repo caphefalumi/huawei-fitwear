@@ -2,23 +2,27 @@ import * as Sentry from "@sentry/react-native"
 import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useState } from "react"
-import { Alert, StyleSheet, Text, View } from "react-native"
+import { StyleSheet, Text, View } from "react-native"
 import Animated, { FadeInUp } from "react-native-reanimated"
 
 import { Pressable } from "@/components/pressable"
 import { Button, PageHeading, Screen } from "@/components/ui"
 import { useAuth } from "@/features/auth"
-import { PERIOD_AREA, useHealth } from "@/features/health"
-import { RecoverySheet } from "@/features/recovery"
+import { useHealth } from "@/features/health"
+import { PERIOD_AREA, PeriodSheet, useActiveInjuries, useInjuries } from "@/features/recovery"
+import { emphasisFor, usePlanPreferences } from "@/features/workout"
 import { useMarkInteractive } from "@/lib/observe"
 import { Palette as C } from "@/theme"
 
 import { useDeveloperMode } from "./developer-mode.store"
 import {
   ActivitySheet,
+  EmphasisSheet,
+  ExperienceSheet,
   FrequencySheet,
   GoalSheet,
   HeightSheet,
+  SessionLengthSheet,
   SexSheet,
   TargetWeightSheet,
   WeightSheet,
@@ -65,7 +69,9 @@ type OpenSheet =
   | "frequency"
   | "activity"
   | "target"
-  | "recovery"
+  | "session"
+  | "emphasis"
+  | "experience"
   | null
 
 export function ProfileScreen() {
@@ -74,10 +80,18 @@ export function ProfileScreen() {
   const developerMode = useDeveloperMode((state) => state.enabled)
   const developerFeatures = useDeveloperMode((state) => state.features)
   const toggleDeveloperMode = useDeveloperMode((state) => state.toggle)
-  const { weightKg, heightCm, sex, plan, recovery, saveRecovery, loading, error, refresh } =
-    useHealth()
-  const inPeriod = recovery?.area === PERIOD_AREA
+  const { weightKg, heightCm, sex, plan, loading, error, refresh } = useHealth()
+  const injuries = useActiveInjuries()
+  const addInjury = useInjuries((state) => state.add)
+  const removeInjury = useInjuries((state) => state.remove)
+  const inPeriod = injuries.some((injury) => injury.area === PERIOD_AREA)
+  const { minutes, likes, dislikes, emphasis, experience } = usePlanPreferences()
+  const preferencesLabel =
+    likes.length || dislikes.length ? `${likes.length} liked, ${dislikes.length} disliked` : "None"
+  const injuriesLabel =
+    injuries.length > 1 ? `${injuries.length} active` : (injuries[0]?.area ?? "None")
   const [openSheet, setOpenSheet] = useState<OpenSheet>(null)
+  const [periodSheet, setPeriodSheet] = useState(false)
   const sexLabel = sex ?? "Not set"
   const weightLabel = weightKg === null ? "Not set" : `${weightKg.toFixed(1)} kg`
   const heightLabel = heightCm === null ? "Not set" : `${heightCm} cm`
@@ -151,6 +165,26 @@ export function ProfileScreen() {
             onPress={() => setOpenSheet("frequency")}
           />
           <ProfileRow
+            label="Session length"
+            value={`${minutes} min`}
+            onPress={() => setOpenSheet("session")}
+          />
+          <ProfileRow
+            label="Emphasis"
+            value={emphasisFor(emphasis, sex)}
+            onPress={() => setOpenSheet("emphasis")}
+          />
+          <ProfileRow
+            label="Experience"
+            value={experience}
+            onPress={() => setOpenSheet("experience")}
+          />
+          <ProfileRow
+            label="Exercise preferences"
+            value={preferencesLabel}
+            onPress={() => router.push("/exercise-preferences")}
+          />
+          <ProfileRow
             label="Daily activity"
             value={plan.activity}
             onPress={() => setOpenSheet("activity")}
@@ -161,9 +195,9 @@ export function ProfileScreen() {
             onPress={() => setOpenSheet("target")}
           />
           <ProfileRow
-            label="Recovery plan"
-            value={recovery?.area ?? "None"}
-            onPress={() => setOpenSheet("recovery")}
+            label="Injuries"
+            value={injuriesLabel}
+            onPress={() => router.push("/injuries")}
           />
         </View>
       </Animated.View>
@@ -224,20 +258,7 @@ export function ProfileScreen() {
             label={inPeriod ? "My period has ended" : "I am in my period"}
             variant={inPeriod ? "secondary" : "primary"}
             style={inPeriod ? styles.periodButtonActive : undefined}
-            onPress={() => {
-              if (inPeriod) {
-                void saveRecovery(null)
-              } else {
-                Alert.alert(
-                  "Period recovery",
-                  "Used only to adjust your plan. You can turn it off any time.",
-                  [
-                    { text: "Not now", style: "cancel" },
-                    { text: "Turn on", onPress: () => setOpenSheet("recovery") },
-                  ],
-                )
-              }
-            }}
+            onPress={() => (inPeriod ? removeInjury(PERIOD_AREA) : setPeriodSheet(true))}
           />
         </Animated.View>
       ) : null}
@@ -249,7 +270,19 @@ export function ProfileScreen() {
       {openSheet === "frequency" ? <FrequencySheet visible onClose={close} /> : null}
       {openSheet === "activity" ? <ActivitySheet visible onClose={close} /> : null}
       {openSheet === "target" ? <TargetWeightSheet visible onClose={close} /> : null}
-      {openSheet === "recovery" ? <RecoverySheet visible onClose={close} /> : null}
+      {openSheet === "session" ? <SessionLengthSheet visible onClose={close} /> : null}
+      {openSheet === "emphasis" ? <EmphasisSheet visible onClose={close} /> : null}
+      {periodSheet ? (
+        <PeriodSheet
+          visible
+          onClose={() => setPeriodSheet(false)}
+          onAdd={(feeling) => {
+            addInjury(PERIOD_AREA, feeling)
+            setPeriodSheet(false)
+          }}
+        />
+      ) : null}
+      {openSheet === "experience" ? <ExperienceSheet visible onClose={close} /> : null}
     </Screen>
   )
 }

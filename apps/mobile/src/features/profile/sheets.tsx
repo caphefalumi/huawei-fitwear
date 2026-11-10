@@ -5,14 +5,22 @@ import { Alert, StyleSheet, Text, TextInput, View } from "react-native"
 import { RadioList } from "@/components/radio-list"
 import { Sheet, SheetActions, SheetField } from "@/components/sheet"
 import { WheelPicker } from "@/components/wheel-picker"
-import { ACTIVITIES, GOALS, PERIOD_AREA, useHealth, type Sex } from "@/features/health"
+import { ACTIVITIES, GOALS, useHealth, type Sex } from "@/features/health"
+import { PERIOD_AREA, useInjuries } from "@/features/recovery"
+import {
+  EMPHASES,
+  emphasisFor,
+  EXPERIENCES,
+  SESSION_MINUTES,
+  usePlanPreferences,
+} from "@/features/workout"
 import { apiErrorMessage } from "@/lib/api"
 import { Palette as C } from "@/theme"
 
 const ACTIVITY_OPTIONS = Object.values(ACTIVITIES)
 const GOAL_OPTIONS = Object.values(GOALS)
 const SEX_OPTIONS: readonly Sex[] = ["Male", "Female", "Rather not say"]
-const SESSION_VALUES = [1, 2, 3, 4, 5, 6, 7]
+const SESSION_VALUES = [1, 2, 3, 4, 5, 6]
 const HEIGHT_VALUES = Array.from({ length: 221 }, (_, index) => index + 80)
 type SheetProps = { visible: boolean; onClose: () => void; onDismiss?: () => void }
 
@@ -159,10 +167,15 @@ export function WeightSheet({ visible, onClose, onDismiss }: SheetProps) {
 }
 
 export function SexSheet({ visible, onClose, onDismiss }: SheetProps) {
-  const { sex, recovery, saveSex } = useHealth()
+  const { sex, saveSex } = useHealth()
+  const inPeriod = useInjuries((state) => state.injuries.some((i) => i.area === PERIOD_AREA))
+  const removeInjury = useInjuries((state) => state.remove)
   const action = useSave(onClose)
   const changeSex = (next: Sex) => {
-    void action.save(() => saveSex(next))
+    void action.save(async () => {
+      await saveSex(next)
+      if (next !== "Female") removeInjury(PERIOD_AREA)
+    })
   }
   return (
     <Sheet visible={visible} title="Sex" onClose={action.close} onDismiss={onDismiss}>
@@ -170,7 +183,7 @@ export function SexSheet({ visible, onClose, onDismiss }: SheetProps) {
         options={SEX_OPTIONS}
         value={sex ?? ("" as Sex)}
         onChange={(next) => {
-          if (next !== "Female" && recovery?.area === PERIOD_AREA) {
+          if (next !== "Female" && inPeriod) {
             Alert.alert(
               "Remove period recovery data?",
               "Changing this will remove your period recovery settings.",
@@ -225,7 +238,9 @@ export function ActivitySheet({ visible, onClose, onDismiss }: SheetProps) {
 
 export function FrequencySheet({ visible, onClose, onDismiss }: SheetProps) {
   const { plan, savePlan } = useHealth()
-  const [draft, setDraft] = useState(plan.sessions ?? SESSION_VALUES[0])
+  const [draft, setDraft] = useState(
+    Math.min(plan.sessions ?? SESSION_VALUES[0], SESSION_VALUES.length),
+  )
   const action = useSave(onClose)
   return (
     <Sheet visible={visible} title="Workout frequency" onClose={action.close} onDismiss={onDismiss}>
@@ -248,6 +263,71 @@ export function FrequencySheet({ visible, onClose, onDismiss }: SheetProps) {
         }}
         onSecondary={action.close}
       />
+    </Sheet>
+  )
+}
+
+export function SessionLengthSheet({ visible, onClose, onDismiss }: SheetProps) {
+  const { minutes, setMinutes } = usePlanPreferences()
+  const [draft, setDraft] = useState(minutes)
+  const action = useSave(onClose)
+  return (
+    <Sheet visible={visible} title="Session length" onClose={action.close} onDismiss={onDismiss}>
+      <WheelPicker
+        label="Session length"
+        values={SESSION_MINUTES}
+        value={draft}
+        onChange={setDraft}
+        format={(value) => `${value} min`}
+      />
+      <SheetActions
+        primaryDisabled={action.pending}
+        secondaryDisabled={action.pending}
+        busy={action.pending}
+        primaryLabel="OK"
+        secondaryLabel="Cancel"
+        onPrimary={() => {
+          void action.save(async () => setMinutes(draft))
+        }}
+        onSecondary={action.close}
+      />
+    </Sheet>
+  )
+}
+
+export function EmphasisSheet({ visible, onClose, onDismiss }: SheetProps) {
+  const { sex } = useHealth()
+  const emphasis = usePlanPreferences((state) => emphasisFor(state.emphasis, sex))
+  const setEmphasis = usePlanPreferences((state) => state.setEmphasis)
+  return (
+    <Sheet visible={visible} title="Emphasis" onClose={onClose} onDismiss={onDismiss}>
+      <RadioList
+        options={EMPHASES}
+        value={emphasis}
+        onChange={(next) => {
+          setEmphasis(next)
+          onClose()
+        }}
+      />
+      <Text style={styles.body}>Lower body gives glutes and hamstrings more of each session.</Text>
+    </Sheet>
+  )
+}
+
+export function ExperienceSheet({ visible, onClose, onDismiss }: SheetProps) {
+  const experience = usePlanPreferences((state) => state.experience)
+  const setExperience = usePlanPreferences((state) => state.setExperience)
+  return (
+    <Sheet visible={visible} title="Experience" onClose={onClose} onDismiss={onDismiss}>
+      <RadioList
+        options={EXPERIENCES}
+        value={experience}
+        onChange={(next) => {
+          setExperience(next)
+          onClose()
+        }}
+      />
+      <Text style={styles.body}>Beginner uses easier variations and fewer sets.</Text>
     </Sheet>
   )
 }

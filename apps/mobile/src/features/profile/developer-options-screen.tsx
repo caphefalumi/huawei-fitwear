@@ -1,6 +1,7 @@
 import { router } from "expo-router"
-import { StyleSheet, Switch, Text, View } from "react-native"
+import { StyleSheet, Text, View } from "react-native"
 
+import { Toggle } from "@/components/toggle"
 import { BackHeader, PageHeading, Screen } from "@/components/ui"
 import { Palette as C } from "@/theme"
 
@@ -37,7 +38,7 @@ export function DeveloperOptionsScreen() {
               <Text style={styles.label}>{label}</Text>
               <Text style={styles.description}>{description}</Text>
             </View>
-            <Switch
+            <Toggle
               accessibilityLabel={label}
               value={features[key]}
               onValueChange={() => toggleFeature(key)}
