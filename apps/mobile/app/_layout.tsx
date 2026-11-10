@@ -56,20 +56,22 @@ function RootNavigator() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={!!user} redirectTo={APP_ROUTES.login}>
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="account-data" />
-          <Stack.Screen name="developer-options" />
-          <Stack.Screen name="nutrition" />
-          <Stack.Screen name="progress" />
-          <Stack.Screen name="capture" />
-          <Stack.Screen name="chest-plan" />
-          <Stack.Screen name="exercise-guide" />
-          <Stack.Screen name="exercise-preferences" />
-          <Stack.Screen name="injuries" />
-          <Stack.Screen name="meal" />
-          <Stack.Screen name="add-item" />
-          <Stack.Screen name="review-item" />
-          <Stack.Screen name="replace-food" />
-          <Stack.Screen name="ble-sync" />
+          <Stack.Screen name="(settings)/account-data" />
+          <Stack.Screen name="(settings)/developer-options" />
+          <Stack.Screen name="(details)/nutrition" />
+          <Stack.Screen name="(details)/progress" />
+          <Stack.Screen name="(modals)/capture" />
+          <Stack.Screen name="(workout)/chest-plan" />
+          <Stack.Screen name="(workout)/exercise-guide" />
+          <Stack.Screen name="(workout)/exercise-preferences" />
+          <Stack.Screen name="(workout)/plan" />
+          <Stack.Screen name="(workout)/session" />
+          <Stack.Screen name="(details)/injuries" />
+          <Stack.Screen name="(details)/meal" />
+          <Stack.Screen name="(modals)/add-item" />
+          <Stack.Screen name="(modals)/review-item" />
+          <Stack.Screen name="(modals)/replace-food" />
+          <Stack.Screen name="(details)/ble-sync" />
         </Stack.Protected>
         <Stack.Protected guard={!user} redirectTo={APP_ROUTES.home}>
           <Stack.Screen name="(auth)" />

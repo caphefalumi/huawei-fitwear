@@ -3,9 +3,9 @@ import { router } from "expo-router"
 
 import { dateKey, useHealth } from "@/features/health"
 import { useInjuries } from "@/features/recovery"
-import { InjuriesScreen } from "@/features/recovery/injuries-screen"
+import { InjuriesScreen } from "@/features/recovery/screens/injuries-screen"
 import { usePlanPreferences } from "@/features/workout"
-import { ExercisePreferencesScreen } from "@/features/workout/exercise-preferences-screen"
+import { ExercisePreferencesScreen } from "@/features/workout/screens/exercise-preferences-screen"
 
 jest.mock("@/features/health", () => ({
   ...jest.requireActual("@/features/health"),
