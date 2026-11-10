@@ -3,7 +3,7 @@ const path = require("node:path")
 const { getExactRoutes } = require("expo-router/build/getRoutes")
 
 test("grouped routes remain at the root navigator with their original URLs", () => {
-  const appDir = path.resolve(__dirname, "../app")
+  const appDir = path.resolve(__dirname, "../../../app")
   const files = []
   function collect(dir) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

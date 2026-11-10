@@ -32,6 +32,12 @@
           }
         ]
       }
+    },
+    {
+      "files": ["apps/mobile/src/features/**/__tests__/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
     }
   ]
 }

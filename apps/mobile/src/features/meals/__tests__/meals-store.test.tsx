@@ -18,7 +18,7 @@ import {
 import { useMealClientStore } from "@/features/meals/store/meal-client.store"
 import { apiRequest } from "@/lib/api/client"
 
-import { createQueryWrapper } from "./query-wrapper"
+import { createQueryWrapper } from "../../../../tests/utils/query-wrapper"
 let mockUserId = "member-a"
 
 jest.mock("@/lib/api/client", () => ({
