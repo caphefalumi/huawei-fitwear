@@ -71,9 +71,17 @@ const savedMeal = {
   ],
 }
 
+const actEnvironment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+
 beforeAll(() => {
   notifyManager.setNotifyFunction((notify) => {
-    reactAct(() => notify())
+    const previousActEnvironment = actEnvironment.IS_REACT_ACT_ENVIRONMENT
+    actEnvironment.IS_REACT_ACT_ENVIRONMENT = true
+    try {
+      reactAct(() => notify())
+    } finally {
+      actEnvironment.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment
+    }
   })
 })
 
