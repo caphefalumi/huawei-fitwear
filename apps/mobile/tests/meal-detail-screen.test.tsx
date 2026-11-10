@@ -1,7 +1,7 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native"
 
 import { useMeals } from "@/features/meals"
-import { MealDetailScreen } from "@/features/meals/meal-detail-screen"
+import { MealDetailScreen } from "@/features/meals/screens/meal-detail-screen"
 import { apiRequest } from "@/lib/api"
 
 import { createQueryWrapper } from "./query-wrapper"
@@ -20,7 +20,7 @@ jest.mock("@/lib/api", () => ({
   ...jest.requireActual("@/lib/api"),
   apiRequest: jest.fn(),
 }))
-jest.mock("@/features/meals/meal-result-screen", () => {
+jest.mock("@/features/meals/screens/meal-result-screen", () => {
   const React = require("react")
   const { Text } = require("react-native")
   return {

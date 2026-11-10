@@ -2,7 +2,7 @@ import { fireEvent, render } from "@testing-library/react-native"
 import { useCameraPermissions } from "expo-camera"
 
 import { useMeals } from "@/features/meals"
-import { MealCaptureScreen } from "@/features/meals/capture-screen"
+import { MealCaptureScreen } from "@/features/meals/screens/capture-screen"
 
 const mockTakePicture = jest.fn()
 const mockRequestPermission = jest.fn()

@@ -4,7 +4,7 @@ import { router } from "expo-router"
 import { useAuth } from "@/features/auth"
 import { useHealth } from "@/features/health"
 import { useDeveloperMode } from "@/features/profile/developer-mode.store"
-import { ProfileScreen } from "@/features/profile/profile-screen"
+import { ProfileScreen } from "@/features/profile/screens/profile-screen"
 import { PERIOD_AREA, useInjuries } from "@/features/recovery"
 
 jest.mock("@/features/auth/auth-hooks", () => ({ useAuth: jest.fn() }))
