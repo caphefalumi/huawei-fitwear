@@ -8,8 +8,7 @@ import {
   type WorkoutSession,
 } from "@/features/workout"
 import { apiRequest } from "@/lib/api/client"
-
-import { createQueryWrapper } from "../../../../tests/utils/query-wrapper"
+import { createQueryWrapper } from "@/tests/utils/query-wrapper"
 
 let serverSessions: WorkoutSession[]
 

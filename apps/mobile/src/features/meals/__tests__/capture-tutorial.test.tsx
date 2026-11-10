@@ -30,7 +30,7 @@ jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }))
 jest.mock("react-native-reanimated", () => ({ useReducedMotion: () => true }))
-import { createQueryWrapper } from "../../../../tests/utils/query-wrapper"
+import { createQueryWrapper } from "@/tests/utils/query-wrapper"
 jest.mock("react-native-keyboard-controller", () => {
   const { View } = require("react-native")
   return { KeyboardAvoidingView: View }
