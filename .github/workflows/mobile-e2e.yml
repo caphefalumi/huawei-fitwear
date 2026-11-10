@@ -131,6 +131,7 @@ jobs:
           key="$({ git ls-files -s -z -- \
             apps/mobile package.json bun.lock .github/workflows/mobile-e2e.yml .github/actions/setup/action.yml \
             ':(exclude)apps/mobile/e2e/**' \
+            ':(exclude)apps/mobile/docs/**' \
             ':(exclude)apps/mobile/src/test-utils/**' \
             ':(exclude,glob)apps/mobile/src/**/__tests__/**' \
             ':(exclude)apps/mobile/jest.config.ts' \
