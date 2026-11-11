@@ -22,6 +22,10 @@ jest.mock("react-native-keyboard-controller", () => {
 })
 jest.mock("@/features/profile/components/sheets", () => ({
   ActivitySheet: () => null,
+  BirthdateSheet: () => {
+    const { Text } = require("react-native")
+    return <Text>Birthdate sheet</Text>
+  },
   EmphasisSheet: () => null,
   ExperienceSheet: () => null,
   FrequencySheet: () => null,
@@ -131,4 +135,21 @@ test("shows unset height and restores account actions", async () => {
   expect(router.push).toHaveBeenNthCalledWith(2, "/developer-options")
   expect(router.push).toHaveBeenNthCalledWith(3, "/ble-sync")
   expect(signOut).toHaveBeenCalledTimes(1)
+})
+
+test("shows the saved birthdate instead of a hard-coded one", async () => {
+  mockUseAuth.mockReturnValue({
+    user: { name: "Member", email: "member@example.com", birthDate: "1994-04-12" },
+    signOut,
+  } as never)
+  const screen = await render(<ProfileScreen />)
+  expect(screen.getByRole("button", { name: "Birthdate, 12-04-1994" })).toBeTruthy()
+  expect(screen.queryByText("14 Jun 1998")).toBeNull()
+})
+
+test("shows an unset birthdate and opens the editor", async () => {
+  const screen = await render(<ProfileScreen />)
+  expect(screen.queryByText("14 Jun 1998")).toBeNull()
+  await fireEvent.press(screen.getByRole("button", { name: "Birthdate, Not set" }))
+  expect(screen.getByText("Birthdate sheet")).toBeTruthy()
 })

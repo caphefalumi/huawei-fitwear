@@ -3,15 +3,10 @@ import { StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-na
 
 import { AuthColors } from "./login-styles"
 
-const ORDER = new Intl.DateTimeFormat(undefined, {
-  day: "numeric",
-  month: "numeric",
-  year: "numeric",
-})
-  .formatToParts(new Date())
-  .flatMap(({ type }) => (type === "day" || type === "month" || type === "year" ? [type] : []))
-
 type DateParts = { day: string; month: string; year: string }
+
+/** Date of birth is always entered as DD-MM-YYYY, whatever the device locale is. */
+const ORDER: (keyof DateParts)[] = ["day", "month", "year"]
 
 function parseISO(value: string): DateParts {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
@@ -71,15 +66,11 @@ export function DateOfBirthField({
     const digits = raw.replace(/\D/g, "")
     if (digits.length >= 8) {
       const yearFirst = /^(\d{4})[-/. ]?(\d{1,2})[-/. ]?(\d{1,2})$/.exec(raw.trim())
-      const localeOrder = /^(\d{1,2})[-/. ](\d{1,2})[-/. ](\d{4})$/.exec(raw.trim())
+      const dayFirst = /^(\d{1,2})[-/. ](\d{1,2})[-/. ](\d{4})$/.exec(raw.trim())
       const pasted = yearFirst
         ? { year: yearFirst[1], month: yearFirst[2], day: yearFirst[3] }
-        : localeOrder
-          ? {
-              day: ORDER[0] === "day" ? localeOrder[1] : localeOrder[2],
-              month: ORDER[0] === "month" ? localeOrder[1] : localeOrder[2],
-              year: localeOrder[3],
-            }
+        : dayFirst
+          ? { day: dayFirst[1], month: dayFirst[2], year: dayFirst[3] }
           : null
       if (pasted) {
         commit(pasted)

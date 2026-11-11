@@ -16,6 +16,7 @@ import { Palette as C } from "@/theme"
 
 import {
   ActivitySheet,
+  BirthdateSheet,
   EmphasisSheet,
   ExperienceSheet,
   FrequencySheet,
@@ -27,6 +28,7 @@ import {
   WeightSheet,
 } from "../components/sheets"
 import { useDeveloperMode } from "../store/developer-mode.store"
+import { formatBirthdate } from "../utils/format-birthdate"
 
 const icons = {
   chevronRight: require("@/assets/images/profile/chevron-right.svg"),
@@ -62,6 +64,7 @@ function ProfileRow({ label, value, onPress, loading = false }: RowProps) {
 }
 
 type OpenSheet =
+  | "birthdate"
   | "height"
   | "weight"
   | "sex"
@@ -140,7 +143,11 @@ export function ProfileScreen() {
       <Animated.View entering={FadeInUp.delay(50).duration(220)}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Profile overview</Text>
-          <ProfileRow label="Birthdate" value="14 Jun 1998" />
+          <ProfileRow
+            label="Birthdate"
+            value={formatBirthdate(user?.birthDate)}
+            onPress={() => setOpenSheet("birthdate")}
+          />
           <ProfileRow label="Sex / gender" value={sexLabel} onPress={() => setOpenSheet("sex")} />
           <ProfileRow
             label="Height"
@@ -269,6 +276,7 @@ export function ProfileScreen() {
         </Animated.View>
       ) : null}
 
+      {openSheet === "birthdate" ? <BirthdateSheet visible onClose={close} /> : null}
       {openSheet === "height" ? <HeightSheet visible onClose={close} /> : null}
       {openSheet === "weight" ? <WeightSheet visible onClose={close} /> : null}
       {openSheet === "sex" ? <SexSheet visible onClose={close} /> : null}

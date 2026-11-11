@@ -15,6 +15,11 @@ export function isDateKey(value: string): boolean {
   )
 }
 
+/** A real calendar date that is not in the future (UTC). No minimum age. */
+export function isValidBirthDate(value: string, now: Date = new Date()): boolean {
+  return isDateKey(value) && value <= toDateKey(now)
+}
+
 export function shiftDateKey(dateKey: string, days: number): string {
   const base = new Date(`${dateKey}T00:00:00.000Z`)
   base.setUTCDate(base.getUTCDate() + days)

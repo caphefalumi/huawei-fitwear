@@ -579,7 +579,7 @@ Legend: **Purpose · Structure · Actions · States · Copy**
   1. Title `Profile` (28/400).
   2. Error banner (conditional): "Couldn't load your health data." + `Retry`.
   3. **Identity:** 60px `accentTint` avatar with initials 20/500 accent; name 19/600; email 12 muted.
-  4. **Profile overview:** heading 17/600; rows height 50 with 1px dividers — `Birthdate` (static `14 Jun 1998`), `Sex / gender`, `Height`, `Weight`. Values `Not set` when missing; skeleton while loading.
+  4. **Profile overview:** heading 17/600; rows height 50 with 1px dividers — `Birthdate` (from the account, formatted `DD-MM-YYYY`, `Not set` when missing; tap to edit with day, month and year wheels like Height), `Sex / gender`, `Height`, `Weight`. Values `Not set` when missing; skeleton while loading.
   5. **Refine your plan:** `Goal / target`, `Workout frequency` (`4 sessions/week`), `Daily activity`, `Target weight`, `Recovery plan` (`None`).
   6. **Account:** `Account data`, `BLE test`, `Sign out`.
   7. **Period recovery** (only when sex = Female): full-width 52 accent button; off state label `I am in my period`; on state `My period has ended` with `accentTint` fill and accent text; turning on shows a native alert: title `Period recovery`, body "Used only to adjust your plan. You can turn it off any time.", actions `Not now` / `Turn on`.
