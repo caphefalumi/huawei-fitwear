@@ -2,15 +2,15 @@ import * as Sentry from "@sentry/react-native"
 import { router, useLocalSearchParams } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { BackHeader, Button } from "@/components/ui"
-import { Pressable } from "@/components/ui/pressable"
 import { apiErrorMessage } from "@/lib/api/client"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
-import { Box, Field, NutrientGrid, ValueInput } from "../components/meals-ui"
+import { Box, Field, NutrientGrid, SegmentedChoice, ValueInput } from "../components/meals-ui"
 import { splitDetail, useMeals } from "../hooks/meals-hooks"
 
 type NutrientKey = "energy" | "protein" | "carbs" | "fat"
@@ -99,106 +99,98 @@ export function ReviewItemScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.screen}
-      keyboardShouldPersistTaps="handled"
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}
-    >
-      <BackHeader
-        label="Search"
-        onPress={() => router.back()}
-        actionLabel="Cancel"
-        onAction={() => router.back()}
-      />
-
-      <View style={styles.heading}>
-        <Text accessibilityRole="header" style={styles.title}>
-          {existing ? "Review item" : "Manual item"}
-        </Text>
-        <Text style={styles.subtitle}>
-          {existing
-            ? "Review and correct the portion and nutrition before logging."
-            : "Enter nutrition from a food label or your measured recipe."}
-        </Text>
-      </View>
-
-      <View style={styles.estimateBar}>
-        <Text style={styles.estimateTag}>
-          {existing ? "Editable nutrition · review required" : "Manual entry · no AI estimate"}
-        </Text>
-        <Text style={styles.estimateCategory}>Full portion values</Text>
-      </View>
-
-      <Field label="Food or drink name">
-        <Box>
-          <ValueInput
-            label="Food or drink name"
-            value={name}
-            onChangeText={setName}
-            keyboardType="default"
-          />
-        </Box>
-      </Field>
-
-      <Field label="Amount">
-        <Box>
-          <ValueInput label="Amount" value={amount} onChangeText={setAmount} unit={unit} />
-        </Box>
-      </Field>
-      <View
-        accessibilityRole="radiogroup"
-        accessibilityLabel="Portion unit"
-        style={{ flexDirection: "row", flexWrap: "wrap", gap: 16 }}
+    <KeyboardAvoidingView behavior="padding" style={styles.screen}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
+        ]}
       >
-        {(["g", "ml"] as const).map((value) => (
-          <Pressable
-            key={value}
-            accessibilityRole="radio"
-            accessibilityLabel={value === "g" ? "Grams" : "Milliliters"}
-            accessibilityState={{ checked: unit === value }}
-            onPress={() => setUnit(value)}
-            style={{ padding: 12 }}
-          >
-            <Text style={{ color: unit === value ? C.accent : C.text }}>{value}</Text>
-          </Pressable>
-        ))}
-      </View>
-      {error ? (
-        <Text accessibilityRole="alert" style={styles.footnote}>
-          {error}
+        <BackHeader
+          label="Search"
+          onPress={() => router.back()}
+          actionLabel="Cancel"
+          onAction={() => router.back()}
+        />
+
+        <View style={styles.heading}>
+          <Text accessibilityRole="header" style={styles.title}>
+            {existing ? "Review item" : "Manual item"}
+          </Text>
+          <Text style={styles.subtitle}>
+            {existing
+              ? "Review and correct the portion and nutrition before logging."
+              : "Enter nutrition from a food label or your measured recipe."}
+          </Text>
+        </View>
+
+        <View style={styles.estimateBar}>
+          <Text style={styles.estimateTag}>
+            {existing ? "Editable nutrition · review required" : "Manual entry · no AI estimate"}
+          </Text>
+          <Text style={styles.estimateCategory}>Full portion values</Text>
+        </View>
+
+        <Field label="Food or drink name">
+          <Box>
+            <ValueInput
+              label="Food or drink name"
+              value={name}
+              onChangeText={setName}
+              keyboardType="default"
+            />
+          </Box>
+        </Field>
+
+        <Field label="Amount">
+          <Box>
+            <ValueInput label="Amount" value={amount} onChangeText={setAmount} unit={unit} />
+          </Box>
+        </Field>
+        <SegmentedChoice
+          label="Portion unit"
+          options={[
+            { value: "g", label: "g", accessibilityLabel: "Grams" },
+            { value: "ml", label: "ml", accessibilityLabel: "Milliliters" },
+          ]}
+          value={unit}
+          onChange={setUnit}
+        />
+        {error ? (
+          <Text accessibilityRole="alert" style={styles.footnote}>
+            {error}
+          </Text>
+        ) : null}
+
+        <View style={styles.nutrientHeader}>
+          <Text accessibilityRole="header" style={styles.nutrientTitle}>
+            Nutrition for the full portion
+          </Text>
+          <Text style={styles.nutrientAction}>Editable</Text>
+        </View>
+
+        <NutrientGrid
+          values={draft}
+          onChange={(key, value) => setDraft((prev) => ({ ...prev, [key]: value }))}
+          units={{ energy: "kcal", protein: "g", carbs: "g", fat: "g" }}
+        />
+
+        <Text style={styles.footnote}>
+          {params.description ? `${params.description}. ` : ""}Enter values for the entire portion,
+          not per 100 {unit}.
         </Text>
-      ) : null}
 
-      <View style={styles.nutrientHeader}>
-        <Text accessibilityRole="header" style={styles.nutrientTitle}>
-          Nutrition for the full portion
-        </Text>
-        <Text style={styles.nutrientAction}>Editable</Text>
-      </View>
+        <Text style={styles.centerNote}>Review the name, amount, and nutrients above.</Text>
 
-      <NutrientGrid
-        values={draft}
-        onChange={(key, value) => setDraft((prev) => ({ ...prev, [key]: value }))}
-        units={{ energy: "kcal", protein: "g", carbs: "g", fat: "g" }}
-      />
-
-      <Text style={styles.footnote}>
-        {params.description ? `${params.description}. ` : ""}Enter values for the entire portion,
-        not per 100 {unit}.
-      </Text>
-
-      <Text style={styles.centerNote}>Review the name, amount, and nutrients above.</Text>
-
-      <Button
-        label={existing ? "Save item" : "Add item"}
-        disabled={saving}
-        busy={saving}
-        onPress={handleAdd}
-      />
-    </ScrollView>
+        <Button
+          label={existing ? "Save item" : "Add item"}
+          disabled={saving}
+          busy={saving}
+          onPress={handleAdd}
+        />
+      </ScrollView>
+    </KeyboardAvoidingView>
   )
 }
 

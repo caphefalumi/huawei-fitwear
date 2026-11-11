@@ -6,13 +6,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { FetchErrorState } from "@/components/feedback/fetch-states"
 import { BackHeader, Button, SectionHeading } from "@/components/ui"
-import { Pressable } from "@/components/ui/pressable"
 import { apiErrorMessage } from "@/lib/api/client"
 import { Palette as C } from "@/theme"
 
 import { MealPhoto } from "../components/meal-photo"
 import { MealRow } from "../components/meal-row"
 import { MealAmountSheet, MealOptionsSheet } from "../components/meal-sheets"
+import { SegmentedChoice } from "../components/meals-ui"
 import {
   mealTypeLabel,
   rescaleItem,
@@ -140,31 +140,19 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           />
         ) : null}
         <MealPhoto mealId={log?.id} imageUrl={photo} style={styles.photo} />
-        <View
-          accessibilityRole="radiogroup"
-          accessibilityLabel="Meal type"
-          style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}
-        >
-          {(["breakfast", "lunch", "dinner", "snack"] as MealType[]).map((type) => (
-            <Pressable
-              key={type}
-              disabled={pending || meals.busy}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: (log?.mealType ?? meals.mealType) === type }}
-              style={{ padding: 12 }}
-              onPress={() => {
-                if (log) void perform(() => meals.updateMealType(log.id, type))
-                else meals.setMealType(type)
-              }}
-            >
-              <Text
-                style={{ color: (log?.mealType ?? meals.mealType) === type ? C.accent : C.text }}
-              >
-                {mealTypeLabel(type)}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        <SegmentedChoice
+          label="Meal type"
+          options={(["breakfast", "lunch", "dinner", "snack"] as MealType[]).map((type) => ({
+            value: type,
+            label: mealTypeLabel(type),
+          }))}
+          value={log?.mealType ?? meals.mealType}
+          disabled={pending || meals.busy}
+          onChange={(type) => {
+            if (log) void perform(() => meals.updateMealType(log.id, type))
+            else meals.setMealType(type)
+          }}
+        />
 
         <View style={styles.totalsCard}>
           <View style={styles.totalsTop}>

@@ -5,6 +5,7 @@ import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { StyleSheet, Text, TextInput, View } from "react-native"
+import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { BackHeader, Button } from "@/components/ui"
@@ -131,7 +132,8 @@ export function MealCaptureScreen() {
 
   return (
     <>
-      <View
+      <KeyboardAvoidingView
+        behavior="padding"
         style={[styles.screen, { paddingTop: 12 + insets.top, paddingBottom: 16 + insets.bottom }]}
       >
         <BackHeader label="Meals" onPress={() => router.back()} />
@@ -292,7 +294,7 @@ export function MealCaptureScreen() {
             style={styles.compactButton}
           />
         </View>
-      </View>
+      </KeyboardAvoidingView>
 
       <Sheet visible={!tutorialSeen} title="Capture your meal" onClose={dismissTutorial}>
         <View style={styles.tutorialSteps}>
