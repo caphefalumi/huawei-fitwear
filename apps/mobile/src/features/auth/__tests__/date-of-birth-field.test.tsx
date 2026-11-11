@@ -6,7 +6,7 @@ const onChange = jest.fn()
 
 beforeEach(() => onChange.mockClear())
 
-test("assembles a typed locale-ordered date as an ISO date", async () => {
+test("assembles a typed DD-MM-YYYY date as an ISO date", async () => {
   const screen = await render(<DateOfBirthField value="" onChange={onChange} />)
 
   await fireEvent.changeText(screen.getByLabelText("Day"), "12")
@@ -17,6 +17,23 @@ test("assembles a typed locale-ordered date as an ISO date", async () => {
   await fireEvent.changeText(screen.getByLabelText("Day"), "")
   expect(onChange).toHaveBeenLastCalledWith("")
 })
+test("always lays the fields out as day, month, year", async () => {
+  const screen = await render(<DateOfBirthField value="" onChange={onChange} />)
+
+  const placeholders = screen
+    .getAllByPlaceholderText(/^(DD|MM|YYYY)$/)
+    .map((input) => input.props.placeholder)
+  expect(placeholders).toEqual(["DD", "MM", "YYYY"])
+})
+
+test("reads a pasted DD-MM-YYYY date day first", async () => {
+  const screen = await render(<DateOfBirthField value="" onChange={onChange} />)
+
+  await fireEvent.changeText(screen.getByLabelText("Day"), "12-03-1998")
+
+  expect(onChange).toHaveBeenLastCalledWith("1998-03-12")
+})
+
 test("accepts pasted ISO dates from any date field", async () => {
   const screen = await render(<DateOfBirthField value="" onChange={onChange} />)
 

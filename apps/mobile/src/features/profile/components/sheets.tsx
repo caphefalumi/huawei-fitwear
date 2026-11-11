@@ -5,6 +5,7 @@ import { Alert, StyleSheet, Text, TextInput, View } from "react-native"
 import { RadioList } from "@/components/ui/radio-list"
 import { Sheet, SheetActions, SheetField } from "@/components/ui/sheet"
 import { WheelPicker } from "@/components/ui/wheel-picker"
+import { useAuth } from "@/features/auth"
 import { ACTIVITIES, GOALS, useHealth, type Sex } from "@/features/health"
 import { PERIOD_AREA, useInjuries } from "@/features/recovery"
 import {
@@ -15,7 +16,10 @@ import {
   usePlanPreferences,
 } from "@/features/workout"
 import { apiErrorMessage } from "@/lib/api/client"
+import { validateBirthDate } from "@/lib/forms/form-validation"
 import { Palette as C } from "@/theme"
+
+import { BirthdatePicker, birthdateParts, birthdateToIso } from "./birthdate-picker"
 
 const ACTIVITY_OPTIONS = Object.values(ACTIVITIES)
 const GOAL_OPTIONS = Object.values(GOALS)
@@ -94,6 +98,37 @@ function NumberField({
       />
       <Text style={styles.unit}>{unit}</Text>
     </View>
+  )
+}
+
+export function BirthdateSheet({ visible, onClose, onDismiss }: SheetProps) {
+  const { user, updateUser } = useAuth()
+  const saved = user?.birthDate ?? null
+  const [draft, setDraft] = useState(() => birthdateParts(saved))
+  const action = useSave(onClose)
+  const iso = birthdateToIso(draft)
+  const validation = validateBirthDate(iso)
+  useEffect(() => {
+    if (visible) setDraft(birthdateParts(saved))
+  }, [visible, saved])
+  return (
+    <Sheet visible={visible} title="Birthdate" onClose={action.close} onDismiss={onDismiss}>
+      <BirthdatePicker value={draft} onChange={setDraft} />
+      <Text style={styles.body}>Your age is used to estimate your daily energy needs.</Text>
+      {validation ? <Text accessibilityRole="alert">{validation}</Text> : null}
+      {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
+      <SheetActions
+        primaryDisabled={action.pending || Boolean(validation)}
+        secondaryDisabled={action.pending}
+        busy={action.pending}
+        primaryLabel="OK"
+        secondaryLabel="Cancel"
+        onPrimary={() => {
+          void action.save(() => updateUser({ birthDate: iso }))
+        }}
+        onSecondary={action.close}
+      />
+    </Sheet>
   )
 }
 

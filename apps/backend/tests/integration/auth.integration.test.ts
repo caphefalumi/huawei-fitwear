@@ -64,6 +64,36 @@ describe("Integration Test: Auth API Endpoints", () => {
       expect(setCookie).toContain("session_token=")
     })
 
+    it("should reject sign-up with an invalid or future birth date", async () => {
+      for (const birthDate of ["2999-01-01", "2026-02-31"]) {
+        const res = await app.handle(
+          new Request("http://localhost/auth/sign-up", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: "baddob@fitwear.dev",
+              password: "SecurePassword123!",
+              birthDate,
+            }),
+          }),
+        )
+        expect(res.status).toBe(422)
+      }
+      const ok = await app.handle(
+        new Request("http://localhost/auth/sign-up", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "gooddob@fitwear.dev",
+            password: "SecurePassword123!",
+            birthDate: "1994-04-12",
+          }),
+        }),
+      )
+      expect(ok.status).toBe(200)
+      expect((await ok.json()).user.birthDate).toBe("1994-04-12")
+    })
+
     it("should reject sign-up with duplicate email", async () => {
       const payload = {
         email: "duplicate@fitwear.dev",
@@ -400,6 +430,34 @@ describe("Integration Test: Auth API Endpoints", () => {
       expect(updated.currentWeightKg).toBe(78.5)
       expect(updated.targetWeightKg).toBe(72.0)
       expect(updated.fitnessGoal).toBe("weight_loss")
+    })
+
+    it("PUT /auth/update-user should save a valid birth date and reject invalid ones", async () => {
+      const put = (birthDate: string) =>
+        app.handle(
+          new Request("http://localhost/auth/update-user", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${sessionToken}`,
+            },
+            body: JSON.stringify({ birthDate }),
+          }),
+        )
+
+      const ok = await put("1994-04-12")
+      expect(ok.status).toBe(200)
+      expect((await ok.json()).birthDate).toBe("1994-04-12")
+
+      for (const bad of ["2999-01-01", "2026-02-31", "12/04/1994", ""]) {
+        expect((await put(bad)).status).toBe(422)
+      }
+      const session = await app.handle(
+        new Request("http://localhost/auth/session", {
+          headers: { Authorization: `Bearer ${sessionToken}` },
+        }),
+      )
+      expect((await session.json()).user.birthDate).toBe("1994-04-12")
     })
 
     it("POST /auth/sign-out should revoke session and block subsequent access", async () => {

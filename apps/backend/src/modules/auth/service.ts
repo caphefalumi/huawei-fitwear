@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm"
 import { Elysia, status } from "elysia"
 
 import { getDb, user as userTable, session as sessionTable } from "../../db"
+import { isValidBirthDate } from "../../lib/date"
 import { generateId, generateToken } from "../../lib/id"
 import { deleteUserMealImages } from "../../lib/meal-images"
 import {
@@ -18,8 +19,18 @@ import type { SignUpBody, SignInBody, UpdateUserBody } from "./index"
 const DUMMY_PASSWORD_HASH =
   "pbkdf2-sha256$100000$I/JGQHdg0q04nAIJdHrgjw==$ewzHdfVsNzzkwsEG3YbeatwSeBFKcuQ9xNPa2kKWohU="
 
+function assertBirthDate(birthDate: string | undefined) {
+  if (birthDate !== undefined && !isValidBirthDate(birthDate)) {
+    throw status(422, {
+      success: false,
+      message: "Birth date must be a real date in YYYY-MM-DD format and not in the future.",
+    })
+  }
+}
+
 export abstract class Auth {
   static async signUp(data: SignUpBody, d1?: D1Database) {
+    assertBirthDate(data.birthDate)
     const db = getDb(d1)
     const email = data.email.toLowerCase()
 
@@ -214,6 +225,7 @@ export abstract class Auth {
   }
 
   static async updateUser(userId: string, data: UpdateUserBody, d1?: D1Database) {
+    assertBirthDate(data.birthDate)
     const db = getDb(d1)
 
     await db

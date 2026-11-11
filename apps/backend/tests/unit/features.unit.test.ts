@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 
-import { isDateKey, shiftDateKey, toDateKey } from "../../src/lib/date"
+import { isDateKey, isValidBirthDate, shiftDateKey, toDateKey } from "../../src/lib/date"
 import {
   ageFromBirthDate,
   basalMetabolicRate,
@@ -23,6 +23,24 @@ describe("Calendar date keys", () => {
     expect(shiftDateKey("2024-02-28", 1)).toBe("2024-02-29")
     expect(shiftDateKey("2026-12-31", 1)).toBe("2027-01-01")
     expect(shiftDateKey("2026-01-01", -1)).toBe("2025-12-31")
+  })
+})
+
+describe("Birth date validation", () => {
+  const now = new Date("2026-11-11T12:00:00Z")
+  it("accepts real past dates and today, with no minimum age", () => {
+    expect(isValidBirthDate("1994-04-12", now)).toBe(true)
+    expect(isValidBirthDate("2000-02-29", now)).toBe(true)
+    expect(isValidBirthDate("2026-11-11", now)).toBe(true)
+    expect(isValidBirthDate("2026-11-10", now)).toBe(true)
+  })
+  it("rejects future, impossible, malformed and empty values", () => {
+    expect(isValidBirthDate("2026-11-12", now)).toBe(false)
+    expect(isValidBirthDate("2026-02-31", now)).toBe(false)
+    expect(isValidBirthDate("1999-02-29", now)).toBe(false)
+    expect(isValidBirthDate("1994-4-12", now)).toBe(false)
+    expect(isValidBirthDate("12/04/1994", now)).toBe(false)
+    expect(isValidBirthDate("", now)).toBe(false)
   })
 })
 
