@@ -14,6 +14,9 @@ export const Palette = {
   accentSoft: "#E2A6AD",
   track: "#D6D0C9",
   previewTint: "#F7F5F2",
+  /** Dark backdrop behind video placeholders and the player. */
+  video: "#3A3532",
+  videoDeep: "#141211",
   onAccent: "#FFFFFF",
 } as const
 

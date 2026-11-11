@@ -15,11 +15,23 @@ import { CATALOG, findExercise, type CatalogExercise, type MuscleGroup } from ".
 export type Emphasis = "Balanced" | "Lower body"
 export type Experience = "Beginner" | "Regular"
 
+export type RoutineExercise = {
+  key: string
+  name: string
+  prescription: string
+  sets: number
+  /** Target per set: reps, or seconds for timed holds. */
+  reps: number
+  unit: "reps" | "seconds"
+  /** Rest after each set, in seconds. */
+  rest: number
+  liked?: boolean
+}
 export type Routine = {
   name: string
   sets: number
   minutes: number
-  exercises: { key: string; name: string; prescription: string; liked?: boolean }[]
+  exercises: RoutineExercise[]
 }
 export type RoutinePair = {
   today: Routine
@@ -38,7 +50,12 @@ export type PlanInput = {
   dislikes: string[]
   emphasis?: Emphasis
   experience?: Experience
+  /** Reps the user chose to keep after a workout, by `repTargetKey`. */
+  repTargets?: Record<string, number>
 }
+
+/** Rep targets are kept per routine, so Upper A and Upper B can differ. */
+export const repTargetKey = (routine: string, exercise: string) => `${routine}|${exercise}`
 
 /** One template slot: the first liked option wins, else the first; beginners get `beginner`. */
 type Slot = { options: string[]; beginner?: string }
@@ -196,13 +213,19 @@ const FIRST_WEEK = "2024-01-01"
 
 export const REST_DAY: Routine = { name: "Rest day", sets: 0, minutes: 0, exercises: [] }
 
+/** Rest between sets by goal; compounds get 30 s more because they load more joints. */
+export const restSeconds = (exercise: CatalogExercise, goal: string) =>
+  (REST_SECONDS[goal] ?? 75) + (exercise.compound ? COMPOUND_EXTRA_REST : 0)
+
 function exerciseMinutes(exercise: CatalogExercise, sets: number, goal: string) {
-  const rest = (REST_SECONDS[goal] ?? 75) + (exercise.compound ? COMPOUND_EXTRA_REST : 0)
-  return (sets * (SET_SECONDS + rest)) / 60 + SETUP_MINUTES
+  return (sets * (SET_SECONDS + restSeconds(exercise, goal))) / 60 + SETUP_MINUTES
 }
 
-const prescription = (exercise: CatalogExercise, sets: number) =>
-  `${sets}x${exercise.unit === "seconds" ? "30–45s" : "8–12"}`
+const prescription = (exercise: CatalogExercise, sets: number, target?: number) => {
+  const seconds = exercise.unit === "seconds"
+  if (target !== undefined) return `${sets}x${target}${seconds ? "s" : ""}`
+  return `${sets}x${seconds ? "30–45s" : "8–12"}`
+}
 
 function buildRoutine(
   name: string,
@@ -210,6 +233,7 @@ function buildRoutine(
   setsFor: (exercise: CatalogExercise) => number,
   goal: string,
   likes: string[],
+  repTargets: Record<string, number> = {},
 ): Routine {
   const minutes = picked.reduce(
     (total, exercise) => total + exerciseMinutes(exercise, setsFor(exercise), goal),
@@ -219,12 +243,19 @@ function buildRoutine(
     name,
     sets: picked.reduce((total, exercise) => total + setsFor(exercise), 0),
     minutes: Math.round(minutes),
-    exercises: picked.map((exercise) => ({
-      key: exercise.key,
-      name: exercise.name,
-      prescription: prescription(exercise, setsFor(exercise)),
-      ...(likes.includes(exercise.key) ? { liked: true } : {}),
-    })),
+    exercises: picked.map((exercise) => {
+      const target = repTargets[repTargetKey(name, exercise.key)]
+      return {
+        key: exercise.key,
+        name: exercise.name,
+        prescription: prescription(exercise, setsFor(exercise), target),
+        sets: setsFor(exercise),
+        reps: target ?? exercise.reps,
+        unit: exercise.unit,
+        rest: restSeconds(exercise, goal),
+        ...(likes.includes(exercise.key) ? { liked: true } : {}),
+      }
+    }),
   }
 }
 
@@ -336,10 +367,17 @@ function sessionFor(
     else if (extra) extraSets.delete(extra)
     else picked.pop()
   }
-  return buildRoutine(kind, picked, setsFor, input.goal, input.likes)
+  return buildRoutine(kind, picked, setsFor, input.goal, input.likes, input.repTargets)
 }
 
 const mondayIndex = (date: Date) => (date.getDay() + 6) % 7
+
+/** Local date from a `YYYY-MM-DD` key, or null when the key is missing or malformed. */
+export function fromDateKey(key?: string): Date | null {
+  const match = key?.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+}
 
 /** The routine on a calendar day, or the rest day when nothing is scheduled. */
 export function routineOn(date: Date, input: PlanInput): Routine {

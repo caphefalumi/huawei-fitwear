@@ -1,6 +1,7 @@
 import { create } from "zustand"
 
 import { dateKey } from "@/features/health"
+import { planNow, usePlanNow } from "@/lib/time/demo-clock"
 
 export type Joint =
   | "cervical spine"
@@ -96,23 +97,34 @@ export function daysBetween(from: string, to: string) {
 export const shortDate = (key: string) =>
   new Date(`${key}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })
 
-/** `option` is a severity for body areas and a feeling for period. */
+export type PhaseDays = { excludeDays: number; lightDays: number }
+/** A severity for body areas, a feeling for period, or custom days for either. */
+export type InjuryOption = Severity | PeriodFeeling | PhaseDays
+
 export function createInjury(
   area: InjuryArea,
-  option?: Severity | PeriodFeeling,
-  today = dateKey(),
+  option?: InjuryOption,
+  today = dateKey(planNow()),
 ): Injury {
   const days =
-    area === PERIOD_AREA
-      ? (PERIOD_FEELINGS[option as PeriodFeeling] ?? PERIOD_FEELINGS["Tired or crampy"])
-      : area === UNWELL_AREA
-        ? { excludeDays: 0, lightDays: UNWELL_LIGHT_DAYS }
-        : (SEVERITIES[option as Severity] ?? SEVERITIES.Mild)
-  return { area, startDate: today, ...days, permanent: null }
+    typeof option === "object"
+      ? option
+      : area === PERIOD_AREA
+        ? (PERIOD_FEELINGS[option as PeriodFeeling] ?? PERIOD_FEELINGS["Tired or crampy"])
+        : area === UNWELL_AREA
+          ? { excludeDays: 0, lightDays: UNWELL_LIGHT_DAYS }
+          : (SEVERITIES[option as Severity] ?? SEVERITIES.Mild)
+  return {
+    area,
+    startDate: today,
+    excludeDays: days.excludeDays,
+    lightDays: days.lightDays,
+    permanent: null,
+  }
 }
 
 /** The phase on `today`, or null before the start and after recovery ends. */
-export function phaseOn(injury: Injury, today = dateKey()): Phase | null {
+export function phaseOn(injury: Injury, today = dateKey(planNow())): Phase | null {
   const day = daysBetween(injury.startDate, today)
   if (day < 0) return null
   if (day < injury.excludeDays) return "exclude"
@@ -120,7 +132,8 @@ export function phaseOn(injury: Injury, today = dateKey()): Phase | null {
   return day < injury.excludeDays + injury.lightDays ? "light" : null
 }
 
-export const isActive = (injury: Injury, today = dateKey()) => phaseOn(injury, today) !== null
+export const isActive = (injury: Injury, today = dateKey(planNow())) =>
+  phaseOn(injury, today) !== null
 
 /** Last day (inclusive) of a phase. */
 export const phaseEnd = (injury: Injury, phase: Phase) =>
@@ -136,7 +149,7 @@ export function injuryTitle(injuries: Injury[]) {
 }
 
 /** What changes in the user's plan today, in their words. */
-export function injuryEffect(injury: Injury, today = dateKey()) {
+export function injuryEffect(injury: Injury, today = dateKey(planNow())) {
   const phase = phaseOn(injury, today) ?? (injury.excludeDays ? "exclude" : "light")
   const until = (end: Phase) =>
     injury.permanent === end ? "" : ` until ${shortDate(phaseEnd(injury, end))}`
@@ -158,7 +171,7 @@ export function injuryEffect(injury: Injury, today = dateKey()) {
 type InjuriesState = {
   injuries: Injury[]
   save: (next: Injury[]) => void
-  add: (area: InjuryArea, option?: Severity | PeriodFeeling) => void
+  add: (area: InjuryArea, option?: InjuryOption) => void
   remove: (area: InjuryArea) => void
 }
 
@@ -176,7 +189,8 @@ export const useInjuries = create<InjuriesState>((set) => ({
     set((state) => ({ injuries: state.injuries.filter((injury) => injury.area !== area) })),
 }))
 
-export function useActiveInjuries(today = dateKey()) {
+export function useActiveInjuries(today?: string) {
+  const now = dateKey(usePlanNow())
   const injuries = useInjuries((state) => state.injuries)
-  return injuries.filter((injury) => isActive(injury, today))
+  return injuries.filter((injury) => isActive(injury, today ?? now))
 }

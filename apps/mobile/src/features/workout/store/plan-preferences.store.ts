@@ -2,8 +2,9 @@ import { create } from "zustand"
 
 import { useHealth, type Sex } from "@/features/health"
 import { useInjuries } from "@/features/recovery"
+import { usePlanNow } from "@/lib/time/demo-clock"
 
-import { routinesFor, type Emphasis, type Experience } from "../utils/routines"
+import { routinesFor, type Emphasis, type Experience, type PlanInput } from "../utils/routines"
 
 export const SESSION_MINUTES = [30, 45, 60, 90]
 export const EMPHASES: readonly Emphasis[] = ["Balanced", "Lower body"]
@@ -19,10 +20,13 @@ type PlanPreferencesState = Snapshot & {
   /** Null until the user picks one, so the default can follow their sex. */
   emphasis: Emphasis | null
   experience: Experience
+  /** Reps kept from finished workouts, by `repTargetKey`. */
+  repTargets: Record<string, number>
   hintDismissed: boolean
   setMinutes: (minutes: number) => void
   setEmphasis: (emphasis: Emphasis) => void
   setExperience: (experience: Experience) => void
+  saveRepTargets: (targets: Record<string, number>) => void
   /** Like, or back to neutral when already liked. */
   toggleLike: (key: string) => void
   /** Dislike, or back to neutral when already disliked. */
@@ -40,12 +44,15 @@ export const usePlanPreferences = create<PlanPreferencesState>((set, get) => ({
   minutes: 45,
   emphasis: null,
   experience: "Regular",
+  repTargets: {},
   likes: [],
   dislikes: [],
   hintDismissed: false,
   setMinutes: (minutes) => set({ minutes }),
   setEmphasis: (emphasis) => set({ emphasis }),
   setExperience: (experience) => set({ experience }),
+  saveRepTargets: (targets) =>
+    set((state) => ({ repTargets: { ...state.repTargets, ...targets } })),
   toggleLike: (key) =>
     set((state) => ({
       likes: state.likes.includes(key) ? without(state.likes, key) : [...state.likes, key],
@@ -67,22 +74,26 @@ export const usePlanPreferences = create<PlanPreferencesState>((set, get) => ({
   dismissHint: () => set({ hintDismissed: true }),
 }))
 
-/** Today's and the next routine from the user's plan settings. */
-export function useRoutines(date = new Date()) {
+/** The planner input from the user's current settings. */
+export function usePlanInput(): PlanInput {
   const { plan, sex } = useHealth()
   const injuries = useInjuries((state) => state.injuries)
-  const { minutes, likes, dislikes, emphasis, experience } = usePlanPreferences()
-  return routinesFor(
-    {
-      sessions: plan.sessions,
-      goal: plan.goal,
-      minutes,
-      injuries,
-      likes,
-      dislikes,
-      emphasis: emphasisFor(emphasis, sex),
-      experience,
-    },
-    date,
-  )
+  const { minutes, likes, dislikes, emphasis, experience, repTargets } = usePlanPreferences()
+  return {
+    sessions: plan.sessions,
+    goal: plan.goal,
+    minutes,
+    injuries,
+    likes,
+    dislikes,
+    emphasis: emphasisFor(emphasis, sex),
+    experience,
+    repTargets,
+  }
+}
+
+/** Today's and the next routine from the user's plan settings. */
+export function useRoutines(date?: Date) {
+  const now = usePlanNow()
+  return routinesFor(usePlanInput(), date ?? now)
 }

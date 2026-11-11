@@ -1,7 +1,7 @@
 import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useState } from "react"
-import { StyleSheet, Text, View } from "react-native"
+import { StyleSheet, Text, View, type ViewStyle } from "react-native"
 
 import { BackHeader, Button, PageHeading, Screen } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
@@ -9,8 +9,10 @@ import { Sheet, SheetActions } from "@/components/ui/sheet"
 import { Toggle } from "@/components/ui/toggle"
 import { dateKey, useHealth } from "@/features/health"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
+import { planNow, usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
 
+import { CUSTOM, CUSTOM_OPTION, CustomDays, hasDays } from "../components/custom-days"
 import { OptionList } from "../components/option-list"
 import { PeriodSheet } from "../components/period-sheet"
 import {
@@ -29,8 +31,9 @@ import {
   useInjuries,
   type Injury,
   type InjuryArea,
-  type PeriodFeeling,
+  type InjuryOption,
   type Phase,
+  type PhaseDays,
   type Severity,
 } from "../hooks/injuries"
 
@@ -54,12 +57,16 @@ const SEVERITY_COPY: Record<Severity, string> = {
   Moderate: "Skip it for 3 days, then light for 7",
   Severe: "Skip it for 7 days, then light for 14",
 }
-const SEVERITY_OPTIONS = (Object.keys(SEVERITIES) as Severity[]).map((value) => ({
-  value,
-  detail: SEVERITY_COPY[value],
-}))
+const SEVERITY_OPTIONS = [
+  ...(Object.keys(SEVERITIES) as Severity[]).map((value) => ({
+    value,
+    detail: SEVERITY_COPY[value],
+  })),
+  CUSTOM_OPTION,
+]
+const PENCIL = require("@/assets/images/recovery/pencil.svg")
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"]
-const DOT = 17
+const DOT = 20
 
 /** Period recovery rests instead of excluding single exercises. */
 const phaseLabel = (area: InjuryArea, phase: Phase) =>
@@ -259,10 +266,12 @@ function AddInjurySheet({
   added: InjuryArea[]
   showPeriod: boolean
   onClose: () => void
-  onAdd: (area: InjuryArea, option?: Severity | PeriodFeeling) => void
+  onAdd: (area: InjuryArea, option?: InjuryOption) => void
 }) {
   const [area, setArea] = useState<InjuryArea | null>(null)
-  const [severity, setSeverity] = useState<Severity>("Mild")
+  const [severity, setSeverity] = useState<Severity | typeof CUSTOM>("Mild")
+  const [custom, setCustom] = useState<PhaseDays>(SEVERITIES.Mild)
+  const isCustom = severity === CUSTOM
   const close = () => {
     setArea(null)
     onClose()
@@ -274,8 +283,8 @@ function AddInjurySheet({
         visible={visible}
         onClose={close}
         onBack={() => setArea(null)}
-        onAdd={(feeling) => {
-          onAdd(area, feeling)
+        onAdd={(option) => {
+          onAdd(area, option)
           setArea(null)
         }}
       />
@@ -284,13 +293,25 @@ function AddInjurySheet({
   if (area)
     return (
       <Sheet visible={visible} title={`How bad is your ${area.toLowerCase()}?`} onClose={close}>
-        <OptionList options={SEVERITY_OPTIONS} value={severity} onChange={setSeverity} />
-        <Text style={styles.muted}>You can change each phase anytime.</Text>
+        <OptionList
+          options={SEVERITY_OPTIONS}
+          value={severity}
+          onChange={(next) => {
+            // Custom starts from the severity the user had picked.
+            if (next === CUSTOM && severity !== CUSTOM) setCustom(SEVERITIES[severity])
+            setSeverity(next)
+          }}
+        />
+        {isCustom ? (
+          <CustomDays area={area} today={dateKey(planNow())} value={custom} onChange={setCustom} />
+        ) : null}
+        <Text style={styles.muted}>You can change each date later from the card.</Text>
         <SheetActions
           primaryLabel="Add"
           secondaryLabel="Back"
+          primaryDisabled={isCustom && !hasDays(custom)}
           onPrimary={() => {
-            onAdd(area, severity)
+            onAdd(area, isCustom ? custom : severity)
             setArea(null)
           }}
           onSecondary={() => setArea(null)}
@@ -398,41 +419,83 @@ function Timeline({
           )}
         </View>
         <View style={styles.stops}>
-          <Pressable
-            style={[styles.stop, styles.stopStart]}
-            accessibilityLabel={`Start, ${shortDate(injury.startDate)}`}
-            accessibilityHint="Change when this started"
+          <Stop
+            align="start"
+            dotStyle={styles.dotStart}
+            date={shortDate(injury.startDate)}
+            caption="Start"
+            a11y={`Start, ${shortDate(injury.startDate)}`}
+            hint="Change when this started"
             onPress={() => onEdit("start")}
-          >
-            <View style={[styles.dot, styles.dotStart]} />
-            <Text style={styles.stopDate}>{shortDate(injury.startDate)}</Text>
-            <Text style={styles.stopCaption}>Start</Text>
-          </Pressable>
+          />
           {phases.map((phase) => {
             const { date, caption, a11y } = stop(phase)
-            const dotStyle = !on(phase)
-              ? styles.dotOff
-              : phase === "exclude"
-                ? styles.dotExclude
-                : styles.dotLight
             return (
-              <Pressable
+              <Stop
                 key={phase}
-                disabled={unreachable(phase)}
-                style={[styles.stop, phase === "exclude" ? styles.stopMiddle : styles.stopEnd]}
-                accessibilityLabel={a11y}
-                accessibilityHint={unreachable(phase) ? undefined : "Change this phase"}
-                onPress={() => onEdit(phase)}
-              >
-                <View style={[styles.dot, dotStyle]} />
-                <Text style={[styles.stopDate, !on(phase) && styles.off]}>{date}</Text>
-                {caption ? <Text style={styles.stopCaption}>{caption}</Text> : null}
-              </Pressable>
+                align={phase === "exclude" ? "center" : "end"}
+                dotStyle={
+                  !on(phase)
+                    ? styles.dotOff
+                    : phase === "exclude"
+                      ? styles.dotExclude
+                      : styles.dotLight
+                }
+                date={date}
+                caption={caption}
+                muted={!on(phase)}
+                a11y={a11y}
+                hint="Change this phase"
+                onPress={unreachable(phase) ? undefined : () => onEdit(phase)}
+              />
             )
           })}
         </View>
       </View>
+      <Text style={styles.tapHint}>Tap a date to change it.</Text>
     </View>
+  )
+}
+
+const ALIGN = { start: "flex-start", center: "center", end: "flex-end" } as const
+
+/** One dot on the timeline with its date in a tappable chip below. */
+function Stop({
+  align,
+  dotStyle,
+  date,
+  caption,
+  muted = false,
+  a11y,
+  hint,
+  onPress,
+}: {
+  align: keyof typeof ALIGN
+  dotStyle: ViewStyle
+  date: string
+  caption: string
+  muted?: boolean
+  a11y: string
+  hint: string
+  onPress?: () => void
+}) {
+  return (
+    <Pressable
+      disabled={!onPress}
+      style={[styles.stop, { alignItems: ALIGN[align] }]}
+      accessibilityLabel={a11y}
+      accessibilityHint={onPress ? hint : undefined}
+      onPress={onPress}
+    >
+      <View style={[styles.dot, dotStyle]} />
+      <View style={[styles.chip, { alignItems: ALIGN[align] }, !onPress && styles.chipOff]}>
+        <View style={styles.chipRow}>
+          <Text style={[styles.stopDate, muted && styles.off]}>{date}</Text>
+          {onPress ? <Image source={PENCIL} style={styles.pencil} contentFit="contain" /> : null}
+        </View>
+        {caption ? <Text style={styles.stopCaption}>{caption}</Text> : null}
+      </View>
+    </Pressable>
   )
 }
 
@@ -464,7 +527,7 @@ function InjuryCard({
 
 export function InjuriesScreen() {
   useMarkInteractive()
-  const today = dateKey()
+  const today = dateKey(usePlanNow())
   const { sex } = useHealth()
   const stored = useInjuries((state) => state.injuries)
   const save = useInjuries((state) => state.save)
@@ -604,10 +667,10 @@ const styles = StyleSheet.create({
   },
   lines: {
     position: "absolute",
-    top: DOT / 2 - 1.5,
+    top: DOT / 2 - 2,
     left: DOT / 2,
     right: DOT / 2,
-    height: 3,
+    height: 4,
     flexDirection: "row",
   },
   line: {
@@ -623,9 +686,9 @@ const styles = StyleSheet.create({
   marker: {
     position: "absolute",
     top: -4,
-    width: 11,
-    height: 11,
-    marginLeft: -5.5,
+    width: 12,
+    height: 12,
+    marginLeft: -6,
     borderRadius: 6,
     borderWidth: 2,
     borderColor: C.accent,
@@ -636,24 +699,15 @@ const styles = StyleSheet.create({
   },
   stop: {
     flex: 1,
-    gap: 2,
-  },
-  stopStart: {
-    alignItems: "flex-start",
-  },
-  stopMiddle: {
-    alignItems: "center",
-  },
-  stopEnd: {
-    alignItems: "flex-end",
+    justifyContent: "flex-start",
+    gap: 6,
   },
   dot: {
     width: DOT,
     height: DOT,
     borderRadius: DOT / 2,
-    borderWidth: 3,
+    borderWidth: 4,
     backgroundColor: C.surface,
-    marginBottom: 4,
   },
   dotStart: {
     borderColor: C.accent,
@@ -669,14 +723,41 @@ const styles = StyleSheet.create({
     borderColor: C.track,
     borderStyle: "dashed",
   },
+  chip: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.background,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    gap: 1,
+  },
+  chipOff: {
+    borderStyle: "dashed",
+    backgroundColor: C.surface,
+  },
+  chipRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  pencil: {
+    width: 12,
+    height: 12,
+  },
   stopDate: {
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
     color: C.text,
   },
   stopCaption: {
     fontSize: 11,
     color: C.textMuted,
+  },
+  tapHint: {
+    fontSize: 11,
+    color: C.textMuted,
+    textAlign: "center",
   },
   safety: {
     fontSize: 11,

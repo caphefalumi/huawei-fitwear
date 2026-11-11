@@ -10,7 +10,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { useAuth } from "@/features/auth"
 import { useHealth } from "@/features/health"
 import { PERIOD_AREA, PeriodSheet, useActiveInjuries, useInjuries } from "@/features/recovery"
-import { emphasisFor, usePlanPreferences } from "@/features/workout"
+import { emphasisFor, useLoads, usePlanPreferences } from "@/features/workout"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
@@ -86,6 +86,7 @@ export function ProfileScreen() {
   const removeInjury = useInjuries((state) => state.remove)
   const inPeriod = injuries.some((injury) => injury.area === PERIOD_AREA)
   const { minutes, likes, dislikes, emphasis, experience } = usePlanPreferences()
+  const strengthLevel = useLoads().level
   const preferencesLabel =
     likes.length || dislikes.length ? `${likes.length} liked, ${dislikes.length} disliked` : "None"
   const injuriesLabel =
@@ -178,6 +179,11 @@ export function ProfileScreen() {
             label="Experience"
             value={experience}
             onPress={() => setOpenSheet("experience")}
+          />
+          <ProfileRow
+            label="Training weights"
+            value={strengthLevel}
+            onPress={() => router.push("/training-weights")}
           />
           <ProfileRow
             label="Exercise preferences"

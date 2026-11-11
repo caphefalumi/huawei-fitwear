@@ -16,15 +16,7 @@ import { Palette as C } from "@/theme"
 
 import { usePlanPreferences } from "../store/plan-preferences.store"
 import { CATALOG, type CatalogExercise, type MuscleGroup } from "../utils/catalog"
-
-const GROUPS: { group: MuscleGroup; icon: number }[] = [
-  { group: "Chest", icon: require("@/assets/images/recovery/body-chest.svg") },
-  { group: "Back", icon: require("@/assets/images/recovery/body-back.svg") },
-  { group: "Shoulders", icon: require("@/assets/images/recovery/body-shoulders.svg") },
-  { group: "Arms", icon: require("@/assets/images/recovery/body-arms.svg") },
-  { group: "Legs", icon: require("@/assets/images/recovery/body-legs.svg") },
-  { group: "Core", icon: require("@/assets/images/recovery/body-core.svg") },
-]
+import { MUSCLE_GROUPS } from "../utils/muscle-groups"
 
 const UNDO_MS = 5000
 
@@ -129,7 +121,7 @@ export function ExercisePreferencesScreen() {
     <View style={styles.container}>
       <Screen>
         <BackHeader
-          label="Profile"
+          label="Back"
           onPress={() => router.back()}
           actionLabel={hasChoices ? "↺ Reset" : undefined}
           onAction={() => setUndo(reset())}
@@ -149,7 +141,7 @@ export function ExercisePreferencesScreen() {
         )}
 
         <View style={styles.groups}>
-          {GROUPS.map((item) => {
+          {MUSCLE_GROUPS.map((item) => {
             const keys = CATALOG.filter((exercise) => exercise.group === item.group).map(
               (exercise) => exercise.key,
             )

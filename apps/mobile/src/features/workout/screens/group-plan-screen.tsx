@@ -1,42 +1,61 @@
+import { Image } from "expo-image"
 import { router, useLocalSearchParams } from "expo-router"
 import { StyleSheet, Text, View } from "react-native"
 
-import { BackHeader, Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
+import { BackHeader, PageHeading, Screen } from "@/components/ui"
+import { Pressable } from "@/components/ui/pressable"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
-import { GROUP_ROUTINES } from "../utils/routines"
+import { capitalize, EQUIPMENT_LABELS, exercisesIn, groupFromParam } from "../utils/muscle-groups"
 
+const icons = {
+  play: require("@/assets/images/workout/play.svg"),
+}
+
+/** Every exercise in one muscle group, as a library to learn from. */
 export function GroupPlanScreen() {
   useMarkInteractive()
-  const { group } = useLocalSearchParams<{ group?: string }>()
-  const routine = GROUP_ROUTINES[group ?? ""] ?? GROUP_ROUTINES.chest
+  const { group: param } = useLocalSearchParams<{ group?: string }>()
+  const group = groupFromParam(param)
+  const exercises = exercisesIn(group)
 
   return (
     <Screen contentStyle={styles.content}>
       <BackHeader label="Workout plan" onPress={() => router.back()} />
-
       <PageHeading
-        eyebrow={`${routine.name} plan`}
-        title={routine.name}
-        subtitle={`${routine.exercises.length} exercises · ${routine.sets} sets · ${routine.minutes} min`}
+        title={group}
+        subtitle={`${exercises.length} exercises. Tap one to see how it's done.`}
       />
 
-      <View style={styles.section}>
-        <SectionHeading title="Exercises" actionLabel={`${routine.exercises.length} moves`} />
-        <Card>
-          <View style={styles.exerciseList}>
-            {routine.exercises.map((exercise) => (
-              <View key={exercise.name} style={styles.exerciseRow}>
-                <Text style={styles.exerciseName}>{exercise.name}</Text>
-                <Text style={styles.exercisePrescription}>{exercise.prescription}</Text>
-              </View>
-            ))}
-          </View>
-        </Card>
+      <View style={styles.list}>
+        {exercises.map((exercise, index) => (
+          <Pressable
+            key={exercise.key}
+            style={[styles.row, index > 0 && styles.rowDivider]}
+            accessibilityLabel={exercise.name}
+            accessibilityHint="Opens the technique guide"
+            onPress={() => router.push(`/exercise-guide?name=${exercise.key}`)}
+          >
+            <View style={styles.thumb}>
+              <Image
+                accessible={false}
+                source={icons.play}
+                style={styles.thumbIcon}
+                contentFit="contain"
+                tintColor={C.onAccent}
+              />
+            </View>
+            <View style={styles.rowCopy}>
+              <Text style={styles.rowTitle}>{exercise.name}</Text>
+              <Text style={styles.rowSub}>
+                {capitalize(exercise.muscles[0] ?? group)} - {EQUIPMENT_LABELS[exercise.equipment]}
+              </Text>
+            </View>
+            <Text style={styles.chevron}>›</Text>
+          </Pressable>
+        ))}
       </View>
-
-      <Button label="Start workout" onPress={() => router.push("/session")} />
     </Screen>
   )
 }
@@ -45,23 +64,50 @@ const styles = StyleSheet.create({
   content: {
     gap: 14,
   },
-  section: {
-    gap: 8,
+  list: {
+    backgroundColor: C.surface,
+    borderRadius: 18,
+    overflow: "hidden",
   },
-  exerciseList: {
-    gap: 8,
-    paddingTop: 4,
-  },
-  exerciseRow: {
+  row: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    minHeight: 64,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
-  exerciseName: {
-    fontSize: 12,
+  rowDivider: {
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+  },
+  thumb: {
+    width: 56,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: C.video,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  thumbIcon: {
+    width: 14,
+    height: 14,
+  },
+  rowCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  rowTitle: {
+    fontSize: 14,
+    fontWeight: "600",
     color: C.text,
   },
-  exercisePrescription: {
+  rowSub: {
     fontSize: 12,
     color: C.textMuted,
+  },
+  chevron: {
+    fontSize: 20,
+    color: C.track,
   },
 })
