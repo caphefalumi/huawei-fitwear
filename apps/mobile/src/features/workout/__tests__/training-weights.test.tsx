@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react-native"
+import { act, fireEvent, render } from "@testing-library/react-native"
 import { router, useLocalSearchParams } from "expo-router"
 
 import { useHealth } from "@/features/health"
@@ -36,6 +36,10 @@ beforeEach(() => {
   useTrainingWeights.setState({ level: null, custom: {} })
 })
 
+afterEach(() => {
+  jest.useRealTimers()
+})
+
 test("suggests loads from body weight, sex and level", () => {
   expect(suggestedLoad(bench, { bodyWeightKg: 70, sex: "Male", level: "Moderate" })).toBe(42.5)
   expect(suggestedLoad(bench, { bodyWeightKg: 70, sex: "Male", level: "Light" })).toBe(25)
@@ -56,6 +60,7 @@ test("lists a group's exercises without prescriptions and opens a guide", async 
 })
 
 test("guide shows the main muscle first, the rest on Show all, and links weight to Profile", async () => {
+  jest.useFakeTimers()
   jest.mocked(useLocalSearchParams).mockReturnValue({ name: "bench-press" })
   const screen = await render(<ExerciseGuideScreen />)
   expect(screen.getByText("Chest")).toBeTruthy()
@@ -67,6 +72,10 @@ test("guide shows the main muscle first, the rest on Show all, and links weight 
 
   await fireEvent.press(screen.getByLabelText("Play Bench press video"))
   expect(screen.getByLabelText("Close video")).toBeTruthy()
+  await act(async () => {
+    jest.advanceTimersByTime(100)
+  })
+  await fireEvent.press(screen.getByLabelText("Close video"))
 
   await fireEvent.press(screen.getByLabelText(/^Your weight 42\.5 kg/))
   expect(router.push).toHaveBeenCalledWith("/training-weights?edit=bench-press")
