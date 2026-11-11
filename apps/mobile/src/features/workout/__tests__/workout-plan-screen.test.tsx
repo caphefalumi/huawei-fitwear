@@ -54,9 +54,9 @@ test("shows each day's session in the week strip and previews a tapped day", asy
   expect(screen.getByText("Planned")).toBeTruthy()
 })
 
-test("opens exercise preferences from Edit plan", async () => {
+test("opens exercise preferences from Plan Preferences", async () => {
   const screen = await render(<WorkoutPlanScreen />)
-  await fireEvent.press(screen.getByText("Edit plan"))
+  await fireEvent.press(screen.getByText("Plan Preferences"))
   expect(router.push).toHaveBeenCalledWith("/exercise-preferences")
 })
 

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { StyleSheet, Text, View } from "react-native"
 import Animated, { FadeInUp } from "react-native-reanimated"
 
-import { Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
+import { Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
 import { dateKey, useHealth } from "@/features/health"
 import { injuryEffect, useActiveInjuries } from "@/features/recovery"
@@ -13,6 +13,7 @@ import { usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
 
 import { usePlanInput, usePlanPreferences, useRoutines } from "../store/plan-preferences.store"
+import { MUSCLE_GROUPS } from "../utils/muscle-groups"
 import { routineOn, type PlanInput, type Routine } from "../utils/routines"
 
 const icons = {
@@ -85,39 +86,6 @@ function ExerciseRows({ routine }: { routine: Routine }) {
   )
 }
 
-const MUSCLE_GROUPS = [
-  {
-    key: "chest",
-    label: "Chest",
-    icon: require("@/assets/images/recovery/body-chest.svg"),
-  },
-  {
-    key: "back",
-    label: "Back",
-    icon: require("@/assets/images/recovery/body-back.svg"),
-  },
-  {
-    key: "shoulders",
-    label: "Shoulders",
-    icon: require("@/assets/images/recovery/body-shoulders.svg"),
-  },
-  {
-    key: "arms",
-    label: "Arms",
-    icon: require("@/assets/images/recovery/body-arms.svg"),
-  },
-  {
-    key: "legs",
-    label: "Legs",
-    icon: require("@/assets/images/recovery/body-legs.svg"),
-  },
-  {
-    key: "core",
-    label: "Core",
-    icon: require("@/assets/images/recovery/body-core.svg"),
-  },
-]
-
 export function WorkoutPlanScreen() {
   useMarkInteractive()
   const { plan } = useHealth()
@@ -154,9 +122,7 @@ export function WorkoutPlanScreen() {
     return () => clearTimeout(timer)
   }, [toast])
   const summary = (routine: Routine) =>
-    routine.exercises.length
-      ? `${routine.name} · ${routine.exercises.length} exercises · ${routine.sets} sets · ${routine.minutes} min`
-      : routine.name
+    routine.exercises.length ? `${routine.name} - ${routine.minutes} min` : routine.name
 
   return (
     <View style={styles.container}>
@@ -224,7 +190,7 @@ export function WorkoutPlanScreen() {
             title={
               isToday ? "Today" : selected.date.toLocaleDateString("en-US", { weekday: "long" })
             }
-            actionLabel="Edit plan"
+            actionLabel="Plan Preferences"
             onPress={() => router.push("/exercise-preferences")}
           />
           <Animated.View entering={FadeInUp.delay(50).duration(220)}>
@@ -247,7 +213,7 @@ export function WorkoutPlanScreen() {
         </View>
 
         <View style={styles.section}>
-          <SectionHeading title="Upcoming" actionLabel={shortDate(nextDate)} />
+          <SectionHeading title="Upcoming" />
           <Animated.View entering={FadeInUp.delay(100).duration(220)}>
             <Card>
               <View style={styles.nextHeader}>
@@ -271,23 +237,19 @@ export function WorkoutPlanScreen() {
           <SectionHeading title="Browse muscle groups" actionLabel="6 groups" />
           <Animated.View entering={FadeInUp.delay(150).duration(220)}>
             <View style={styles.groups}>
-              {MUSCLE_GROUPS.map((group) => (
+              {MUSCLE_GROUPS.map(({ group, icon }) => (
                 <Pressable
-                  key={group.key}
+                  key={group}
                   style={styles.group}
-                  onPress={() =>
-                    router.push(group.key === "chest" ? "/chest-plan" : `/plan?group=${group.key}`)
-                  }
+                  onPress={() => router.push(`/plan?group=${group.toLowerCase()}`)}
                 >
-                  <Image source={group.icon} style={styles.groupImage} contentFit="contain" />
-                  <Text style={styles.groupLabel}>{group.label}</Text>
+                  <Image source={icon} style={styles.groupImage} contentFit="contain" />
+                  <Text style={styles.groupLabel}>{group}</Text>
                 </Pressable>
               ))}
             </View>
           </Animated.View>
         </View>
-
-        <Button label="View Chest plan" onPress={() => router.push("/chest-plan")} />
       </Screen>
       {toast ? (
         <View style={styles.toast} accessibilityLiveRegion="polite">

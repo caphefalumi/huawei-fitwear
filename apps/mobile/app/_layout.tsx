@@ -64,6 +64,7 @@ function RootNavigator() {
           <Stack.Screen name="(workout)/chest-plan" />
           <Stack.Screen name="(workout)/exercise-guide" />
           <Stack.Screen name="(workout)/exercise-preferences" />
+          <Stack.Screen name="(workout)/training-weights" />
           <Stack.Screen name="(workout)/plan" />
           <Stack.Screen name="(workout)/session" />
           <Stack.Screen name="(details)/injuries" />

@@ -20,6 +20,14 @@ export {
   type Routine,
   type RoutinePair,
 } from "./utils/routines"
+export {
+  defaultLevel,
+  STRENGTH_LEVELS,
+  suggestedLoad,
+  useLoads,
+  useTrainingWeights,
+  type StrengthLevel,
+} from "./store/training-weights.store"
 export { WorkoutProvider, useWorkouts, workoutQueryKeys } from "./hooks/workout-hooks"
 export type {
   Exercise,
