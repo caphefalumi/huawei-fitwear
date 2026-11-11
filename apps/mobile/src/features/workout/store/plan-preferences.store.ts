@@ -20,10 +20,13 @@ type PlanPreferencesState = Snapshot & {
   /** Null until the user picks one, so the default can follow their sex. */
   emphasis: Emphasis | null
   experience: Experience
+  /** Reps kept from finished workouts, by `repTargetKey`. */
+  repTargets: Record<string, number>
   hintDismissed: boolean
   setMinutes: (minutes: number) => void
   setEmphasis: (emphasis: Emphasis) => void
   setExperience: (experience: Experience) => void
+  saveRepTargets: (targets: Record<string, number>) => void
   /** Like, or back to neutral when already liked. */
   toggleLike: (key: string) => void
   /** Dislike, or back to neutral when already disliked. */
@@ -41,12 +44,15 @@ export const usePlanPreferences = create<PlanPreferencesState>((set, get) => ({
   minutes: 45,
   emphasis: null,
   experience: "Regular",
+  repTargets: {},
   likes: [],
   dislikes: [],
   hintDismissed: false,
   setMinutes: (minutes) => set({ minutes }),
   setEmphasis: (emphasis) => set({ emphasis }),
   setExperience: (experience) => set({ experience }),
+  saveRepTargets: (targets) =>
+    set((state) => ({ repTargets: { ...state.repTargets, ...targets } })),
   toggleLike: (key) =>
     set((state) => ({
       likes: state.likes.includes(key) ? without(state.likes, key) : [...state.likes, key],
@@ -72,7 +78,7 @@ export const usePlanPreferences = create<PlanPreferencesState>((set, get) => ({
 export function usePlanInput(): PlanInput {
   const { plan, sex } = useHealth()
   const injuries = useInjuries((state) => state.injuries)
-  const { minutes, likes, dislikes, emphasis, experience } = usePlanPreferences()
+  const { minutes, likes, dislikes, emphasis, experience, repTargets } = usePlanPreferences()
   return {
     sessions: plan.sessions,
     goal: plan.goal,
@@ -82,6 +88,7 @@ export function usePlanInput(): PlanInput {
     dislikes,
     emphasis: emphasisFor(emphasis, sex),
     experience,
+    repTargets,
   }
 }
 

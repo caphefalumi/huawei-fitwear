@@ -60,6 +60,7 @@ function planParts(input: PlanInput) {
       label: "your exercise picks",
     },
     { key: "recovery", value: JSON.stringify(input.injuries), label: "recovery" },
+    { key: "reps", value: JSON.stringify(input.repTargets ?? {}), label: "your reps" },
   ]
 }
 
@@ -194,42 +195,60 @@ export function WorkoutPlanScreen() {
             onPress={() => router.push("/exercise-preferences")}
           />
           <Animated.View entering={FadeInUp.delay(50).duration(220)}>
-            <Card style={styles.todayCard}>
-              <View style={styles.todayRow}>
-                <View style={styles.todayCopy}>
-                  <Text style={styles.todayTitle}>{isToday ? "Current routine" : "Planned"}</Text>
-                  <Text style={styles.cardSub}>{summary(shown)}</Text>
+            <Pressable
+              accessibilityLabel={`${isToday ? "Current routine" : "Planned"}, ${summary(shown)}`}
+              accessibilityHint="Opens the routine"
+              onPress={() => router.push(`/routine?date=${dateKey(selected.date)}`)}
+            >
+              <Card style={styles.todayCard}>
+                <View style={styles.todayRow}>
+                  <View style={styles.todayCopy}>
+                    <Text style={styles.todayTitle}>{isToday ? "Current routine" : "Planned"}</Text>
+                    <Text style={styles.cardSub}>{summary(shown)}</Text>
+                  </View>
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeLabel}>{shortDate(selected.date).toUpperCase()}</Text>
+                  </View>
                 </View>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeLabel}>{shortDate(selected.date).toUpperCase()}</Text>
-                </View>
-              </View>
-              <ExerciseRows routine={shown} />
-              {isToday && adjustedFor ? (
-                <Text style={styles.footnote}>ADJUSTED FOR {adjustedFor.toUpperCase()}</Text>
-              ) : null}
-            </Card>
+                <ExerciseRows routine={shown} />
+                {isToday && adjustedFor ? (
+                  <Text style={styles.footnote}>ADJUSTED FOR {adjustedFor.toUpperCase()}</Text>
+                ) : null}
+                {shown.exercises.length ? (
+                  <Text style={styles.viewLink}>
+                    {isToday ? "View and start ›" : "View routine ›"}
+                  </Text>
+                ) : null}
+              </Card>
+            </Pressable>
           </Animated.View>
         </View>
 
         <View style={styles.section}>
           <SectionHeading title="Upcoming" />
           <Animated.View entering={FadeInUp.delay(100).duration(220)}>
-            <Card>
-              <View style={styles.nextHeader}>
-                <View style={styles.todayCopy}>
-                  <Text style={styles.rowTitle}>Next routine</Text>
-                  <Text style={styles.cardSub}>{summary(next)}</Text>
+            <Pressable
+              accessibilityLabel={`Next routine, ${summary(next)}`}
+              accessibilityHint="Opens the routine"
+              onPress={() => router.push(`/routine?date=${dateKey(nextDate)}`)}
+            >
+              <Card>
+                <View style={styles.nextHeader}>
+                  <View style={styles.todayCopy}>
+                    <Text style={styles.rowTitle}>Next routine</Text>
+                    <Text style={styles.cardSub}>{summary(next)}</Text>
+                  </View>
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeLabel}>{shortDate(nextDate).toUpperCase()}</Text>
+                  </View>
                 </View>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeLabel}>{shortDate(nextDate).toUpperCase()}</Text>
-                </View>
-              </View>
-              <ExerciseRows routine={next} />
-              {injuries.length ? (
-                <Text style={styles.footnote}>IF READY · not cleared medically</Text>
-              ) : null}
-            </Card>
+                <ExerciseRows routine={next} />
+                {injuries.length ? (
+                  <Text style={styles.footnote}>IF READY · not cleared medically</Text>
+                ) : null}
+                <Text style={styles.viewLink}>View routine ›</Text>
+              </Card>
+            </Pressable>
           </Animated.View>
         </View>
 
@@ -424,6 +443,12 @@ const styles = StyleSheet.create({
   exercisePrescription: {
     fontSize: 12,
     color: C.textMuted,
+  },
+  viewLink: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: C.accent,
+    paddingTop: 12,
   },
   footnote: {
     fontSize: 10,
