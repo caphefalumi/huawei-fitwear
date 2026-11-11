@@ -3,6 +3,7 @@ import { StyleSheet, Text } from "react-native"
 
 import { Sheet, SheetActions } from "@/components/ui/sheet"
 import { dateKey } from "@/features/health"
+import { planNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
 
 import { PERIOD_AREA, PERIOD_FEELINGS, type PeriodFeeling, type PhaseDays } from "../hooks/injuries"
@@ -53,7 +54,12 @@ export function PeriodSheet({
         }}
       />
       {isCustom ? (
-        <CustomDays area={PERIOD_AREA} today={dateKey()} value={custom} onChange={setCustom} />
+        <CustomDays
+          area={PERIOD_AREA}
+          today={dateKey(planNow())}
+          value={custom}
+          onChange={setCustom}
+        />
       ) : null}
       <Text style={styles.muted}>
         Used only to adjust your plan. You can change the days anytime.

@@ -1,35 +1,65 @@
 import { Image } from "expo-image"
-import { router } from "expo-router"
+import { router, useFocusEffect } from "expo-router"
+import { useCallback, useEffect, useState } from "react"
 import { StyleSheet, Text, View } from "react-native"
 import Animated, { FadeInUp } from "react-native-reanimated"
 
 import { Button, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
-import { useHealth } from "@/features/health"
+import { dateKey, useHealth } from "@/features/health"
 import { injuryEffect, useActiveInjuries } from "@/features/recovery"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
+import { usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
 
-import { usePlanPreferences, useRoutines } from "../store/plan-preferences.store"
-import type { Routine } from "../utils/routines"
+import { usePlanInput, usePlanPreferences, useRoutines } from "../store/plan-preferences.store"
+import { routineOn, type PlanInput, type Routine } from "../utils/routines"
 
 const icons = {
   shieldCheck: require("@/assets/images/home/shield-check.svg"),
 }
 
-/** Monday-to-Sunday strip of the current week. */
+/** Monday-to-Sunday dates of the week containing `today`. */
 function currentWeek(today: Date) {
   const monday = new Date(today)
   monday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
   return Array.from({ length: 7 }, (_, index) => {
     const date = new Date(monday)
     date.setDate(monday.getDate() + index)
-    return {
-      day: date.toLocaleDateString("en-US", { weekday: "short" }),
-      date: String(date.getDate()).padStart(2, "0"),
-      active: date.toDateString() === today.toDateString(),
-    }
+    return date
   })
+}
+
+/** Session names short enough for the week strip. */
+const SHORT_NAMES: Record<string, string> = {
+  "Full Body A": "Full A",
+  "Full Body B": "Full B",
+  "Upper A": "Up A",
+  "Upper B": "Up B",
+  "Lower A": "Low A",
+  "Lower B": "Low B",
+  "Rest day": "Rest",
+}
+const shortName = (name: string) => SHORT_NAMES[name] ?? name
+
+const TOAST_MS = 4000
+/** Plan settings as last seen on this screen, to say what changed when the user comes back. */
+let seenPlan: Record<string, string> | null = null
+
+function planParts(input: PlanInput) {
+  return [
+    { key: "sessions", value: String(input.sessions ?? 3), label: `${input.sessions ?? 3}x/week` },
+    { key: "minutes", value: String(input.minutes), label: `${input.minutes} min` },
+    { key: "goal", value: input.goal, label: input.goal },
+    { key: "emphasis", value: input.emphasis ?? "", label: `${input.emphasis} focus` },
+    { key: "experience", value: input.experience ?? "", label: input.experience ?? "" },
+    {
+      key: "picks",
+      value: JSON.stringify([input.likes, input.dislikes]),
+      label: "your exercise picks",
+    },
+    { key: "recovery", value: JSON.stringify(input.injuries), label: "recovery" },
+  ]
 }
 
 const shortDate = (date: Date) =>
@@ -49,7 +79,7 @@ function ExerciseRows({ routine }: { routine: Routine }) {
           </View>
         ))
       ) : (
-        <Text style={styles.exerciseName}>Rest and recover today.</Text>
+        <Text style={styles.exerciseName}>Rest and recover.</Text>
       )}
     </View>
   )
@@ -93,114 +123,185 @@ export function WorkoutPlanScreen() {
   const { plan } = useHealth()
   const minutes = usePlanPreferences((state) => state.minutes)
   const injuries = useActiveInjuries()
-  const now = new Date()
+  const now = usePlanNow()
   const { today, next, nextDate, adjustedFor } = useRoutines(now)
+  const input = usePlanInput()
+  const week = currentWeek(now).map((date) => ({ date, routine: routineOn(date, input) }))
+  const todayKey = dateKey(now)
+  const [selectedKey, setSelectedKey] = useState(todayKey)
+  useEffect(() => setSelectedKey(todayKey), [todayKey])
+  const selected =
+    week.find(({ date }) => dateKey(date) === selectedKey) ??
+    week.find(({ date }) => dateKey(date) === todayKey)!
+  const isToday = dateKey(selected.date) === todayKey
+  const shown = isToday ? today : selected.routine
+
+  // Tell the user what changed when they come back after editing their plan.
+  const [toast, setToast] = useState<string | null>(null)
+  const signature = JSON.stringify(planParts(input))
+  useFocusEffect(
+    useCallback(() => {
+      const parts: ReturnType<typeof planParts> = JSON.parse(signature)
+      const changed = seenPlan ? parts.filter((part) => seenPlan?.[part.key] !== part.value) : []
+      if (changed.length)
+        setToast(`Plan updated · ${changed.map((part) => part.label).join(" · ")}`)
+      seenPlan = Object.fromEntries(parts.map((part) => [part.key, part.value]))
+    }, [signature]),
+  )
+  useEffect(() => {
+    if (!toast) return
+    const timer = setTimeout(() => setToast(null), TOAST_MS)
+    return () => clearTimeout(timer)
+  }, [toast])
   const summary = (routine: Routine) =>
     routine.exercises.length
       ? `${routine.name} · ${routine.exercises.length} exercises · ${routine.sets} sets · ${routine.minutes} min`
       : routine.name
 
   return (
-    <Screen>
-      <PageHeading
-        eyebrow="My plan"
-        title="Workout plan"
-        subtitle={`${plan.sessions ?? 3}x/week · ${minutes} min · ${plan.goal}`}
-      />
+    <View style={styles.container}>
+      <Screen>
+        <PageHeading
+          eyebrow="My plan"
+          title="Workout plan"
+          subtitle={`${plan.sessions ?? 3}x/week · ${minutes} min · ${plan.goal}`}
+        />
 
-      <View style={styles.week}>
-        {currentWeek(now).map(({ active, ...day }) => {
-          return (
-            <View key={day.date} style={[styles.day, active && styles.dayActive]}>
-              <Text style={[styles.dayLabel, active && styles.dayLabelActive]}>{day.day}</Text>
-              <Text style={[styles.dayDate, active && styles.dayDateActive]}>{day.date}</Text>
-            </View>
-          )
-        })}
-      </View>
-
-      {injuries.length ? (
-        <Animated.View entering={FadeInUp.duration(220)}>
-          <Pressable style={styles.recoveryCard} onPress={() => router.push("/injuries")}>
-            <Image source={icons.shieldCheck} style={styles.recoveryIcon} contentFit="contain" />
-            <View style={styles.recoveryCopy}>
-              <Text style={styles.recoveryTitle}>Recovery</Text>
-              <Text style={styles.recoverySub}>
-                {injuries.map((injury) => injuryEffect(injury)).join("\n")}
-              </Text>
-            </View>
-          </Pressable>
-        </Animated.View>
-      ) : null}
-
-      <View style={styles.section}>
-        <SectionHeading title="Today" actionLabel={today.name} />
-        <Animated.View entering={FadeInUp.delay(50).duration(220)}>
-          <Card style={styles.todayCard}>
-            <View style={styles.todayRow}>
-              <View style={styles.todayCopy}>
-                <Text style={styles.todayTitle}>Current routine</Text>
-                <Text style={styles.cardSub}>{summary(today)}</Text>
-              </View>
-              <View style={styles.badge}>
-                <Text style={styles.badgeLabel}>{shortDate(now).toUpperCase()}</Text>
-              </View>
-            </View>
-            <ExerciseRows routine={today} />
-            {adjustedFor ? (
-              <Text style={styles.footnote}>ADJUSTED FOR {adjustedFor.toUpperCase()}</Text>
-            ) : null}
-          </Card>
-        </Animated.View>
-      </View>
-
-      <View style={styles.section}>
-        <SectionHeading title="Upcoming" actionLabel={shortDate(nextDate)} />
-        <Animated.View entering={FadeInUp.delay(100).duration(220)}>
-          <Card>
-            <View style={styles.nextHeader}>
-              <View style={styles.todayCopy}>
-                <Text style={styles.rowTitle}>Next routine</Text>
-                <Text style={styles.cardSub}>{summary(next)}</Text>
-              </View>
-              <View style={styles.badge}>
-                <Text style={styles.badgeLabel}>{shortDate(nextDate).toUpperCase()}</Text>
-              </View>
-            </View>
-            <ExerciseRows routine={next} />
-            {injuries.length ? (
-              <Text style={styles.footnote}>IF READY · not cleared medically</Text>
-            ) : null}
-          </Card>
-        </Animated.View>
-      </View>
-
-      <View style={styles.section}>
-        <SectionHeading title="Browse muscle groups" actionLabel="6 groups" />
-        <Animated.View entering={FadeInUp.delay(150).duration(220)}>
-          <View style={styles.groups}>
-            {MUSCLE_GROUPS.map((group) => (
+        <View style={styles.week}>
+          {week.map(({ date, routine }) => {
+            const key = dateKey(date)
+            const active = key === dateKey(selected.date)
+            const rest = !routine.exercises.length
+            const weekday = date.toLocaleDateString("en-US", { weekday: "short" })
+            return (
               <Pressable
-                key={group.key}
-                style={styles.group}
-                onPress={() =>
-                  router.push(group.key === "chest" ? "/chest-plan" : `/plan?group=${group.key}`)
-                }
+                key={key}
+                style={[
+                  styles.day,
+                  rest && styles.dayRest,
+                  key === todayKey && styles.dayToday,
+                  active && styles.dayActive,
+                ]}
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`${weekday} ${date.getDate()}, ${routine.name}`}
+                onPress={() => setSelectedKey(key)}
               >
-                <Image source={group.icon} style={styles.groupImage} contentFit="contain" />
-                <Text style={styles.groupLabel}>{group.label}</Text>
+                <Text style={[styles.dayLabel, active && styles.dayLabelActive]}>{weekday}</Text>
+                <Text style={[styles.dayDate, active && styles.dayDateActive]}>
+                  {String(date.getDate()).padStart(2, "0")}
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.dayName,
+                    rest && styles.dayNameRest,
+                    active && styles.dayLabelActive,
+                  ]}
+                >
+                  {shortName(routine.name)}
+                </Text>
               </Pressable>
-            ))}
-          </View>
-        </Animated.View>
-      </View>
+            )
+          })}
+        </View>
 
-      <Button label="View Chest plan" onPress={() => router.push("/chest-plan")} />
-    </Screen>
+        {injuries.length ? (
+          <Animated.View entering={FadeInUp.duration(220)}>
+            <Pressable style={styles.recoveryCard} onPress={() => router.push("/injuries")}>
+              <Image source={icons.shieldCheck} style={styles.recoveryIcon} contentFit="contain" />
+              <View style={styles.recoveryCopy}>
+                <Text style={styles.recoveryTitle}>Recovery</Text>
+                <Text style={styles.recoverySub}>
+                  {injuries.map((injury) => injuryEffect(injury)).join("\n")}
+                </Text>
+              </View>
+            </Pressable>
+          </Animated.View>
+        ) : null}
+
+        <View style={styles.section}>
+          <SectionHeading
+            title={
+              isToday ? "Today" : selected.date.toLocaleDateString("en-US", { weekday: "long" })
+            }
+            actionLabel="Edit plan"
+            onPress={() => router.push("/exercise-preferences")}
+          />
+          <Animated.View entering={FadeInUp.delay(50).duration(220)}>
+            <Card style={styles.todayCard}>
+              <View style={styles.todayRow}>
+                <View style={styles.todayCopy}>
+                  <Text style={styles.todayTitle}>{isToday ? "Current routine" : "Planned"}</Text>
+                  <Text style={styles.cardSub}>{summary(shown)}</Text>
+                </View>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeLabel}>{shortDate(selected.date).toUpperCase()}</Text>
+                </View>
+              </View>
+              <ExerciseRows routine={shown} />
+              {isToday && adjustedFor ? (
+                <Text style={styles.footnote}>ADJUSTED FOR {adjustedFor.toUpperCase()}</Text>
+              ) : null}
+            </Card>
+          </Animated.View>
+        </View>
+
+        <View style={styles.section}>
+          <SectionHeading title="Upcoming" actionLabel={shortDate(nextDate)} />
+          <Animated.View entering={FadeInUp.delay(100).duration(220)}>
+            <Card>
+              <View style={styles.nextHeader}>
+                <View style={styles.todayCopy}>
+                  <Text style={styles.rowTitle}>Next routine</Text>
+                  <Text style={styles.cardSub}>{summary(next)}</Text>
+                </View>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeLabel}>{shortDate(nextDate).toUpperCase()}</Text>
+                </View>
+              </View>
+              <ExerciseRows routine={next} />
+              {injuries.length ? (
+                <Text style={styles.footnote}>IF READY · not cleared medically</Text>
+              ) : null}
+            </Card>
+          </Animated.View>
+        </View>
+
+        <View style={styles.section}>
+          <SectionHeading title="Browse muscle groups" actionLabel="6 groups" />
+          <Animated.View entering={FadeInUp.delay(150).duration(220)}>
+            <View style={styles.groups}>
+              {MUSCLE_GROUPS.map((group) => (
+                <Pressable
+                  key={group.key}
+                  style={styles.group}
+                  onPress={() =>
+                    router.push(group.key === "chest" ? "/chest-plan" : `/plan?group=${group.key}`)
+                  }
+                >
+                  <Image source={group.icon} style={styles.groupImage} contentFit="contain" />
+                  <Text style={styles.groupLabel}>{group.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </Animated.View>
+        </View>
+
+        <Button label="View Chest plan" onPress={() => router.push("/chest-plan")} />
+      </Screen>
+      {toast ? (
+        <View style={styles.toast} accessibilityLiveRegion="polite">
+          <Text style={styles.toastText}>{toast}</Text>
+        </View>
+      ) : null}
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   week: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -208,15 +309,26 @@ const styles = StyleSheet.create({
   },
   day: {
     flex: 1,
-    height: 58,
+    minWidth: 0,
+    height: 72,
     borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: C.surface,
     backgroundColor: C.surface,
     alignItems: "center",
     justifyContent: "center",
     gap: 2,
   },
+  dayRest: {
+    backgroundColor: C.background,
+    borderColor: C.border,
+  },
+  dayToday: {
+    borderColor: C.accent,
+  },
   dayActive: {
     backgroundColor: C.accent,
+    borderColor: C.accent,
   },
   dayLabel: {
     fontSize: 10,
@@ -231,6 +343,29 @@ const styles = StyleSheet.create({
     color: C.text,
   },
   dayDateActive: {
+    color: C.onAccent,
+  },
+  dayName: {
+    fontSize: 9,
+    fontWeight: "600",
+    color: C.accent,
+  },
+  dayNameRest: {
+    color: C.textMuted,
+    fontWeight: "400",
+  },
+  toast: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    bottom: 16,
+    backgroundColor: C.text,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  toastText: {
+    fontSize: 13,
     color: C.onAccent,
   },
   recoveryCard: {

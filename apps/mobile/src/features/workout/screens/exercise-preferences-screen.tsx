@@ -129,7 +129,7 @@ export function ExercisePreferencesScreen() {
     <View style={styles.container}>
       <Screen>
         <BackHeader
-          label="Profile"
+          label="Back"
           onPress={() => router.back()}
           actionLabel={hasChoices ? "↺ Reset" : undefined}
           onAction={() => setUndo(reset())}

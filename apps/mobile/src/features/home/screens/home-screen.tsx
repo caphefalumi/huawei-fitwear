@@ -6,11 +6,13 @@ import Animated, { FadeInUp } from "react-native-reanimated"
 
 import { Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
+import { useAuth } from "@/features/auth"
 import { useHealth } from "@/features/health"
 import { useMeals } from "@/features/meals"
 import { injuryEffect, injuryTitle, useActiveInjuries } from "@/features/recovery"
 import { useRoutines } from "@/features/workout"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
+import { usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
 
 import { NutritionRing } from "../components/ring"
@@ -61,6 +63,10 @@ export function HomeScreen() {
   const kcalLeft = targetKcal - consumedKcal
   const kcalShown = useCountUp(kcalLeft)
   const today = useRoutines().today
+  const { user } = useAuth()
+  const dateLine = usePlanNow()
+    .toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
+    .toUpperCase()
   const latestWeightKg = weightKg ?? DEMO_WEIGHTS[DEMO_WEIGHTS.length - 1]
   const weights =
     latestWeightKg >= 70 && latestWeightKg <= 74
@@ -70,8 +76,8 @@ export function HomeScreen() {
   return (
     <Screen>
       <View style={styles.topRow}>
-        <Text style={styles.date}>THU, OCT 8</Text>
-        <Text style={styles.name}>Sam N.</Text>
+        <Text style={styles.date}>{dateLine}</Text>
+        <Text style={styles.name}>{user?.name?.trim() || "Sam N."}</Text>
       </View>
 
       <PageHeading title="Today" style={styles.heading} />

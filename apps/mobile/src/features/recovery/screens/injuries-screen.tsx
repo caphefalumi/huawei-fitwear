@@ -9,6 +9,7 @@ import { Sheet, SheetActions } from "@/components/ui/sheet"
 import { Toggle } from "@/components/ui/toggle"
 import { dateKey, useHealth } from "@/features/health"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
+import { planNow, usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
 
 import { CUSTOM, CUSTOM_OPTION, CustomDays, hasDays } from "../components/custom-days"
@@ -302,7 +303,7 @@ function AddInjurySheet({
           }}
         />
         {isCustom ? (
-          <CustomDays area={area} today={dateKey()} value={custom} onChange={setCustom} />
+          <CustomDays area={area} today={dateKey(planNow())} value={custom} onChange={setCustom} />
         ) : null}
         <Text style={styles.muted}>You can change each date later from the card.</Text>
         <SheetActions
@@ -526,7 +527,7 @@ function InjuryCard({
 
 export function InjuriesScreen() {
   useMarkInteractive()
-  const today = dateKey()
+  const today = dateKey(usePlanNow())
   const { sex } = useHealth()
   const stored = useInjuries((state) => state.injuries)
   const save = useInjuries((state) => state.save)

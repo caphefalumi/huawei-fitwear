@@ -310,6 +310,11 @@ export function EmphasisSheet({ visible, onClose, onDismiss }: SheetProps) {
         }}
       />
       <Text style={styles.body}>Lower body gives glutes and hamstrings more of each session.</Text>
+      {sex === "Female" ? (
+        <Text style={styles.body}>
+          Lower body is the default for women. You can change it anytime.
+        </Text>
+      ) : null}
     </Sheet>
   )
 }
