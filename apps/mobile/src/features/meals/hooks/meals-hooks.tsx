@@ -62,17 +62,28 @@ export type MealLog = {
   kcal: number
   macros: Macros
 }
+export type ProfileField =
+  | "gender"
+  | "birthDate"
+  | "heightCm"
+  | "currentWeightKg"
+  | "activityLevel"
+  | "fitnessGoal"
+/** `targets` and `remaining` are null until the profile has everything a target needs. */
 export type NutritionSummary = {
   targetDate: string
+  profileComplete: boolean
+  missingFields: ProfileField[]
+  /** The target weight was reached, so targets are for maintaining weight. */
+  targetReached: boolean
   targets: {
     calorieTargetKcal: number
     proteinTargetG: number
     carbsTargetG: number
     fatTargetG: number
-    source: "stored" | "derived"
-  }
+  } | null
   consumed: { caloriesKcal: number; proteinG: number; carbsG: number; fatG: number }
-  remaining: { caloriesKcal: number; proteinG: number; carbsG: number; fatG: number }
+  remaining: { caloriesKcal: number; proteinG: number; carbsG: number; fatG: number } | null
   mealCount: number
 }
 const round1 = (value: number) => Math.round(value * 10) / 10

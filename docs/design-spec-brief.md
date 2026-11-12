@@ -96,7 +96,7 @@ The organising idea is **"one calm dashboard for eating and training"**: warm, p
 | Section action | `6 groups`, `Oct 9`, routine name |
 | Primary CTA | `Analyze photo`, `Start workout`, `Save set`, `Sign In` |
 | Secondary CTA | `Enter meal manually`, `Upload from library`, `Create account` |
-| Footnote | `Demo personal targets · estimates, not medical advice.` |
+| Footnote | `Targets are estimates, not medical advice.` |
 | Destructive confirm | `Cancel and delete workout`, `Delete account`, `Delete item` |
 | Empty state | `No meals match “…” .`, `No matching foods.`, `No database match` |
 
@@ -450,22 +450,23 @@ Legend: **Purpose · Structure · Actions · States · Copy**
 - **Structure (top to bottom, gap 18):**
   1. Top row: date eyebrow `THU, OCT 8` (12 muted) left; first name `Sam N.` (13/600 accent) right.
   2. Title `Today` (28/400).
-  3. **Focus card** (surface): three one-line lines — `Today: Chest · 5 sets · ~45 min` (13/600), `1320 kcal left` (12 muted), `Watch connected` / recovery title (12 muted); then a 7-dot week strip (10px dots, gap 8; active filled accent, idle 1px border).
-  4. **Success banner** (conditional, `accentTint`, radius 12, padding 14/12): check icon 14 + "Weight saved · nutrition targets updated" (12/600 accent) + ✕ dismiss.
-  5. **Nutrition card** (surface, tappable → `/nutrition`): header `Nutrition` (14/600); body = 120–140px dual-arc ring (remaining kcal centred, 27/600) on the left, three `MacroBar`s (Protein 92/140g, Carbs 152/275g, Fat 38/60g) on the right, gap 20; conditional line `1,320 consumed · 840 kcal left of 2,200` (11 muted).
+  3. **Focus card** (surface): three one-line lines — `Today: Chest · 5 sets · ~45 min` (13/600), `1,540 kcal left` (12 muted; replaced by `Complete profile to see your daily target` while the profile is incomplete), `Watch connected` / recovery title (12 muted); then a 7-dot week strip (10px dots, gap 8; active filled accent, idle 1px border).
+  4. **Success banner** (conditional, `accentTint`, radius 12, padding 14/12): check icon 14 + "Nutrition targets updated" (12/600 accent) + ✕ dismiss. Shown only when a profile change moved the daily kcal target.
+  5. **Nutrition card** (surface, tappable → `/nutrition`): header `Nutrition` (14/600); body = 120–140px dual-arc ring (remaining kcal centred, 27/600) on the left, three `MacroBar`s (Protein, Carbs, Fat as consumed / target grams) on the right, gap 20; line `650 consumed - 1,540 kcal left of 2,190` (11 muted). **Incomplete profile:** the card is not tappable; it shows a `Complete profile` block (`accentTint`, radius 16, padding 16) with "Complete your profile to see your customized dashboard.", a `Still needed: Height, Weight` line naming each missing field as the Profile screen labels it (Sex / gender, Birthdate, Height, Weight, Daily activity, Goal / target), and a primary `Complete profile` button that opens Profile, plus `N kcal logged today` (11 muted). No ring, targets or remaining values are shown. **Loading or error:** a single muted line.
   6. **Progress section**: heading + card (tappable → `/progress`) with "Latest weight" 12 muted, `71.5` 27/600 + `kg` 14 muted, delta line `−1.2 kg in 4 weeks` 11 muted, a 7-point sparkline, and an optional previous-log row (thumbnail 44×20, `Previous · Oct 7`, `72.0 kg`).
   7. **Recovery row** (conditional; `card` fill, radius 12, padding 14): shield-check 21, title 12/600, `3 rest days · 2 light days` 11 muted, chevron 17. Opens `RecoverySheet`.
-  8. Footnote (conditional): `Demo personal targets · estimates, not medical advice.` 10 muted, centred.
+  8. Footnote (shown when targets are shown): `Targets are estimates, not medical advice.` 10 muted, centred.
 - **Actions:** tap Nutrition, Progress, Recovery; dismiss banner; navigate via tabs.
 - **States:** fresh account (no weight logged) vs. weight-logged (targets update, banner, previous log); recovery on/off.
-- **Data notes:** the base `1320` consumed, macro bases, `DEMO_WEIGHTS`, `WEEK_ACTIVE`, date, and name are **static demo values**; only meal logs and the health store add real data.
+- **Data notes:** the Nutrition card and kcal line use the real daily summary (`GET /meals/summary`): consumed comes from the meals saved for the day, targets from the profile (see "Nutrition targets" below). `DEMO_WEIGHTS`, `WEEK_ACTIVE`, the progress card's "Logged Oct 8" and "Previous" row, and the `Sam N.` fallback name remain **static demo values**.
+- **Nutrition targets:** BMR (Mifflin-St Jeor: `10 x kg + 6.25 x cm - 5 x age + s`, s = +5 male, -161 female, -78 other) x activity factor (1.2, 1.375, 1.55, 1.725, 1.9; never shown to the user), plus a goal offset (Gain +300, Maintain 0, Loss -400), never below 1,500 (male), 1,200 (female) or 1,350 (other), rounded to 10 kcal. Protein 1.8 / 1.6 / 2.0 g/kg; fat 20% / 30% / 25% of kcal (Gain / Maintain / Loss); carbs the remainder. Grams are whole numbers. Required profile fields: weight, height, sex, birthdate, activity, goal. There are no default values: while any is missing the dashboard shows the `Complete profile` state. Per-day stored targets (`PUT /targets`) are not used. **Weight basis:** kcal and protein use a stored basis weight (`calorieWeightKg`) instead of every weight log. It moves only when the current weight is 5 kg or more away from it, or when the target weight is reached (Loss: weight at or below target, Gain: at or above). Changing the goal or target weight resets it. After the target is reached (`targetReached`) the goal counts as Maintain, the Profile goal is unchanged, and Home and Nutrition show "Target weight reached".
 
 ### 11.5 Nutrition (`/nutrition`)
 
 - **Purpose:** full nutrition breakdown for the day.
 - **Structure:** back header; title `Nutrition`; hero ring (remaining/consumed); `Remaining today`, `Consumed`, `Daily target` stat blocks; `Macronutrients` section with Protein/Carbs/Fat bars and gram values; `About these numbers` explainer card.
 - **Actions:** back; likely tap-through to meals.
-- **States:** no meals logged (zeros, ring empty), partial, target met/exceeded (ring full, remaining clamped at 0).
+- **States:** no meals logged (zeros, ring empty), partial, target met/exceeded (ring full, remaining clamped at 0), incomplete profile (`Complete profile` block with the list of missing fields and a `Logged today` card with energy, protein, carbs and fat; no ring, target or remaining), loading or error (one muted line).
 - **Copy:** "Nutrition targets use your latest profile information.", "About these numbers".
 
 ### 11.6 Progress (`/progress`)
@@ -596,7 +597,7 @@ Legend: **Purpose · Structure · Actions · States · Copy**
 | Sex | Radio list | Options include `Female`, `Male`, presumably `Other`/`Prefer not to say` |
 | Goal | Radio list | Fat loss / maintenance / muscle gain variants |
 | Frequency | Radio list 1–7 | Value renders `N sessions/week` |
-| Activity | Radio list | Sedentary → very active |
+| Activity | Radio list | `Sedentary (office job)`, `Light (1-2 days/week)`, `Moderate (3-5 days/week)`, `Heavy (6-7 days/week)`, `Athlete (2x per day)`; factors are never shown. Independent of `Workout frequency`, which only drives the plan |
 | Target weight | Numeric kg | Compared against current weight |
 | Recovery | Recovery sheet | See §11.20 |
 
@@ -735,7 +736,7 @@ These are real divergences in the current app. Do not silently copy them; choose
 
 6. **Two spacing scales** (`tokens.ts` 4/8/16/24/32 vs `constants/theme.ts` 2/4/8/16/24/32/64). Pick one; keep 64 as optional.
 
-7. **Demo data is presented as real.** Home's base calories, macro bases, weights, week activity, date, and `Sam N.` are hardcoded. The spec should define empty/first-run and real-data layouts, not just the populated demo.
+7. **Demo data is presented as real.** Home's nutrition numbers now come from the real summary. Weights, week activity and the `Sam N.` fallback name are still hardcoded. The spec should define empty/first-run and real-data layouts, not just the populated demo.
 
 8. **Typography is fixed-size** outside login. Define a dynamic-type strategy (allow font scaling, reflow rules for hero numbers and tab labels).
 

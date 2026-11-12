@@ -20,6 +20,10 @@ export const user = sqliteTable("user", {
   activityLevel: text("activityLevel").default("moderately_active"),
   fitnessGoal: text("fitnessGoal").default("muscle_gain"),
   weeklySessions: integer("weeklySessions").notNull().default(3),
+  /** Weight the kcal target is calculated from. Moves in steps, see nextCalorieBasis. */
+  calorieWeightKg: real("calorieWeightKg"),
+  /** The target weight was reached, so the kcal target follows the maintenance goal. */
+  targetReached: integer("targetReached", { mode: "boolean" }).notNull().default(false),
   pendingDeletion: integer("pendingDeletion", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("createdAt", { mode: "timestamp" })
     .notNull()

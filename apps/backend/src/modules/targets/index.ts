@@ -37,16 +37,19 @@ export const targets = new Elysia({
     detail: {
       summary: "Resolve calorie & macro targets for a date",
       description:
-        "Returns the stored target when present, otherwise derives one from the profile using Mifflin-St Jeor BMR, the activity multiplier and the fitness goal.",
+        "Derives targets from the profile: Mifflin-St Jeor BMR x activity factor, plus a goal offset (+300 / 0 / -400 kcal), floored by sex and rounded to 10 kcal, with whole-gram macros. Weight used is a basis that only moves every 5 kg or on reaching the target weight; once reached, `targetReached` is true and the goal counts as maintenance. `targets` is null and `missingFields` lists what is needed while the profile is incomplete.",
     },
   })
   .put("/", ({ user, body }) => Targets.upsert(user.id, body), {
     auth: true,
     body: "targets.upsertBody",
-    detail: { summary: "Create or replace the stored target for a date" },
+    detail: {
+      summary: "Create or replace the stored target for a date",
+      description: "Stored targets are not used by GET /targets or the daily summary.",
+    },
   })
   .delete("/", ({ user, query }) => Targets.remove(user.id, query.date ?? toDateKey()), {
     auth: true,
     query: "targets.dateQuery",
-    detail: { summary: "Delete a stored target so it falls back to derived values" },
+    detail: { summary: "Delete the stored target for a date" },
   })

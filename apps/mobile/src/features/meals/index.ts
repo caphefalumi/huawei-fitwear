@@ -24,6 +24,7 @@ export type {
   MealLog,
   MealType,
   NutritionSummary,
+  ProfileField,
 } from "./hooks/meals-hooks"
 export { MealPhoto } from "./components/meal-photo"
 export {

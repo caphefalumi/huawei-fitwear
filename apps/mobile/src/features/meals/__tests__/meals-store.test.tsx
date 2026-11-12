@@ -41,12 +41,14 @@ const item: MealItem = {
 }
 const summary = {
   targetDate: localDate(),
+  profileComplete: true,
+  missingFields: [],
+  targetReached: false,
   targets: {
     calorieTargetKcal: 2100,
     proteinTargetG: 130,
     carbsTargetG: 250,
     fatTargetG: 60,
-    source: "derived",
   },
   consumed: { caloriesKcal: 260, proteinG: 5, carbsG: 57, fatG: 1 },
   remaining: { caloriesKcal: 1840, proteinG: 125, carbsG: 193, fatG: 59 },

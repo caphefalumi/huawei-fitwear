@@ -1,6 +1,6 @@
 import { Image } from "expo-image"
 import { router, useFocusEffect } from "expo-router"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { StyleSheet, Text, View } from "react-native"
 import Animated, { FadeInUp } from "react-native-reanimated"
 
@@ -15,9 +15,11 @@ import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
 
+import { CompleteProfileCard } from "../components/complete-profile-card"
 import { NutritionRing } from "../components/ring"
 import { MacroBar } from "../components/ui"
 import { WeightChart } from "../components/weight-chart"
+import { nutritionView } from "../utils/nutrition-view"
 
 const DEMO_WEIGHTS = [72.8, 72.5, 72.3, 72.1, 71.9, 71.7, 71.5]
 const WEEK_ACTIVE = [true, true, false, true, true, false, true]
@@ -49,19 +51,26 @@ function useCountUp(target: number, duration = 600) {
 export function HomeScreen() {
   const { weightKg, weightUpdated } = useHealth()
   const injuries = useActiveInjuries()
-  const { loggedKcal, loggedMacros } = useMeals()
+  const { summary, error: mealsError } = useMeals()
   useMarkInteractive()
-  const [bannerDismissed, setBannerDismissed] = useState(false)
   const [visit, setVisit] = useState(0)
 
   useFocusEffect(useCallback(() => setVisit((v) => v + 1), []))
 
-  useEffect(() => setBannerDismissed(false), [weightKg])
+  const nutrition = nutritionView(summary)
+  const targetKcal = nutrition.status === "ready" ? nutrition.targetKcal : null
+  const kcalShown = useCountUp(nutrition.status === "ready" ? nutrition.kcalLeft : 0)
 
-  const targetKcal = weightUpdated ? 2160 : 2200
-  const consumedKcal = 1320 + loggedKcal
-  const kcalLeft = targetKcal - consumedKcal
-  const kcalShown = useCountUp(kcalLeft)
+  // Tell the user when a profile change moved their daily target.
+  const previousTargetKcal = useRef<number | null>(null)
+  const [targetsUpdated, setTargetsUpdated] = useState(false)
+  useEffect(() => {
+    if (targetKcal === null) return
+    if (previousTargetKcal.current !== null && previousTargetKcal.current !== targetKcal) {
+      setTargetsUpdated(true)
+    }
+    previousTargetKcal.current = targetKcal
+  }, [targetKcal])
   const today = useRoutines().today
   const { user } = useAuth()
   const dateLine = usePlanNow()
@@ -88,9 +97,15 @@ export function HomeScreen() {
             Today: {today.name}
             {today.exercises.length ? ` · ${today.sets} sets · ~${today.minutes} min` : ""}
           </Text>
-          <Text style={styles.focusMuted} numberOfLines={1}>
-            {kcalShown} kcal left
-          </Text>
+          {nutrition.status === "ready" ? (
+            <Text style={styles.focusMuted} numberOfLines={1}>
+              {kcalShown} kcal left
+            </Text>
+          ) : nutrition.status === "incomplete" ? (
+            <Text style={styles.focusMuted} numberOfLines={1}>
+              Complete profile to see your daily target
+            </Text>
+          ) : null}
           <Text style={styles.focusMuted} numberOfLines={1}>
             {injuries.length ? injuryTitle(injuries) : "Watch connected"}
           </Text>
@@ -106,44 +121,68 @@ export function HomeScreen() {
         </Card>
       </Animated.View>
 
-      {weightUpdated && !bannerDismissed ? (
+      {targetsUpdated ? (
         <View style={styles.banner}>
           <Image source={icons.check} style={styles.bannerIcon} contentFit="contain" />
-          <Text style={styles.bannerText}>Weight saved · nutrition targets updated</Text>
-          <Pressable onPress={() => setBannerDismissed(true)} hitSlop={10}>
+          <Text style={styles.bannerText}>Nutrition targets updated</Text>
+          <Pressable
+            onPress={() => setTargetsUpdated(false)}
+            hitSlop={10}
+            accessibilityLabel="Dismiss"
+          >
             <Text style={styles.bannerClose}>✕</Text>
           </Pressable>
         </View>
       ) : null}
 
       <Animated.View key={visit} entering={FadeInUp.delay(60).duration(250)}>
-        <Pressable onPress={() => router.push("/nutrition")}>
+        {nutrition.status === "ready" ? (
+          <Pressable onPress={() => router.push("/nutrition")}>
+            <Card>
+              <Text style={styles.cardHeaderText}>Nutrition</Text>
+
+              <View style={styles.nutritionBody}>
+                <NutritionRing kcalLeft={kcalShown} progress={nutrition.progress} />
+
+                <View style={styles.macros}>
+                  {nutrition.macros.map((macro) => (
+                    <MacroBar
+                      key={macro.label}
+                      label={macro.label}
+                      value={macro.value}
+                      target={macro.target}
+                      unit="g"
+                    />
+                  ))}
+                </View>
+              </View>
+
+              <Text style={styles.consumedLine}>
+                {nutrition.consumedKcal.toLocaleString("en-US")} consumed - {kcalShown} kcal left of{" "}
+                {nutrition.targetKcal.toLocaleString("en-US")}
+              </Text>
+              {nutrition.targetReached ? (
+                <Text style={styles.consumedLine}>
+                  Target weight reached - your target now keeps your weight steady.
+                </Text>
+              ) : null}
+            </Card>
+          </Pressable>
+        ) : (
           <Card>
             <Text style={styles.cardHeaderText}>Nutrition</Text>
-
-            <View style={styles.nutritionBody}>
-              <NutritionRing kcalLeft={kcalShown} progress={consumedKcal / targetKcal} />
-
-              <View style={styles.macros}>
-                <MacroBar label="Protein" value={92 + loggedMacros.protein} target={140} unit="g" />
-                <MacroBar
-                  label="Carbs"
-                  value={152 + loggedMacros.carbs}
-                  target={weightUpdated ? 265 : 275}
-                  unit="g"
-                />
-                <MacroBar label="Fat" value={38 + loggedMacros.fat} target={60} unit="g" />
-              </View>
-            </View>
-
-            {weightUpdated ? (
-              <Text style={styles.consumedLine}>
-                {consumedKcal.toLocaleString("en-US")} consumed · {kcalShown} kcal left of{" "}
-                {targetKcal.toLocaleString("en-US")}
-              </Text>
-            ) : null}
+            {nutrition.status === "incomplete" ? (
+              <>
+                <CompleteProfileCard missing={nutrition.missing} />
+                <Text style={styles.consumedLine}>
+                  {nutrition.consumedKcal.toLocaleString("en-US")} kcal logged today
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.consumedLine}>{mealsError ?? "Loading nutrition..."}</Text>
+            )}
           </Card>
-        </Pressable>
+        )}
       </Animated.View>
 
       <Animated.View
@@ -198,8 +237,8 @@ export function HomeScreen() {
         </Pressable>
       ) : null}
 
-      {weightUpdated ? (
-        <Text style={styles.footnote}>Demo personal targets · estimates, not medical advice.</Text>
+      {nutrition.status === "ready" ? (
+        <Text style={styles.footnote}>Targets are estimates, not medical advice.</Text>
       ) : null}
     </Screen>
   )
