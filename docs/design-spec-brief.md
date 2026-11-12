@@ -459,12 +459,18 @@ Legend: **Purpose · Structure · Actions · States · Copy**
 - **Actions:** tap Nutrition, Progress, Recovery; dismiss banner; navigate via tabs.
 - **States:** fresh account (no weight logged) vs. weight-logged (targets update, banner, previous log); recovery on/off.
 - **Data notes:** the Nutrition card and kcal line use the real daily summary (`GET /meals/summary`): consumed comes from the meals saved for the day, targets from the profile (see "Nutrition targets" below). `DEMO_WEIGHTS`, `WEEK_ACTIVE`, the progress card's "Logged Oct 8" and "Previous" row, and the `Sam N.` fallback name remain **static demo values**.
-- **Nutrition targets:** BMR (Mifflin-St Jeor: `10 x kg + 6.25 x cm - 5 x age + s`, s = +5 male, -161 female, -78 other) x activity factor (1.2, 1.375, 1.55, 1.725, 1.9; never shown to the user), plus a goal offset (Gain +300, Maintain 0, Loss -400), never below 1,500 (male), 1,200 (female) or 1,350 (other), rounded to 10 kcal. Protein 1.8 / 1.6 / 2.0 g/kg; fat 20% / 30% / 25% of kcal (Gain / Maintain / Loss); carbs the remainder. Grams are whole numbers. Required profile fields: weight, height, sex, birthdate, activity, goal. There are no default values: while any is missing the dashboard shows the `Complete profile` state. Per-day stored targets (`PUT /targets`) are not used. **Weight basis:** kcal and protein use a stored basis weight (`calorieWeightKg`) instead of every weight log. It moves only when the current weight is 5 kg or more away from it, or when the target weight is reached (Loss: weight at or below target, Gain: at or above). Changing the goal or target weight resets it. After the target is reached (`targetReached`) the goal counts as Maintain, the Profile goal is unchanged, and Home and Nutrition show "Target weight reached".
+- **Nutrition targets** (derived from the Profile only; per-day stored targets from `PUT /targets` are not used):
+  - **kcal:** BMR (Mifflin-St Jeor: `10 x kg + 6.25 x cm - 5 x age + s`, s = +5 male, -161 female, -78 other) x activity factor, plus a goal offset (Gain +300, Maintain 0, Loss -400). Floor 1,500 (male), 1,200 (female), 1,350 (other). Rounded to 10 kcal.
+  - **Activity factors:** 1.2 / 1.375 / 1.55 / 1.725 / 1.9 for the five Daily activity levels. Never shown to the user.
+  - **Macros (whole grams):** protein 1.8 / 1.6 / 2.0 g/kg and fat 20% / 30% / 25% of kcal for Gain / Maintain / Loss; carbs are the remaining kcal.
+  - **Required fields:** weight, height, sex, birthdate, activity, goal. No default values: if any is missing, the dashboard shows the `Complete profile` state.
+  - **Weight basis:** kcal and protein use a stored basis weight (`calorieWeightKg`), not each weight log, so the target does not jitter. It moves only when the current weight is 5 kg or more from it, or when the target weight is reached (Loss: at or below, Gain: at or above). Changing the goal or the target weight resets it to the current weight. With no target weight, only the 5 kg rule applies.
+  - **Target reached** (`targetReached`): targets switch to Maintain. The Profile goal is not changed. Home and Nutrition show "Target weight reached".
 
 ### 11.5 Nutrition (`/nutrition`)
 
 - **Purpose:** full nutrition breakdown for the day.
-- **Structure:** back header; title `Nutrition`; hero ring (remaining/consumed); `Remaining today`, `Consumed`, `Daily target` stat blocks; `Macronutrients` section with Protein/Carbs/Fat bars and gram values; `About these numbers` explainer card.
+- **Structure:** back header; title `Nutrition`; hero ring (remaining/consumed); `Target weight reached` card (only after the target weight is reached); `Remaining today`, `Consumed`, `Daily target` stat blocks; `Macronutrients` section with Protein/Carbs/Fat bars and gram values; `About these numbers` explainer card.
 - **Actions:** back; likely tap-through to meals.
 - **States:** no meals logged (zeros, ring empty), partial, target met/exceeded (ring full, remaining clamped at 0), incomplete profile (`Complete profile` block with the list of missing fields and a `Logged today` card with energy, protein, carbs and fat; no ring, target or remaining), loading or error (one muted line).
 - **Copy:** "Nutrition targets use your latest profile information.", "About these numbers".
@@ -593,12 +599,12 @@ Legend: **Purpose · Structure · Actions · States · Copy**
 | Sheet | Control | Copy / notes |
 |---|---|---|
 | Height | Wheel picker, cm | "Height contributes to your initial energy estimate." |
-| Weight | Wheel picker / numeric, kg, 0.1 | Saving updates nutrition targets and triggers Home banner |
+| Weight | Wheel picker / numeric, kg, 0.1 | Saving logs the weight. Nutrition targets change only when it crosses a 5 kg step or the target weight (see "Weight basis"); then the Home banner shows |
 | Sex | Radio list | Options include `Female`, `Male`, presumably `Other`/`Prefer not to say` |
-| Goal | Radio list | Fat loss / maintenance / muscle gain variants |
-| Frequency | Radio list 1–7 | Value renders `N sessions/week` |
+| Goal | Radio list | Fat loss / maintenance / muscle gain variants. Changing it resets the weight basis |
+| Frequency | Radio list 1–7 | Value renders `N sessions/week`. Drives the plan only, not kcal |
 | Activity | Radio list | `Sedentary (office job)`, `Light (1-2 days/week)`, `Moderate (3-5 days/week)`, `Heavy (6-7 days/week)`, `Athlete (2x per day)`; factors are never shown. Independent of `Workout frequency`, which only drives the plan |
-| Target weight | Numeric kg | Compared against current weight |
+| Target weight | Numeric kg | End point of the weight steps. Reaching it switches nutrition targets to Maintain. Changing it resets the weight basis |
 | Recovery | Recovery sheet | See §11.20 |
 
 All use: `SheetField` bordered blocks, `SheetActions` (primary save 52, secondary cancel 48), busy state on primary, validation inline.
