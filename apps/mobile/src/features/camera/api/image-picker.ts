@@ -1,24 +1,23 @@
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator"
 import * as ImagePicker from "expo-image-picker"
 import { Platform } from "react-native"
 
 export type PickedImage = {
   uri: string
   base64: string
-  mimeType: "image/jpeg" | "image/png"
+  mimeType: "image/webp"
 }
 
-export function validatePickedImage(uri: string, base64: string | null | undefined): PickedImage {
-  if (!base64) throw new Error("Could not read this image. Choose another JPEG or PNG.")
-  const mimeType = base64.startsWith("/9j/")
-    ? "image/jpeg"
-    : base64.startsWith("iVBOR")
-      ? "image/png"
-      : null
-  if (!mimeType) throw new Error("Choose a JPEG or PNG image.")
-  if (base64.length > 7_000_000) {
-    throw new Error("This image is too large. Crop it or choose a smaller photo (under 5 MB).")
-  }
-  return { uri, base64, mimeType }
+// Pickers hand back HEIC, JPEG or PNG; storage and analysis take WebP only.
+export async function prepareMealImage(uri: string): Promise<PickedImage> {
+  const rendered = await ImageManipulator.manipulate(uri, { maxWidth: 1280 }).renderAsync()
+  const saved = await rendered.saveAsync({
+    compress: 0.8,
+    format: SaveFormat.WEBP,
+    base64: true,
+  })
+  if (!saved.base64) throw new Error("Could not read this photo. Choose another one.")
+  return { uri: saved.uri, base64: saved.base64, mimeType: "image/webp" }
 }
 
 export async function pickImage(camera: boolean): Promise<PickedImage | null> {
@@ -33,8 +32,7 @@ export async function pickImage(camera: boolean): Promise<PickedImage | null> {
 
   const options: ImagePicker.ImagePickerOptions = {
     mediaTypes: ["images"],
-    base64: true,
-    quality: 0.7,
+    quality: 1,
     allowsEditing: true,
   }
   const result = camera
@@ -42,6 +40,5 @@ export async function pickImage(camera: boolean): Promise<PickedImage | null> {
     : await ImagePicker.launchImageLibraryAsync(options)
   if (result.canceled) return null
 
-  const asset = result.assets[0]
-  return validatePickedImage(asset.uri, asset.base64)
+  return prepareMealImage(result.assets[0].uri)
 }

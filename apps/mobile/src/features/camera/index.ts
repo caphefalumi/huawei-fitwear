@@ -1,1 +1,1 @@
-export { pickImage, validatePickedImage, type PickedImage } from "./api/image-picker"
+export { pickImage, prepareMealImage, type PickedImage } from "./api/image-picker"

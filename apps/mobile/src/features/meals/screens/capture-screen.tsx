@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { BackHeader, Button } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
 import { Sheet } from "@/components/ui/sheet"
-import { pickImage, validatePickedImage } from "@/features/camera"
+import { pickImage, prepareMealImage, type PickedImage } from "@/features/camera"
 import { ApiError, apiErrorMessage } from "@/lib/api/client"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
@@ -30,11 +30,7 @@ export function MealCaptureScreen() {
   const insets = useSafeAreaInsets()
   const { tutorialSeen, dismissTutorial, setAnalysis, setDraftPhoto, items } = useMeals()
   const [description, setDescription] = useState("")
-  const [image, setImage] = useState<{
-    uri: string
-    base64: string
-    mimeType: "image/jpeg" | "image/png"
-  } | null>(null)
+  const [image, setImage] = useState<PickedImage | null>(null)
   const analyzeMutation = useMutation({
     mutationFn: (body: { image: string; mimeType: string; description?: string }) =>
       analyzeMeal(body),
@@ -76,10 +72,10 @@ export function MealCaptureScreen() {
     if (busy) return
     setError(null)
     try {
-      const photo = await cameraRef.current?.takePictureAsync({ base64: true, quality: 0.7 })
+      const photo = await cameraRef.current?.takePictureAsync({ quality: 1 })
       if (!photo) throw new Error("Could not capture photo. Try again.")
-      const validated = validatePickedImage(photo.uri, photo.base64)
-      if (active.current) setImage(validated)
+      const prepared = await prepareMealImage(photo.uri)
+      if (active.current) setImage(prepared)
     } catch (cause) {
       Sentry.captureException(cause)
       if (active.current) {
