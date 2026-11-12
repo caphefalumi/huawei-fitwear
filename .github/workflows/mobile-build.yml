@@ -1,16 +1,6 @@
 name: Mobile Build
 
-on:
-  workflow_dispatch:
-    inputs:
-      build_android:
-        description: Build Android debug APK
-        type: boolean
-        default: false
-      build_ios:
-        description: Build iOS Simulator app
-        type: boolean
-        default: false
+on: workflow_dispatch
 
 permissions:
   contents: read
@@ -25,11 +15,20 @@ env:
   EXPO_NONINTERACTIVE: "1"
 
 jobs:
-  android:
-    name: Build Android
-    if: ${{ inputs.build_android }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: ${{ matrix.timeout }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: android
+            os: ubuntu-latest
+            timeout: 45
+          - platform: ios
+            os: macos-latest
+            timeout: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -37,49 +36,47 @@ jobs:
       - uses: ./.github/actions/setup
 
       - name: Generate native project
+        if: matrix.platform == 'android'
         working-directory: apps/mobile
         run: bunx expo prebuild --platform android --no-install
 
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        if: matrix.platform == 'android'
         with:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
+        if: matrix.platform == 'android'
       - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+        if: matrix.platform == 'android'
         with:
           packages: "platform-tools cmake;3.31.6"
 
       - name: Build debug APK
+        if: matrix.platform == 'android'
         working-directory: apps/mobile/android
         run: ./gradlew --build-cache assembleDebug
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: matrix.platform == 'android'
         with:
           name: fitwear-android-debug-apk
           path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
 
-  ios:
-    name: Build iOS Simulator
-    if: ${{ inputs.build_ios }}
-    runs-on: macos-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-
       - name: Generate native project
+        if: matrix.platform == 'ios'
         working-directory: apps/mobile
         run: bunx expo prebuild --platform ios --no-install
 
       - name: Install CocoaPods dependencies
+        if: matrix.platform == 'ios'
         working-directory: apps/mobile/ios
         run: pod install
 
       - name: Build for iOS Simulator
+        if: matrix.platform == 'ios'
         working-directory: apps/mobile
         run: >-
           xcodebuild
@@ -93,6 +90,7 @@ jobs:
           build
 
       - name: Package app
+        if: matrix.platform == 'ios'
         working-directory: apps/mobile
         run: >-
           ditto -c -k --sequesterRsrc --keepParent
@@ -100,6 +98,7 @@ jobs:
           build/ios/mobile-ios-simulator.zip
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: matrix.platform == 'ios'
         with:
           name: fitwear-ios-simulator-app
           path: apps/mobile/build/ios/mobile-ios-simulator.zip

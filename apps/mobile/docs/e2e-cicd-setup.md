@@ -9,7 +9,7 @@ How the Fitwear mobile app is tested in GitHub Actions: unit checks on pull requ
 | Workflow         | File                                 | Triggers                                                  | Purpose                                                           |
 | ---------------- | ------------------------------------ | --------------------------------------------------------- | ----------------------------------------------------------------- |
 | **Mobile CI**    | `.github/workflows/mobile-ci.yml`    | `pull_request` → `main`, merge group, `workflow_dispatch` | Typecheck + Jest when `apps/mobile/**` (or root lockfile) changes |
-| **Mobile Build** | `.github/workflows/mobile-build.yml` | `workflow_dispatch`                                       | Optional debug APK (Windows) and/or iOS Simulator build (macOS)   |
+| **Mobile Build** | `.github/workflows/mobile-build.yml` | `workflow_dispatch`                                       | Debug APK (Android) and iOS Simulator build, via matrix           |
 | **Mobile E2E**   | `.github/workflows/mobile-e2e.yml`   | Cron + `workflow_dispatch`                                | Release APK + Android emulator + Maestro flows                    |
 
 Mobile CI does **not** run Maestro. E2E is nightly and manual only.
@@ -47,7 +47,7 @@ flowchart TB
 
 ## Mobile Build (optional artifacts)
 
-Manual dispatch only. Inputs: `build_android`, `build_ios` (at least one required).
+Manual dispatch only. One matrix job builds every platform in parallel.
 
 - **Android:** `windows-latest`, Expo prebuild, Gradle `assembleDebug`, artifact `fitwear-android-debug-apk`.
 - **iOS:** `macos-latest`, `pod install`, `xcodebuild` for Simulator, artifact `fitwear-ios-simulator-app`.
