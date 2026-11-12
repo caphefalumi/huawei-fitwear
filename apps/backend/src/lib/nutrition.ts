@@ -33,11 +33,21 @@ const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
   extra_active: 1.9,
 }
 
-const GOAL_CALORIE_FACTORS: Record<FitnessGoal, number> = {
-  weight_loss: 0.8,
-  maintenance: 1,
-  muscle_gain: 1.1,
+/** Daily energy adjustment applied on top of TDEE, in kcal. */
+const GOAL_CALORIE_OFFSETS: Record<FitnessGoal, number> = {
+  weight_loss: -400,
+  maintenance: 0,
+  muscle_gain: 300,
 }
+
+/** Lowest daily target we will ever suggest, regardless of goal. */
+const MIN_DAILY_KCAL: Record<Gender, number> = {
+  male: 1500,
+  female: 1200,
+  other: 1350,
+}
+
+const KCAL_ROUNDING_STEP = 10
 
 const GOAL_PROTEIN_PER_KG: Record<FitnessGoal, number> = {
   weight_loss: 2,
@@ -48,26 +58,26 @@ const GOAL_PROTEIN_PER_KG: Record<FitnessGoal, number> = {
 const GOAL_FAT_CALORIE_SHARE: Record<FitnessGoal, number> = {
   weight_loss: 0.25,
   maintenance: 0.3,
-  muscle_gain: 0.25,
+  muscle_gain: 0.2,
 }
 
-export const FALLBACK_HEIGHT_CM = 170
-export const FALLBACK_WEIGHT_KG = 70
-export const FALLBACK_AGE_YEARS = 30
+/** Weight change, in kg, that triggers a fresh kcal calculation. */
+export const WEIGHT_STEP_KG = 5
 
 const round1 = (value: number): number => Math.round(value * 10) / 10
 
-export function ageFromBirthDate(birthDate: string | null, now = new Date()): number {
-  if (!birthDate) return FALLBACK_AGE_YEARS
+/** Age in whole years, or null when the birthdate is missing, malformed or implausible. */
+export function ageFromBirthDate(birthDate: string | null, now = new Date()): number | null {
+  if (!birthDate) return null
   const parsed = new Date(birthDate)
-  if (Number.isNaN(parsed.getTime())) return FALLBACK_AGE_YEARS
+  if (Number.isNaN(parsed.getTime())) return null
 
   let age = now.getUTCFullYear() - parsed.getUTCFullYear()
   const monthDelta = now.getUTCMonth() - parsed.getUTCMonth()
   if (monthDelta < 0 || (monthDelta === 0 && now.getUTCDate() < parsed.getUTCDate())) {
     age -= 1
   }
-  return age >= 0 && age <= 120 ? age : FALLBACK_AGE_YEARS
+  return age >= 0 && age <= 120 ? age : null
 }
 
 export function basalMetabolicRate(input: {
@@ -82,40 +92,116 @@ export function basalMetabolicRate(input: {
   return base - 78
 }
 
-export function activityMultiplier(activityLevel: string | null): number {
-  return (
-    ACTIVITY_MULTIPLIERS[(activityLevel ?? "") as ActivityLevel] ??
-    ACTIVITY_MULTIPLIERS.moderately_active
-  )
+export function activityMultiplier(activityLevel: string | null): number | null {
+  return ACTIVITY_MULTIPLIERS[(activityLevel ?? "") as ActivityLevel] ?? null
 }
 
-export function deriveDailyTargets(profile: BiometricProfile, now = new Date()): MacroTargets {
-  const weightKg =
-    profile.currentWeightKg && profile.currentWeightKg > 0
-      ? profile.currentWeightKg
-      : FALLBACK_WEIGHT_KG
-  const heightCm = profile.heightCm && profile.heightCm > 0 ? profile.heightCm : FALLBACK_HEIGHT_CM
-  const gender = (profile.gender ?? "other") as Gender
-  const goal = (
-    GOAL_CALORIE_FACTORS[(profile.fitnessGoal ?? "") as FitnessGoal] !== undefined
-      ? profile.fitnessGoal
-      : "maintenance"
-  ) as FitnessGoal
+/** Profile fields a daily target cannot be calculated without. */
+export type ProfileField =
+  | "gender"
+  | "birthDate"
+  | "heightCm"
+  | "currentWeightKg"
+  | "activityLevel"
+  | "fitnessGoal"
+
+const isGender = (value: string | null): value is Gender =>
+  value === "male" || value === "female" || value === "other"
+const isGoal = (value: string | null): value is FitnessGoal =>
+  value !== null && Object.hasOwn(GOAL_CALORIE_OFFSETS, value)
+const isPositive = (value: number | null): value is number => value !== null && value > 0
+
+/** Lists the profile fields that are missing or invalid, in a stable order. */
+export function missingProfileFields(profile: BiometricProfile, now = new Date()): ProfileField[] {
+  const missing: ProfileField[] = []
+  if (!isGender(profile.gender)) missing.push("gender")
+  if (ageFromBirthDate(profile.birthDate, now) === null) missing.push("birthDate")
+  if (!isPositive(profile.heightCm)) missing.push("heightCm")
+  if (!isPositive(profile.currentWeightKg)) missing.push("currentWeightKg")
+  if (activityMultiplier(profile.activityLevel) === null) missing.push("activityLevel")
+  if (!isGoal(profile.fitnessGoal)) missing.push("fitnessGoal")
+  return missing
+}
+
+/**
+ * The weight the kcal target is calculated from. It stays put while the user logs daily
+ * weights and only moves in steps, so the target does not jitter with scale noise.
+ */
+export type CalorieBasis = {
+  weightKg: number
+  /** The target weight was reached: the goal is treated as maintenance from here on. */
+  targetReached: boolean
+}
+
+const hasReachedTarget = (
+  goal: string | null,
+  weightKg: number,
+  targetWeightKg: number | null,
+): boolean => {
+  if (!isPositive(targetWeightKg)) return false
+  if (goal === "weight_loss") return weightKg <= targetWeightKg
+  if (goal === "muscle_gain") return weightKg >= targetWeightKg
+  return false
+}
+
+/**
+ * Moves the calorie basis forward. It changes when the target weight is reached, or when the
+ * current weight is WEIGHT_STEP_KG or more away from the basis. Otherwise it is returned as is.
+ * Changing the goal or the target weight clears the stored basis, so it restarts from the
+ * current weight.
+ */
+export function nextCalorieBasis(input: {
+  basis: CalorieBasis | null
+  currentWeightKg: number | null
+  targetWeightKg: number | null
+  goal: string | null
+}): CalorieBasis | null {
+  const { basis, currentWeightKg, targetWeightKg, goal } = input
+  if (!isPositive(currentWeightKg)) return basis
+  const reached = hasReachedTarget(goal, currentWeightKg, targetWeightKg)
+  if (!basis) return { weightKg: currentWeightKg, targetReached: reached }
+  if (basis.targetReached) return basis
+  if (reached) return { weightKg: currentWeightKg, targetReached: true }
+  if (Math.abs(currentWeightKg - basis.weightKg) >= WEIGHT_STEP_KG) {
+    return { weightKg: currentWeightKg, targetReached: false }
+  }
+  return basis
+}
+
+/**
+ * Daily kcal and macro targets from the profile, or null when the profile is incomplete.
+ * kcal = (BMR x activity factor) + goal offset, floored by sex and rounded to 10 kcal.
+ * Macros are derived from the rounded kcal and rounded to whole grams.
+ * With a `basis`, its weight is used instead of the current weight, and a reached target
+ * counts as the maintenance goal.
+ */
+export function deriveDailyTargets(
+  profile: BiometricProfile,
+  now = new Date(),
+  basis: CalorieBasis | null = null,
+): MacroTargets | null {
+  if (missingProfileFields(profile, now).length > 0) return null
+  const weightKg = basis?.weightKg ?? (profile.currentWeightKg as number)
+  const heightCm = profile.heightCm as number
+  const gender = profile.gender as Gender
+  const goal: FitnessGoal = basis?.targetReached
+    ? "maintenance"
+    : (profile.fitnessGoal as FitnessGoal)
 
   const bmr = basalMetabolicRate({
     weightKg,
     heightCm,
-    ageYears: ageFromBirthDate(profile.birthDate, now),
+    ageYears: ageFromBirthDate(profile.birthDate, now) as number,
     gender,
   })
+  const tdee = bmr * (activityMultiplier(profile.activityLevel) as number)
+  const adjusted = Math.max(tdee + GOAL_CALORIE_OFFSETS[goal], MIN_DAILY_KCAL[gender])
+  const calorieTargetKcal = Math.round(adjusted / KCAL_ROUNDING_STEP) * KCAL_ROUNDING_STEP
 
-  const calorieTargetKcal = Math.round(
-    bmr * activityMultiplier(profile.activityLevel) * GOAL_CALORIE_FACTORS[goal],
-  )
-  const proteinTargetG = round1(weightKg * GOAL_PROTEIN_PER_KG[goal])
-  const fatTargetG = round1((calorieTargetKcal * GOAL_FAT_CALORIE_SHARE[goal]) / 9)
+  const proteinTargetG = Math.round(weightKg * GOAL_PROTEIN_PER_KG[goal])
+  const fatTargetG = Math.round((calorieTargetKcal * GOAL_FAT_CALORIE_SHARE[goal]) / 9)
   const carbsKcal = calorieTargetKcal - proteinTargetG * 4 - fatTargetG * 9
-  const carbsTargetG = round1(Math.max(carbsKcal, 0) / 4)
+  const carbsTargetG = Math.round(Math.max(carbsKcal, 0) / 4)
 
   return { calorieTargetKcal, proteinTargetG, carbsTargetG, fatTargetG }
 }

@@ -2,75 +2,113 @@ import { router } from "expo-router"
 import { StyleSheet, Text, View } from "react-native"
 
 import { BackHeader, Card, PageHeading, Screen } from "@/components/ui"
-import { useHealth } from "@/features/health"
 import { useMeals } from "@/features/meals"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
+import { usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
 
+import { CompleteProfileCard } from "../components/complete-profile-card"
 import { NutritionRing } from "../components/ring"
 import { MacroBar } from "../components/ui"
+import { nutritionView } from "../utils/nutrition-view"
 
 export function NutritionScreen() {
   useMarkInteractive()
-  const { weightUpdated } = useHealth()
-  const { loggedKcal, loggedMacros } = useMeals()
-
-  const targetKcal = weightUpdated ? 2160 : 2200
-  const consumedKcal = 1320 + loggedKcal
-  const left = targetKcal - consumedKcal
+  const { summary, error } = useMeals()
+  const nutrition = nutritionView(summary)
+  const dateLine = usePlanNow().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  })
 
   return (
     <Screen>
       <BackHeader label="Today" onPress={() => router.back()} />
 
-      <PageHeading title="Nutrition" subtitle="Thursday, Oct 8" />
+      <PageHeading title="Nutrition" subtitle={dateLine} />
 
-      <Card style={styles.center}>
-        <NutritionRing kcalLeft={left} progress={consumedKcal / targetKcal} />
+      {nutrition.status === "ready" ? (
+        <>
+          <Card style={styles.center}>
+            <NutritionRing kcalLeft={nutrition.kcalLeft} progress={nutrition.progress} />
 
-        <View style={styles.stats}>
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Consumed</Text>
-            <Text style={styles.statValue}>{consumedKcal.toLocaleString("en-US")} kcal</Text>
-          </View>
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Daily target</Text>
-            <Text style={styles.statValue}>{targetKcal.toLocaleString("en-US")} kcal</Text>
-          </View>
-        </View>
-      </Card>
+            <View style={styles.stats}>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Consumed</Text>
+                <Text style={styles.statValue}>
+                  {nutrition.consumedKcal.toLocaleString("en-US")} kcal
+                </Text>
+              </View>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Daily target</Text>
+                <Text style={styles.statValue}>
+                  {nutrition.targetKcal.toLocaleString("en-US")} kcal
+                </Text>
+              </View>
+            </View>
+          </Card>
 
-      <Card>
-        <Text style={styles.cardTitle}>Remaining today</Text>
-        <Text style={styles.remaining}>{left} kcal</Text>
-      </Card>
+          {nutrition.targetReached ? (
+            <Card>
+              <Text style={styles.cardTitle}>Target weight reached</Text>
+              <Text style={styles.noteBody}>
+                Your daily target now keeps your weight steady instead of changing it.
+              </Text>
+            </Card>
+          ) : null}
 
-      <Card>
-        <Text style={styles.cardTitle}>Macronutrients</Text>
-        <View style={styles.macros}>
-          <MacroBar
-            label="Protein"
-            value={92 + loggedMacros.protein}
-            target={140}
-            unit="g"
-            note={`${Math.max(0, Math.round(140 - 92 - loggedMacros.protein))} g remaining`}
-          />
-          <MacroBar
-            label="Carbs"
-            value={152 + loggedMacros.carbs}
-            target={265}
-            unit="g"
-            note={`${Math.max(0, Math.round(265 - 152 - loggedMacros.carbs))} g remaining`}
-          />
-          <MacroBar
-            label="Fat"
-            value={38 + loggedMacros.fat}
-            target={60}
-            unit="g"
-            note={`${Math.max(0, Math.round(60 - 38 - loggedMacros.fat))} g remaining`}
-          />
-        </View>
-      </Card>
+          <Card>
+            <Text style={styles.cardTitle}>Remaining today</Text>
+            <Text style={styles.remaining}>{nutrition.kcalLeft.toLocaleString("en-US")} kcal</Text>
+          </Card>
+
+          <Card>
+            <Text style={styles.cardTitle}>Macronutrients</Text>
+            <View style={styles.macros}>
+              {nutrition.macros.map((macro) => (
+                <MacroBar
+                  key={macro.label}
+                  label={macro.label}
+                  value={macro.value}
+                  target={macro.target}
+                  unit="g"
+                  note={`${Math.max(0, Math.round(macro.target - macro.value))} g remaining`}
+                />
+              ))}
+            </View>
+          </Card>
+        </>
+      ) : nutrition.status === "incomplete" ? (
+        <>
+          <CompleteProfileCard />
+          <Card>
+            <Text style={styles.cardTitle}>Logged today</Text>
+            <View style={styles.stats}>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Energy</Text>
+                <Text style={styles.statValue}>
+                  {nutrition.consumedKcal.toLocaleString("en-US")} kcal
+                </Text>
+              </View>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Protein</Text>
+                <Text style={styles.statValue}>{nutrition.consumed.protein} g</Text>
+              </View>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Carbs</Text>
+                <Text style={styles.statValue}>{nutrition.consumed.carbs} g</Text>
+              </View>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Fat</Text>
+                <Text style={styles.statValue}>{nutrition.consumed.fat} g</Text>
+              </View>
+            </View>
+          </Card>
+        </>
+      ) : (
+        <Text style={styles.noteBody}>{error ?? "Loading nutrition..."}</Text>
+      )}
 
       <View style={styles.note}>
         <Text style={styles.noteTitle}>About these numbers</Text>

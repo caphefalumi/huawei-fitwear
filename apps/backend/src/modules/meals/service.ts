@@ -17,8 +17,6 @@ import type {
 
 const DEFAULT_LIMIT = 20
 
-const round1 = (value: number): number => Math.round(value * 10) / 10
-
 export type MealItemRecord = typeof mealItemsTable.$inferSelect
 export type MealLogRecord = typeof mealLogsTable.$inferSelect
 
@@ -273,16 +271,20 @@ export abstract class Meals {
       Targets.resolve(userId, targetDate, d1),
     ])
     const consumed = sumNutrition([totals!])
+    const { targets, profileComplete, missingFields, targetReached } = resolvedTargets
 
     return {
       targetDate,
-      targets: resolvedTargets,
+      profileComplete,
+      missingFields,
+      targetReached,
+      targets,
       consumed,
-      remaining: {
-        caloriesKcal: Math.round(resolvedTargets.calorieTargetKcal - consumed.caloriesKcal),
-        proteinG: round1(resolvedTargets.proteinTargetG - consumed.proteinG),
-        carbsG: round1(resolvedTargets.carbsTargetG - consumed.carbsG),
-        fatG: round1(resolvedTargets.fatTargetG - consumed.fatG),
+      remaining: targets && {
+        caloriesKcal: Math.round(targets.calorieTargetKcal - consumed.caloriesKcal),
+        proteinG: Math.round(targets.proteinTargetG - consumed.proteinG),
+        carbsG: Math.round(targets.carbsTargetG - consumed.carbsG),
+        fatG: Math.round(targets.fatTargetG - consumed.fatG),
       },
       mealCount: totals!.mealCount,
     }

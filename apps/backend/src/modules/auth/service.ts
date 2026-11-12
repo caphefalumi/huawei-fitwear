@@ -68,8 +68,8 @@ export abstract class Auth {
       heightCm: data.heightCm ?? null,
       currentWeightKg: data.currentWeightKg ?? null,
       targetWeightKg: data.targetWeightKg ?? null,
-      activityLevel: data.activityLevel ?? "moderately_active",
-      fitnessGoal: data.fitnessGoal ?? "muscle_gain",
+      activityLevel: data.activityLevel ?? null,
+      fitnessGoal: data.fitnessGoal ?? null,
       weeklySessions: data.weeklySessions ?? 3,
       createdAt: now,
       updatedAt: now,
@@ -228,10 +228,24 @@ export abstract class Auth {
     assertBirthDate(data.birthDate)
     const db = getDb(d1)
 
+    // A new goal or target weight starts a fresh kcal basis from the current weight.
+    let resetBasis = false
+    if (data.fitnessGoal !== undefined || data.targetWeightKg !== undefined) {
+      const before = await db
+        .select({ fitnessGoal: userTable.fitnessGoal, targetWeightKg: userTable.targetWeightKg })
+        .from(userTable)
+        .where(eq(userTable.id, userId))
+        .get()
+      resetBasis =
+        (data.fitnessGoal !== undefined && data.fitnessGoal !== before?.fitnessGoal) ||
+        (data.targetWeightKg !== undefined && data.targetWeightKg !== before?.targetWeightKg)
+    }
+
     await db
       .update(userTable)
       .set({
         ...data,
+        ...(resetBasis ? { calorieWeightKg: null, targetReached: false } : {}),
         updatedAt: new Date(),
       })
       .where(eq(userTable.id, userId))

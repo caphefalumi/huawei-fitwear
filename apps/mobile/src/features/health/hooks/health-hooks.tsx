@@ -21,11 +21,11 @@ export const GOALS = {
   muscle_gain: "Build muscle",
 } as const
 export const ACTIVITIES = {
-  sedentary: "Sedentary",
-  lightly_active: "Light",
-  moderately_active: "Moderate",
-  very_active: "High",
-  extra_active: "Very high",
+  sedentary: "Sedentary (office job)",
+  lightly_active: "Light (1-2 days/week)",
+  moderately_active: "Moderate (3-5 days/week)",
+  very_active: "Heavy (6-7 days/week)",
+  extra_active: "Athlete (2x per day)",
 } as const
 
 export function dateKey(date = new Date()) {

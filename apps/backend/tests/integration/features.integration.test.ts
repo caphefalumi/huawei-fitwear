@@ -148,6 +148,124 @@ describe("Persistent feature APIs", () => {
     ).toBe(0)
   })
 
+  it("asks for a complete profile instead of guessing targets", async () => {
+    const own = await account()
+    const token = own.session.token
+
+    const incomplete = await (await request("/targets", token)).json()
+    expect(incomplete.profileComplete).toBe(false)
+    expect(incomplete.targets).toBeNull()
+    expect(incomplete.missingFields).toEqual([
+      "gender",
+      "birthDate",
+      "heightCm",
+      "currentWeightKg",
+      "activityLevel",
+      "fitnessGoal",
+    ])
+
+    await Meals.create(
+      own.user.id,
+      { mealType: "lunch", targetDate: "2026-01-10", items: [foodItem] },
+      d1,
+    )
+    const summary = await (await request("/meals/summary?date=2026-01-10", token)).json()
+    expect(summary.profileComplete).toBe(false)
+    expect(summary.targets).toBeNull()
+    expect(summary.remaining).toBeNull()
+    expect(summary.consumed.caloriesKcal).toBe(130)
+    expect(summary.mealCount).toBe(1)
+  })
+
+  it("derives rounded targets from the profile and ignores stored daily targets", async () => {
+    const own = await account()
+    const token = own.session.token
+    const update = await request("/auth/update-user", token, "PUT", {
+      gender: "male",
+      birthDate: "1990-01-01",
+      heightCm: 175,
+      currentWeightKg: 70,
+      activityLevel: "moderately_active",
+      fitnessGoal: "weight_loss",
+    })
+    expect(update.status).toBe(200)
+
+    const resolved = await (await request("/targets?date=2026-01-10", token)).json()
+    expect(resolved.profileComplete).toBe(true)
+    expect(resolved.missingFields).toEqual([])
+    expect(resolved.targets.calorieTargetKcal % 10).toBe(0)
+    expect(resolved.targets.proteinTargetG).toBe(140)
+
+    // A stored override for the day must not change what the dashboard receives.
+    const stored = await request("/targets", token, "PUT", {
+      date: "2026-01-10",
+      calorieTargetKcal: 1800,
+      proteinTargetG: 100,
+      carbsTargetG: 200,
+      fatTargetG: 50,
+    })
+    expect(stored.status).toBe(200)
+    expect((await (await request("/targets?date=2026-01-10", token)).json()).targets).toEqual(
+      resolved.targets,
+    )
+
+    await Meals.create(
+      own.user.id,
+      { mealType: "lunch", targetDate: "2026-01-10", items: [foodItem] },
+      d1,
+    )
+    const summary = await (await request("/meals/summary?date=2026-01-10", token)).json()
+    expect(summary.targets).toEqual(resolved.targets)
+    expect(summary.remaining.caloriesKcal).toBe(resolved.targets.calorieTargetKcal - 130)
+    expect(summary.remaining.proteinG).toBe(137)
+    expect(summary.targetReached).toBe(false)
+  })
+
+  it("keeps kcal steady between 5 kg steps and moves to maintenance at the target weight", async () => {
+    const own = await account()
+    const token = own.session.token
+    await request("/auth/update-user", token, "PUT", {
+      gender: "male",
+      birthDate: "1990-01-01",
+      heightCm: 175,
+      currentWeightKg: 80,
+      targetWeightKg: 70,
+      activityLevel: "moderately_active",
+      fitnessGoal: "weight_loss",
+    })
+    const kcal = async () => {
+      const body = await (await request("/targets", token)).json()
+      return { kcal: body.targets.calorieTargetKcal as number, reached: body.targetReached }
+    }
+    const log = (date: string, weightKg: number) =>
+      request("/health/weight", token, "PUT", { date, weightKg })
+
+    const start = await kcal()
+    expect(start.reached).toBe(false)
+
+    // Scale noise below 5 kg changes nothing.
+    await log("2026-01-01", 78)
+    expect(await kcal()).toEqual(start)
+
+    // 5 kg down: calculated again from the new weight.
+    await log("2026-01-02", 75)
+    const stepped = await kcal()
+    expect(stepped.kcal).toBeLessThan(start.kcal)
+    expect(stepped.reached).toBe(false)
+
+    // Target reached: the goal counts as maintenance, so kcal goes up.
+    await log("2026-01-03", 70)
+    const reached = await kcal()
+    expect(reached.reached).toBe(true)
+    expect(reached.kcal).toBeGreaterThan(start.kcal)
+    const summary = await (await request("/meals/summary", token)).json()
+    expect(summary.targetReached).toBe(true)
+
+    // Setting a new target weight starts over from the current weight.
+    await request("/auth/update-user", token, "PUT", { targetWeightKg: 65 })
+    expect((await kcal()).reached).toBe(false)
+  })
+
   it("upserts daily weight and keeps profile synchronized to the newest date, not the latest edit", async () => {
     const own = await account()
     const token = own.session.token
