@@ -44,7 +44,9 @@ export function nutritionView(summary: NutritionSummary | null | undefined): Nut
   if (!summary) return { status: "loading" }
   const consumedKcal = Math.round(summary.consumed.caloriesKcal)
   const { targets } = summary
-  if (!summary.profileComplete || !targets) {
+  // `profileComplete === false` (not `!profileComplete`) so a backend that has not been
+  // deployed yet, whose summary has no such flag, does not read as an incomplete profile.
+  if (summary.profileComplete === false || !targets) {
     return {
       status: "incomplete",
       consumedKcal,
@@ -53,7 +55,7 @@ export function nutritionView(summary: NutritionSummary | null | undefined): Nut
         carbs: Math.round(summary.consumed.carbsG),
         fat: Math.round(summary.consumed.fatG),
       },
-      missing: profileFieldLabels(summary.missingFields),
+      missing: profileFieldLabels(summary.missingFields ?? []),
     }
   }
   return {
@@ -62,7 +64,7 @@ export function nutritionView(summary: NutritionSummary | null | undefined): Nut
     targetKcal: targets.calorieTargetKcal,
     kcalLeft: Math.max(0, targets.calorieTargetKcal - consumedKcal),
     progress: Math.min(1, consumedKcal / targets.calorieTargetKcal),
-    targetReached: summary.targetReached,
+    targetReached: summary.targetReached === true,
     macros: [
       {
         label: "Protein",

@@ -67,6 +67,16 @@ test("shows only what was eaten while the profile is incomplete", () => {
   })
 })
 
+test("does not crash on a summary from a backend that predates the profile flags", () => {
+  const { profileComplete, missingFields, targetReached, ...old } = complete
+  void [profileComplete, missingFields, targetReached]
+  expect(nutritionView(old as never)).toMatchObject({ status: "ready", targetReached: false })
+  expect(nutritionView({ ...old, targets: null } as never)).toMatchObject({
+    status: "incomplete",
+    missing: [],
+  })
+})
+
 test("names every missing field as the Profile screen does", () => {
   expect(
     profileFieldLabels([
