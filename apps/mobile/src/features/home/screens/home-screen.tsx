@@ -173,7 +173,7 @@ export function HomeScreen() {
             <Text style={styles.cardHeaderText}>Nutrition</Text>
             {nutrition.status === "incomplete" ? (
               <>
-                <CompleteProfileCard />
+                <CompleteProfileCard missing={nutrition.missing} />
                 <Text style={styles.consumedLine}>
                   {nutrition.consumedKcal.toLocaleString("en-US")} kcal logged today
                 </Text>

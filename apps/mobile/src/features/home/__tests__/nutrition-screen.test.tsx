@@ -52,13 +52,14 @@ test("nutrition asks to complete the profile and lists what was logged", async (
   mockMeals({
     ...summary,
     profileComplete: false,
-    missingFields: ["gender"],
+    missingFields: ["gender", "activityLevel"],
     targetReached: false,
     targets: null,
     remaining: null,
   })
   const screen = await renderScreen()
   expect(screen.getByText("Complete your profile to see your customized dashboard.")).toBeTruthy()
+  expect(screen.getByText("Still needed: Sex / gender, Daily activity")).toBeTruthy()
   expect(screen.getByText("Logged today")).toBeTruthy()
   expect(screen.getByText("42 g")).toBeTruthy()
   expect(screen.queryByText("Daily target")).toBeNull()

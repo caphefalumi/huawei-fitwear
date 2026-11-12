@@ -102,6 +102,7 @@ test("home says when the target weight was reached", async () => {
 test("home asks to complete the profile instead of showing targets", async () => {
   const screen = await renderHome(incompleteSummary)
   expect(screen.getByText("Complete your profile to see your customized dashboard.")).toBeTruthy()
+  expect(screen.getByText("Still needed: Height, Weight")).toBeTruthy()
   expect(screen.getByText("650 kcal logged today")).toBeTruthy()
   expect(screen.queryByText(/kcal left/)).toBeNull()
 

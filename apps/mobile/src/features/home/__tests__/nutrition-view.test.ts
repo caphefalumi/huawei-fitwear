@@ -1,6 +1,6 @@
 import type { NutritionSummary } from "@/features/meals"
 
-import { nutritionView } from "../utils/nutrition-view"
+import { nutritionView, profileFieldLabels } from "../utils/nutrition-view"
 
 const complete: NutritionSummary = {
   targetDate: "2026-11-12",
@@ -63,5 +63,19 @@ test("shows only what was eaten while the profile is incomplete", () => {
     status: "incomplete",
     consumedKcal: 650,
     consumed: { protein: 42, carbs: 80, fat: 20 },
+    missing: ["Height", "Weight"],
   })
+})
+
+test("names every missing field as the Profile screen does", () => {
+  expect(
+    profileFieldLabels([
+      "gender",
+      "birthDate",
+      "heightCm",
+      "currentWeightKg",
+      "activityLevel",
+      "fitnessGoal",
+    ]),
+  ).toEqual(["Sex / gender", "Birthdate", "Height", "Weight", "Daily activity", "Goal / target"])
 })

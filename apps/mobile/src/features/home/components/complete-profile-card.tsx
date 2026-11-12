@@ -4,14 +4,20 @@ import { StyleSheet, Text, View } from "react-native"
 import { Button } from "@/components/ui"
 import { Palette as C } from "@/theme"
 
-/** Shown instead of targets while the profile is missing details a target needs. */
-export function CompleteProfileCard() {
+/**
+ * Shown instead of targets while the profile is missing details a target needs.
+ * `missing` names those details as the Profile screen does.
+ */
+export function CompleteProfileCard({ missing }: { missing: string[] }) {
   return (
     <View style={styles.card}>
       <Text style={styles.title} accessibilityRole="header">
         Complete profile
       </Text>
       <Text style={styles.body}>Complete your profile to see your customized dashboard.</Text>
+      {missing.length > 0 ? (
+        <Text style={styles.body}>Still needed: {missing.join(", ")}</Text>
+      ) : null}
       <Button
         label="Complete profile"
         onPress={() => router.push("/profile")}

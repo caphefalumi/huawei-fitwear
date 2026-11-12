@@ -81,7 +81,7 @@ export function NutritionScreen() {
         </>
       ) : nutrition.status === "incomplete" ? (
         <>
-          <CompleteProfileCard />
+          <CompleteProfileCard missing={nutrition.missing} />
           <Card>
             <Text style={styles.cardTitle}>Logged today</Text>
             <View style={styles.stats}>
