@@ -13,6 +13,7 @@ env:
   CI: "true"
   EXPO_NO_TELEMETRY: "1"
   EXPO_NONINTERACTIVE: "1"
+  APP_NAME: VoocHealth
 
 jobs:
   build:
@@ -86,8 +87,8 @@ jobs:
         working-directory: apps/mobile
         run: >-
           xcodebuild
-          -workspace ios/mobile.xcworkspace
-          -scheme mobile
+          -workspace "ios/$APP_NAME.xcworkspace"
+          -scheme "$APP_NAME"
           -configuration Debug
           -sdk iphonesimulator
           -destination 'generic/platform=iOS Simulator'
@@ -100,7 +101,7 @@ jobs:
         working-directory: apps/mobile
         run: >-
           ditto -c -k --sequesterRsrc --keepParent
-          build/ios/Build/Products/Debug-iphonesimulator/mobile.app
+          "build/ios/Build/Products/Debug-iphonesimulator/$APP_NAME.app"
           build/ios/mobile-ios-simulator.zip
 
       # Shared: one upload step driven by the matrix
