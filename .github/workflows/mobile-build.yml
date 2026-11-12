@@ -26,20 +26,20 @@ jobs:
           - platform: android
             os: ubuntu-latest
             timeout: 45
+            artifact: fitwear-android-debug-apk
+            path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
           - platform: ios
             os: macos-latest
             timeout: 60
+            artifact: fitwear-ios-simulator-app
+            path: apps/mobile/build/ios/mobile-ios-simulator.zip
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
 
-      - name: Generate native project
-        if: matrix.platform == 'android'
-        working-directory: apps/mobile
-        run: bunx expo prebuild --platform android --no-install
-
+      # Android toolchain
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         if: matrix.platform == 'android'
         with:
@@ -52,23 +52,29 @@ jobs:
         with:
           packages: "platform-tools cmake;3.31.6"
 
+      # Shared: one prebuild step driven by the matrix
+      - name: Generate native project
+        working-directory: apps/mobile
+        run: bunx expo prebuild --platform ${{ matrix.platform }} --no-install
+
+      # Android build
       - name: Build debug APK
         if: matrix.platform == 'android'
         working-directory: apps/mobile/android
-        run: ./gradlew --build-cache assembleDebug
+        run: >-
+          ./gradlew
+          --build-cache
+          -PreactNativeArchitectures=arm64-v8a,x86_64
+          assembleDebug
 
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        if: matrix.platform == 'android'
-        with:
-          name: fitwear-android-debug-apk
-          path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Generate native project
+      # iOS build
+      - name: Cache CocoaPods
         if: matrix.platform == 'ios'
-        working-directory: apps/mobile
-        run: bunx expo prebuild --platform ios --no-install
+        uses: actions/cache@v4 # pin to a commit SHA like your other actions
+        with:
+          path: apps/mobile/ios/Pods
+          key: pods-${{ runner.os }}-${{ hashFiles('bun.lock', 'apps/mobile/app.json') }}
+          restore-keys: pods-${{ runner.os }}-
 
       - name: Install CocoaPods dependencies
         if: matrix.platform == 'ios'
@@ -97,10 +103,11 @@ jobs:
           build/ios/Build/Products/Debug-iphonesimulator/mobile.app
           build/ios/mobile-ios-simulator.zip
 
+      # Shared: one upload step driven by the matrix
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        if: matrix.platform == 'ios'
         with:
-          name: fitwear-ios-simulator-app
-          path: apps/mobile/build/ios/mobile-ios-simulator.zip
+          name: ${{ matrix.artifact }}-${{ github.sha }}
+          path: ${{ matrix.path }}
           if-no-files-found: error
           retention-days: 7
+          compression-level: 0
