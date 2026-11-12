@@ -1,3 +1,13 @@
+name: Mobile Build
+
+on: workflow_dispatch
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-build-${{ github.ref }}
+  cancel-in-progress: false
 env:
   CI: "true"
   EXPO_NO_TELEMETRY: "1"
