@@ -31,7 +31,7 @@ const createBody = t.Object({
   image: t.Optional(
     t.Object({
       data: t.String({ minLength: 1, maxLength: 8000000 }),
-      mimeType: t.Union([t.Literal("image/jpeg"), t.Literal("image/png")]),
+      mimeType: t.Union([t.Literal("image/jpeg"), t.Literal("image/png"), t.Literal("image/webp")]),
     }),
   ),
   scaleReferenceType: t.Optional(

@@ -17,9 +17,22 @@ jest.mock("expo-camera", () => {
   return { CameraView: MockCameraView, useCameraPermissions: jest.fn() }
 })
 jest.mock("expo-router", () => ({ router: { push: jest.fn(), back: jest.fn() } }))
+jest.mock("expo-image-manipulator", () => ({
+  SaveFormat: { WEBP: "webp" },
+  ImageManipulator: {
+    manipulate: () => ({
+      renderAsync: async () => ({
+        saveAsync: async () => ({
+          uri: "file://meal.webp",
+          base64: "UklGRh4AAABXRUJQVlA4TBEAAAAvAAAAAAfQ//73v/+BiOh/AAA=",
+        }),
+      }),
+    }),
+  },
+}))
 jest.mock("@/features/camera", () => ({
   pickImage: jest.fn(),
-  validatePickedImage: jest.requireActual("@/features/camera/api/image-picker").validatePickedImage,
+  prepareMealImage: jest.requireActual("@/features/camera/api/image-picker").prepareMealImage,
 }))
 jest.mock("@/lib/api/client", () => ({
   ...jest.requireActual("@/lib/api/client"),
@@ -90,18 +103,18 @@ test("the tutorial stays hidden once it has been seen", async () => {
 
 test("shutter captures photo -> preview shows and Analyze enables", async () => {
   mockMeals(true)
-  mockTakePicture.mockResolvedValueOnce({ uri: "file://meal.jpg", base64: "/9j/abc" })
+  mockTakePicture.mockResolvedValueOnce({ uri: "file://meal.jpg" })
   const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
   expect(screen.getByLabelText("Analyze photo").props.accessibilityState.disabled).toBe(true)
   await fireEvent.press(screen.getByLabelText("Take meal photo"))
   await screen.findByLabelText("Selected meal photo")
-  expect(mockTakePicture).toHaveBeenCalledWith({ base64: true, quality: 0.7 })
+  expect(mockTakePicture).toHaveBeenCalledWith({ quality: 1 })
   expect(screen.getByLabelText("Analyze photo").props.accessibilityState.disabled).toBe(false)
 })
 
 test("retake returns to live camera", async () => {
   mockMeals(true)
-  mockTakePicture.mockResolvedValueOnce({ uri: "file://meal.jpg", base64: "/9j/abc" })
+  mockTakePicture.mockResolvedValueOnce({ uri: "file://meal.jpg" })
   const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
   await fireEvent.press(screen.getByLabelText("Take meal photo"))
   await screen.findByLabelText("Selected meal photo")
@@ -120,7 +133,7 @@ test("capture failure shows error and library path still works", async () => {
   jest.mocked(pickImage).mockResolvedValueOnce({
     uri: "file://meal.jpg",
     base64: "/9j/abc",
-    mimeType: "image/jpeg",
+    mimeType: "image/webp",
   })
   await fireEvent.press(screen.getByLabelText("Choose from library"))
   expect(jest.mocked(pickImage)).toHaveBeenLastCalledWith(false)
@@ -138,7 +151,7 @@ test("denied permission shows request button and library fallback", async () => 
   jest.mocked(pickImage).mockResolvedValueOnce({
     uri: "file://meal.jpg",
     base64: "/9j/abc",
-    mimeType: "image/jpeg",
+    mimeType: "image/webp",
   })
   await fireEvent.press(screen.getByLabelText("Choose from library"))
   await screen.findByLabelText("Selected meal photo")

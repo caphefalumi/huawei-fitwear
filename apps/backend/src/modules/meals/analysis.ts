@@ -9,7 +9,7 @@ import { Meals } from "./service"
 
 const analysisBody = t.Object({
   image: t.String({ minLength: 16, maxLength: 8_000_000, pattern: "^[A-Za-z0-9+/]+={0,2}$" }),
-  mimeType: t.Union([t.Literal("image/jpeg"), t.Literal("image/png")]),
+  mimeType: t.Union([t.Literal("image/jpeg"), t.Literal("image/png"), t.Literal("image/webp")]),
   description: t.Optional(t.String({ maxLength: 2000 })),
 })
 

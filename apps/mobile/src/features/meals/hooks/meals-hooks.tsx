@@ -48,7 +48,7 @@ export type FoodEntry = {
 }
 export type MealEstimate = Macros & { kcal: number }
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack"
-export type MealImage = { data: string; mimeType: "image/jpeg" | "image/png" }
+export type MealImage = { data: string; mimeType: "image/jpeg" | "image/png" | "image/webp" }
 export type MealLog = {
   id: string
   name: string

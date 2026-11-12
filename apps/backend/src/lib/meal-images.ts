@@ -4,11 +4,14 @@ import { status } from "elysia"
 
 import { getMealImages } from "../db"
 
-export type MealImage = { data: string; mimeType: "image/jpeg" | "image/png" }
+export type MealImage = { data: string; mimeType: "image/jpeg" | "image/png" | "image/webp" }
 
 export function decodeMealImage(image: MealImage): Uint8Array {
   if (!image.data || image.data.length > 8_000_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(image.data)) {
-    throw status(400, { success: false, message: "Provide a JPEG or PNG image smaller than 6 MB" })
+    throw status(400, {
+      success: false,
+      message: "Provide a JPEG, PNG or WebP image smaller than 6 MB",
+    })
   }
   let raw: string
   try {
@@ -18,10 +21,15 @@ export function decodeMealImage(image: MealImage): Uint8Array {
   }
   const jpeg = raw.charCodeAt(0) === 255 && raw.charCodeAt(1) === 216 && raw.charCodeAt(2) === 255
   const png = raw.slice(0, 8) === "\x89PNG\r\n\x1a\n"
-  if ((image.mimeType === "image/jpeg" && !jpeg) || (image.mimeType === "image/png" && !png)) {
+  const webp = raw.slice(0, 4) === "RIFF" && raw.slice(8, 12) === "WEBP"
+  if (
+    (image.mimeType === "image/jpeg" && !jpeg) ||
+    (image.mimeType === "image/png" && !png) ||
+    (image.mimeType === "image/webp" && !webp)
+  ) {
     throw status(400, {
       success: false,
-      message: "Image bytes do not match the selected JPEG or PNG format",
+      message: "Image bytes do not match the selected JPEG, PNG or WebP format",
     })
   }
   return Uint8Array.from(raw, (character) => character.charCodeAt(0))
@@ -80,7 +88,10 @@ export async function readMealImage(userId: string, mealId: string): Promise<{ i
   const object = await bucket.get(`${userId}/${mealId}`)
   if (!object) throw status(404, { success: false, message: "Meal photo not found" })
   const mimeType = object.httpMetadata?.contentType
-  if (object.size > 6_000_000 || (mimeType !== "image/jpeg" && mimeType !== "image/png")) {
+  if (
+    object.size > 6_000_000 ||
+    (mimeType !== "image/jpeg" && mimeType !== "image/png" && mimeType !== "image/webp")
+  ) {
     throw status(502, { success: false, message: "Stored meal photo is invalid" })
   }
   const base64 = Buffer.from(await object.arrayBuffer()).toString("base64")
