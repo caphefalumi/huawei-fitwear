@@ -36,7 +36,8 @@ apps/watch/
 
 ArkTS files under `entry/src` are formatted on pushes to `main` with the pinned
 `oxk` formatter and `.github/arkts-format.json`. The formatter runs outside the
-watch workspace; Huawei Code Linter configuration remains in `code-linter.json5`.
+watch workspace. Pull requests lint production ArkTS with the open-source `oxk`
+linter and `.github/arkts-lint.json`; Huawei's `code-linter.json5` is not used in CI.
 
 ## Getting Started
 

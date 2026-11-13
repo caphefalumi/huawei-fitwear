@@ -159,13 +159,12 @@ test.each(["sign-in", "sign-up", "request reset", "verify reset", "complete rese
     }
     onlineManager.setOnline(false)
     request.mockRejectedValue(new AxiosError("Network Error", "ERR_NETWORK"))
-    let failure: unknown
     await act(async () => {
-      void actions[action]().catch((error: unknown) => {
-        failure = error
-      })
+      await expect(actions[action]()).rejects.toMatchObject({ status: 0, code: "NETWORK_ERROR" })
+      const { promise, resolve } = Promise.withResolvers<void>()
+      setTimeout(resolve, 0)
+      await promise
     })
-    await waitFor(() => expect(failure).toMatchObject({ status: 0, code: "NETWORK_ERROR" }))
     expect(result.current.pending).toBe(false)
     expect(result.current.user).toBeNull()
     expect(saved.setToken).not.toHaveBeenCalled()
