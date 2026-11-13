@@ -43,6 +43,14 @@ apps/watch/
    - Start a Wearable Emulator in **Tools > Device Manager**, or plug in a Huawei smartwatch with USB/Wi-Fi debugging enabled.
    - Click the green **Run** button or press `Shift + F10`.
 
+### Bluetooth demo
+
+On the watch, open **BLE Sync Demo**, grant Bluetooth access, and tap **Start Stream**.
+In a mobile development build with Bluetooth enabled, open **BLE Sync** and connect
+to the watch. The phone requests a 185-byte ATT MTU; smaller negotiated MTUs can
+prevent IMU packets from fitting in a notification. The watch stops advertising
+after two minutes without a connection; restart the stream to advertise again.
+
 ## Wearable Design Considerations
 
 - **Screen Constraints**: Wearable displays are typically circular or compact square formats. Ensure interactive components utilize relative or center-aligned positioning.

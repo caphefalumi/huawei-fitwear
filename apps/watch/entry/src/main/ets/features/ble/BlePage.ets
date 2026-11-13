@@ -1,7 +1,7 @@
 import { abilityAccessCtrl, common, Permissions } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { router } from '@kit.ArkUI';
-import { BleGattServerService } from './BleGattServerService';
+import { BleGattServerListener, BleGattServerService } from './BleGattServerService';
 
 @Entry
 @ComponentV2
@@ -13,7 +13,7 @@ struct BlePage {
   @Local lastSent: string = '—';
   @Local draftText: string = 'Hello from Watch!';
 
-  private bleService: BleGattServerService = new BleGattServerService({
+  private bleListener: BleGattServerListener = {
     onStatus: (text: string): void => {
       this.statusText = text;
       this.serverRunning = this.bleService.isRunning();
@@ -24,7 +24,8 @@ struct BlePage {
     onReceived: (text: string): void => {
       this.lastReceived = text;
     }
-  });
+  };
+  private bleService: BleGattServerService = new BleGattServerService(this.bleListener);
 
   aboutToDisappear(): void {
     this.bleService.stop();

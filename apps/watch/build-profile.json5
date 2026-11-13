@@ -1,6 +1,20 @@
 {
   "app": {
-    "signingConfigs": [],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "C:\\Users\\Toan\\.ohos\\config\\default_watch_cm8fv098X_W0sDN1Osvz_y5YZUzDZKCeycQEh0GM-O8=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001BDAB27423CA1F1792A11E914ACA653B61B553AD2DB0DDBEAD76884BCBC617A38F15A4B105DC5929",
+          "profile": "C:\\Users\\Toan\\.ohos\\config\\default_watch_cm8fv098X_W0sDN1Osvz_y5YZUzDZKCeycQEh0GM-O8=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:\\Users\\Toan\\.ohos\\config\\default_watch_cm8fv098X_W0sDN1Osvz_y5YZUzDZKCeycQEh0GM-O8=.p12",
+          "storePassword": "0000001B324331CD1B8D2300E7D9A51F81232C655947B08439FBB92B1B918D7208CC7E29D8BE55F924A440"
+        }
+      }
+    ],
     "products": [
       {
         "name": "default",

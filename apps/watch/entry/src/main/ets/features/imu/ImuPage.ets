@@ -1,5 +1,5 @@
 import { router } from '@kit.ArkUI';
-import { ImuSensorService } from './ImuSensorService';
+import { ImuSensorListener, ImuSensorService } from './ImuSensorService';
 
 /** UI refresh stride: 100 ms samples → ~2 Hz text updates (wearable-friendly). */
 const UI_SAMPLE_STRIDE: number = 5;
@@ -14,7 +14,7 @@ struct ImuPage {
   @Local accelMag: string = '—';
   @Local sampleCount: number = 0;
 
-  private imuService: ImuSensorService = new ImuSensorService({
+  private imuListener: ImuSensorListener = {
     onStatus: (text: string): void => {
       this.statusText = text;
       this.running = this.imuService.isRunning();
@@ -33,7 +33,8 @@ struct ImuPage {
       }
       this.gyroText = `x ${x.toFixed(2)}   y ${y.toFixed(2)}   z ${z.toFixed(2)}`;
     }
-  });
+  };
+  private imuService: ImuSensorService = new ImuSensorService(this.imuListener);
 
   aboutToDisappear(): void {
     this.imuService.stop();

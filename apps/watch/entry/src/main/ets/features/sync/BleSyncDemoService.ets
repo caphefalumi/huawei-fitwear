@@ -1,6 +1,6 @@
 import { common } from '@kit.AbilityKit';
-import { BleGattServerService } from '../ble/BleGattServerService';
-import { ImuSensorService } from '../imu/ImuSensorService';
+import { BleGattServerListener, BleGattServerService } from '../ble/BleGattServerService';
+import { ImuSensorListener, ImuSensorService } from '../imu/ImuSensorService';
 
 /** IMU streaming interval in ns — 200 ms between hardware samples. */
 const IMU_INTERVAL_NS: number = 200_000_000;
@@ -9,15 +9,15 @@ const IMU_INTERVAL_NS: number = 200_000_000;
 const STREAM_STRIDE: number = 3;
 
 export interface BleSyncDemoListener {
-  onBleStatus(text: string): void;
-  onBleConnected(deviceId: string): void;
-  onBleDisconnected(): void;
-  onImuStatus(text: string): void;
-  onImuSample(ax: number, ay: number, az: number, mag: number,
-    gx: number, gy: number, gz: number, count: number): void;
-  onMessageFromPhone(text: string): void;
-  onPacketSent(payloadBytes: number): void;
-  onError(text: string): void;
+  onBleStatus: (text: string) => void;
+  onBleConnected: (deviceId: string) => void;
+  onBleDisconnected: () => void;
+  onImuStatus: (text: string) => void;
+  onImuSample: (ax: number, ay: number, az: number, mag: number,
+    gx: number, gy: number, gz: number, count: number) => void;
+  onMessageFromPhone: (text: string) => void;
+  onPacketSent: (payloadBytes: number) => void;
+  onError: (text: string) => void;
 }
 
 /** Strictly-typed IMU packet model conforming to ArkTS object literal requirements. */
@@ -69,7 +69,7 @@ export class BleSyncDemoService {
   constructor(listener: BleSyncDemoListener) {
     this.listener = listener;
 
-    this.bleService = new BleGattServerService({
+    const bleListener: BleGattServerListener = {
       onStatus: (text: string): void => {
         this.listener.onBleStatus(text);
       },
@@ -85,9 +85,10 @@ export class BleSyncDemoService {
       onReceived: (text: string): void => {
         this.listener.onMessageFromPhone(text);
       },
-    });
+    };
+    this.bleService = new BleGattServerService(bleListener);
 
-    this.imuService = new ImuSensorService({
+    const imuListener: ImuSensorListener = {
       onStatus: (text: string): void => {
         this.listener.onImuStatus(text);
       },
@@ -109,7 +110,8 @@ export class BleSyncDemoService {
         this.latestGy = y;
         this.latestGz = z;
       },
-    });
+    };
+    this.imuService = new ImuSensorService(imuListener);
   }
 
   isRunning(): boolean {
