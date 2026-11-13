@@ -5,7 +5,7 @@ import { window } from '@kit.ArkUI';
 const DOMAIN = 0x0000;
 
 export default class EntryAbility extends UIAbility {
-  onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+  onCreate(_want: Want, _launchParam: AbilityConstant.LaunchParam): void {
     try {
       this.context
         .getApplicationContext()
