@@ -59,6 +59,7 @@ bun lint                     # Lint mobile and backend workspaces
 - **Installing packages**: ALWAYS use `npx expo install <package>` or `bunx expo install <package>` instead of direct package manager add. This resolves Expo SDK-compatible versions.
 - **Routing**: Use **Expo Router**. Route screens live in `apps/mobile/app/` as thin route files. Keep feature logic in `src/features/<feature>/`, not in route files.
 - **Navigation hooks**: Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
+- **Async React tests**: Await each state-changing async action and its rejection inside `await act(async () => { ... })`; never fire-and-forget an action inside `act` and wait for its result afterward. Await scheduled updates before leaving the boundary when necessary, assert the resulting state, and inspect test output for `act(...)` warnings rather than suppressing them.
 - **Pre-commit verification**:
   ```bash
   cd apps/mobile
