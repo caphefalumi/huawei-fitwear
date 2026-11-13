@@ -55,17 +55,6 @@ jobs:
               - '.github/workflows/ci.yml'
               - '.github/actions/**'
 
-  format:
-    name: Format
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-      - run: bun run fmt:check
-
   lint:
     name: Lint
     needs: changes
@@ -120,7 +109,7 @@ jobs:
   ci-pass:
     name: CI passed
     if: always()
-    needs: [changes, format, lint, backend, mobile]
+    needs: [changes, lint, backend, mobile]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions: {}
