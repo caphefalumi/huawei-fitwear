@@ -1,7 +1,7 @@
 import { abilityAccessCtrl, common, Permissions } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { router } from '@kit.ArkUI';
-import { BleSyncDemoService } from './BleSyncDemoService';
+import { BleSyncDemoListener, BleSyncDemoService } from './BleSyncDemoService';
 
 /** Redraw the live numbers at most this often (ms) to stay wearable-friendly. */
 const UI_THROTTLE_MS: number = 300;
@@ -37,7 +37,7 @@ struct BleSyncDemoPage {
   private pendingGz: number = 0;
   private lastUiMs: number = 0;
 
-  private service: BleSyncDemoService = new BleSyncDemoService({
+  private listener: BleSyncDemoListener = {
     onBleStatus: (text: string): void => {
       this.bleStatus = text;
     },
@@ -81,7 +81,8 @@ struct BleSyncDemoPage {
     onError: (text: string): void => {
       this.bleStatus = `Err: ${text}`;
     },
-  });
+  };
+  private service: BleSyncDemoService = new BleSyncDemoService(this.listener);
 
   aboutToDisappear(): void {
     this.service.stop();

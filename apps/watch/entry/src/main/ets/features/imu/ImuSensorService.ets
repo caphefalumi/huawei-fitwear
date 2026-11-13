@@ -18,9 +18,9 @@ function assertMagnitude(): void {
 assertMagnitude();
 
 export interface ImuSensorListener {
-  onStatus(text: string): void;
-  onAccelerometer(x: number, y: number, z: number, magnitude: number, sampleCount: number): void;
-  onGyroscope(x: number, y: number, z: number): void;
+  onStatus: (text: string) => void;
+  onAccelerometer: (x: number, y: number, z: number, magnitude: number, sampleCount: number) => void;
+  onGyroscope: (x: number, y: number, z: number) => void;
 }
 
 /** Subscribes to accelerometer and gyroscope; reports samples via listener. */

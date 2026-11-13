@@ -37,10 +37,10 @@ const ADV_TIMEOUT_MS: number = 120_000;
 const HANDSHAKE_TIMEOUT_MS: number = 10_000;
 
 export interface BleGattServerListener {
-  onStatus(text: string): void;
+  onStatus: (text: string) => void;
   /** Non-empty deviceId when connected; empty string when disconnected. */
-  onConnection(deviceId: string): void;
-  onReceived(text: string): void;
+  onConnection: (deviceId: string) => void;
+  onReceived: (text: string) => void;
 }
 
 const textEncoder: util.TextEncoder = new util.TextEncoder();
@@ -340,11 +340,11 @@ export class BleGattServerService {
     }
   };
 
-  private onMtuChange = (data: ble.MtuChangeParam): void => {
-    this.negotiatedMtu = data.mtu;
-    hilog.info(DOMAIN, TAG, 'MTU updated: dev %{public}s, mtu %{public}d', data.deviceId, data.mtu);
-    if (data.mtu < 120) {
-      this.listener.onStatus(`MTU: ${data.mtu}B`);
+  private onMtuChange = (mtu: number): void => {
+    this.negotiatedMtu = mtu;
+    hilog.info(DOMAIN, TAG, 'MTU updated: %{public}d', mtu);
+    if (mtu < 120) {
+      this.listener.onStatus(`MTU: ${mtu}B`);
     }
   };
 
