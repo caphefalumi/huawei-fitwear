@@ -178,7 +178,7 @@ bun run lint
 
 ### Android E2E in GitHub Actions
 
-The **Mobile E2E** workflow runs only on `workflow_dispatch` and the daily `schedule` at **01:00 Asia/Ho_Chi_Minh**. There are no E2E pull request or push triggers, and manual dispatch must target `main`. The separate Mobile CI workflow continues handling Jest and typechecking on pull requests.
+The **Mobile E2E** workflow runs on `workflow_dispatch`, the daily `schedule` at **01:00 Asia/Ho_Chi_Minh**, and pushes to `feat/build-mobile` while that branch is verifying the release build. There are no E2E pull request triggers. Manual dispatch must target `main` or `feat/build-mobile`. The separate Mobile CI workflow continues handling Jest and typechecking on pull requests.
 
 Every E2E run uses an **x86_64 Android release APK matching the checked-out app inputs and staging API URL**, then installs it on an API 34 AOSP Pixel 6 emulator with KVM. A GitHub Actions cache is keyed by tracked mobile application sources, dependency manifests/lockfile, workflow build configuration, and staging API URL. **Changes only to Maestro flows, mobile tests, or README content reuse the cached APK** without rerunning Expo/Gradle. Changes to app code, dependencies, native configuration, or API URL produce a cache miss and a fresh build. A missing or evicted cache also triggers a fresh build, never a fallback to an unrelated APK. A manual run can set `force_rebuild=true` to bypass the cache. Each workflow run uploads its selected APK as a same-run artifact for the emulator job. Native Gradle minification and Sentry upload are disabled for fresh builds. Maestro 2.12.0 runs the top-level flows in `apps/mobile/e2e/`. Place shared subflows in nested directories. These tests do not require Google services.
 
@@ -240,7 +240,7 @@ Password fields on login and sign-up have accessible Show/Hide icon controls; to
 
 Save, add, and delete actions keep their labels unchanged while pending. Shared sheet primary actions show a spinner, duplicate submissions are blocked, and failures remain visible. Profile health fields show skeletons while loading and a retry banner on error.
 
-The Profile tab groups identity, editable health details, plan, conditional period recovery, and account actions. Period recovery requires explicit opt-in; changing sex away from Female prompts before removing its settings. Account & data shows the signed-in email and a confirmed account deletion flow. Failed deletion keeps the local session so the user can retry; sign-out clears local state immediately.
+The Profile tab groups identity, editable health details, plan, conditional period recovery, and account actions. Health and plan sections appear without entrance animations, including when system animations are disabled. Period recovery requires explicit opt-in; changing sex away from Female prompts before removing its settings. Account & data shows the signed-in email and a confirmed account deletion flow. Failed deletion keeps the local session so the user can retry; sign-out clears local state immediately.
 
 ### Accessibility
 

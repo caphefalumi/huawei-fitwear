@@ -1,10 +1,14 @@
 name: Mobile E2E
 
-# No pull_request, push, or merge_group triggers: E2E is manual and nightly only.
+# No pull_request or merge_group triggers. Nightly and manual runs stay on main.
+# Push is limited to the release-build branch so that fix can be proven before merge.
 on:
   schedule:
     - cron: "0 1 * * *"
       timezone: Asia/Ho_Chi_Minh
+  push:
+    branches:
+      - feat/build-mobile
   workflow_dispatch:
     inputs:
       include_tags:
@@ -40,14 +44,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Restrict E2E dispatch to main
+      - name: Restrict E2E dispatch to trusted branches
         env:
           REF: ${{ github.ref }}
         run: |
-          if [[ "$REF" != "refs/heads/main" ]]; then
-            echo "::error::Mobile E2E runs must use main (trusted code with staging credentials)."
-            exit 1
-          fi
+          # Staging credentials stay on trusted refs. feat/build-mobile is included
+          # so the release-build fix can be proven before it merges to main.
+          case "$REF" in
+            refs/heads/main|refs/heads/feat/build-mobile)
+              ;;
+            *)
+              echo "::error::Mobile E2E runs must use main (trusted code with staging credentials)."
+              exit 1
+              ;;
+          esac
 
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

@@ -1,6 +1,12 @@
 name: Mobile Build
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  # Manual dispatch is the normal entry point. This branch also runs on push
+  # so the release-mode fix can be verified before it merges.
+  push:
+    branches:
+      - feat/build-mobile
 
 permissions:
   contents: read
@@ -8,16 +14,19 @@ permissions:
 concurrency:
   group: mobile-build-${{ github.ref }}
   cancel-in-progress: false
-
 env:
   CI: "true"
   EXPO_NO_TELEMETRY: "1"
   EXPO_NONINTERACTIVE: "1"
-  APP_NAME: VoocHealth
+  APP_NAME: VoocHealth # must match "name" in app.json
+  # Release bundling uploads source maps only when this secret exists.
+  # An empty token skips upload so unsigned CI archives still succeed.
+  SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+  SENTRY_DISABLE_AUTO_UPLOAD: ${{ secrets.SENTRY_AUTH_TOKEN == '' && 'true' || 'false' }}
 
 jobs:
   build:
-    name: Build ${{ matrix.platform }}
+    name: Release ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: ${{ matrix.timeout }}
     strategy:
@@ -26,21 +35,20 @@ jobs:
         include:
           - platform: android
             os: ubuntu-latest
-            timeout: 45
-            artifact: fitwear-android-debug-apk
-            path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            timeout: 60
+            artifact: app-release.apk
+            path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
           - platform: ios
             os: macos-latest
-            timeout: 60
-            artifact: fitwear-ios-simulator-app
-            path: apps/mobile/build/ios/mobile-ios-simulator.zip
+            timeout: 75
+            artifact: app-release.ipa
+            path: apps/mobile/build/ios/app-release.ipa
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
 
-      # Android toolchain
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         if: matrix.platform == 'android'
         with:
@@ -53,61 +61,54 @@ jobs:
         with:
           packages: "platform-tools cmake;3.31.6"
 
-      # Shared: one prebuild step driven by the matrix
+      - name: Note Sentry source map upload
+        run: |
+          if [[ "$SENTRY_DISABLE_AUTO_UPLOAD" == "true" ]]; then
+            echo "Sentry source map upload is disabled. Add the SENTRY_AUTH_TOKEN repository secret to upload release source maps."
+          else
+            echo "Sentry source map upload is enabled."
+          fi
+
       - name: Generate native project
         working-directory: apps/mobile
         run: bunx expo prebuild --platform ${{ matrix.platform }} --no-install
 
-      # Android build
-      - name: Build debug APK
+      - name: Build release APK
         if: matrix.platform == 'android'
         working-directory: apps/mobile/android
-        run: >-
-          ./gradlew
-          --build-cache
-          -PreactNativeArchitectures=arm64-v8a,x86_64
-          assembleDebug
-
-      # iOS build
-      - name: Cache CocoaPods
-        if: matrix.platform == 'ios'
-        uses: actions/cache@v4 # pin to a commit SHA like your other actions
-        with:
-          path: apps/mobile/ios/Pods
-          key: pods-${{ runner.os }}-${{ hashFiles('bun.lock', 'apps/mobile/app.json') }}
-          restore-keys: pods-${{ runner.os }}-
+        run: ./gradlew --build-cache assembleRelease
 
       - name: Install CocoaPods dependencies
         if: matrix.platform == 'ios'
         working-directory: apps/mobile/ios
         run: pod install
 
-      - name: Build for iOS Simulator
+      - name: Archive iOS app (unsigned)
         if: matrix.platform == 'ios'
         working-directory: apps/mobile
         run: >-
-          xcodebuild
+          xcodebuild archive
           -workspace "ios/$APP_NAME.xcworkspace"
           -scheme "$APP_NAME"
-          -configuration Debug
-          -sdk iphonesimulator
-          -destination 'generic/platform=iOS Simulator'
-          -derivedDataPath build/ios
+          -configuration Release
+          -sdk iphoneos
+          -destination 'generic/platform=iOS'
+          -archivePath build/ios/app.xcarchive
           CODE_SIGNING_ALLOWED=NO
-          build
+          CODE_SIGNING_REQUIRED=NO
+          CODE_SIGN_IDENTITY=""
 
-      - name: Package app
+      - name: Package IPA
         if: matrix.platform == 'ios'
-        working-directory: apps/mobile
-        run: >-
-          ditto -c -k --sequesterRsrc --keepParent
-          "build/ios/Build/Products/Debug-iphonesimulator/$APP_NAME.app"
-          build/ios/mobile-ios-simulator.zip
+        working-directory: apps/mobile/build/ios
+        run: |
+          mkdir Payload
+          cp -R "app.xcarchive/Products/Applications/$APP_NAME.app" Payload/
+          zip -qry app-release.ipa Payload
 
-      # Shared: one upload step driven by the matrix
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: ${{ matrix.artifact }}-${{ github.sha }}
+          name: ${{ matrix.artifact }}
           path: ${{ matrix.path }}
           if-no-files-found: error
           retention-days: 7

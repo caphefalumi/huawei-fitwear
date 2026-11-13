@@ -141,7 +141,7 @@ export function ProfileScreen() {
         </View>
       </Animated.View>
 
-      <Animated.View entering={FadeInUp.delay(50).duration(220)}>
+      <View>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Profile overview</Text>
           <ProfileRow
@@ -158,9 +158,9 @@ export function ProfileScreen() {
           />
           <ProfileRow label="Weight" value={weightLabel} onPress={() => setOpenSheet("weight")} />
         </View>
-      </Animated.View>
+      </View>
 
-      <Animated.View entering={FadeInUp.delay(100).duration(220)}>
+      <View>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Refine your plan</Text>
           <ProfileRow
@@ -214,7 +214,7 @@ export function ProfileScreen() {
             onPress={() => router.push("/injuries")}
           />
         </View>
-      </Animated.View>
+      </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Account</Text>

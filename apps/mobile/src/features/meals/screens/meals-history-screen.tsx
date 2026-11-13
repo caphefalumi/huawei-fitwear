@@ -2,7 +2,6 @@ import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useMemo, useState } from "react"
 import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
-import Animated, { FadeInUp } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/ui/pressable"
@@ -101,32 +100,29 @@ export function MealsHistoryScreen() {
       {items.length === 0 ? (
         <Text style={styles.empty}>No meals match “{query.trim()}”.</Text>
       ) : (
-        items.map((item, index) => (
-          <Animated.View
+        items.map((item) => (
+          <Pressable
             key={item.id}
-            entering={index < 4 ? FadeInUp.delay(index * 50).duration(220) : undefined}
+            style={styles.card}
+            onPress={() => router.push(`/meal?log=${item.id}`)}
           >
-            <Pressable style={styles.card} onPress={() => router.push(`/meal?log=${item.id}`)}>
-              <Image
-                source={require("@/assets/images/meals/meal-photo.png")}
-                style={styles.photo}
-                contentFit="cover"
-              />
-              <View style={styles.copy}>
-                <Text style={styles.name} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <Text style={styles.date}>
-                  {item.date}
-                  {sort === "newest" ? ` · ${item.time}` : ""}
-                  {sort !== "newest" && sort !== "kcal"
-                    ? ` · ${metricOf(item, sort)} g ${sort}`
-                    : ""}
-                </Text>
-              </View>
-              <Text style={styles.kcal}>{item.kcal} kcal</Text>
-            </Pressable>
-          </Animated.View>
+            <Image
+              source={require("@/assets/images/meals/meal-photo.png")}
+              style={styles.photo}
+              contentFit="cover"
+            />
+            <View style={styles.copy}>
+              <Text style={styles.name} numberOfLines={1}>
+                {item.name}
+              </Text>
+              <Text style={styles.date}>
+                {item.date}
+                {sort === "newest" ? ` · ${item.time}` : ""}
+                {sort !== "newest" && sort !== "kcal" ? ` · ${metricOf(item, sort)} g ${sort}` : ""}
+              </Text>
+            </View>
+            <Text style={styles.kcal}>{item.kcal} kcal</Text>
+          </Pressable>
         ))
       )}
     </ScrollView>

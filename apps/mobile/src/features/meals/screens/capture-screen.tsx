@@ -128,167 +128,173 @@ export function MealCaptureScreen() {
 
   return (
     <>
-      <KeyboardAvoidingView
-        behavior="padding"
-        style={[styles.screen, { paddingTop: 12 + insets.top, paddingBottom: 16 + insets.bottom }]}
-      >
-        <BackHeader label="Meals" onPress={() => router.back()} />
+      <KeyboardAvoidingView behavior="padding" style={styles.keyboard}>
+        {/* Inset padding must not live on KeyboardAvoidingView; its padding behavior overwrites paddingBottom. */}
+        <View
+          style={[
+            styles.screen,
+            { paddingTop: 12 + insets.top, paddingBottom: 16 + insets.bottom },
+          ]}
+        >
+          <BackHeader label="Meals" onPress={() => router.back()} />
 
-        <View style={styles.heading}>
-          <Text accessibilityRole="header" style={styles.title}>
-            Capture Meal
-          </Text>
-          <Text style={styles.subtitle}>Capture food or drinks.</Text>
-        </View>
+          <View style={styles.heading}>
+            <Text accessibilityRole="header" style={styles.title}>
+              Capture Meal
+            </Text>
+            <Text style={styles.subtitle}>Capture food or drinks.</Text>
+          </View>
 
-        <View style={styles.previewWrap}>
-          {image ? (
-            <>
-              <Image
-                accessible
-                accessibilityLabel="Selected meal photo"
-                source={{ uri: image.uri }}
-                style={styles.preview}
-                contentFit="cover"
-              />
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Retake photo"
-                onPress={() => {
-                  setImage(null)
-                  setError(null)
-                }}
-                style={styles.retake}
-              >
+          <View style={styles.previewWrap}>
+            {image ? (
+              <>
                 <Image
-                  accessible={false}
-                  source={icons.switchCamera}
-                  style={styles.retakeIcon}
-                  contentFit="contain"
+                  accessible
+                  accessibilityLabel="Selected meal photo"
+                  source={{ uri: image.uri }}
+                  style={styles.preview}
+                  contentFit="cover"
                 />
-              </Pressable>
-            </>
-          ) : !permission ? (
-            <View style={styles.preview} />
-          ) : !cameraGranted ? (
-            <View style={styles.preview}>
-              <View style={styles.circle}>
-                <Image
-                  accessible={false}
-                  source={icons.utensils}
-                  style={styles.circleIcon}
-                  contentFit="contain"
-                />
-                <Text style={styles.circleTitle}>Camera access needed</Text>
-                <Text style={styles.circleNote}>Allow access or pick from library</Text>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Allow camera access"
-                onPress={requestPermission}
-                style={styles.permissionButton}
-              >
-                <Text style={styles.permissionLabel}>Allow camera access</Text>
-              </Pressable>
-              <Text style={styles.circleNote}>or pick a photo from your library below</Text>
-            </View>
-          ) : (
-            <View style={styles.preview}>
-              <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
-              <View pointerEvents="none" style={styles.guide}>
-                <View style={[styles.guideCorner, styles.guideTL]} />
-                <View style={[styles.guideCorner, styles.guideTR]} />
-                <View style={[styles.guideCorner, styles.guideBL]} />
-                <View style={[styles.guideCorner, styles.guideBR]} />
-                <View style={styles.guideCircle}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Retake photo"
+                  onPress={() => {
+                    setImage(null)
+                    setError(null)
+                  }}
+                  style={styles.retake}
+                >
+                  <Image
+                    accessible={false}
+                    source={icons.switchCamera}
+                    style={styles.retakeIcon}
+                    contentFit="contain"
+                  />
+                </Pressable>
+              </>
+            ) : !permission ? (
+              <View style={styles.preview} />
+            ) : !cameraGranted ? (
+              <View style={styles.preview}>
+                <View style={styles.circle}>
                   <Image
                     accessible={false}
                     source={icons.utensils}
                     style={styles.circleIcon}
                     contentFit="contain"
                   />
-                  <Text style={styles.circleTitle}>Place food or drink here</Text>
-                  <Text style={styles.circleNote}>Top-down shot · keep steady</Text>
+                  <Text style={styles.circleTitle}>Camera access needed</Text>
+                  <Text style={styles.circleNote}>Allow access or pick from library</Text>
                 </View>
-                <View style={styles.guideRuler}>
-                  <Image
-                    accessible={false}
-                    source={icons.ruler}
-                    style={styles.guideRulerIcon}
-                    contentFit="contain"
-                  />
-                  <Text style={styles.guideRulerText}>Place 15 cm ruler beside plate or cup</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Allow camera access"
+                  onPress={requestPermission}
+                  style={styles.permissionButton}
+                >
+                  <Text style={styles.permissionLabel}>Allow camera access</Text>
+                </Pressable>
+                <Text style={styles.circleNote}>or pick a photo from your library below</Text>
+              </View>
+            ) : (
+              <View style={styles.preview}>
+                <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
+                <View pointerEvents="none" style={styles.guide}>
+                  <View style={[styles.guideCorner, styles.guideTL]} />
+                  <View style={[styles.guideCorner, styles.guideTR]} />
+                  <View style={[styles.guideCorner, styles.guideBL]} />
+                  <View style={[styles.guideCorner, styles.guideBR]} />
+                  <View style={styles.guideCircle}>
+                    <Image
+                      accessible={false}
+                      source={icons.utensils}
+                      style={styles.circleIcon}
+                      contentFit="contain"
+                    />
+                    <Text style={styles.circleTitle}>Place food or drink here</Text>
+                    <Text style={styles.circleNote}>Top-down shot · keep steady</Text>
+                  </View>
+                  <View style={styles.guideRuler}>
+                    <Image
+                      accessible={false}
+                      source={icons.ruler}
+                      style={styles.guideRulerIcon}
+                      contentFit="contain"
+                    />
+                    <Text style={styles.guideRulerText}>Place 15 cm ruler beside plate or cup</Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.bottom}>
-          {error ? (
-            <Text accessibilityRole="alert" numberOfLines={2} style={styles.error}>
-              {error} Manual entry remains available.
-            </Text>
-          ) : null}
-          <View style={styles.shutterRow}>
-            <View style={styles.sideSlot} />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Take meal photo"
-              disabled={busy || (!image && !cameraGranted)}
-              style={styles.shutterRing}
-              onPress={image ? () => setImage(null) : takePhoto}
-            >
-              <View style={styles.shutter} />
-            </Pressable>
-            <View style={[styles.sideSlot, styles.sideSlotRight]}>
-              <Pressable
-                accessibilityLabel="Choose from library"
-                disabled={busy}
-                onPress={selectLibrary}
-                style={styles.libraryIconButton}
-                hitSlop={8}
-              >
-                <Image
-                  accessible={false}
-                  source={icons.images}
-                  style={styles.libraryIcon}
-                  contentFit="contain"
-                />
-              </Pressable>
-            </View>
+            )}
           </View>
-          <TextInput
-            accessibilityLabel="Optional meal description"
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Add details (e.g. ingredients, size)."
-            placeholderTextColor={C.textMuted}
-            maxLength={120}
-            returnKeyType="done"
-            style={styles.description}
-          />
-          <Text numberOfLines={2} style={styles.footnote}>
-            Only when you tap Analyze, your selected photo and description are sent to the
-            configured cloud model. Estimates must be reviewed; no wearable or medical measurements
-            are inferred.
-          </Text>
-          <Button
-            label="Analyze photo"
-            disabled={!image || busy}
-            busy={busy}
-            onPress={analyze}
-            style={styles.compactButton}
-          />
-          <Button
-            variant="secondary"
-            label="Enter meal manually"
-            onPress={() => {
-              if (image) setDraftPhoto(image.uri, { data: image.base64, mimeType: image.mimeType })
-              router.push("/meal")
-            }}
-            style={styles.compactButton}
-          />
+
+          <View style={styles.bottom}>
+            {error ? (
+              <Text accessibilityRole="alert" numberOfLines={2} style={styles.error}>
+                {error} Manual entry remains available.
+              </Text>
+            ) : null}
+            <View style={styles.shutterRow}>
+              <View style={styles.sideSlot} />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Take meal photo"
+                disabled={busy || (!image && !cameraGranted)}
+                style={styles.shutterRing}
+                onPress={image ? () => setImage(null) : takePhoto}
+              >
+                <View style={styles.shutter} />
+              </Pressable>
+              <View style={[styles.sideSlot, styles.sideSlotRight]}>
+                <Pressable
+                  accessibilityLabel="Choose from library"
+                  disabled={busy}
+                  onPress={selectLibrary}
+                  style={styles.libraryIconButton}
+                  hitSlop={8}
+                >
+                  <Image
+                    accessible={false}
+                    source={icons.images}
+                    style={styles.libraryIcon}
+                    contentFit="contain"
+                  />
+                </Pressable>
+              </View>
+            </View>
+            <TextInput
+              accessibilityLabel="Optional meal description"
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Add details (e.g. ingredients, size)."
+              placeholderTextColor={C.textMuted}
+              maxLength={120}
+              returnKeyType="done"
+              style={styles.description}
+            />
+            <Text numberOfLines={2} style={styles.footnote}>
+              Only when you tap Analyze, your selected photo and description are sent to the
+              configured cloud model. Estimates must be reviewed; no wearable or medical
+              measurements are inferred.
+            </Text>
+            <Button
+              label="Analyze photo"
+              disabled={!image || busy}
+              busy={busy}
+              onPress={analyze}
+              style={styles.compactButton}
+            />
+            <Button
+              variant="secondary"
+              label="Enter meal manually"
+              onPress={() => {
+                if (image)
+                  setDraftPhoto(image.uri, { data: image.base64, mimeType: image.mimeType })
+                router.push("/meal")
+              }}
+              style={styles.compactButton}
+            />
+          </View>
         </View>
       </KeyboardAvoidingView>
 
@@ -315,9 +321,12 @@ export function MealCaptureScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  keyboard: {
     flex: 1,
     backgroundColor: C.background,
+  },
+  screen: {
+    flex: 1,
     paddingHorizontal: 24,
     gap: 10,
   },
