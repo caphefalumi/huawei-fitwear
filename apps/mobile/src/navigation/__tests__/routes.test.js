@@ -9,7 +9,8 @@ test("grouped routes remain at the root navigator with their original URLs", () 
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const file = path.join(dir, entry.name)
       if (entry.isDirectory()) collect(file)
-      else if (/\.tsx?$/.test(entry.name)) files.push(`./${path.relative(appDir, file)}`)
+      else if (/\.tsx?$/.test(entry.name))
+        files.push(`./${path.relative(appDir, file).split(path.sep).join("/")}`)
     }
   }
   collect(appDir)
