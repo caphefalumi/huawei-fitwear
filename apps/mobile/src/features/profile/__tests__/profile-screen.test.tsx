@@ -125,7 +125,7 @@ test("shows unset height and restores account actions", async () => {
   expect(screen.queryByText("null cm")).toBeNull()
 
   await fireEvent.press(screen.getByRole("button", { name: "Account data" }))
-  await fireEvent.press(screen.getByRole("button", { name: "Developer mode, off" }))
+  await fireEvent(screen.getByRole("switch", { name: "Developer mode" }), "valueChange", true)
   await fireEvent.press(screen.getByRole("button", { name: "Developer options" }))
   await act(async () => useDeveloperMode.getState().toggleFeature("bleTest"))
   await fireEvent.press(screen.getByRole("button", { name: "BLE test" }))

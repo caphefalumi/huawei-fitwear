@@ -7,6 +7,7 @@ import Animated, { FadeInUp } from "react-native-reanimated"
 
 import { Button, PageHeading, Screen } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
+import { Toggle } from "@/components/ui/toggle"
 import { useAuth } from "@/features/auth"
 import { useHealth } from "@/features/health"
 import { PERIOD_AREA, PeriodSheet, useActiveInjuries, useInjuries } from "@/features/recovery"
@@ -224,15 +225,14 @@ export function ProfileScreen() {
         >
           <Text style={styles.rowLabel}>Account data</Text>
         </Pressable>
-        <Pressable
-          accessibilityLabel={`Developer mode, ${developerMode ? "on" : "off"}`}
-          accessibilityRole="button"
-          onPress={toggleDeveloperMode}
-          style={styles.row}
-        >
+        <View style={styles.row}>
           <Text style={styles.rowLabel}>Developer mode</Text>
-          <Text style={styles.rowValue}>{developerMode ? "On" : "Off"}</Text>
-        </Pressable>
+          <Toggle
+            accessibilityLabel="Developer mode"
+            value={developerMode}
+            onValueChange={toggleDeveloperMode}
+          />
+        </View>
         {developerMode ? (
           <Pressable
             accessibilityRole="button"
