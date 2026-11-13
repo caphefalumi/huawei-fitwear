@@ -1,10 +1,14 @@
 name: Mobile E2E
 
-# No pull_request, push, or merge_group triggers: E2E is manual and nightly only.
+# No pull_request or merge_group triggers. Nightly and manual runs stay on main.
+# Push is limited to the release-build branch so that fix can be proven before merge.
 on:
   schedule:
     - cron: "0 1 * * *"
       timezone: Asia/Ho_Chi_Minh
+  push:
+    branches:
+      - feat/build-mobile
   workflow_dispatch:
     inputs:
       include_tags:

@@ -1,6 +1,12 @@
 name: Mobile Build
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  # Manual dispatch is the normal entry point. This branch also runs on push
+  # so the release-mode fix can be verified before it merges.
+  push:
+    branches:
+      - feat/build-mobile
 
 permissions:
   contents: read
