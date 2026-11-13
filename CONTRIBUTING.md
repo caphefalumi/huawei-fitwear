@@ -57,9 +57,11 @@ bun run backend:test
 bun run mobile:test:e2e    # Maestro flows, when your change affects them
 ```
 
-Formatting is applied automatically after pushes to `main`. The `VOOC_APP_TOKEN` repository secret must have contents write access and bypass the `main` ruleset. Automatic commits use the name `VoocBot`.
+Formatting is applied automatically after pushes to `main` using the GitHub App configured by `APP_ID` and `APP_PRIVATE_KEY`. The app needs contents write access and permission to bypass the `main` ruleset.
 
 For watch changes, verify the build and behaviour in DevEco Studio, and state the device or simulator used. In the PR description, list the commands you ran and anything you could not verify.
+
+Passing checks do not excuse unexpected test warnings. Inspect CI test logs, investigate and fix actionable causes (including React `act(...)` warnings), rerun the affected checks, and inspect the new logs before merging. Report a blocker only when the remaining prerequisite cannot be resolved with available access.
 
 ## Pull requests
 
