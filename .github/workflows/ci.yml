@@ -27,6 +27,7 @@ jobs:
       backend: ${{ github.event_name != 'pull_request' || steps.filter.outputs.backend == 'true' }}
       mobile: ${{ github.event_name != 'pull_request' || steps.filter.outputs.mobile == 'true' }}
       lint: ${{ github.event_name != 'pull_request' || steps.filter.outputs.lint == 'true' }}
+      watch: ${{ github.event_name != 'pull_request' || steps.filter.outputs.watch == 'true' }}
     steps:
       # On PRs this uses the API, so no checkout is needed.
       - name: Filter changed paths
@@ -47,6 +48,10 @@ jobs:
               - 'bun.lock'
               - '.github/workflows/ci.yml'
               - '.github/actions/**'
+            watch:
+              - 'apps/watch/**'
+              - '.github/arkts-lint.json'
+              - '.github/workflows/ci.yml'
             lint:
               - 'apps/**'
               - 'package.json'
@@ -67,6 +72,21 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
       - run: bun run lint
+
+  watch:
+    name: Watch lint
+    needs: changes
+    if: needs.changes.outputs.watch == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install ArkTS linter
+        run: cargo install --git https://github.com/ohos-rs/oxc-ark --rev bc16abcbcff59558146f4b85a766dcda8fa14c36 --locked oxk
+      - name: Lint watch ArkTS
+        run: oxk lint --config .github/arkts-lint.json apps/watch/entry/src/main/ets
 
   backend:
     name: Backend
@@ -109,7 +129,7 @@ jobs:
   ci-pass:
     name: CI passed
     if: always()
-    needs: [changes, lint, backend, mobile]
+    needs: [changes, lint, backend, mobile, watch]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions: {}

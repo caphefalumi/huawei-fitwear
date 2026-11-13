@@ -1,0 +1,8 @@
+{
+  "plugins": ["arkts"],
+  "rules": {
+    "arkts/no-var": "error",
+    "arkts/no-symbol": "error",
+    "arkts/no-any-unknown": "error"
+  }
+}
