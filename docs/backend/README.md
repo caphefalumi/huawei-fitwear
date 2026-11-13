@@ -207,7 +207,7 @@ flowchart LR
 ```bash
 cd apps/backend
 bun run dev             # Start local Cloudflare Workers dev server
-bun run build           # Dry-run build verification (wrangler deploy --dry-run)
+bun run build           # Dry-run build verification using the top-level Worker configuration
 bun run deploy          # Deploy to Cloudflare Workers
 bun run db:generate     # Generate new Drizzle SQL migration from schema.ts
 bun run db:migrate:local  # Apply D1 migrations locally (.wrangler/state/v3/d1)
