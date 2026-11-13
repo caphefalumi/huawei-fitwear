@@ -32,7 +32,7 @@ struct ImuPage {
         return;
       }
       this.gyroText = `x ${x.toFixed(2)}   y ${y.toFixed(2)}   z ${z.toFixed(2)}`;
-    }
+    },
   };
   private imuService: ImuSensorService = new ImuSensorService(this.imuListener);
 
@@ -61,11 +61,9 @@ struct ImuPage {
         .width('90%')
         .margin({ top: 10 })
         .justifyContent(FlexAlign.Start)
-
         Text(this.statusText)
           .fontSize(12)
           .fontColor('#38BDF8')
-
         Button(this.running ? 'Stop' : 'Start')
           .height(32)
           .fontSize(14)
@@ -78,7 +76,6 @@ struct ImuPage {
             }
             this.running = this.imuService.isRunning();
           })
-
         Column({ space: 2 }) {
           Text('Accel m/s²')
             .fontSize(11)
@@ -94,7 +91,6 @@ struct ImuPage {
         .padding(8)
         .backgroundColor('#1E293B')
         .borderRadius(8)
-
         Column({ space: 2 }) {
           Text('Gyro rad/s')
             .fontSize(11)
@@ -107,7 +103,6 @@ struct ImuPage {
         .padding(8)
         .backgroundColor('#1E293B')
         .borderRadius(8)
-
         Text(`${this.sampleCount} accel samples`)
           .fontSize(11)
           .fontColor('#64748B')
@@ -118,6 +113,6 @@ struct ImuPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#020617')
+    .backgroundColor('#020617');
   }
 }

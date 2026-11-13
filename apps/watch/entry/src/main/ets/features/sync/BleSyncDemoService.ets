@@ -13,8 +13,16 @@ export interface BleSyncDemoListener {
   onBleConnected: (deviceId: string) => void;
   onBleDisconnected: () => void;
   onImuStatus: (text: string) => void;
-  onImuSample: (ax: number, ay: number, az: number, mag: number,
-    gx: number, gy: number, gz: number, count: number) => void;
+  onImuSample: (
+    ax: number,
+    ay: number,
+    az: number,
+    mag: number,
+    gx: number,
+    gy: number,
+    gz: number,
+    count: number,
+  ) => void;
   onMessageFromPhone: (text: string) => void;
   onPacketSent: (payloadBytes: number) => void;
   onError: (text: string) => void;
@@ -92,13 +100,28 @@ export class BleSyncDemoService {
       onStatus: (text: string): void => {
         this.listener.onImuStatus(text);
       },
-      onAccelerometer: (x: number, y: number, z: number, magnitude: number, count: number): void => {
+      onAccelerometer: (
+        x: number,
+        y: number,
+        z: number,
+        magnitude: number,
+        count: number,
+      ): void => {
         this.latestAx = x;
         this.latestAy = y;
         this.latestAz = z;
         this.latestMag = magnitude;
         this.sampleCount = count;
-        this.listener.onImuSample(x, y, z, magnitude, this.latestGx, this.latestGy, this.latestGz, count);
+        this.listener.onImuSample(
+          x,
+          y,
+          z,
+          magnitude,
+          this.latestGx,
+          this.latestGy,
+          this.latestGz,
+          count,
+        );
 
         // Broadcast a packet every STREAM_STRIDE samples when phone is connected
         if (count % STREAM_STRIDE === 0 && this.connectedDeviceId.length > 0) {
@@ -159,14 +182,14 @@ export class BleSyncDemoService {
           Math.round(this.latestAx * 100) / 100,
           Math.round(this.latestAy * 100) / 100,
           Math.round(this.latestAz * 100) / 100,
-          Math.round(this.latestMag * 100) / 100
+          Math.round(this.latestMag * 100) / 100,
         ],
         g: [
           Math.round(this.latestGx * 100) / 100,
           Math.round(this.latestGy * 100) / 100,
-          Math.round(this.latestGz * 100) / 100
+          Math.round(this.latestGz * 100) / 100,
         ],
-        ts: now
+        ts: now,
       };
       payload = JSON.stringify(compact);
     } else {

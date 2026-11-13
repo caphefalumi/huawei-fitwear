@@ -10,7 +10,6 @@ struct Index {
         .fontWeight(FontWeight.Bold)
         .fontColor('#FFFFFF')
         .margin({ top: 20 })
-
       Text('Watch demos')
         .fontSize(12)
         .fontColor('#94A3B8')
@@ -25,7 +24,6 @@ struct Index {
         .onClick(() => {
           router.pushUrl({ url: 'features/sync/BleSyncDemoPage' });
         })
-
       Button('Bluetooth')
         .width('70%')
         .height(36)
@@ -34,7 +32,6 @@ struct Index {
         .onClick(() => {
           router.pushUrl({ url: 'features/ble/BlePage' });
         })
-
       Button('IMU Sensors')
         .width('70%')
         .height(36)
@@ -48,6 +45,6 @@ struct Index {
     .height('100%')
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor('#020617')
+    .backgroundColor('#020617');
   }
 }

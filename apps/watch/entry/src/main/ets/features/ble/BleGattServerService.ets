@@ -22,7 +22,7 @@ export const CHAR_MESSAGE_UUID: string = 'F17E0002-6B2A-4C8E-9D15-3A7F2E8C4B02';
 export const MAX_MESSAGE_BYTES: number = 180;
 
 /** ATT Error Code for Invalid Attribute Value Length */
-const ATT_ERR_INVALID_ATTR_VALUE_LEN: number = 0x0D;
+const ATT_ERR_INVALID_ATTR_VALUE_LEN: number = 0x0d;
 
 /**
  * Apple Accessory Design Guidelines recommended advertising interval.
@@ -66,7 +66,7 @@ export class BleGattServerService {
   private listener: BleGattServerListener;
   private context: common.UIAbilityContext | undefined = undefined;
   private gattServer: ble.GattServer | undefined = undefined;
-  private advHandle: number = 0xFF;
+  private advHandle: number = 0xff;
   private advActive: boolean = false;
   private serverRunning: boolean = false;
   private connectedDeviceId: string = '';
@@ -165,14 +165,18 @@ export class BleGattServerService {
       serviceUuid: SERVICE_UUID,
       characteristicUuid: CHAR_MESSAGE_UUID,
       characteristicValue: this.outboundBuffer,
-      confirm: false
+      confirm: false,
     };
     try {
-      this.gattServer.notifyCharacteristicChanged(this.connectedDeviceId, notifyChar, (err: BusinessError) => {
-        if (err) {
-          this.listener.onStatus(`Notify Err: ${err.code}`);
-        }
-      });
+      this.gattServer.notifyCharacteristicChanged(
+        this.connectedDeviceId,
+        notifyChar,
+        (err: BusinessError) => {
+          if (err) {
+            this.listener.onStatus(`Notify Err: ${err.code}`);
+          }
+        },
+      );
     } catch (err) {
       const e = err as BusinessError;
       this.listener.onStatus(`Send Err: ${e.code}`);
@@ -186,7 +190,7 @@ export class BleGattServerService {
         serviceUuid: SERVICE_UUID,
         characteristicUuid: CHAR_MESSAGE_UUID,
         descriptorUuid: DESC_CCC_UUID,
-        descriptorValue: this.cccBuffer
+        descriptorValue: this.cccBuffer,
       };
       const messageChar: ble.BLECharacteristic = {
         serviceUuid: SERVICE_UUID,
@@ -197,14 +201,14 @@ export class BleGattServerService {
           write: true,
           writeNoResponse: true,
           read: true,
-          notify: true
-        }
+          notify: true,
+        },
       };
       const gattService: ble.GattService = {
         serviceUuid: SERVICE_UUID,
         isPrimary: true,
         characteristics: [messageChar],
-        includeServices: []
+        includeServices: [],
       };
 
       this.gattServer = ble.createGattServer();
@@ -220,26 +224,26 @@ export class BleGattServerService {
       const setting: ble.AdvertiseSetting = {
         interval: ADV_INTERVAL_APPLE_SLOTS,
         txPower: 0,
-        connectable: true
+        connectable: true,
       };
       // Primary advertisement: 128-bit UUID only. Device name in scan response (31-byte limit protection)
       const advData: ble.AdvertiseData = {
         serviceUuids: [SERVICE_UUID],
         manufactureData: [],
         serviceData: [],
-        includeDeviceName: false
+        includeDeviceName: false,
       };
       const scanResponse: ble.AdvertiseData = {
         serviceUuids: [],
         manufactureData: [],
         serviceData: [],
-        includeDeviceName: true
+        includeDeviceName: true,
       };
       const advParams: ble.AdvertisingParams = {
         advertisingSettings: setting,
         advertisingData: advData,
         advertisingResponse: scanResponse,
-        duration: 0
+        duration: 0,
       };
 
       this.listener.onStatus('Starting...');
@@ -257,7 +261,13 @@ export class BleGattServerService {
           return;
         }
         if (err) {
-          hilog.error(DOMAIN, TAG, 'startAdvertising err: %{public}d %{public}s', err.code, err.message);
+          hilog.error(
+            DOMAIN,
+            TAG,
+            'startAdvertising err: %{public}d %{public}s',
+            err.code,
+            err.message,
+          );
           this.releaseResources();
           this.listener.onStatus(`Adv Err: ${err.code}`);
           return;
@@ -278,9 +288,9 @@ export class BleGattServerService {
 
   private releaseResources(): void {
     try {
-      if (this.advHandle !== 0xFF) {
+      if (this.advHandle !== 0xff) {
         ble.stopAdvertising(this.advHandle);
-        this.advHandle = 0xFF;
+        this.advHandle = 0xff;
       }
       if (this.gattServer) {
         this.gattServer.removeService(SERVICE_UUID);
@@ -349,15 +359,16 @@ export class BleGattServerService {
   };
 
   private onCharacteristicRead = (req: ble.CharacteristicReadRequest): void => {
-    const slice = req.offset < this.outboundBuffer.byteLength
-      ? this.outboundBuffer.slice(req.offset)
-      : new ArrayBuffer(0);
+    const slice =
+      req.offset < this.outboundBuffer.byteLength
+        ? this.outboundBuffer.slice(req.offset)
+        : new ArrayBuffer(0);
     const response: ble.ServerResponse = {
       deviceId: req.deviceId,
       transId: req.transId,
       status: 0,
       offset: req.offset,
-      value: slice
+      value: slice,
     };
     try {
       this.gattServer?.sendResponse(response);
@@ -399,7 +410,7 @@ export class BleGattServerService {
       transId: req.transId,
       status: status,
       offset: req.offset,
-      value: new ArrayBuffer(0)
+      value: new ArrayBuffer(0),
     };
     try {
       this.gattServer?.sendResponse(response);
@@ -410,15 +421,16 @@ export class BleGattServerService {
   }
 
   private onDescriptorRead = (req: ble.DescriptorReadRequest): void => {
-    const slice = req.offset < this.cccBuffer.byteLength
-      ? this.cccBuffer.slice(req.offset)
-      : new ArrayBuffer(0);
+    const slice =
+      req.offset < this.cccBuffer.byteLength
+        ? this.cccBuffer.slice(req.offset)
+        : new ArrayBuffer(0);
     const response: ble.ServerResponse = {
       deviceId: req.deviceId,
       transId: req.transId,
       status: 0,
       offset: req.offset,
-      value: slice
+      value: slice,
     };
     try {
       this.gattServer?.sendResponse(response);
@@ -443,7 +455,7 @@ export class BleGattServerService {
       transId: req.transId,
       status: 0,
       offset: req.offset,
-      value: new ArrayBuffer(0)
+      value: new ArrayBuffer(0),
     };
     try {
       this.gattServer?.sendResponse(response);
@@ -478,7 +490,12 @@ export class BleGattServerService {
       const cccView = new Uint8Array(this.cccBuffer);
       // If client never subscribed or authenticated within 10s, drop link
       if (this.connectedDeviceId.length > 0 && cccView[0] !== 1) {
-        hilog.warn(DOMAIN, TAG, 'Watchdog expired: unauthenticated connection from %{public}s', this.connectedDeviceId);
+        hilog.warn(
+          DOMAIN,
+          TAG,
+          'Watchdog expired: unauthenticated connection from %{public}s',
+          this.connectedDeviceId,
+        );
         this.listener.onStatus('Errant conn dropped');
         this.resetServerAndReadvertise();
       }
@@ -516,13 +533,22 @@ export class BleGattServerService {
     }
     const context = this.context;
     try {
-      window.getLastWindow(context).then((win: window.Window) => {
-        win.setWindowKeepScreenOn(on).catch((err: BusinessError) => {
-          hilog.error(DOMAIN, TAG, 'keepScreen err: %{public}d %{public}s', err.code, err.message);
+      window
+        .getLastWindow(context)
+        .then((win: window.Window) => {
+          win.setWindowKeepScreenOn(on).catch((err: BusinessError) => {
+            hilog.error(
+              DOMAIN,
+              TAG,
+              'keepScreen err: %{public}d %{public}s',
+              err.code,
+              err.message,
+            );
+          });
+        })
+        .catch((err: BusinessError) => {
+          hilog.error(DOMAIN, TAG, 'getWindow err: %{public}d %{public}s', err.code, err.message);
         });
-      }).catch((err: BusinessError) => {
-        hilog.error(DOMAIN, TAG, 'getWindow err: %{public}d %{public}s', err.code, err.message);
-      });
     } catch (err) {
       const e = err as BusinessError;
       hilog.error(DOMAIN, TAG, 'setKeepScreen err: %{public}d %{public}s', e.code, e.message);
@@ -530,7 +556,7 @@ export class BleGattServerService {
   }
 
   private pauseAdvertising(): void {
-    if (this.advHandle === 0xFF || !this.advActive) {
+    if (this.advHandle === 0xff || !this.advActive) {
       return;
     }
     this.advActive = false;
@@ -538,7 +564,13 @@ export class BleGattServerService {
     try {
       ble.disableAdvertising(params, (err: BusinessError) => {
         if (err) {
-          hilog.error(DOMAIN, TAG, 'disableAdvertising err: %{public}d %{public}s', err.code, err.message);
+          hilog.error(
+            DOMAIN,
+            TAG,
+            'disableAdvertising err: %{public}d %{public}s',
+            err.code,
+            err.message,
+          );
         }
       });
     } catch (err) {
@@ -548,7 +580,7 @@ export class BleGattServerService {
   }
 
   private resumeAdvertising(): void {
-    if (this.advHandle === 0xFF || this.advActive) {
+    if (this.advHandle === 0xff || this.advActive) {
       return;
     }
     this.advActive = true;
@@ -557,7 +589,13 @@ export class BleGattServerService {
       ble.enableAdvertising(params, (err: BusinessError) => {
         if (err) {
           this.advActive = false;
-          hilog.error(DOMAIN, TAG, 'enableAdvertising err: %{public}d %{public}s', err.code, err.message);
+          hilog.error(
+            DOMAIN,
+            TAG,
+            'enableAdvertising err: %{public}d %{public}s',
+            err.code,
+            err.message,
+          );
         }
       });
     } catch (err) {

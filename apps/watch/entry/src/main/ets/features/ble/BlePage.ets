@@ -23,7 +23,7 @@ struct BlePage {
     },
     onReceived: (text: string): void => {
       this.lastReceived = text;
-    }
+    },
   };
   private bleService: BleGattServerService = new BleGattServerService(this.bleListener);
 
@@ -40,16 +40,19 @@ struct BlePage {
     const context = host as common.UIAbilityContext;
     const atManager = abilityAccessCtrl.createAtManager();
     const permissions: Array<Permissions> = ['ohos.permission.ACCESS_BLUETOOTH'];
-    atManager.requestPermissionsFromUser(context, permissions).then((result) => {
-      if (result.authResults.length > 0 && result.authResults[0] === 0) {
-        this.bleService.start(context);
-        this.serverRunning = this.bleService.isRunning();
-      } else {
-        this.statusText = 'BT Permission Denied';
-      }
-    }).catch((err: BusinessError) => {
-      this.statusText = `Perm Err: ${err.code}`;
-    });
+    atManager
+      .requestPermissionsFromUser(context, permissions)
+      .then((result) => {
+        if (result.authResults.length > 0 && result.authResults[0] === 0) {
+          this.bleService.start(context);
+          this.serverRunning = this.bleService.isRunning();
+        } else {
+          this.statusText = 'BT Permission Denied';
+        }
+      })
+      .catch((err: BusinessError) => {
+        this.statusText = `Perm Err: ${err.code}`;
+      });
   }
 
   private stopServer(): void {
@@ -85,11 +88,9 @@ struct BlePage {
         .width('90%')
         .margin({ top: 10 })
         .justifyContent(FlexAlign.Start)
-
         Text(this.statusText)
           .fontSize(11)
           .fontColor(this.connectedDeviceId.length > 0 ? '#4ADE80' : '#38BDF8')
-
         Button(this.serverRunning ? 'Stop BLE Server' : 'Start BLE Server')
           .height(28)
           .fontSize(12)
@@ -101,7 +102,6 @@ struct BlePage {
               this.requestBlePermissionAndStart();
             }
           })
-
         Column({ space: 2 }) {
           Text('From Phone:')
             .fontSize(10)
@@ -118,7 +118,6 @@ struct BlePage {
         .padding(6)
         .backgroundColor('#1E293B')
         .borderRadius(8)
-
         TextInput({ text: this.draftText, placeholder: 'Message to phone' })
           .width('86%')
           .height(30)
@@ -128,7 +127,6 @@ struct BlePage {
           .onChange((val: string) => {
             this.draftText = val;
           })
-
         Row({ space: 6 }) {
           Button('Send')
             .height(26)
@@ -137,7 +135,6 @@ struct BlePage {
             .onClick(() => {
               this.sendText(this.draftText);
             })
-
           Button('Rep +1')
             .height(26)
             .fontSize(11)
@@ -146,7 +143,6 @@ struct BlePage {
               this.sendText('Rep 10 | HR 142 bpm');
             })
         }
-
         Text(`Last sent: ${this.lastSent}`)
           .fontSize(10)
           .fontColor('#64748B')
@@ -157,6 +153,6 @@ struct BlePage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#020617')
+    .backgroundColor('#020617');
   }
 }

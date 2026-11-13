@@ -19,7 +19,13 @@ assertMagnitude();
 
 export interface ImuSensorListener {
   onStatus: (text: string) => void;
-  onAccelerometer: (x: number, y: number, z: number, magnitude: number, sampleCount: number) => void;
+  onAccelerometer: (
+    x: number,
+    y: number,
+    z: number,
+    magnitude: number,
+    sampleCount: number,
+  ) => void;
   onGyroscope: (x: number, y: number, z: number) => void;
 }
 
@@ -82,8 +88,11 @@ export class ImuSensorService {
       this.gyroOn = false;
     }
     this.running = false;
-    if (this.lastStatus === 'Sampling' || this.lastStatus.startsWith('Accel only') ||
-      this.lastStatus.startsWith('Gyro only')) {
+    if (
+      this.lastStatus === 'Sampling' ||
+      this.lastStatus.startsWith('Accel only') ||
+      this.lastStatus.startsWith('Gyro only')
+    ) {
       this.setStatus('Stopped');
     }
   }
@@ -100,7 +109,7 @@ export class ImuSensorService {
       data.y,
       data.z,
       vectorMagnitude(data.x, data.y, data.z),
-      this.sampleCount
+      this.sampleCount,
     );
   };
 

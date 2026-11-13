@@ -52,8 +52,16 @@ struct BleSyncDemoPage {
     onImuStatus: (text: string): void => {
       this.imuStatus = text;
     },
-    onImuSample: (ax: number, ay: number, az: number, mag: number,
-      gx: number, gy: number, gz: number, count: number): void => {
+    onImuSample: (
+      ax: number,
+      ay: number,
+      az: number,
+      mag: number,
+      gx: number,
+      gy: number,
+      gz: number,
+      count: number,
+    ): void => {
       this.pendingAx = ax;
       this.pendingAy = ay;
       this.pendingAz = az;
@@ -98,17 +106,20 @@ struct BleSyncDemoPage {
     const context = host as common.UIAbilityContext;
     const atManager = abilityAccessCtrl.createAtManager();
     const perms: Array<Permissions> = ['ohos.permission.ACCESS_BLUETOOTH'];
-    atManager.requestPermissionsFromUser(context, perms).then((result) => {
-      const granted = result.authResults.length > 0 && result.authResults[0] === 0;
-      if (granted) {
-        this.service.start(context);
-        this.running = this.service.isRunning();
-      } else {
-        this.bleStatus = 'BT Permission Denied';
-      }
-    }).catch((err: BusinessError) => {
-      this.bleStatus = `Perm error: ${err.code}`;
-    });
+    atManager
+      .requestPermissionsFromUser(context, perms)
+      .then((result) => {
+        const granted = result.authResults.length > 0 && result.authResults[0] === 0;
+        if (granted) {
+          this.service.start(context);
+          this.running = this.service.isRunning();
+        } else {
+          this.bleStatus = 'BT Permission Denied';
+        }
+      })
+      .catch((err: BusinessError) => {
+        this.bleStatus = `Perm error: ${err.code}`;
+      });
   }
 
   private stopAll(): void {
@@ -135,7 +146,6 @@ struct BleSyncDemoPage {
   build() {
     Scroll() {
       Column({ space: 8 }) {
-
         // ── Top bar ──────────────────────────────────────────────────────────
         Row() {
           Button('<')
@@ -161,8 +171,16 @@ struct BleSyncDemoPage {
         // ── Connection status pill ────────────────────────────────────────────
         Row({ space: 6 }) {
           Circle({ width: 8, height: 8 })
-            .fill(this.connectedDeviceId.length > 0 ? '#4ADE80' : (this.running ? '#38BDF8' : '#64748B'))
-          Text(this.connectedDeviceId.length > 0 ? 'Phone Connected' : (this.running ? this.bleStatus : 'Stopped'))
+            .fill(
+              this.connectedDeviceId.length > 0 ? '#4ADE80' : this.running ? '#38BDF8' : '#64748B',
+            )
+          Text(
+            this.connectedDeviceId.length > 0
+              ? 'Phone Connected'
+              : this.running
+                ? this.bleStatus
+                : 'Stopped',
+          )
             .fontSize(11)
             .fontColor(this.connectedDeviceId.length > 0 ? '#4ADE80' : '#94A3B8')
         }
@@ -199,7 +217,6 @@ struct BleSyncDemoPage {
             .fontWeight(FontWeight.Medium)
             .fontColor('#38BDF8')
             .maxLines(2)
-
           TextInput({ text: this.watchDraftText, placeholder: 'Message to phone' })
             .width('100%')
             .height(28)
@@ -210,7 +227,6 @@ struct BleSyncDemoPage {
             .onChange((val: string) => {
               this.watchDraftText = val;
             })
-
           Row({ space: 6 }) {
             Button('Send')
               .height(26)
@@ -220,7 +236,6 @@ struct BleSyncDemoPage {
               .onClick(() => {
                 this.sendTextToPhone(this.watchDraftText);
               })
-
             Button('ACK ✓')
               .height(26)
               .fontSize(11)
@@ -229,7 +244,6 @@ struct BleSyncDemoPage {
               .onClick(() => {
                 this.sendTextToPhone('ACK: Set complete');
               })
-
             Button('HR 145')
               .height(26)
               .fontSize(11)
@@ -240,7 +254,6 @@ struct BleSyncDemoPage {
               })
           }
           .margin({ top: 2 })
-
           Text(`Last sent: ${this.lastSentToPhone}`)
             .fontSize(9)
             .fontColor('#64748B')
@@ -272,7 +285,7 @@ struct BleSyncDemoPage {
                 .fontSize(9)
                 .fontColor('#64748B')
             }
-          }
+          };
         }
 
         // ── Accelerometer ─────────────────────────────────────────────────────
@@ -324,14 +337,14 @@ struct BleSyncDemoPage {
           .fontSize(10)
           .fontColor('#475569')
           .margin({ bottom: 16 })
-
-      } // Column
+      }
+      // Column
       .width('100%')
       .alignItems(HorizontalAlign.Center)
-
-    } // Scroll
+    }
+    // Scroll
     .width('100%')
     .height('100%')
-    .backgroundColor('#020617')
+    .backgroundColor('#020617');
   }
 }
