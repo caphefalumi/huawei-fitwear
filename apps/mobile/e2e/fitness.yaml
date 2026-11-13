@@ -4,8 +4,15 @@ tags:
   - fitness
 ---
 - setAirplaneMode: disabled
-# A warm app must be stopped before its data is cleared (including local reruns).
+# Stop the previous flow, then let Android finish removing that task.
+# Launching during removal makes the destroy timeout kill the new process,
+# which leaves the system splash up for the rest of the flow.
 - stopApp
+- extendedWaitUntil:
+    visible:
+      id: "previous-task-removed"
+    optional: true
+    timeout: 3000
 - launchApp:
     clearState: true
 - startRecording:
