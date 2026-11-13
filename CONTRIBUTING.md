@@ -57,6 +57,8 @@ bun run backend:test
 bun run mobile:test:e2e    # Maestro flows, when your change affects them
 ```
 
+Formatting is applied automatically after pushes to `main`. The `VOOC_APP_TOKEN` repository secret must have contents write access and bypass the `main` ruleset. Automatic commits use the name `VoocBot`.
+
 For watch changes, verify the build and behaviour in DevEco Studio, and state the device or simulator used. In the PR description, list the commands you ran and anything you could not verify.
 
 ## Pull requests
