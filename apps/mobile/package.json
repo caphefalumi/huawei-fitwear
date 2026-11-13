@@ -15,7 +15,7 @@
     "lint:expo": "expo lint",
     "fmt": "oxfmt",
     "typecheck": "tsc --noEmit",
-    "test": "jest --runInBand",
+    "test": "jest",
     "test:watch": "jest --watchAll",
     "test:e2e": "maestro test e2e",
     "test:e2e:errors": "maestro test e2e/error-messages.yaml"

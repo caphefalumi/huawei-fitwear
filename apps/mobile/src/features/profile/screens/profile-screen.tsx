@@ -228,6 +228,7 @@ export function ProfileScreen() {
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Developer mode</Text>
           <Toggle
+            style={{ alignSelf: "center" }}
             accessibilityLabel="Developer mode"
             value={developerMode}
             onValueChange={toggleDeveloperMode}
