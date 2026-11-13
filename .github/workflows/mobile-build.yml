@@ -13,6 +13,10 @@ env:
   EXPO_NO_TELEMETRY: "1"
   EXPO_NONINTERACTIVE: "1"
   APP_NAME: VoocHealth # must match "name" in app.json
+  # Release bundling uploads source maps only when this secret exists.
+  # An empty token skips upload so unsigned CI archives still succeed.
+  SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+  SENTRY_DISABLE_AUTO_UPLOAD: ${{ secrets.SENTRY_AUTH_TOKEN == '' && 'true' || 'false' }}
 
 jobs:
   build:
@@ -50,6 +54,14 @@ jobs:
         if: matrix.platform == 'android'
         with:
           packages: "platform-tools cmake;3.31.6"
+
+      - name: Note Sentry source map upload
+        run: |
+          if [[ "$SENTRY_DISABLE_AUTO_UPLOAD" == "true" ]]; then
+            echo "Sentry source map upload is disabled. Add the SENTRY_AUTH_TOKEN repository secret to upload release source maps."
+          else
+            echo "Sentry source map upload is enabled."
+          fi
 
       - name: Generate native project
         working-directory: apps/mobile
