@@ -63,6 +63,8 @@ For watch changes, verify the build and behaviour in DevEco Studio, and state th
 
 Passing checks do not excuse unexpected test warnings. Inspect CI test logs, investigate and fix actionable causes (including React `act(...)` warnings), rerun the affected checks, and inspect the new logs before merging. Report a blocker only when the remaining prerequisite cannot be resolved with available access.
 
+In React tests, await state-changing asynchronous actions **inside** `await act(async () => { ... })`, including expected rejections. Do not start an action with `void` inside `act` and wait for its result outside: its later updates can escape the boundary. If the action schedules updates, await their completion within the boundary before asserting the resulting state. Investigate warnings rather than suppressing them.
+
 ## Pull requests
 
 - Fill in every section of the pull request template: summary, verification, risks, and checklist.
