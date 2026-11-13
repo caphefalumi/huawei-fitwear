@@ -34,6 +34,10 @@ apps/watch/
 - **Target OS**: HarmonyOS NEXT (`wearable` profile).
 - **SDK**: API 11+ (`6.1.1(24)`).
 
+ArkTS files under `entry/src` are formatted on pushes to `main` with the pinned
+`oxk` formatter and `.github/arkts-format.json`. The formatter runs outside the
+watch workspace; Huawei Code Linter configuration remains in `code-linter.json5`.
+
 ## Getting Started
 
 1. Open DevEco Studio.

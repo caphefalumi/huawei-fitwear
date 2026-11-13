@@ -15,7 +15,7 @@ jobs:
   format:
     name: Format main
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/create-github-app-token@v2
         id: app-token
@@ -31,7 +31,17 @@ jobs:
       - uses: ./.github/actions/setup
 
       - run: bun run fmt
-
+      - name: Install ArkTS formatter
+        run: cargo install --git https://github.com/ohos-rs/oxc-ark --rev 25ca00609724a45f8bb2804390d04c397cf45044 --locked oxk
+      - name: Format watch ArkTS
+        run: |
+          log=$(mktemp)
+          trap 'rm -f "$log"' EXIT
+          oxk format --config .github/arkts-format.json 'apps/watch/entry/src/**/*.ets' 2>"$log"
+          if [ -s "$log" ]; then
+            cat "$log"
+            exit 1
+          fi
       - name: Commit and push formatting changes
         run: |
           git add -u
