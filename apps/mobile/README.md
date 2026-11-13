@@ -240,7 +240,7 @@ Password fields on login and sign-up have accessible Show/Hide icon controls; to
 
 Save, add, and delete actions keep their labels unchanged while pending. Shared sheet primary actions show a spinner, duplicate submissions are blocked, and failures remain visible. Profile health fields show skeletons while loading and a retry banner on error.
 
-The Profile tab groups identity, editable health details, plan, conditional period recovery, and account actions. Period recovery requires explicit opt-in; changing sex away from Female prompts before removing its settings. Account & data shows the signed-in email and a confirmed account deletion flow. Failed deletion keeps the local session so the user can retry; sign-out clears local state immediately.
+The Profile tab groups identity, editable health details, plan, conditional period recovery, and account actions. Health and plan sections appear without entrance animations, including when system animations are disabled. Period recovery requires explicit opt-in; changing sex away from Female prompts before removing its settings. Account & data shows the signed-in email and a confirmed account deletion flow. Failed deletion keeps the local session so the user can retry; sign-out clears local state immediately.
 
 ### Accessibility
 
