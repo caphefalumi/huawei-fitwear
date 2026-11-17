@@ -15,12 +15,17 @@ test("feature boundary check rejects deep cross-feature imports through aliases 
     expect(check().status).toBe(0)
     fs.writeFileSync(
       file,
-      'import "@/features/meals/hooks/private"\nimport "../meals/hooks/private"\n',
+      'import "@/features/meals/hooks/private"\n' +
+        'import "../meals/hooks/private"\n' +
+        'import("../meals/hooks/private")\n' +
+        'require("@/features/meals/hooks/private")\n' +
+        "import(`../meals/hooks/private`)\n",
     )
     const result = check()
     expect(result.status).toBe(1)
     expect(result.stderr).toContain("@/features/meals/hooks/private")
     expect(result.stderr).toContain("../meals/hooks/private")
+    expect(result.stderr.match(/import .* through the feature's public API/g)).toHaveLength(5)
   } finally {
     fs.rmSync(dir, { recursive: true, force: true })
   }

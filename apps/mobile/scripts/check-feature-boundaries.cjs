@@ -1,30 +1,39 @@
 const fs = require("node:fs")
 const path = require("node:path")
-const ts = require("typescript")
+const { parse } = require("@babel/parser")
 
 const featuresDir = path.resolve(process.argv[2] ?? path.join(__dirname, "../src/features"))
 let violations = 0
 
 function checkFile(file, feature) {
-  const source = ts.createSourceFile(
-    file,
-    fs.readFileSync(file, "utf8"),
-    ts.ScriptTarget.Latest,
-    true,
-  )
+  const source = parse(fs.readFileSync(file, "utf8"), {
+    sourceType: "unambiguous",
+    plugins: ["typescript", "jsx"],
+  })
   function visit(node) {
     let specifier
-    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
-      specifier = node.moduleSpecifier
-    } else if (
-      ts.isCallExpression(node) &&
-      (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
-        (ts.isIdentifier(node.expression) && node.expression.text === "require"))
+    if (
+      node.type === "ImportDeclaration" ||
+      node.type === "ExportNamedDeclaration" ||
+      node.type === "ExportAllDeclaration"
     ) {
-      specifier = node.arguments[0]
+      specifier = node.source
+    } else if (
+      node.type === "ImportExpression" ||
+      (node.type === "CallExpression" &&
+        (node.callee.type === "Import" ||
+          (node.callee.type === "Identifier" && node.callee.name === "require")))
+    ) {
+      specifier = node.type === "ImportExpression" ? node.source : node.arguments[0]
     }
-    if (specifier && ts.isStringLiteralLike(specifier)) {
-      const value = specifier.text
+    if (
+      specifier?.type === "StringLiteral" ||
+      (specifier?.type === "TemplateLiteral" && specifier.expressions.length === 0)
+    ) {
+      const value =
+        specifier.type === "StringLiteral"
+          ? specifier.value
+          : (specifier.quasis[0].value.cooked ?? specifier.quasis[0].value.raw)
       const target = value.startsWith("@/features/")
         ? path.join(featuresDir, value.slice("@/features/".length))
         : value.startsWith(".")
@@ -33,15 +42,22 @@ function checkFile(file, feature) {
       if (target) {
         const parts = path.relative(featuresDir, target).split(path.sep)
         if (parts[0] !== ".." && parts[0] !== feature && parts.length > 1) {
-          const line = source.getLineAndCharacterOfPosition(specifier.getStart()).line + 1
           console.error(
-            `${path.relative(process.cwd(), file)}:${line}: import ${value} through the feature's public API`,
+            `${path.relative(process.cwd(), file)}:${specifier.loc.start.line}: import ${value} through the feature's public API`,
           )
           violations++
         }
       }
     }
-    ts.forEachChild(node, visit)
+    for (const value of Object.values(node)) {
+      if (Array.isArray(value)) {
+        for (const child of value) {
+          if (child?.type) visit(child)
+        }
+      } else if (value?.type) {
+        visit(value)
+      }
+    }
   }
   visit(source)
 }
