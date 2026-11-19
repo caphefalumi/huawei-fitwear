@@ -100,6 +100,7 @@ jobs:
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.path }}
+          archive: false
           if-no-files-found: error
           retention-days: 7
           compression-level: 0
