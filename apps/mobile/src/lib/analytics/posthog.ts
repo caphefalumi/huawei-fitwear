@@ -5,7 +5,7 @@ const host = process.env.EXPO_PUBLIC_POSTHOG_HOST
 
 export const isPostHogConfigured = Boolean(projectToken && host)
 
-if (!isPostHogConfigured && __DEV__) {
+if (__DEV__ && !isPostHogConfigured && (projectToken || host)) {
   const missingVariable = projectToken
     ? "EXPO_PUBLIC_POSTHOG_HOST"
     : "EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN"
