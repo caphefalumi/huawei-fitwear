@@ -18,7 +18,7 @@ import { Palette as C } from "@/theme"
 import { analyzeMeal, uploadMealPhoto } from "../api/meals-api"
 import { icons } from "../components/meals-ui"
 import { useMeals } from "../hooks/meals-hooks"
-import { MealLidarCamera, useMealLidarAvailable, type MealDepth } from "./meal-lidar-camera"
+import { MealLidarCamera, useMealLidarAvailable } from "./meal-lidar-camera"
 
 const TUTORIAL_STEPS = [
   { title: "Add a ruler", detail: "If you have one, place a 15 cm ruler beside the plate or cup." },
@@ -29,7 +29,7 @@ export function MealCaptureScreen() {
   const insets = useSafeAreaInsets()
   const { tutorialSeen, dismissTutorial, setAnalysis, setDraftPhoto, items } = useMeals()
   const [description, setDescription] = useState("")
-  const [image, setImage] = useState<(PickedImage & { depth?: MealDepth }) | null>(null)
+  const [image, setImage] = useState<(PickedImage & { portionVolumeMl?: number }) | null>(null)
   const [lidarFailed, setLidarFailed] = useState(false)
   const [lidarCapture, setLidarCapture] = useState(0)
   const lidarAvailable = useMealLidarAvailable()
@@ -39,7 +39,7 @@ export function MealCaptureScreen() {
       image,
       description,
     }: {
-      image: PickedImage & { depth?: MealDepth }
+      image: PickedImage & { portionVolumeMl?: number }
       description?: string
     }) => {
       const photoId =
@@ -47,7 +47,10 @@ export function MealCaptureScreen() {
           ? uploadedPhoto.current.photoId
           : await uploadMealPhoto(image.uri)
       uploadedPhoto.current = { image, photoId }
-      return { photoId, items: await analyzeMeal({ photoId, description, depth: image.depth }) }
+      return {
+        photoId,
+        items: await analyzeMeal({ photoId, description, portionVolumeMl: image.portionVolumeMl }),
+      }
     },
   })
   const [error, setError] = useState<string | null>(null)
@@ -76,10 +79,10 @@ export function MealCaptureScreen() {
   }, [])
 
   const receiveLidarPhoto = useCallback(
-    async (uri: string, depth?: MealDepth) => {
+    async (uri: string, portionVolumeMl?: number) => {
       try {
         const prepared = await prepareMealImage(uri)
-        if (active.current) setImage({ ...prepared, depth })
+        if (active.current) setImage({ ...prepared, portionVolumeMl })
       } catch (cause) {
         captureException(cause)
         disableLidar()
@@ -266,7 +269,11 @@ export function MealCaptureScreen() {
                       contentFit="contain"
                     />
                     <Text style={styles.circleTitle}>Place food or drink here</Text>
-                    <Text style={styles.circleNote}>Top-down shot · keep steady</Text>
+                    <Text style={styles.circleNote}>
+                      {useLidar
+                        ? "Top-down · center one portion on a flat plate"
+                        : "Top-down shot · keep steady"}
+                    </Text>
                   </View>
                   <View style={styles.guideRuler}>
                     <Image
@@ -275,7 +282,9 @@ export function MealCaptureScreen() {
                       style={styles.guideRulerIcon}
                       contentFit="contain"
                     />
-                    <Text style={styles.guideRulerText}>Place 15 cm ruler beside plate or cup</Text>
+                    <Text style={styles.guideRulerText}>
+                      Optional: place a ruler beside the plate
+                    </Text>
                   </View>
                 </View>
               </View>

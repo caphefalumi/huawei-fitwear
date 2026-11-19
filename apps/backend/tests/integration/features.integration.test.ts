@@ -136,21 +136,13 @@ describe("Persistent feature APIs", () => {
     const { photoId } = await uploaded.json()
     expect((await request("/meals/analyze", stranger, "POST", { photoId })).status).toBe(404)
     expect((await request("/meals/analyze", owner, "POST", { photoId })).status).toBe(200)
-    expect(JSON.stringify(aiInputs[0])).not.toContain("LiDAR measurements")
-    const depth = {
-      cellsMm: Array.from({ length: 36 }, (_, index) => index + 350),
-      focalCellsX: 6,
-      focalCellsY: 7,
-    }
-    expect((await request("/meals/analyze", owner, "POST", { photoId, depth })).status).toBe(200)
-    expect(JSON.stringify(aiInputs[1])).toContain(depth.cellsMm.join(","))
+    expect(JSON.stringify(aiInputs[0])).not.toContain("Estimated volume from LiDAR")
     expect(
-      (
-        await request("/meals/analyze", owner, "POST", {
-          photoId,
-          depth: { ...depth, cellsMm: [350] },
-        })
-      ).status,
+      (await request("/meals/analyze", owner, "POST", { photoId, portionVolumeMl: 180 })).status,
+    ).toBe(200)
+    expect(JSON.stringify(aiInputs[1])).toContain("one central portion: 180 mL")
+    expect(
+      (await request("/meals/analyze", owner, "POST", { photoId, portionVolumeMl: -10 })).status,
     ).toBe(422)
     expect(aiInputs).toHaveLength(2)
     const meal = { mealType: "lunch", items: [foodItem], photoId }
