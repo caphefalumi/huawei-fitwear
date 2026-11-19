@@ -1,10 +1,8 @@
-import "@/lib/monitoring/sentry"
 import "@/global.css"
-import * as Sentry from "@sentry/react-native"
 import { QueryClientProvider } from "@tanstack/react-query"
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, usePathname } from "expo-router"
 import * as SplashScreen from "expo-splash-screen"
-import { PostHogProvider } from "posthog-react-native"
+import { PostHogErrorBoundary, PostHogProvider } from "posthog-react-native"
 import { type PropsWithChildren, useEffect } from "react"
 import { Text, useColorScheme, View } from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
@@ -39,18 +37,9 @@ function AppRoot() {
         <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
           <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
-              {posthog ? (
-                <PostHogProvider client={posthog} autocapture={{ captureScreens: false }}>
-                  <ScreenTracker />
-                  <NetworkStatusBanner />
-                  <RootNavigator />
-                </PostHogProvider>
-              ) : (
-                <>
-                  <NetworkStatusBanner />
-                  <RootNavigator />
-                </>
-              )}
+              <ScreenTracker />
+              <NetworkStatusBanner />
+              <RootNavigator />
             </KeyboardProvider>
           </GestureHandlerRootView>
         </ThemeProvider>
@@ -124,12 +113,18 @@ function StartupErrorFallback() {
   )
 }
 
-function RootLayout() {
-  return (
-    <Sentry.GlobalErrorBoundary fallback={<StartupErrorFallback />}>
+export default function RootLayout() {
+  const app = (
+    <PostHogErrorBoundary fallback={<StartupErrorFallback />}>
       <AppRoot />
-    </Sentry.GlobalErrorBoundary>
+    </PostHogErrorBoundary>
+  )
+
+  return posthog ? (
+    <PostHogProvider client={posthog} autocapture={{ captureScreens: false }}>
+      {app}
+    </PostHogProvider>
+  ) : (
+    app
   )
 }
-
-export default Sentry.wrap(RootLayout)

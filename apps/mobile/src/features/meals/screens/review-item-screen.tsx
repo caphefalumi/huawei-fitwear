@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/react-native"
 import { router, useLocalSearchParams } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
@@ -6,9 +5,8 @@ import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { BackHeader, Button } from "@/components/ui"
-import { posthog } from "@/lib/analytics/posthog"
+import { captureException, posthog } from "@/lib/analytics/posthog"
 import { apiErrorMessage } from "@/lib/api/client"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
 import { Box, Field, NutrientGrid, SegmentedChoice, ValueInput } from "../components/meals-ui"
@@ -17,7 +15,6 @@ import { splitDetail, useMeals } from "../hooks/meals-hooks"
 type NutrientKey = "energy" | "protein" | "carbs" | "fat"
 
 export function ReviewItemScreen() {
-  useMarkInteractive()
   const insets = useSafeAreaInsets()
   const { addItem, updateItem, items, history } = useMeals()
   const params = useLocalSearchParams<{
@@ -96,7 +93,7 @@ export function ReviewItemScreen() {
       if (existing || params.log) router.back()
       else router.navigate("/meal")
     } catch (cause) {
-      Sentry.captureException(cause)
+      captureException(cause)
       if (active.current) setError(apiErrorMessage(cause, "this item", "save"))
     } finally {
       if (active.current) setSaving(false)

@@ -13,7 +13,7 @@ const FEATURES: { key: DeveloperFeature; label: string; description: string }[] 
   {
     key: "testError",
     label: "Send test error",
-    description: "Captures a test event in Sentry from the Profile screen.",
+    description: "Captures a test event in PostHog from the Profile screen.",
   },
   {
     key: "bleTest",

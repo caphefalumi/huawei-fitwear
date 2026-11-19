@@ -25,6 +25,8 @@ export const posthog = isPostHogConfigured
         autocapture: {
           uncaughtExceptions: true,
           unhandledRejections: true,
+          nativeCrashes: true,
+          androidNdkCrashes: true,
           console: [],
         },
       },
@@ -33,6 +35,10 @@ export const posthog = isPostHogConfigured
       },
     })
   : undefined
+
+export function captureException(cause: unknown) {
+  posthog?.captureException(cause)
+}
 
 export const posthogLog = {
   info: (message: string, attributes?: Record<string, boolean | number | string>) =>

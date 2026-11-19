@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/react-native"
 import { router, useLocalSearchParams } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
@@ -7,7 +6,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { BackHeader, SectionHeading } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
 import { apiErrorMessage } from "@/lib/api/client"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
 import { SearchInput } from "../components/meals-ui"
@@ -20,7 +18,6 @@ import {
 } from "../hooks/meals-hooks"
 
 export function ReplaceFoodScreen() {
-  useMarkInteractive()
   const insets = useSafeAreaInsets()
   const params = useLocalSearchParams<{ id?: string; log?: string }>()
   const { items, history, updateItem } = useMeals()
@@ -61,7 +58,7 @@ export function ReplaceFoodScreen() {
       )
       if (active.current) router.back()
     } catch (cause) {
-      Sentry.captureException(cause)
+      captureException(cause)
       if (active.current) setError(apiErrorMessage(cause, "this food", "save"))
     } finally {
       if (active.current) setSaving(false)

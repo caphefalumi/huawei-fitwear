@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/react-native"
 import { PermissionsAndroid, Platform } from "react-native"
 import {
   BleError,
@@ -136,7 +135,7 @@ export class WatchBleClient {
         return
       }
     } catch (err) {
-      Sentry.captureException(err)
+      captureException(err)
       this.listener.onError(err instanceof Error ? err.message : "Could not read Bluetooth state")
       return
     }
@@ -265,7 +264,7 @@ export class WatchBleClient {
           this.listener.onError(null)
           this.setStatus("connected")
         } catch (connErr) {
-          Sentry.captureException(connErr)
+          captureException(connErr)
           // Release a half-open link so the watch can advertise again.
           if (connected) await this.safeCancel(connected)
           if (session !== this.session) return
@@ -323,7 +322,7 @@ export class WatchBleClient {
       this.emitBytes("phone-to-watch", bytes)
       return { ok: true, text: clean, byteLength: bytes.byteLength }
     } catch (err) {
-      Sentry.captureException(err)
+      captureException(err)
       const error = err instanceof Error ? err.message : "Write failed."
       this.listener.onError(error)
       return { ok: false, error }

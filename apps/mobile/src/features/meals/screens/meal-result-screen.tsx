@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/react-native"
 import { router } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
@@ -6,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { FetchErrorState } from "@/components/feedback/fetch-states"
 import { BackHeader, Button, SectionHeading } from "@/components/ui"
-import { posthog } from "@/lib/analytics/posthog"
+import { captureException, posthog } from "@/lib/analytics/posthog"
 import { apiErrorMessage } from "@/lib/api/client"
 import { Palette as C } from "@/theme"
 
@@ -52,7 +51,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
       await action()
       if (active.current) after?.()
     } catch (cause) {
-      Sentry.captureException(cause)
+      captureException(cause)
       if (active.current) setActionError(apiErrorMessage(cause, "your meal", "save"))
     } finally {
       if (active.current) setPending(false)

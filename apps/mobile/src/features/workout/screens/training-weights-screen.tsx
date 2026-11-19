@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { BackHeader, Button, PageHeading, Screen } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
 import { Sheet } from "@/components/ui/sheet"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
 import {
@@ -79,7 +78,6 @@ function LoadEditor({ exercise, onSaved }: { exercise: CatalogExercise; onSaved:
 
 /** Profile is the only place training weights change; guides link here. */
 export function TrainingWeightsScreen() {
-  useMarkInteractive()
   const insets = useSafeAreaInsets()
   const { edit } = useLocalSearchParams<{ edit?: string }>()
   const linked = findExercise(edit)

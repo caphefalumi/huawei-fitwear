@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/react-native"
 import { useEffect, useRef, useState } from "react"
 import { AppState } from "react-native"
 
@@ -97,7 +96,7 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
       setToken(nextToken)
       setStep("password")
     } catch (cause) {
-      Sentry.captureException(cause)
+      captureException(cause)
       if (!mounted.current) return
       setCode("")
       setError(userFacingPasswordResetError(cause, "verify"))
@@ -117,7 +116,7 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
       setResendDeadline(Date.now() + result.resendAfterSeconds * 1000)
       setCode("")
     } catch (cause) {
-      Sentry.captureException(cause)
+      captureException(cause)
       if (!mounted.current) return
       setError(userFacingPasswordResetError(cause, "request"))
     } finally {
@@ -143,7 +142,7 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
         setResendDeadline(Date.now() + result.resendAfterSeconds * 1000)
         setStep("code")
       } catch (cause) {
-        Sentry.captureException(cause)
+        captureException(cause)
         if (!mounted.current) return
         setError(userFacingPasswordResetError(cause, "request"))
       } finally {
@@ -173,7 +172,7 @@ export function usePasswordReset({ email, onStart, onCompleted }: PasswordResetO
       onCompleted()
       setStep("done")
     } catch (cause) {
-      Sentry.captureException(cause)
+      captureException(cause)
       if (!mounted.current) return
       setError(userFacingPasswordResetError(cause, "complete"))
     } finally {

@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/react-native"
 import { router } from "expo-router"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Pressable, ScrollView, StyleSheet, TextInput, useColorScheme, View } from "react-native"
@@ -7,8 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { ThemedText } from "@/components/ui/themed-text"
 import { ThemedView } from "@/components/ui/themed-view"
 import { useTheme } from "@/hooks/use-theme"
-import { posthog, posthogLog } from "@/lib/analytics/posthog"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
+import { captureException, posthog, posthogLog } from "@/lib/analytics/posthog"
 import { BottomTabInset, tokens } from "@/theme"
 
 import { useWatchBle } from "../hooks/use-watch-ble"
@@ -103,7 +101,6 @@ function AxisRow({
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 export function BleSyncScreen() {
-  useMarkInteractive()
   const theme = useTheme()
   const colorScheme = useColorScheme()
   const isDark = colorScheme === "dark"
@@ -190,7 +187,7 @@ export function BleSyncScreen() {
         setSendFeedback(ok ? "Sent ✓" : "Failed to send")
       } catch (e) {
         posthogLog.warn("watch message delivery failed", { message_source: "quick_preset" })
-        Sentry.captureException(e)
+        captureException(e)
         setSendFeedback(`Error: ${e instanceof Error ? e.message : String(e)}`)
       } finally {
         setSending(false)
@@ -214,7 +211,7 @@ export function BleSyncScreen() {
       setSendFeedback(ok ? "Sent ✓" : "Failed to send")
     } catch (e) {
       posthogLog.warn("watch message delivery failed", { message_source: "custom" })
-      Sentry.captureException(e)
+      captureException(e)
       setSendFeedback(`Error: ${e instanceof Error ? e.message : String(e)}`)
     } finally {
       setSending(false)

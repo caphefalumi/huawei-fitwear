@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/react-native"
 import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useState } from "react"
@@ -12,7 +11,6 @@ import { useAuth } from "@/features/auth"
 import { useHealth } from "@/features/health"
 import { PERIOD_AREA, PeriodSheet, useActiveInjuries, useInjuries } from "@/features/recovery"
 import { emphasisFor, useLoads, usePlanPreferences } from "@/features/workout"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
 import {
@@ -79,7 +77,6 @@ type OpenSheet =
   | null
 
 export function ProfileScreen() {
-  useMarkInteractive()
   const { user, signOut } = useAuth()
   const developerMode = useDeveloperMode((state) => state.enabled)
   const developerFeatures = useDeveloperMode((state) => state.features)
@@ -255,7 +252,7 @@ export function ProfileScreen() {
         {developerMode && developerFeatures.testError ? (
           <Pressable
             accessibilityRole="button"
-            onPress={() => Sentry.captureException(new Error("First error"))}
+            onPress={() => captureException(new Error("First error"))}
             style={styles.row}
           >
             <Text style={styles.rowLabel}>Send test error</Text>

@@ -61,15 +61,7 @@
         }
       ],
       "./plugins/withBluetoothPermissions",
-      "./plugins/withAndroidCmake",
-      [
-        "@sentry/react-native/expo",
-        {
-          "url": "https://sentry.io/",
-          "project": "huawei-fitwear",
-          "organization": "caphefalumi"
-        }
-      ]
+      "./plugins/withAndroidCmake"
     ],
     "experiments": {
       "typedRoutes": true,

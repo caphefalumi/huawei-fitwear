@@ -6,7 +6,6 @@ import { StyleSheet, Text, View } from "react-native"
 import { BackHeader, Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
 import { affects, injuryTitle, useActiveInjuries } from "@/features/recovery"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
 import { VideoPlaceholder } from "../components/video-placeholder"
@@ -30,7 +29,6 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 }
 
 export function ExerciseGuideScreen() {
-  useMarkInteractive()
   const { name } = useLocalSearchParams<{ name?: string }>()
   const exercise = findExercise(name) ?? CATALOG[0]!
   const injury = useActiveInjuries().find((active) => affects(active.area, exercise))

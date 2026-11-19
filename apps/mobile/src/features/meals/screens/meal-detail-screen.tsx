@@ -5,7 +5,6 @@ import { FetchErrorState, LoadingSkeleton } from "@/components/feedback/fetch-st
 import { Pressable } from "@/components/ui/pressable"
 import { useAuth } from "@/features/auth"
 import { apiErrorMessage } from "@/lib/api/client"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { refetchThrowing } from "@/lib/query/retry"
 import { Palette as C } from "@/theme"
 
@@ -14,7 +13,6 @@ import { fromApiMeal, mealsQueryKeys, useMeals } from "../hooks/meals-hooks"
 import { MealResultScreen } from "./meal-result-screen"
 
 export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: () => void }) {
-  useMarkInteractive()
   const { user } = useAuth()
   const { history, loading } = useMeals()
   const saved = history.find((item) => item.id === logId)

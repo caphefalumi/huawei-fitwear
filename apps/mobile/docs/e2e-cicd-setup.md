@@ -94,7 +94,8 @@ Long-lived feature branches use git diff from the **last successful build SHA** 
 ## Job 2a: `build` (when `rebuild_apk == true`)
 
 - Expo prebuild Android with `EXPO_PUBLIC_API_URL=https://fitwear.tm-project.id.vn/`.
-- Gradle `assembleRelease` for `x86_64` (`-PreactNativeArchitectures=x86_64`), minify off, Sentry auto-upload disabled.
+- Gradle `assembleRelease` for `x86_64` (`-PreactNativeArchitectures=x86_64`), with minification disabled.
+- Release builds can upload maps and native symbols to PostHog. Install `posthog-cli` on the build worker and set `POSTHOG_CLI_API_KEY` and `POSTHOG_CLI_PROJECT_ID` (and `POSTHOG_CLI_HOST` for a non-default region). Builds without upload credentials do not run the upload hooks. Enable exception autocapture in the PostHog project and provide `EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN` and `EXPO_PUBLIC_POSTHOG_HOST` at bundle time to report crashes.
 - Upload artifact **`fitwear-release-apk`** (`app-release.apk`).
 
 ## Job 2b: `fetch-apk` (when `rebuild_apk != true`)

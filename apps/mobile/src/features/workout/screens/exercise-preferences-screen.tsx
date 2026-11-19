@@ -11,7 +11,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { BackHeader, PageHeading, Screen, SectionHeading } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
 import { usePlanPreferences } from "../store/plan-preferences.store"
@@ -100,7 +99,6 @@ function ExerciseRow({ exercise, status }: { exercise: CatalogExercise; status: 
 }
 
 export function ExercisePreferencesScreen() {
-  useMarkInteractive()
   const insets = useSafeAreaInsets()
   const { likes, dislikes, hintDismissed, dismissHint, reset, restore } = usePlanPreferences()
   const [group, setGroup] = useState<MuscleGroup>("Chest")

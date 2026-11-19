@@ -3,7 +3,6 @@ import { StyleSheet, Text, View } from "react-native"
 
 import { BackHeader, Card, PageHeading, Screen } from "@/components/ui"
 import { useMeals } from "@/features/meals"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
 
@@ -13,7 +12,6 @@ import { MacroBar } from "../components/ui"
 import { nutritionView } from "../utils/nutrition-view"
 
 export function NutritionScreen() {
-  useMarkInteractive()
   const { summary, error } = useMeals()
   const nutrition = nutritionView(summary)
   const dateLine = usePlanNow().toLocaleDateString("en-US", {

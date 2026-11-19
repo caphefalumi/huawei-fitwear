@@ -11,7 +11,6 @@ import { useHealth } from "@/features/health"
 import { useMeals } from "@/features/meals"
 import { injuryEffect, injuryTitle, useActiveInjuries } from "@/features/recovery"
 import { useRoutines } from "@/features/workout"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
 
@@ -52,7 +51,6 @@ export function HomeScreen() {
   const { weightKg, weightUpdated } = useHealth()
   const injuries = useActiveInjuries()
   const { summary, error: mealsError } = useMeals()
-  useMarkInteractive()
   const [visit, setVisit] = useState(0)
 
   useFocusEffect(useCallback(() => setVisit((v) => v + 1), []))
