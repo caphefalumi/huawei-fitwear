@@ -33,7 +33,7 @@ jobs:
         include:
           - platform: android
             os: ubuntu-latest
-            timeout: 60
+            timeout: 90
             artifact: app-release.apk
             path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
           - platform: ios

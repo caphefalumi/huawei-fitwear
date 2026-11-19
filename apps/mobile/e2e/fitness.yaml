@@ -72,6 +72,37 @@ tags:
 - extendedWaitUntil:
     notVisible: "Add a ruler"
     timeout: 5000
+
+# Use a real barcode image and the staging lookup; do not save to the diary.
+- addMedia:
+    - "./fixtures/hao-hao-barcode.jpg"
+- tapOn: "Choose from library"
+- extendedWaitUntil:
+    visible: "Photo taken on.*"
+    timeout: 15000
+- tapOn:
+    text: "Photo taken on.*"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: ".*:id/crop_image_menu_crop"
+    timeout: 15000
+- tapOn:
+    id: ".*:id/crop_image_menu_crop"
+- extendedWaitUntil:
+    visible:
+      text: "(?iu).*H[aả]o H[aả]o.*"
+    timeout: 30000
+- assertVisible: "Barcode 8934563138165"
+- tapOn: "Review product"
+- extendedWaitUntil:
+    visible: "Barcode match · review required"
+    timeout: 15000
+- back
+- extendedWaitUntil:
+    visible: "Capture Meal"
+    timeout: 15000
+
 - back
 - tapOn:
     id: "tab-workout"

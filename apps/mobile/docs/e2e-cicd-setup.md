@@ -167,6 +167,8 @@ Summary generator always exits 0 so reporting does not mask a failed test step.
 
 CI discovers **top-level** `.yaml`/`.yml` files in `e2e/`. Put shared subflows in subdirectories so they are not run as separate top-level journeys.
 
+The fitness flow picks a barcode crop from the [Hảo Hảo shrimp noodle package photo](https://foody.nz/cdn/shop/products/thung-30-goi-mi-hao-hao-tom-chua-cay-75g-201902180900116138_bfdedf59-5329-4c42-b54e-65c3ef13ce6e_2048x2048.jpeg?v=1604714785), checks EAN-13 `8934563138165` through the staging catalog lookup, and opens nutrition review without saving the item.
+
 **Conventions (from README):**
 
 - Password fields: test IDs `login-password`, `sign-up-password`.
