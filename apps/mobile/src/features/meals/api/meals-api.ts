@@ -43,7 +43,11 @@ export type MealWriteInput = {
   body?: unknown
 }
 
-export type AnalyzeMealInput = { photoId: string; description?: string }
+export type AnalyzeMealInput = {
+  photoId: string
+  description?: string
+  depth?: { cellsMm: number[]; focalCellsX: number; focalCellsY: number }
+}
 
 export async function uploadMealPhoto(uri: string): Promise<string> {
   const body = new FormData()

@@ -16,6 +16,9 @@ jest.mock("expo-camera", () => {
   MockCameraView.displayName = "MockCameraView"
   return { CameraView: MockCameraView, useCameraPermissions: jest.fn() }
 })
+jest.mock("@/features/meals/screens/meal-lidar-camera", () => ({
+  useMealLidarAvailable: () => false,
+}))
 jest.mock("expo-router", () => ({ router: { push: jest.fn(), back: jest.fn() } }))
 jest.mock("expo-image-manipulator", () => ({
   SaveFormat: { WEBP: "webp" },
