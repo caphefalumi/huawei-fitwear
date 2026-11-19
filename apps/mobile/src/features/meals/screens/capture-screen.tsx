@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query"
 import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useIsFocused } from "expo-router/react-navigation"
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { ActivityIndicator, Platform, StyleSheet, Text, TextInput, View } from "react-native"
 import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -19,9 +19,10 @@ import { analyzeMeal, lookupBarcodeFood, uploadMealPhoto } from "../api/meals-ap
 import { icons } from "../components/meals-ui"
 import { useMeals, type FoodEntry } from "../hooks/meals-hooks"
 import { useMealCamera } from "./meal-camera"
+import { MealLidarCamera, useMealLidarAvailable } from "./meal-lidar-camera"
 
 const TUTORIAL_STEPS = [
-  { title: "Add a ruler", detail: "Place a 15 cm ruler beside the plate or cup." },
+  { title: "Add a ruler", detail: "If you have one, place a 15 cm ruler beside the plate or cup." },
   { title: "Shoot from above", detail: "Keep the whole meal in frame and hold steady." },
 ]
 
@@ -45,19 +46,32 @@ export function MealCaptureScreen() {
   const focused = useIsFocused()
   const { tutorialSeen, dismissTutorial, setAnalysis, setDraftPhoto, items } = useMeals()
   const [description, setDescription] = useState("")
-  const [image, setImage] = useState<PickedImage | null>(null)
+  const [image, setImage] = useState<(PickedImage & { portionVolumeMl?: number }) | null>(null)
+  const lidarAvailable = useMealLidarAvailable()
+  const [lidarFailed, setLidarFailed] = useState(false)
+  const [lidarCapture, setLidarCapture] = useState(0)
+  const useLidar = lidarAvailable && !lidarFailed
   const [barcodePreview, setBarcodePreview] = useState<BarcodePreview | null>(null)
   const barcodeRequest = useRef<AbortController | null>(null)
   const scannedCodes = useRef(new Set<string>())
   const pickingPhoto = useRef(false)
   const analyzeMutation = useMutation({
-    mutationFn: async ({ image, description }: { image: PickedImage; description?: string }) => {
+    mutationFn: async ({
+      image,
+      description,
+    }: {
+      image: PickedImage & { portionVolumeMl?: number }
+      description?: string
+    }) => {
       const photoId =
         uploadedPhoto.current?.image === image
           ? uploadedPhoto.current.photoId
           : await uploadMealPhoto(image.uri)
       uploadedPhoto.current = { image, photoId }
-      return { photoId, items: await analyzeMeal({ photoId, description }) }
+      return {
+        photoId,
+        items: await analyzeMeal({ photoId, description, portionVolumeMl: image.portionVolumeMl }),
+      }
     },
   })
   const [error, setError] = useState<string | null>(null)
@@ -66,7 +80,7 @@ export function MealCaptureScreen() {
   const uploadedPhoto = useRef<{ image: PickedImage; photoId: string } | null>(null)
   const [cameraFailed, setCameraFailed] = useState(false)
   const camera = useMealCamera({
-    active: focused && !image && !cameraFailed,
+    active: focused && !image && !cameraFailed && !useLidar,
     scan: focused && tutorialSeen && !image && !barcodePreview && !cameraFailed,
     onBarcode: scanBarcode,
     onError: (cause) => {
@@ -89,6 +103,7 @@ export function MealCaptureScreen() {
 
   useEffect(() => {
     if (!focused) setBarcodePreview(null)
+    if (!focused) setLidarCapture(0)
     return () => {
       barcodeRequest.current?.abort()
       barcodeRequest.current = null
@@ -102,7 +117,15 @@ export function MealCaptureScreen() {
   }
 
   async function scanBarcode(data: string, compressedUpc: boolean) {
-    if (!focused || !tutorialSeen || image || pickingPhoto.current || barcodeRequest.current) return
+    if (
+      !focused ||
+      !tutorialSeen ||
+      image ||
+      lidarCapture ||
+      pickingPhoto.current ||
+      barcodeRequest.current
+    )
+      return
     const code = lookupCode(data, compressedUpc)
     if (!code || scannedCodes.current.has(code)) return
     scannedCodes.current.add(code)
@@ -149,8 +172,29 @@ export function MealCaptureScreen() {
     })
   }
 
+  const disableLidar = useCallback(() => {
+    setLidarFailed(true)
+    setLidarCapture(0)
+    setError("Depth camera unavailable. Take a regular photo to continue.")
+  }, [])
+
+  const receiveLidarPhoto = useCallback(
+    async (uri: string, portionVolumeMl?: number) => {
+      try {
+        const prepared = await prepareMealImage(uri)
+        if (active.current) setImage({ ...prepared, portionVolumeMl })
+      } catch (cause) {
+        captureException(cause)
+        if (active.current) disableLidar()
+      } finally {
+        if (active.current) setLidarCapture(0)
+      }
+    },
+    [disableLidar],
+  )
+
   async function selectLibrary() {
-    if (busy || pickingPhoto.current) return
+    if (busy || lidarCapture || pickingPhoto.current) return
     pickingPhoto.current = true
     dismissBarcode()
     setError(null)
@@ -171,10 +215,14 @@ export function MealCaptureScreen() {
     }
   }
   async function takePhoto() {
-    if (busy || pickingPhoto.current) return
-    pickingPhoto.current = true
+    if (busy || lidarCapture || pickingPhoto.current) return
     dismissBarcode()
     setError(null)
+    if (useLidar) {
+      setLidarCapture(1)
+      return
+    }
+    pickingPhoto.current = true
     try {
       const uri = await camera.takePhoto()
       if (!uri) return
@@ -314,7 +362,20 @@ export function MealCaptureScreen() {
               </View>
             ) : (
               <View style={styles.preview}>
-                {camera.preview}
+                {useLidar ? (
+                  focused ? (
+                    <MealLidarCamera
+                      style={StyleSheet.absoluteFill}
+                      capture={lidarCapture}
+                      scan={tutorialSeen && !barcodePreview && !lidarCapture}
+                      onBarcode={scanBarcode}
+                      onCapture={receiveLidarPhoto}
+                      onUnavailable={disableLidar}
+                    />
+                  ) : null
+                ) : (
+                  camera.preview
+                )}
                 <View pointerEvents="none" style={styles.guide}>
                   <View style={[styles.guideCorner, styles.guideTL]} />
                   <View style={[styles.guideCorner, styles.guideTR]} />

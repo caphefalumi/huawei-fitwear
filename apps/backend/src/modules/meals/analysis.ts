@@ -20,7 +20,11 @@ const analysisBody = t.Union([
     mimeType: t.Literal("image/webp"),
     description,
   }),
-  t.Object({ photoId: t.String({ pattern: MEAL_PHOTO_ID }), description }),
+  t.Object({
+    photoId: t.String({ pattern: MEAL_PHOTO_ID }),
+    description,
+    portionVolumeMl: t.Optional(t.Integer({ minimum: 10, maximum: 2000 })),
+  }),
 ])
 
 export const mealAnalysisResult = t.Object({
@@ -170,7 +174,11 @@ export const mealAnalysis = new Elysia({ prefix: "/meals", detail: { tags: ["Mea
               content: [
                 {
                   type: "text",
-                  text: `Estimate the pictured meal. Food context: ${body.description ?? "(none)"}`,
+                  text: `Estimate the pictured meal. Food context: ${body.description ?? "(none)"}${
+                    "portionVolumeMl" in body && body.portionVolumeMl !== undefined
+                      ? `\nEstimated volume from LiDAR for one central portion: ${body.portionVolumeMl} mL. Use it as an approximate volume, not a weight. Apply it only if you can identify a single central food matching the portion; ignore it for mixed dishes, multiple plausible foods, or ambiguous scenes. Estimate weight using a density appropriate to the identified food, then estimate its nutrition for that weight.`
+                      : ""
+                  }`,
                 },
                 {
                   type: "image_url",

@@ -30,6 +30,7 @@ jest.mock("../screens/meal-camera", () => ({
     }
   },
 }))
+jest.mock("../screens/meal-lidar-camera", () => ({ useMealLidarAvailable: () => false }))
 jest.mock("expo-router", () => ({ router: { push: jest.fn(), back: jest.fn() } }))
 jest.mock("expo-router/react-navigation", () => ({ useIsFocused: () => true }))
 jest.mock("expo-image-manipulator", () => ({

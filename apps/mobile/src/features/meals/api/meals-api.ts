@@ -43,7 +43,7 @@ export type MealWriteInput = {
   body?: unknown
 }
 
-export type AnalyzeMealInput = { photoId: string; description?: string }
+export type AnalyzeMealInput = { photoId: string; description?: string; portionVolumeMl?: number }
 
 export async function uploadMealPhoto(uri: string): Promise<string> {
   const body = new FormData()

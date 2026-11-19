@@ -152,8 +152,12 @@ describe("Persistent feature APIs", () => {
           : null
       },
     } as unknown as R2Bucket
+    const aiInputs: unknown[] = []
     const ai = {
-      run: async () => ({ choices: [{ message: { content: '{"items":[]}' } }] }),
+      run: async (_model: string, input: unknown) => {
+        aiInputs.push(input)
+        return { choices: [{ message: { content: '{"items":[]}' } }] }
+      },
     } as unknown as Ai
     setTestDatabaseBinding({ DB: d1, fitwear_kv: createTestKv(), MEAL_IMAGES: bucket, AI: ai })
     const owner = (await account()).session.token
@@ -175,6 +179,15 @@ describe("Persistent feature APIs", () => {
     const { photoId } = await uploaded.json()
     expect((await request("/meals/analyze", stranger, "POST", { photoId })).status).toBe(404)
     expect((await request("/meals/analyze", owner, "POST", { photoId })).status).toBe(200)
+    expect(JSON.stringify(aiInputs[0])).not.toContain("Estimated volume from LiDAR")
+    expect(
+      (await request("/meals/analyze", owner, "POST", { photoId, portionVolumeMl: 180 })).status,
+    ).toBe(200)
+    expect(JSON.stringify(aiInputs[1])).toContain("one central portion: 180 mL")
+    expect(
+      (await request("/meals/analyze", owner, "POST", { photoId, portionVolumeMl: -10 })).status,
+    ).toBe(422)
+    expect(aiInputs).toHaveLength(2)
     const meal = { mealType: "lunch", items: [foodItem], photoId }
     expect((await request("/meals", stranger, "POST", meal)).status).toBe(404)
     const saved = await request("/meals", owner, "POST", meal)
