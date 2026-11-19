@@ -74,8 +74,6 @@ tags:
     timeout: 5000
 
 # Use a real barcode image and the staging lookup; do not save to the diary.
-- addMedia:
-    - "./fixtures/hao-hao-barcode.jpg"
 - tapOn: "Choose from library"
 - extendedWaitUntil:
     visible: "Photo taken on.*"

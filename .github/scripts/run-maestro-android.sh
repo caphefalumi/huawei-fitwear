@@ -31,6 +31,24 @@ adb shell getprop sys.boot_completed | grep -q '^1$'
 adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
 adb shell pm path com.fitwear.mobile >/dev/null
 
+# Maestro addMedia returned before the API 34 picker could see the fixture.
+fixture=hao-hao-barcode.jpg
+photo="/sdcard/Pictures/$fixture"
+adb push "apps/mobile/e2e/fixtures/$fixture" "$photo"
+adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d "file://$photo"
+fixture_indexed() {
+  adb shell content query --uri content://media/external/images/media \
+    --projection _display_name | grep -F "$fixture" >/dev/null
+}
+for attempt in {1..15}; do
+  if fixture_indexed; then break; fi
+  sleep 1
+done
+if ! fixture_indexed; then
+  echo "::error::Android did not index the barcode photo fixture."
+  exit 1
+fi
+
 args=()
 if [[ -n "${MAESTRO_INCLUDE_TAGS:-}" ]]; then
   args+=(--include-tags "$MAESTRO_INCLUDE_TAGS")
