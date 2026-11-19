@@ -97,10 +97,8 @@ test("camera detects a barcode once, previews it, and waits for confirmation", a
   const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
   const camera = screen.getByTestId("meal-capture-camera")
   await act(async () => {
-    await Promise.all([
-      fireEvent(camera, "barcodeScanned", "04252614", true),
-      fireEvent(camera, "barcodeScanned", "04252614", true),
-    ])
+    const emitBarcode = camera.props.onBarcodeScanned
+    await Promise.all([emitBarcode("04252614", true), emitBarcode("04252614", true)])
   })
   expect(apiRequest).toHaveBeenCalledTimes(1)
   expect(apiRequest).toHaveBeenCalledWith("/foods/barcode/042100005264", expect.any(Object))
