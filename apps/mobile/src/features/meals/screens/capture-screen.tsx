@@ -12,6 +12,7 @@ import { BackHeader, Button } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
 import { Sheet } from "@/components/ui/sheet"
 import { pickImage, prepareMealImage, type PickedImage } from "@/features/camera"
+import { posthog } from "@/lib/analytics/posthog"
 import { ApiError, apiErrorMessage } from "@/lib/api/client"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
@@ -116,6 +117,10 @@ export function MealCaptureScreen() {
       if (!result.length)
         throw new Error("No food was identified. Try another photo or enter items manually.")
       setAnalysis(result, image.uri, { photoId })
+      posthog?.capture("meal_analysis_completed", {
+        item_count: result.length,
+        description_provided: Boolean(description.trim()),
+      })
       router.push("/meal")
     } catch (cause) {
       Sentry.captureException(cause)

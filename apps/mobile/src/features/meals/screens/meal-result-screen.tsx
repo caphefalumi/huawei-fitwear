@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { FetchErrorState } from "@/components/feedback/fetch-states"
 import { BackHeader, Button, SectionHeading } from "@/components/ui"
+import { posthog } from "@/lib/analytics/posthog"
 import { apiErrorMessage } from "@/lib/api/client"
 import { Palette as C } from "@/theme"
 
@@ -216,7 +217,16 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
             disabled={items.length === 0 || pending || meals.busy}
             busy={pending || meals.busy}
             onPress={() => {
-              void perform(logMeal, () => router.replace("/home"))
+              void perform(
+                async () => {
+                  await logMeal()
+                  posthog?.capture("meal_logged", {
+                    meal_type: meals.mealType,
+                    item_count: items.length,
+                  })
+                },
+                () => router.replace("/home"),
+              )
             }}
           />
         )}

@@ -2,9 +2,10 @@ import "@/lib/monitoring/sentry"
 import "@/global.css"
 import * as Sentry from "@sentry/react-native"
 import { QueryClientProvider } from "@tanstack/react-query"
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router"
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, usePathname } from "expo-router"
 import * as SplashScreen from "expo-splash-screen"
-import { type PropsWithChildren } from "react"
+import { PostHogProvider } from "posthog-react-native"
+import { type PropsWithChildren, useEffect } from "react"
 import { Text, useColorScheme, View } from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
@@ -15,9 +16,20 @@ import { APP_ROUTES, AuthProvider, useAuth } from "@/features/auth"
 import { HealthProvider } from "@/features/health"
 import { MealsProvider } from "@/features/meals"
 import { WorkoutProvider } from "@/features/workout"
+import { posthog } from "@/lib/analytics/posthog"
 import { queryClient } from "@/lib/query/client"
 
 SplashScreen.preventAutoHideAsync()
+
+function ScreenTracker() {
+  const pathname = usePathname()
+
+  useEffect(() => {
+    posthog?.screen(pathname)
+  }, [pathname])
+
+  return null
+}
 
 function AppRoot() {
   const colorScheme = useColorScheme()
@@ -27,8 +39,18 @@ function AppRoot() {
         <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
           <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
-              <NetworkStatusBanner />
-              <RootNavigator />
+              {posthog ? (
+                <PostHogProvider client={posthog} autocapture={{ captureScreens: false }}>
+                  <ScreenTracker />
+                  <NetworkStatusBanner />
+                  <RootNavigator />
+                </PostHogProvider>
+              ) : (
+                <>
+                  <NetworkStatusBanner />
+                  <RootNavigator />
+                </>
+              )}
             </KeyboardProvider>
           </GestureHandlerRootView>
         </ThemeProvider>

@@ -6,6 +6,7 @@ import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { BackHeader, Button } from "@/components/ui"
+import { posthog } from "@/lib/analytics/posthog"
 import { apiErrorMessage } from "@/lib/api/client"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
@@ -87,6 +88,10 @@ export function ReviewItemScreen() {
       }
       if (existing) await updateItem(existing.id, item, params.log)
       else await addItem(item, params.log)
+      posthog?.capture(existing ? "meal_item_updated" : "meal_item_added", {
+        meal_location: params.log ? "history" : "draft",
+        portion_unit: unit,
+      })
       if (!active.current) return
       if (existing || params.log) router.back()
       else router.navigate("/meal")
