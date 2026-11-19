@@ -17,7 +17,9 @@ export async function prepareMealImage(uri: string): Promise<PickedImage> {
   return { uri: saved.uri, mimeType: "image/webp" }
 }
 
-export async function pickImage(camera: boolean): Promise<PickedImage | null> {
+export async function pickImage(
+  camera: boolean,
+): Promise<(PickedImage & { sourceUri: string }) | null> {
   if (camera && Platform.OS !== "web") {
     const permission = await ImagePicker.requestCameraPermissionsAsync()
     if (!permission.granted) {
@@ -37,5 +39,6 @@ export async function pickImage(camera: boolean): Promise<PickedImage | null> {
     : await ImagePicker.launchImageLibraryAsync(options)
   if (result.canceled) return null
 
-  return prepareMealImage(result.assets[0].uri)
+  const sourceUri = result.assets[0].uri
+  return { ...(await prepareMealImage(sourceUri)), sourceUri }
 }

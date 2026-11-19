@@ -1,9 +1,14 @@
 import { act, fireEvent, render } from "@testing-library/react-native"
 import { router } from "expo-router"
+import { type ReactNode } from "react"
 
+import { pickImage } from "@/features/camera"
 import { useMeals } from "@/features/meals"
 import { MealCaptureScreen } from "@/features/meals/screens/capture-screen"
+import { scanMealPhoto } from "@/features/meals/screens/scan-meal-photo"
 import { apiRequest } from "@/lib/api/client"
+
+const mockScanMealPhoto = jest.mocked(scanMealPhoto!)
 
 const mockTakePicture = jest.fn()
 const mockRequestPermission = jest.fn()
@@ -29,6 +34,15 @@ jest.mock("../screens/meal-camera", () => ({
         ) : null,
     }
   },
+}))
+jest.mock("../screens/scan-meal-photo", () => ({ scanMealPhoto: jest.fn() }))
+jest.mock("@expo/ui", () => ({
+  BottomSheet: ({ isPresented, children }: { isPresented: boolean; children: ReactNode }) =>
+    isPresented ? children : null,
+  RNHostView: ({ children }: { children: ReactNode }) => children,
+}))
+jest.mock("expo-symbols", () => ({
+  SymbolView: require("react-native").View,
 }))
 jest.mock("../screens/meal-lidar-camera", () => ({ useMealLidarAvailable: () => false }))
 jest.mock("expo-router", () => ({ router: { push: jest.fn(), back: jest.fn() } }))
@@ -78,6 +92,8 @@ function mockMeals(tutorialSeen: boolean) {
 
 beforeEach(() => {
   jest.clearAllMocks()
+  jest.mocked(apiRequest).mockReset()
+  mockScanMealPhoto.mockReset().mockResolvedValue(null)
   mockCameraGranted = true
 })
 
@@ -137,9 +153,79 @@ test("a dismissed result does not reopen for the same barcode, and another code 
   await act(async () => {
     await scan("3017620422004")
   })
-  expect(screen.getByText(/No nutrition data found/)).toBeTruthy()
+  expect(screen.getByText("Nutrition not available")).toBeTruthy()
   await fireEvent.press(screen.getByText("Enter nutrition manually"))
   expect(router.push).toHaveBeenCalledWith({ pathname: "/review-item", params: {} })
+})
+
+test("library photo barcode sends only the code and a catalog miss leaves the photo available", async () => {
+  mockMeals(true)
+  jest.mocked(pickImage).mockResolvedValueOnce({
+    uri: "file://meal.webp",
+    sourceUri: "file://label.jpg",
+    mimeType: "image/webp",
+  })
+  mockScanMealPhoto.mockResolvedValueOnce({
+    value: "8934609206834",
+    compressedUpc: false,
+  })
+  jest.mocked(apiRequest).mockResolvedValueOnce({ food: null })
+
+  const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
+  await fireEvent.press(screen.getByLabelText("Choose from library"))
+  await screen.findByText("Barcode 8934609206834")
+  expect(screen.getByText("Nutrition not available")).toBeTruthy()
+  expect(scanMealPhoto).toHaveBeenCalledWith("file://label.jpg", expect.anything())
+  expect(apiRequest).toHaveBeenCalledTimes(1)
+  expect(apiRequest).toHaveBeenCalledWith("/foods/barcode/8934609206834", expect.any(Object))
+  await fireEvent.press(screen.getByLabelText("Dismiss barcode result"))
+  expect(screen.getByLabelText("Selected meal photo")).toBeTruthy()
+  expect(screen.getByLabelText("Analyze photo").props.accessibilityState.disabled).toBe(false)
+})
+
+test("retaking a photo ignores a barcode that finishes decoding late", async () => {
+  mockMeals(true)
+  jest.mocked(pickImage).mockResolvedValueOnce({
+    uri: "file://meal.webp",
+    sourceUri: "file://label.jpg",
+    mimeType: "image/webp",
+  })
+  const { promise, resolve } = Promise.withResolvers<{ value: string; compressedUpc: boolean }>()
+  mockScanMealPhoto.mockReturnValueOnce(promise)
+
+  const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
+  await fireEvent.press(screen.getByLabelText("Choose from library"))
+  await screen.findByLabelText("Selected meal photo")
+  await fireEvent.press(screen.getByLabelText("Retake photo"))
+  await act(async () => resolve({ value: "8934609206834", compressedUpc: false }))
+  expect(screen.getByTestId("meal-capture-camera")).toBeTruthy()
+  expect(screen.queryByText("Barcode 8934609206834")).toBeNull()
+  expect(apiRequest).not.toHaveBeenCalled()
+})
+
+test("a lookup error can retry the same barcode without scanning again", async () => {
+  mockMeals(true)
+  mockCameraGranted = false
+  jest.mocked(pickImage).mockResolvedValueOnce({
+    uri: "file://meal.webp",
+    sourceUri: "file://label.jpg",
+    mimeType: "image/webp",
+  })
+  mockScanMealPhoto.mockResolvedValueOnce({
+    value: "8934609206834",
+    compressedUpc: false,
+  })
+  jest
+    .mocked(apiRequest)
+    .mockRejectedValueOnce(new Error("offline"))
+    .mockResolvedValueOnce({ food: null })
+
+  const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
+  await fireEvent.press(screen.getByLabelText("Choose from library"))
+  await fireEvent.press(await screen.findByText("Try again"))
+  expect(await screen.findByText("Nutrition not available")).toBeTruthy()
+  expect(scanMealPhoto).toHaveBeenCalledTimes(1)
+  expect(apiRequest).toHaveBeenCalledTimes(2)
 })
 
 test("first capture shows two tips and no longer shows the old intro or guideline label", async () => {
@@ -201,14 +287,17 @@ test("capture failure shows error and library path still works", async () => {
   const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
   await fireEvent.press(screen.getByLabelText("Take meal photo"))
   await screen.findByRole("alert")
-  const { pickImage } = require("@/features/camera")
+  expect(scanMealPhoto).not.toHaveBeenCalled()
   jest.mocked(pickImage).mockResolvedValueOnce({
     uri: "file://meal.jpg",
+    sourceUri: "file://meal.jpg",
     mimeType: "image/webp",
   })
   await fireEvent.press(screen.getByLabelText("Choose from library"))
   expect(jest.mocked(pickImage)).toHaveBeenLastCalledWith(false)
   await screen.findByLabelText("Selected meal photo")
+  expect(screen.queryByText(/Barcode \d/)).toBeNull()
+  expect(apiRequest).not.toHaveBeenCalled()
 })
 
 test("denied permission shows request button and library fallback", async () => {
@@ -218,9 +307,9 @@ test("denied permission shows request button and library fallback", async () => 
   expect(screen.getByLabelText("Allow camera access")).toBeTruthy()
   await fireEvent.press(screen.getByLabelText("Allow camera access"))
   expect(mockRequestPermission).toHaveBeenCalled()
-  const { pickImage } = require("@/features/camera")
   jest.mocked(pickImage).mockResolvedValueOnce({
     uri: "file://meal.jpg",
+    sourceUri: "file://meal.jpg",
     mimeType: "image/webp",
   })
   await fireEvent.press(screen.getByLabelText("Choose from library"))

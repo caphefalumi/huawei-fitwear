@@ -3,7 +3,7 @@ import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useIsFocused } from "expo-router/react-navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { ActivityIndicator, Platform, StyleSheet, Text, TextInput, View } from "react-native"
+import { Platform, StyleSheet, Text, TextInput, View } from "react-native"
 import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
@@ -16,10 +16,12 @@ import { ApiError, apiErrorMessage } from "@/lib/api/client"
 import { Palette as C } from "@/theme"
 
 import { analyzeMeal, lookupBarcodeFood, uploadMealPhoto } from "../api/meals-api"
+import { BarcodeResultSheet, type BarcodeResult } from "../components/barcode-result-sheet"
 import { icons } from "../components/meals-ui"
-import { useMeals, type FoodEntry } from "../hooks/meals-hooks"
+import { useMeals } from "../hooks/meals-hooks"
 import { useMealCamera } from "./meal-camera"
 import { MealLidarCamera, useMealLidarAvailable } from "./meal-lidar-camera"
+import { scanMealPhoto } from "./scan-meal-photo"
 
 const TUTORIAL_STEPS = [
   { title: "Add a ruler", detail: "If you have one, place a 15 cm ruler beside the plate or cup." },
@@ -36,11 +38,6 @@ function lookupCode(data: string, compressedUpc: boolean) {
   return `${system}${a}${b}${c}${d}${e}0000${last}${check}`
 }
 
-type BarcodePreview =
-  | { kind: "loading" }
-  | { kind: "found"; code: string; food: FoodEntry }
-  | { kind: "manual"; message: string }
-
 export function MealCaptureScreen() {
   const insets = useSafeAreaInsets()
   const focused = useIsFocused()
@@ -51,7 +48,8 @@ export function MealCaptureScreen() {
   const [lidarFailed, setLidarFailed] = useState(false)
   const [lidarCapture, setLidarCapture] = useState(0)
   const useLidar = lidarAvailable && !lidarFailed
-  const [barcodePreview, setBarcodePreview] = useState<BarcodePreview | null>(null)
+  const [barcodePreview, setBarcodePreview] = useState<BarcodeResult | null>(null)
+  const [barcodeOpen, setBarcodeOpen] = useState(false)
   const barcodeRequest = useRef<AbortController | null>(null)
   const scannedCodes = useRef(new Set<string>())
   const pickingPhoto = useRef(false)
@@ -81,7 +79,7 @@ export function MealCaptureScreen() {
   const [cameraFailed, setCameraFailed] = useState(false)
   const camera = useMealCamera({
     active: focused && !image && !cameraFailed && !useLidar,
-    scan: focused && tutorialSeen && !image && !barcodePreview && !cameraFailed,
+    scan: focused && tutorialSeen && !image && !barcodeOpen && !cameraFailed,
     onBarcode: scanBarcode,
     onError: (cause) => {
       captureException(cause)
@@ -102,7 +100,7 @@ export function MealCaptureScreen() {
   }, [])
 
   useEffect(() => {
-    if (!focused) setBarcodePreview(null)
+    if (!focused) setBarcodeOpen(false)
     if (!focused) setLidarCapture(0)
     return () => {
       barcodeRequest.current?.abort()
@@ -113,7 +111,13 @@ export function MealCaptureScreen() {
   function dismissBarcode() {
     barcodeRequest.current?.abort()
     barcodeRequest.current = null
-    setBarcodePreview(null)
+    setBarcodeOpen(false)
+  }
+
+  function retakePhoto() {
+    dismissBarcode()
+    setImage(null)
+    setError(null)
   }
 
   async function scanBarcode(data: string, compressedUpc: boolean) {
@@ -122,6 +126,7 @@ export function MealCaptureScreen() {
       !tutorialSeen ||
       image ||
       lidarCapture ||
+      barcodeOpen ||
       pickingPhoto.current ||
       barcodeRequest.current
     )
@@ -129,31 +134,50 @@ export function MealCaptureScreen() {
     const code = lookupCode(data, compressedUpc)
     if (!code || scannedCodes.current.has(code)) return
     scannedCodes.current.add(code)
-    const lookup = new AbortController()
+    await lookupBarcode(code)
+  }
+
+  async function lookupBarcode(code: string, lookup = new AbortController()) {
     barcodeRequest.current = lookup
-    setBarcodePreview({ kind: "loading" })
+    setBarcodePreview({ kind: "loading", code })
+    setBarcodeOpen(true)
     try {
       const food = await lookupBarcodeFood(code, lookup.signal)
       if (!lookup.signal.aborted)
-        setBarcodePreview(
-          food
-            ? { kind: "found", code, food }
-            : {
-                kind: "manual",
-                message: "No nutrition data found. Enter it from the package label.",
-              },
-        )
+        setBarcodePreview(food ? { kind: "found", code, food } : { kind: "missing", code })
     } catch {
-      if (!lookup.signal.aborted)
-        setBarcodePreview({
-          kind: "manual",
-          message: "Could not look up this barcode. You can still enter nutrition manually.",
-        })
+      if (!lookup.signal.aborted) setBarcodePreview({ kind: "error", code })
     }
   }
 
+  async function scanPhotoBarcode(uri: string) {
+    if (!scanMealPhoto) return
+    const scan = new AbortController()
+    barcodeRequest.current = scan
+    try {
+      const match = await scanMealPhoto(uri, scan.signal)
+      if (!match || scan.signal.aborted) return
+      const code = lookupCode(match.value, match.compressedUpc)
+      if (code) await lookupBarcode(code, scan)
+    } catch (cause) {
+      if (!scan.signal.aborted) {
+        captureException(cause)
+        setError("Could not check this photo for a barcode. Try another photo or use the camera.")
+      }
+    } finally {
+      // Don't clear a newer request that started while the decoder was running.
+      if (barcodeRequest.current === scan) barcodeRequest.current = null
+    }
+  }
+
+  function retryBarcode() {
+    if (!barcodeOpen || barcodePreview?.kind !== "error") return
+    barcodeRequest.current?.abort()
+    void lookupBarcode(barcodePreview.code)
+  }
+
   function openBarcodeItem() {
-    if (!barcodePreview || barcodePreview.kind === "loading") return
+    if (!barcodeOpen || !barcodePreview || barcodePreview.kind === "loading") return
     const match = barcodePreview.kind === "found" ? barcodePreview : null
     dismissBarcode()
     router.push({
@@ -200,7 +224,9 @@ export function MealCaptureScreen() {
     setError(null)
     try {
       const picked = await pickImage(false)
-      if (picked && active.current) setImage(picked)
+      if (!picked || !active.current) return
+      setImage(picked)
+      void scanPhotoBarcode(picked.sourceUri)
     } catch (cause) {
       captureException(cause)
       if (active.current) {
@@ -251,6 +277,7 @@ export function MealCaptureScreen() {
       )
       return
     }
+    dismissBarcode()
     const current = ++request.current
     setError(null)
     analyzeMutation.reset()
@@ -315,10 +342,7 @@ export function MealCaptureScreen() {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Retake photo"
-                  onPress={() => {
-                    setImage(null)
-                    setError(null)
-                  }}
+                  onPress={retakePhoto}
                   style={styles.retake}
                 >
                   <Image
@@ -367,7 +391,7 @@ export function MealCaptureScreen() {
                     <MealLidarCamera
                       style={StyleSheet.absoluteFill}
                       capture={lidarCapture}
-                      scan={tutorialSeen && !barcodePreview && !lidarCapture}
+                      scan={tutorialSeen && !barcodeOpen && !lidarCapture}
                       onBarcode={scanBarcode}
                       onCapture={receiveLidarPhoto}
                       onUnavailable={disableLidar}
@@ -401,49 +425,6 @@ export function MealCaptureScreen() {
                     <Text style={styles.guideRulerText}>Place 15 cm ruler beside plate or cup</Text>
                   </View>
                 </View>
-                {barcodePreview ? (
-                  <View style={styles.barcodeCard}>
-                    <View style={styles.barcodeHeader}>
-                      <View style={styles.barcodeCopy} accessibilityLiveRegion="polite">
-                        <Text style={styles.barcodeTitle} numberOfLines={2}>
-                          {barcodePreview.kind === "found"
-                            ? barcodePreview.food.name
-                            : barcodePreview.kind === "loading"
-                              ? "Looking up barcode…"
-                              : "Barcode lookup"}
-                        </Text>
-                        {barcodePreview.kind === "found" ? (
-                          <Text style={styles.barcodeDetail}>
-                            Open Food Facts · {Math.round(barcodePreview.food.per100.kcal)} kcal per
-                            100 {barcodePreview.food.unit}
-                          </Text>
-                        ) : barcodePreview.kind === "manual" ? (
-                          <Text style={styles.barcodeDetail}>{barcodePreview.message}</Text>
-                        ) : (
-                          <ActivityIndicator color={C.textMuted} />
-                        )}
-                      </View>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Dismiss barcode result"
-                        style={styles.barcodeDismiss}
-                        onPress={dismissBarcode}
-                      >
-                        <Text style={styles.barcodeTitle}>×</Text>
-                      </Pressable>
-                    </View>
-                    {barcodePreview.kind !== "loading" ? (
-                      <Button
-                        label={
-                          barcodePreview.kind === "found"
-                            ? "Review product"
-                            : "Enter nutrition manually"
-                        }
-                        onPress={openBarcodeItem}
-                      />
-                    ) : null}
-                  </View>
-                ) : null}
               </View>
             )}
           </View>
@@ -461,7 +442,7 @@ export function MealCaptureScreen() {
                 accessibilityLabel="Take meal photo"
                 disabled={busy || (!image && !cameraGranted)}
                 style={styles.shutterRing}
-                onPress={image ? () => setImage(null) : takePhoto}
+                onPress={image ? retakePhoto : takePhoto}
               >
                 <View style={styles.shutter} />
               </Pressable>
@@ -524,6 +505,14 @@ export function MealCaptureScreen() {
         </View>
       </KeyboardAvoidingView>
 
+      <BarcodeResultSheet
+        result={barcodePreview}
+        visible={barcodeOpen}
+        onClose={dismissBarcode}
+        onRetry={retryBarcode}
+        onReview={openBarcodeItem}
+      />
+
       <Sheet visible={!tutorialSeen} title="Capture your meal" onClose={dismissTutorial}>
         <View style={styles.tutorialSteps}>
           {TUTORIAL_STEPS.map((step, index) => (
@@ -581,21 +570,6 @@ const styles = StyleSheet.create({
     gap: 12,
     overflow: "hidden",
   },
-  barcodeCard: {
-    position: "absolute",
-    left: 10,
-    right: 10,
-    bottom: 10,
-    padding: 10,
-    gap: 6,
-    borderRadius: 14,
-    backgroundColor: C.surface,
-  },
-  barcodeHeader: { flexDirection: "row", alignItems: "flex-start", gap: 4 },
-  barcodeCopy: { flex: 1, alignItems: "flex-start", gap: 2, paddingVertical: 4 },
-  barcodeTitle: { color: C.text, fontSize: 15, fontWeight: "600" },
-  barcodeDetail: { color: C.textMuted, fontSize: 12 },
-  barcodeDismiss: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   retake: {
     position: "absolute",
     top: 10,
