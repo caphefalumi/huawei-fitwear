@@ -11,6 +11,7 @@ import {
 } from "react"
 import { AppState } from "react-native"
 
+import { posthog } from "@/lib/analytics/posthog"
 import {
   ApiError,
   apiErrorMessage,
@@ -74,6 +75,15 @@ type AuthContextValue = {
 }
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+function identifyUser(user: AuthUser) {
+  posthog?.identify(user.id, {
+    $set: {
+      email: user.email,
+      ...(user.name ? { name: user.name } : {}),
+    },
+  })
+}
+
 export function AuthProvider({ children }: PropsWithChildren) {
   const sessionQuery = useQuery({ ...authSessionQueryOptions(), enabled: false })
   const authenticated = useAuthUiStore((state) => state.authenticated)
@@ -130,6 +140,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const clearSession = useCallback(async () => {
     revision.current += 1
+    posthog?.reset()
     setApiToken(null)
     setAuthenticated(false)
     queryClient.clear()
@@ -161,6 +172,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           return
         }
         setAuthenticated(true)
+        identifyUser(result.user)
       } catch (cause) {
         Sentry.captureException(cause)
         if (active) {
@@ -231,6 +243,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setApiToken(result.session.token)
         queryClient.setQueryData(authQueryKeys.session, result)
         setAuthenticated(true)
+        identifyUser(result.user)
       } catch (cause) {
         if (!(cause instanceof ApiError && cause.status < 500)) Sentry.captureException(cause)
         setError(userFacingAuthError(cause))
@@ -284,6 +297,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setPending(true)
     try {
       await deleteAccountAsync()
+      posthog?.capture("account_deleted")
       await clearSession()
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) {

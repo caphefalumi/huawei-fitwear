@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { ThemedText } from "@/components/ui/themed-text"
 import { ThemedView } from "@/components/ui/themed-view"
 import { useTheme } from "@/hooks/use-theme"
+import { posthog, posthogLog } from "@/lib/analytics/posthog"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { BottomTabInset, tokens } from "@/theme"
 
@@ -125,6 +126,18 @@ export function BleSyncScreen() {
   const [sendFeedback, setSendFeedback] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const lastPacketMs = useRef<number>(0)
+  const previousConnectionMode = useRef(mode)
+
+  useEffect(() => {
+    if (
+      (mode === "ble-hardware" || mode === "ble-simulated") &&
+      previousConnectionMode.current !== mode
+    ) {
+      posthog?.capture("watch_connected", { connection_mode: mode })
+      posthogLog.info("watch connection established", { connection_mode: mode })
+    }
+    previousConnectionMode.current = mode
+  }, [mode])
 
   // Monitor the latest incoming watch message for IMU data
   useEffect(() => {
@@ -168,8 +181,15 @@ export function BleSyncScreen() {
       setSendFeedback(null)
       try {
         const ok = await sendTextToWatch(txt)
+        if (ok) {
+          posthog?.capture("watch_message_sent", { message_source: "quick_preset" })
+          posthogLog.info("watch message delivered", { message_source: "quick_preset" })
+        } else {
+          posthogLog.warn("watch message delivery failed", { message_source: "quick_preset" })
+        }
         setSendFeedback(ok ? "Sent ✓" : "Failed to send")
       } catch (e) {
+        posthogLog.warn("watch message delivery failed", { message_source: "quick_preset" })
         Sentry.captureException(e)
         setSendFeedback(`Error: ${e instanceof Error ? e.message : String(e)}`)
       } finally {
@@ -185,8 +205,15 @@ export function BleSyncScreen() {
     setSendFeedback(null)
     try {
       const ok = await sendTextToWatch(phoneDraft.trim())
+      if (ok) {
+        posthog?.capture("watch_message_sent", { message_source: "custom" })
+        posthogLog.info("watch message delivered", { message_source: "custom" })
+      } else {
+        posthogLog.warn("watch message delivery failed", { message_source: "custom" })
+      }
       setSendFeedback(ok ? "Sent ✓" : "Failed to send")
     } catch (e) {
+      posthogLog.warn("watch message delivery failed", { message_source: "custom" })
       Sentry.captureException(e)
       setSendFeedback(`Error: ${e instanceof Error ? e.message : String(e)}`)
     } finally {

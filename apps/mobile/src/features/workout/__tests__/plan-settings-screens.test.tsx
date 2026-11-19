@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react-native"
+import { act, fireEvent, render } from "@testing-library/react-native"
 import { router } from "expo-router"
 
 import { dateKey, useHealth } from "@/features/health"
@@ -26,9 +26,20 @@ jest.mock("react-native-safe-area-context", () => ({
 }))
 
 beforeEach(() => {
+  jest.useFakeTimers()
   jest.mocked(useHealth).mockReturnValue({ sex: "Female" } as never)
   useInjuries.setState({ injuries: [] })
   usePlanPreferences.setState({ likes: [], dislikes: [], hintDismissed: false })
+})
+
+afterEach(async () => {
+  try {
+    await act(async () => {
+      jest.advanceTimersByTime(300)
+    })
+  } finally {
+    jest.useRealTimers()
+  }
 })
 
 test("likes, dislikes and resets exercises with undo", async () => {

@@ -41,7 +41,8 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
     "oxfmt": "^0.78.0",
-    "oxlint": "^1.93.0"
+    "oxlint": "^1.93.0",
+    "tsrs": "^7.1.0-beta.tsrs3"
   },
   "overrides": {
     "flow-parser": "0.338.0"
