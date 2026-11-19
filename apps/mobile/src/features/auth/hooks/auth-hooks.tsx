@@ -11,6 +11,7 @@ import {
 } from "react"
 import { AppState } from "react-native"
 
+import { posthog } from "@/config/posthog"
 import {
   ApiError,
   apiErrorMessage,
@@ -74,6 +75,13 @@ type AuthContextValue = {
 }
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+function identifyUser(user: AuthUser) {
+  posthog?.identify(user.id, {
+    email: user.email,
+    ...(user.name ? { name: user.name } : {}),
+  })
+}
+
 export function AuthProvider({ children }: PropsWithChildren) {
   const sessionQuery = useQuery({ ...authSessionQueryOptions(), enabled: false })
   const authenticated = useAuthUiStore((state) => state.authenticated)
@@ -130,6 +138,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const clearSession = useCallback(async () => {
     revision.current += 1
+    posthog?.reset()
     setApiToken(null)
     setAuthenticated(false)
     queryClient.clear()
@@ -160,6 +169,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
           setError("Your session expired. Sign in again.")
           return
         }
+        identifyUser(result.user)
         setAuthenticated(true)
       } catch (cause) {
         Sentry.captureException(cause)
@@ -214,7 +224,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [session, clearSession, setError])
 
   const authenticate = useCallback(
-    async (sendRequest: () => Promise<AuthenticationSessionResponse>) => {
+    async (
+      sendRequest: () => Promise<AuthenticationSessionResponse>,
+      event: "account_signed_in" | "account_created",
+    ) => {
       if (busy.current) throw new Error("An authentication request is already running.")
       busy.current = true
       setPending(true)
@@ -230,6 +243,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
         queryClient.removeQueries()
         setApiToken(result.session.token)
         queryClient.setQueryData(authQueryKeys.session, result)
+        identifyUser(result.user)
+        posthog?.capture(event)
         setAuthenticated(true)
       } catch (cause) {
         if (!(cause instanceof ApiError && cause.status < 500)) Sentry.captureException(cause)
@@ -244,11 +259,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
   )
 
   const signIn = useCallback(
-    (email: string, password: string) => authenticate(() => sendSignIn({ email, password })),
+    (email: string, password: string) =>
+      authenticate(() => sendSignIn({ email, password }), "account_signed_in"),
     [authenticate],
   )
   const signUp = useCallback(
-    (body: SignUpBody) => authenticate(() => sendSignUp(body)),
+    (body: SignUpBody) => authenticate(() => sendSignUp(body), "account_created"),
     [authenticate],
   )
 
@@ -259,6 +275,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     completeResetMutation.mutateAsync({ resetToken, password })
 
   const signOut = useCallback(() => {
+    posthog?.capture("account_signed_out")
     setError(null)
     revision.current += 1
     const localRevision = revision.current
@@ -284,6 +301,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setPending(true)
     try {
       await deleteAccountAsync()
+      posthog?.capture("account_deleted")
       await clearSession()
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) {
@@ -304,6 +322,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const currentRevision = revision.current
       try {
         const result = await updateUserAsync(body)
+        posthog?.capture("profile_updated")
         if (currentRevision === revision.current) {
           queryClient.setQueryData<AuthenticationSessionResponse>(
             authQueryKeys.session,

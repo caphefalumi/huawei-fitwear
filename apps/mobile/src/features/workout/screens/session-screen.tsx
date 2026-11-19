@@ -7,7 +7,9 @@ import { BackHeader, Button, Card, PageHeading, Screen } from "@/components/ui"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Pressable } from "@/components/ui/pressable"
 import { Toggle } from "@/components/ui/toggle"
+import { posthog } from "@/config/posthog"
 import { dateKey } from "@/features/health"
+import { posthogLog } from "@/lib/monitoring/posthog-logs"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { planNow, usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
@@ -143,7 +145,11 @@ export function SessionScreen() {
           changed.map(({ item, sets }) => [repTargetKey(routine.name, item.key), average(sets)]),
         ),
       )
-    if (totalSets) addFinished({ date: dateKey(planNow()), routine: routine.name })
+    if (totalSets) {
+      addFinished({ date: dateKey(planNow()), routine: routine.name })
+      posthog?.capture("workout_completed")
+      posthogLog.info("workout session completed", { workflow: "workout", outcome: "completed" })
+    }
     router.dismissTo("/workout")
   }
 

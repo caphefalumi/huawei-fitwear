@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { BackHeader, Button } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
 import { Sheet } from "@/components/ui/sheet"
+import { posthog } from "@/config/posthog"
 import { pickImage, prepareMealImage, type PickedImage } from "@/features/camera"
 import { ApiError, apiErrorMessage } from "@/lib/api/client"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
@@ -115,6 +116,7 @@ export function MealCaptureScreen() {
       if (!active.current || current !== request.current) return
       if (!result.length)
         throw new Error("No food was identified. Try another photo or enter items manually.")
+      posthog?.capture("meal_photo_analyzed")
       setAnalysis(result, image.uri, { photoId })
       router.push("/meal")
     } catch (cause) {

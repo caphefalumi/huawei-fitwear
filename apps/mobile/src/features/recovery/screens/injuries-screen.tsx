@@ -7,6 +7,7 @@ import { BackHeader, Button, PageHeading, Screen } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
 import { Sheet, SheetActions } from "@/components/ui/sheet"
 import { Toggle } from "@/components/ui/toggle"
+import { posthog } from "@/config/posthog"
 import { dateKey, useHealth } from "@/features/health"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { planNow, usePlanNow } from "@/lib/time/demo-clock"
@@ -570,6 +571,7 @@ export function InjuriesScreen() {
         disabled={!changed}
         onPress={() => {
           save(draft)
+          posthog?.capture("recovery_plan_saved")
           router.back()
         }}
       />

@@ -10,6 +10,7 @@ import {
 } from "react"
 import { AppState } from "react-native"
 
+import { posthog } from "@/config/posthog"
 import { useAuth } from "@/features/auth"
 import { apiErrorMessage } from "@/lib/api/client"
 import { refetchAllThrowing } from "@/lib/query/retry"
@@ -424,12 +425,15 @@ export function MealsProvider({ children }: { children: ReactNode }) {
       },
       deleteMeal,
     )
+    posthog?.capture("meal_logged")
   }
   const deleteLog = async (id: string) => {
     await runWrite(`/meals/${id}`, "DELETE")
+    posthog?.capture("meal_deleted")
   }
   const updateMealType = async (id: string, type: MealType) => {
     await runWrite(`/meals/${id}`, "PATCH", { mealType: type })
+    posthog?.capture("meal_type_changed")
   }
   const totals = useMemo(() => sumItems(items), [items])
   const refreshing = (historyQuery.isFetching || summaryQuery.isFetching) && !loading

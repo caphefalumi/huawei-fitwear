@@ -11,6 +11,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller"
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon"
 import { NetworkStatusBanner } from "@/components/feedback/network-status"
+import { PostHogProvider } from "@/config/posthog-provider"
 import { APP_ROUTES, AuthProvider, useAuth } from "@/features/auth"
 import { HealthProvider } from "@/features/health"
 import { MealsProvider } from "@/features/meals"
@@ -23,16 +24,18 @@ function AppRoot() {
   const colorScheme = useColorScheme()
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <KeyboardProvider>
-              <NetworkStatusBanner />
-              <RootNavigator />
-            </KeyboardProvider>
-          </GestureHandlerRootView>
-        </ThemeProvider>
-      </AuthProvider>
+      <PostHogProvider>
+        <AuthProvider>
+          <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <KeyboardProvider>
+                <NetworkStatusBanner />
+                <RootNavigator />
+              </KeyboardProvider>
+            </GestureHandlerRootView>
+          </ThemeProvider>
+        </AuthProvider>
+      </PostHogProvider>
     </QueryClientProvider>
   )
 }

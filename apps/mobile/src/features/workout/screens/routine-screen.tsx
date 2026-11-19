@@ -5,7 +5,9 @@ import { StyleSheet, Text, View } from "react-native"
 import { BackHeader, Button, PageHeading, Screen } from "@/components/ui"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Pressable } from "@/components/ui/pressable"
+import { posthog } from "@/config/posthog"
 import { dateKey } from "@/features/health"
+import { posthogLog } from "@/lib/monitoring/posthog-logs"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
@@ -70,7 +72,11 @@ export function RoutineScreen() {
     ? "Today"
     : date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })
 
-  const start = () => router.push(`/session?date=${key}`)
+  const start = () => {
+    posthog?.capture("workout_started")
+    posthogLog.info("workout session started", { workflow: "workout", outcome: "started" })
+    router.push(`/session?date=${key}`)
+  }
 
   return (
     <View style={styles.container}>

@@ -1,6 +1,8 @@
 import { Platform } from "react-native"
 
+import { posthog } from "@/config/posthog"
 import { apiRequest } from "@/lib/api/client"
+import { posthogLog } from "@/lib/monitoring/posthog-logs"
 
 import type { FoodEntry, NutritionSummary } from "../hooks/meals-hooks"
 
@@ -84,10 +86,52 @@ export async function fetchMealPhoto(id: string, signal?: AbortSignal): Promise<
   ).imageUrl
 }
 
+function mealAnalysisTraceId() {
+  return `meal-analysis-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+function captureMealAnalysisGeneration(
+  traceId: string,
+  input: AnalyzeMealInput,
+  startedAt: number,
+  items?: ApiMealItem[],
+) {
+  posthog?.capture("$ai_generation", {
+    $ai_trace_id: traceId,
+    $ai_session_id: null,
+    $ai_span_name: "meal_photo_analysis",
+    $ai_latency: (Date.now() - startedAt) / 1000,
+    ...(input.description
+      ? { $ai_input: [{ role: "user", content: input.description }] }
+      : {}),
+    ...(items
+      ? {
+          $ai_output_choices: [
+            {
+              role: "assistant",
+              content: JSON.stringify(items),
+            },
+          ],
+        }
+      : { $ai_is_error: true }),
+  })
+}
+
 export async function analyzeMeal(input: AnalyzeMealInput): Promise<ApiMealItem[]> {
-  return (
-    await apiRequest<{ items: ApiMealItem[] }>("/meals/analyze", { method: "POST", body: input })
-  ).items
+  const traceId = mealAnalysisTraceId()
+  const startedAt = Date.now()
+  try {
+    const items = (
+      await apiRequest<{ items: ApiMealItem[] }>("/meals/analyze", { method: "POST", body: input })
+    ).items
+    captureMealAnalysisGeneration(traceId, input, startedAt, items)
+    posthogLog.info("meal analysis completed", { workflow: "meal_analysis", outcome: "completed" })
+    return items
+  } catch (error) {
+    captureMealAnalysisGeneration(traceId, input, startedAt)
+    posthogLog.warn("meal analysis failed", { workflow: "meal_analysis", outcome: "failed" })
+    throw error
+  }
 }
 
 export async function searchFoods(query: string, signal?: AbortSignal): Promise<FoodEntry[]> {
