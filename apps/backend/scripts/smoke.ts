@@ -12,10 +12,10 @@ async function request(path: string, method = "GET", body?: unknown, bearer = to
   return fetch(baseURL + path, {
     method,
     headers: {
-      "Content-Type": "application/json",
+      ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }),
       ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
     },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    body: body instanceof FormData ? body : JSON.stringify(body),
   })
 }
 async function json(path: string, method = "GET", body?: unknown, bearer = token) {
@@ -51,14 +51,14 @@ try {
     carbsTargetG: 250,
     fatTargetG: 60,
   })
-  const photo = await Bun.file(
-    new URL("../../mobile/assets/images/meals/meal-photo.png", import.meta.url),
-  ).bytes()
-  const image = { data: Buffer.from(photo).toString("base64"), mimeType: "image/png" }
+  const photo = Bun.file(new URL("./meal-photo.webp", import.meta.url), { type: "image/webp" })
+  const form = new FormData()
+  form.append("image", photo, "meal.webp")
+  const { photoId } = await json("/meals/photos", "POST", form)
   const meal = await json("/meals", "POST", {
     mealType: "lunch",
     targetDate: today,
-    image,
+    photoId,
     items: [
       {
         foodName: "Rice",
@@ -74,7 +74,7 @@ try {
   mealId = meal.id
   assert.equal(
     (await json(`/meals/${mealId}/photo`)).imageUrl,
-    `data:image/png;base64,${image.data}`,
+    `data:image/webp;base64,${Buffer.from(await photo.bytes()).toString("base64")}`,
   )
   assert.equal((await json(`/meals/summary?date=${today}`)).remaining.caloriesKcal, 1840)
   const corrected = await json(`/meals/${mealId}/items/${meal.items[0].id}`, "PATCH", {
@@ -110,8 +110,7 @@ try {
   assert.equal((await request(`/workouts/${workoutId}`, "GET", undefined, otherToken)).status, 404)
   if (process.env.SMOKE_ANALYZE === "1") {
     const analysis = await json("/meals/analyze", "POST", {
-      image: image.data,
-      mimeType: image.mimeType,
+      photoId,
       description: "Lunch on a plate. Estimate ingredients and portions for review.",
     })
     assert.ok(

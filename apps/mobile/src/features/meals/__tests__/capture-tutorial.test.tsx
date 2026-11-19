@@ -132,7 +132,6 @@ test("capture failure shows error and library path still works", async () => {
   const { pickImage } = require("@/features/camera")
   jest.mocked(pickImage).mockResolvedValueOnce({
     uri: "file://meal.jpg",
-    base64: "/9j/abc",
     mimeType: "image/webp",
   })
   await fireEvent.press(screen.getByLabelText("Choose from library"))
@@ -150,7 +149,6 @@ test("denied permission shows request button and library fallback", async () => 
   const { pickImage } = require("@/features/camera")
   jest.mocked(pickImage).mockResolvedValueOnce({
     uri: "file://meal.jpg",
-    base64: "/9j/abc",
     mimeType: "image/webp",
   })
   await fireEvent.press(screen.getByLabelText("Choose from library"))

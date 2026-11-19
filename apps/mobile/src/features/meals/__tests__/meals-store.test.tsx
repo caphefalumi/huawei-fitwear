@@ -359,21 +359,21 @@ test("food search maps backend catalogue units and nutrients", async () => {
   ])
 })
 
-test("captured photo stays with failed drafts and is uploaded with the logged meal", async () => {
+test("captured photo stays with failed drafts and saves by photo ID", async () => {
   const { result } = await renderHook(() => useMeals(), {
     wrapper: createQueryWrapper(MealsProvider),
   })
   await waitFor(() => expect(result.current.loading).toBe(false))
-  const image = { data: "/9j/actual-selected-image-bytes", mimeType: "image/jpeg" as const }
+  const photoId = "01935a35-8437-7339-a07b-d769beff2d8a"
   await act(async () => {
-    result.current.setDraftPhoto("file:///meal.jpeg", image)
+    result.current.setDraftPhoto("file:///meal.webp", { photoId })
     await result.current.addItem(item)
   })
   request.mockRejectedValueOnce(new Error("Photo storage unavailable"))
   await act(async () => {
     await expect(result.current.logMeal()).rejects.toThrow("Photo storage unavailable")
   })
-  expect(result.current.draftImage).toBe("file:///meal.jpeg")
+  expect(result.current.draftImage).toBe("file:///meal.webp")
   expect(result.current.items).toEqual([item])
   request.mockImplementation(async (path, options) =>
     options?.method === "POST"
@@ -387,7 +387,7 @@ test("captured photo stays with failed drafts and is uploaded with the logged me
   })
   expect(request).toHaveBeenCalledWith(
     "/meals",
-    expect.objectContaining({ method: "POST", body: expect.objectContaining({ image }) }),
+    expect.objectContaining({ method: "POST", body: expect.objectContaining({ photoId }) }),
   )
   expect(result.current.draftImage).toBeNull()
 })

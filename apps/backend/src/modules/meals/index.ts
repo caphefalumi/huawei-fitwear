@@ -1,6 +1,7 @@
 import { Elysia, t, type Static } from "elysia"
 
 import { DATE_KEY_PATTERN } from "../../lib/date"
+import { MEAL_PHOTO_ID } from "../../lib/meal-images"
 import { authGuard } from "../auth/service"
 import { Meals } from "./service"
 
@@ -28,10 +29,11 @@ const createBody = t.Object({
   targetDate: t.Optional(dateKey),
   mealType,
   imageUrl: t.Optional(t.String()),
+  photoId: t.Optional(t.String({ pattern: MEAL_PHOTO_ID })),
   image: t.Optional(
     t.Object({
       data: t.String({ minLength: 1, maxLength: 8000000 }),
-      mimeType: t.Union([t.Literal("image/jpeg"), t.Literal("image/png"), t.Literal("image/webp")]),
+      mimeType: t.Literal("image/webp"),
     }),
   ),
   scaleReferenceType: t.Optional(

@@ -263,7 +263,11 @@ export async function apiRequest<T>(
     data: options.body,
     headers: {
       Accept: "application/json",
-      ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(options.body instanceof FormData
+        ? { "Content-Type": "multipart/form-data" }
+        : options.body !== undefined
+          ? { "Content-Type": "application/json" }
+          : {}),
     },
     signal: options.signal,
   })

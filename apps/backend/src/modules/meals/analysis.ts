@@ -2,16 +2,26 @@ import { Value } from "@sinclair/typebox/value"
 import { Elysia, status, t, type Static } from "elysia"
 
 import { getAi, getKv } from "../../db"
-import { decodeMealImage, readMealImage } from "../../lib/meal-images"
+import {
+  decodeMealImage,
+  draftMealPhotoDataUrl,
+  MEAL_PHOTO_ID,
+  readMealImage,
+  uploadDraftMealPhoto,
+} from "../../lib/meal-images"
 import { consumeTokenBucket } from "../../lib/token-bucket"
 import { authGuard } from "../auth/service"
 import { Meals } from "./service"
 
-const analysisBody = t.Object({
-  image: t.String({ minLength: 16, maxLength: 8_000_000, pattern: "^[A-Za-z0-9+/]+={0,2}$" }),
-  mimeType: t.Union([t.Literal("image/jpeg"), t.Literal("image/png"), t.Literal("image/webp")]),
-  description: t.Optional(t.String({ maxLength: 2000 })),
-})
+const description = t.Optional(t.String({ maxLength: 2000 }))
+const analysisBody = t.Union([
+  t.Object({
+    image: t.String({ minLength: 16, maxLength: 8_000_000, pattern: "^[A-Za-z0-9+/]+={0,2}$" }),
+    mimeType: t.Literal("image/webp"),
+    description,
+  }),
+  t.Object({ photoId: t.String({ pattern: MEAL_PHOTO_ID }), description }),
+])
 
 export const mealAnalysisResult = t.Object({
   items: t.Array(
@@ -113,16 +123,39 @@ export const mealAnalysis = new Elysia({ prefix: "/meals", detail: { tags: ["Mea
     },
     { auth: true, detail: { summary: "Read the authenticated user’s private meal photo" } },
   )
+  .post("/photos", ({ user, body }) => uploadDraftMealPhoto(user.id, body.image), {
+    auth: true,
+    body: t.Object({ image: t.File({ maxSize: 6_000_000 }) }),
+    async beforeHandle({ user, set }) {
+      const kv = getKv()
+      if (!kv) return
+      const limit = await consumeTokenBucket(kv, `rl:meal-photo:${user.id}`, {
+        capacity: 20,
+        refillPerSecond: 20 / 3600,
+      })
+      if (!limit.allowed) {
+        set.headers["Retry-After"] = String(limit.retryAfterSec)
+        return status(429, { success: false, message: "Meal photo upload limit reached." })
+      }
+    },
+    detail: { summary: "Upload a private meal photo for analysis and saving" },
+  })
   .post(
     "/analyze",
-    async ({ body }) => {
+    async ({ user, body }) => {
       const ai = getAi()
       if (!ai)
         throw status(503, {
           success: false,
           message: "Cloud image analysis is not configured. Manual food entry is available.",
         })
-      decodeMealImage({ data: body.image, mimeType: body.mimeType })
+      let imageUrl: string
+      if ("photoId" in body) {
+        imageUrl = await draftMealPhotoDataUrl(user.id, body.photoId)
+      } else {
+        decodeMealImage({ data: body.image, mimeType: body.mimeType })
+        imageUrl = `data:${body.mimeType};base64,${body.image}`
+      }
       let output: unknown
       try {
         output = await ai.run("@cf/google/gemma-4-26b-a4b-it", {
@@ -141,7 +174,7 @@ export const mealAnalysis = new Elysia({ prefix: "/meals", detail: { tags: ["Mea
                 },
                 {
                   type: "image_url",
-                  image_url: { url: `data:${body.mimeType};base64,${body.image}` },
+                  image_url: { url: imageUrl },
                 },
               ],
             },

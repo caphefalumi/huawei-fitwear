@@ -39,6 +39,7 @@
       "bucket_name": "fitwear-meal-images"
     }
   ],
+  "triggers": { "crons": ["17 * * * *"] },
   "queues": {
     "producers": [
       {
@@ -90,6 +91,7 @@
           "bucket_name": "fitwear-meal-images"
         }
       ],
+      "triggers": { "crons": ["17 * * * *"] },
       "queues": {
         "producers": [
           {
@@ -141,6 +143,7 @@
           "bucket_name": "fitwear-meal-images-staging"
         }
       ],
+      "triggers": { "crons": ["17 * * * *"] },
       "queues": {
         "producers": [
           {
