@@ -1,10 +1,4 @@
 import { useMutation } from "@tanstack/react-query"
-import {
-  CameraView,
-  useCameraPermissions,
-  type BarcodeScanningResult,
-  type BarcodeSettings,
-} from "expo-camera"
 import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useIsFocused } from "expo-router/react-navigation"
@@ -24,19 +18,16 @@ import { Palette as C } from "@/theme"
 import { analyzeMeal, lookupBarcodeFood, uploadMealPhoto } from "../api/meals-api"
 import { icons } from "../components/meals-ui"
 import { useMeals, type FoodEntry } from "../hooks/meals-hooks"
+import { useMealCamera } from "./meal-camera"
 
 const TUTORIAL_STEPS = [
   { title: "Add a ruler", detail: "Place a 15 cm ruler beside the plate or cup." },
   { title: "Shoot from above", detail: "Keep the whole meal in frame and hold steady." },
 ]
 
-const barcodeScannerSettings: BarcodeSettings = {
-  barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"],
-}
-
-function lookupCode({ data, type }: BarcodeScanningResult) {
+function lookupCode(data: string, compressedUpc: boolean) {
   if (!/^(?:[0-9]{8}|[0-9]{12,14})$/.test(data)) return null
-  if (type !== "upc_e" || data.length !== 8) return data
+  if (!compressedUpc || data.length !== 8) return data
   const [system, a, b, c, d, e, last, check] = data
   if (last <= "2") return `${system}${a}${b}${last}0000${c}${d}${e}${check}`
   if (last === "3") return `${system}${a}${b}${c}00000${d}${e}${check}`
@@ -59,7 +50,6 @@ export function MealCaptureScreen() {
   const barcodeRequest = useRef<AbortController | null>(null)
   const scannedCodes = useRef(new Set<string>())
   const pickingPhoto = useRef(false)
-  const previewSize = useRef({ width: 0, height: 0 })
   const analyzeMutation = useMutation({
     mutationFn: async ({ image, description }: { image: PickedImage; description?: string }) => {
       const photoId =
@@ -73,9 +63,19 @@ export function MealCaptureScreen() {
   const [error, setError] = useState<string | null>(null)
   const active = useRef(true)
   const request = useRef(0)
-  const cameraRef = useRef<CameraView>(null)
   const uploadedPhoto = useRef<{ image: PickedImage; photoId: string } | null>(null)
-  const [permission, requestPermission] = useCameraPermissions()
+  const [cameraFailed, setCameraFailed] = useState(false)
+  const camera = useMealCamera({
+    active: focused && !image && !cameraFailed,
+    scan: focused && tutorialSeen && !image && !barcodePreview && !cameraFailed,
+    onBarcode: scanBarcode,
+    onError: (cause) => {
+      captureException(cause)
+      setCameraFailed(true)
+      setError("Camera unavailable. Choose a photo from your library.")
+    },
+    style: StyleSheet.absoluteFill,
+  })
   const busy = analyzeMutation.isPending
   useEffect(() => {
     const activeRef = active
@@ -101,16 +101,9 @@ export function MealCaptureScreen() {
     setBarcodePreview(null)
   }
 
-  async function scanBarcode(event: BarcodeScanningResult) {
+  async function scanBarcode(data: string, compressedUpc: boolean) {
     if (!focused || !tutorialSeen || image || pickingPhoto.current || barcodeRequest.current) return
-    const { width, height } = previewSize.current
-    const bounds = event.bounds
-    if (bounds?.size.width > 0 && bounds.size.height > 0 && width && height) {
-      const x = (bounds.origin.x + bounds.size.width / 2) / width
-      const y = (bounds.origin.y + bounds.size.height / 2) / height
-      if (x < 0.2 || x > 0.8 || y < 0.2 || y > 0.8) return
-    }
-    const code = lookupCode(event)
+    const code = lookupCode(data, compressedUpc)
     if (!code || scannedCodes.current.has(code)) return
     scannedCodes.current.add(code)
     const lookup = new AbortController()
@@ -183,9 +176,9 @@ export function MealCaptureScreen() {
     dismissBarcode()
     setError(null)
     try {
-      const photo = await cameraRef.current?.takePictureAsync({ quality: 1 })
-      if (!photo) throw new Error("Could not capture photo. Try again.")
-      const prepared = await prepareMealImage(photo.uri)
+      const uri = await camera.takePhoto()
+      if (!uri) return
+      const prepared = await prepareMealImage(uri)
       if (active.current) setImage(prepared)
     } catch (cause) {
       captureException(cause)
@@ -240,7 +233,7 @@ export function MealCaptureScreen() {
     }
   }
 
-  const cameraGranted = permission?.granted ?? false
+  const cameraGranted = camera.cameraGranted && camera.cameraAvailable && !cameraFailed
 
   return (
     <>
@@ -288,9 +281,7 @@ export function MealCaptureScreen() {
                   />
                 </Pressable>
               </>
-            ) : !permission ? (
-              <View style={styles.preview} />
-            ) : !cameraGranted ? (
+            ) : !cameraGranted || Platform.OS === "web" ? (
               <View style={styles.preview}>
                 <View style={styles.circle}>
                   <Image
@@ -299,39 +290,31 @@ export function MealCaptureScreen() {
                     style={styles.circleIcon}
                     contentFit="contain"
                   />
-                  <Text style={styles.circleTitle}>Camera access needed</Text>
-                  <Text style={styles.circleNote}>Allow access or pick from library</Text>
+                  <Text style={styles.circleTitle}>
+                    {Platform.OS === "web"
+                      ? "Take or choose a photo"
+                      : cameraFailed || !camera.cameraAvailable
+                        ? "Camera unavailable"
+                        : "Camera access needed"}
+                  </Text>
+                  <Text style={styles.circleNote}>
+                    You can also choose a photo from your library.
+                  </Text>
                 </View>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Allow camera access"
-                  onPress={requestPermission}
-                  style={styles.permissionButton}
-                >
-                  <Text style={styles.permissionLabel}>Allow camera access</Text>
-                </Pressable>
-                <Text style={styles.circleNote}>or pick a photo from your library below</Text>
+                {camera.cameraAvailable && !cameraFailed && !camera.cameraGranted ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Allow camera access"
+                    onPress={camera.requestPermission}
+                    style={styles.permissionButton}
+                  >
+                    <Text style={styles.permissionLabel}>Allow camera access</Text>
+                  </Pressable>
+                ) : null}
               </View>
             ) : (
-              <View
-                style={styles.preview}
-                onLayout={({ nativeEvent }) => {
-                  previewSize.current = nativeEvent.layout
-                }}
-              >
-                {focused ? (
-                  <CameraView
-                    ref={cameraRef}
-                    style={StyleSheet.absoluteFill}
-                    facing="back"
-                    barcodeScannerSettings={barcodeScannerSettings}
-                    onBarcodeScanned={
-                      Platform.OS !== "web" && tutorialSeen && !barcodePreview
-                        ? scanBarcode
-                        : undefined
-                    }
-                  />
-                ) : null}
+              <View style={styles.preview}>
+                {camera.preview}
                 <View pointerEvents="none" style={styles.guide}>
                   <View style={[styles.guideCorner, styles.guideTL]} />
                   <View style={[styles.guideCorner, styles.guideTR]} />
@@ -345,11 +328,7 @@ export function MealCaptureScreen() {
                       contentFit="contain"
                     />
                     <Text style={styles.circleTitle}>Place food or drink here</Text>
-                    <Text style={styles.circleNote}>
-                      {Platform.OS === "web"
-                        ? "Top-down shot · keep steady"
-                        : "Take a photo or center a barcode"}
-                    </Text>
+                    <Text style={styles.circleNote}>Take a photo or center a barcode</Text>
                   </View>
                   <View style={styles.guideRuler}>
                     <Image

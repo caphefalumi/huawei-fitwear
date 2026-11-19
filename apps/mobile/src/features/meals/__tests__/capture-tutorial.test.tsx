@@ -1,5 +1,4 @@
 import { act, fireEvent, render } from "@testing-library/react-native"
-import { useCameraPermissions } from "expo-camera"
 import { router } from "expo-router"
 
 import { useMeals } from "@/features/meals"
@@ -8,16 +7,29 @@ import { apiRequest } from "@/lib/api/client"
 
 const mockTakePicture = jest.fn()
 const mockRequestPermission = jest.fn()
-jest.mock("expo-camera", () => {
-  const React = require("react")
-  const RN = require("react-native")
-  const MockCameraView = React.forwardRef((props: object, ref: object) => {
-    React.useImperativeHandle(ref, () => ({ takePictureAsync: mockTakePicture }))
-    return <RN.View {...props} testID="meal-capture-camera" />
-  })
-  MockCameraView.displayName = "MockCameraView"
-  return { CameraView: MockCameraView, useCameraPermissions: jest.fn() }
-})
+let mockCameraGranted = true
+jest.mock("../screens/meal-camera", () => ({
+  useMealCamera: (options: {
+    active: boolean
+    scan: boolean
+    onBarcode: (data: string, compressed: boolean) => void
+  }) => {
+    const { View } = require("react-native")
+    return {
+      cameraGranted: mockCameraGranted,
+      cameraAvailable: true,
+      requestPermission: mockRequestPermission,
+      takePhoto: mockTakePicture,
+      preview:
+        options.active && mockCameraGranted ? (
+          <View
+            testID="meal-capture-camera"
+            onBarcodeScanned={options.scan ? options.onBarcode : undefined}
+          />
+        ) : null,
+    }
+  },
+}))
 jest.mock("expo-router", () => ({ router: { push: jest.fn(), back: jest.fn() } }))
 jest.mock("expo-router/react-navigation", () => ({ useIsFocused: () => true }))
 jest.mock("expo-image-manipulator", () => ({
@@ -62,15 +74,10 @@ function mockMeals(tutorialSeen: boolean) {
     items: [],
   } as never)
 }
-function mockPermission(granted: boolean) {
-  jest
-    .mocked(useCameraPermissions)
-    .mockReturnValue([{ granted } as never, mockRequestPermission, jest.fn()] as never)
-}
 
 beforeEach(() => {
   jest.clearAllMocks()
-  mockPermission(true)
+  mockCameraGranted = true
 })
 
 test("camera detects a barcode once, previews it, and waits for confirmation", async () => {
@@ -90,10 +97,9 @@ test("camera detects a barcode once, previews it, and waits for confirmation", a
   const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
   const camera = screen.getByTestId("meal-capture-camera")
   await act(async () => {
-    const event = { type: "upc_e", data: "04252614" }
     await Promise.all([
-      fireEvent(camera, "barcodeScanned", event),
-      fireEvent(camera, "barcodeScanned", event),
+      fireEvent(camera, "barcodeScanned", "04252614", true),
+      fireEvent(camera, "barcodeScanned", "04252614", true),
     ])
   })
   expect(apiRequest).toHaveBeenCalledTimes(1)
@@ -120,7 +126,7 @@ test("a dismissed result does not reopen for the same barcode, and another code 
   jest.mocked(apiRequest).mockResolvedValue({ food: null })
   const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
   const scan = (data: string) =>
-    fireEvent(screen.getByTestId("meal-capture-camera"), "barcodeScanned", { type: "ean13", data })
+    fireEvent(screen.getByTestId("meal-capture-camera"), "barcodeScanned", data, false)
   await act(async () => {
     await scan("3017620422003")
   })
@@ -170,18 +176,18 @@ test("the tutorial stays hidden once it has been seen", async () => {
 
 test("shutter captures photo -> preview shows and Analyze enables", async () => {
   mockMeals(true)
-  mockTakePicture.mockResolvedValueOnce({ uri: "file://meal.jpg" })
+  mockTakePicture.mockResolvedValueOnce("file://meal.jpg")
   const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
   expect(screen.getByLabelText("Analyze photo").props.accessibilityState.disabled).toBe(true)
   await fireEvent.press(screen.getByLabelText("Take meal photo"))
   await screen.findByLabelText("Selected meal photo")
-  expect(mockTakePicture).toHaveBeenCalledWith({ quality: 1 })
+  expect(mockTakePicture).toHaveBeenCalledTimes(1)
   expect(screen.getByLabelText("Analyze photo").props.accessibilityState.disabled).toBe(false)
 })
 
 test("retake returns to live camera", async () => {
   mockMeals(true)
-  mockTakePicture.mockResolvedValueOnce({ uri: "file://meal.jpg" })
+  mockTakePicture.mockResolvedValueOnce("file://meal.jpg")
   const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
   await fireEvent.press(screen.getByLabelText("Take meal photo"))
   await screen.findByLabelText("Selected meal photo")
@@ -208,7 +214,7 @@ test("capture failure shows error and library path still works", async () => {
 
 test("denied permission shows request button and library fallback", async () => {
   mockMeals(true)
-  mockPermission(false)
+  mockCameraGranted = false
   const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
   expect(screen.getByLabelText("Allow camera access")).toBeTruthy()
   await fireEvent.press(screen.getByLabelText("Allow camera access"))
