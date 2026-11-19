@@ -4,7 +4,7 @@ import { status } from "elysia"
 import { getDb, mealItems as mealItemsTable, mealLogs as mealLogsTable } from "../../db"
 import { isDateKey, toDateKey } from "../../lib/date"
 import { generateId } from "../../lib/id"
-import { deleteMealImage, saveMealImage } from "../../lib/meal-images"
+import { attachDraftMealPhoto, deleteMealImage, saveMealImage } from "../../lib/meal-images"
 import { sumNutrition, type NutritionTotals } from "../../lib/nutrition"
 import { Targets } from "../targets/service"
 import type {
@@ -80,6 +80,8 @@ export abstract class Meals {
       createdAt: now,
     }
     if (body.image) mealLog.imageUrl = await saveMealImage(userId, mealLog.id, body.image)
+    else if (body.photoId)
+      mealLog.imageUrl = await attachDraftMealPhoto(userId, mealLog.id, body.photoId)
 
     const itemRows = body.items.map((item) => buildItemRow(mealLog.id, item, now))
 
@@ -89,7 +91,7 @@ export abstract class Meals {
         db.insert(mealItemsTable).values(itemRows),
       ])
     } catch (error) {
-      if (body.image) {
+      if (body.image || body.photoId) {
         try {
           await deleteMealImage(userId, mealLog.id)
         } catch (cleanupError) {

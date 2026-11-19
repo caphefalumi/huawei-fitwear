@@ -16,7 +16,7 @@ import { ApiError, apiErrorMessage } from "@/lib/api/client"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
-import { analyzeMeal } from "../api/meals-api"
+import { analyzeMeal, uploadMealPhoto } from "../api/meals-api"
 import { icons } from "../components/meals-ui"
 import { useMeals } from "../hooks/meals-hooks"
 
@@ -32,13 +32,20 @@ export function MealCaptureScreen() {
   const [description, setDescription] = useState("")
   const [image, setImage] = useState<PickedImage | null>(null)
   const analyzeMutation = useMutation({
-    mutationFn: (body: { image: string; mimeType: string; description?: string }) =>
-      analyzeMeal(body),
+    mutationFn: async ({ image, description }: { image: PickedImage; description?: string }) => {
+      const photoId =
+        uploadedPhoto.current?.image === image
+          ? uploadedPhoto.current.photoId
+          : await uploadMealPhoto(image.uri)
+      uploadedPhoto.current = { image, photoId }
+      return { photoId, items: await analyzeMeal({ photoId, description }) }
+    },
   })
   const [error, setError] = useState<string | null>(null)
   const active = useRef(true)
   const request = useRef(0)
   const cameraRef = useRef<CameraView>(null)
+  const uploadedPhoto = useRef<{ image: PickedImage; photoId: string } | null>(null)
   const [permission, requestPermission] = useCameraPermissions()
   const busy = analyzeMutation.isPending
   useEffect(() => {
@@ -101,15 +108,14 @@ export function MealCaptureScreen() {
     setError(null)
     analyzeMutation.reset()
     try {
-      const result = await analyzeMutation.mutateAsync({
-        image: image.base64,
-        mimeType: image.mimeType,
+      const { items: result, photoId } = await analyzeMutation.mutateAsync({
+        image,
         ...(description.trim() ? { description: description.trim() } : {}),
       })
       if (!active.current || current !== request.current) return
       if (!result.length)
         throw new Error("No food was identified. Try another photo or enter items manually.")
-      setAnalysis(result, image.uri, { data: image.base64, mimeType: image.mimeType })
+      setAnalysis(result, image.uri, { photoId })
       router.push("/meal")
     } catch (cause) {
       Sentry.captureException(cause)
@@ -288,8 +294,13 @@ export function MealCaptureScreen() {
               variant="secondary"
               label="Enter meal manually"
               onPress={() => {
-                if (image)
-                  setDraftPhoto(image.uri, { data: image.base64, mimeType: image.mimeType })
+                if (image) {
+                  const photoId =
+                    uploadedPhoto.current?.image === image
+                      ? uploadedPhoto.current.photoId
+                      : undefined
+                  setDraftPhoto(image.uri, { photoId })
+                }
                 router.push("/meal")
               }}
               style={styles.compactButton}

@@ -1,3 +1,5 @@
+import { Platform } from "react-native"
+
 import { apiRequest } from "@/lib/api/client"
 
 import type { FoodEntry, NutritionSummary } from "../hooks/meals-hooks"
@@ -41,7 +43,19 @@ export type MealWriteInput = {
   body?: unknown
 }
 
-export type AnalyzeMealInput = { image: string; mimeType: string; description?: string }
+export type AnalyzeMealInput = { photoId: string; description?: string }
+
+export async function uploadMealPhoto(uri: string): Promise<string> {
+  const body = new FormData()
+  if (Platform.OS === "web") {
+    body.append("image", await (await fetch(uri)).blob(), "meal.webp")
+  } else {
+    // React Native FormData accepts a URI-backed file part.
+    const file = { uri, type: "image/webp", name: "meal.webp" }
+    body.append("image", file as unknown as Blob)
+  }
+  return (await apiRequest<{ photoId: string }>("/meals/photos", { method: "POST", body })).photoId
+}
 
 export async function fetchMeals(signal?: AbortSignal): Promise<ApiMeal[]> {
   const all: ApiMeal[] = []

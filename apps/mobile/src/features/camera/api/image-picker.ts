@@ -4,7 +4,6 @@ import { Platform } from "react-native"
 
 export type PickedImage = {
   uri: string
-  base64: string
   mimeType: "image/webp"
 }
 
@@ -14,10 +13,8 @@ export async function prepareMealImage(uri: string): Promise<PickedImage> {
   const saved = await rendered.saveAsync({
     compress: 0.8,
     format: SaveFormat.WEBP,
-    base64: true,
   })
-  if (!saved.base64) throw new Error("Could not read this photo. Choose another one.")
-  return { uri: saved.uri, base64: saved.base64, mimeType: "image/webp" }
+  return { uri: saved.uri, mimeType: "image/webp" }
 }
 
 export async function pickImage(camera: boolean): Promise<PickedImage | null> {

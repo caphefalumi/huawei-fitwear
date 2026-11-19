@@ -18,6 +18,7 @@ import {
   fetchMeals,
   fetchMealSummary,
   searchFoods,
+  uploadMealPhoto,
   writeMeal,
   type ApiMeal,
   type ApiMealItem,
@@ -48,7 +49,7 @@ export type FoodEntry = {
 }
 export type MealEstimate = Macros & { kcal: number }
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack"
-export type MealImage = { data: string; mimeType: "image/jpeg" | "image/png" | "image/webp" }
+export type MealImage = { photoId?: string }
 export type MealLog = {
   id: string
   name: string
@@ -405,6 +406,11 @@ export function MealsProvider({ children }: { children: ReactNode }) {
   const logMeal = async () => {
     if (!items.length) throw new Error("Add at least one item before logging.")
     items.forEach(validateItem)
+    let photoId = draftImageData?.photoId
+    if (!photoId && draftImage) {
+      photoId = await uploadMealPhoto(draftImage)
+      setDraftPhoto(draftImage, { photoId })
+    }
     await runWrite<ApiMeal>(
       "/meals",
       "POST",
@@ -414,7 +420,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
         loggedAt: new Date().toISOString(),
         scaleReferenceType: "none",
         items: items.map(toApiItem),
-        ...(draftImageData ? { image: draftImageData } : {}),
+        ...(photoId ? { photoId } : {}),
       },
       deleteMeal,
     )

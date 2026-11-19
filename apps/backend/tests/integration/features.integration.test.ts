@@ -76,7 +76,7 @@ describe("Persistent feature APIs", () => {
     setTestDatabaseBinding({ DB: d1, fitwear_kv: createTestKv(), AI: ai })
     const { session } = await account()
     const other = await account("other@fitwear.dev")
-    const image = { image: btoa("\xff\xd8\xff" + "test-image"), mimeType: "image/jpeg" }
+    const image = { image: btoa("RIFF\0\0\0\0WEBPVP8 "), mimeType: "image/webp" }
     const analyze = (token?: string) => request("/meals/analyze", token, "POST", image)
 
     expect((await analyze()).status).toBe(401)
@@ -88,6 +88,59 @@ describe("Persistent feature APIs", () => {
     expect(Number(limited.headers.get("Retry-After"))).toBeGreaterThan(0)
     expect((await analyze(other.session.token)).status).toBe(200)
     expect(calls).toBe(11)
+  })
+
+  it("uploads WebP once and uses its private reference for analysis and saving", async () => {
+    const objects = new Map<string, Blob>()
+    const bucket = {
+      async put(key: string, value: Blob | ReadableStream) {
+        objects.set(key, value instanceof Blob ? value : await new Response(value).blob())
+      },
+      async get(key: string) {
+        const blob = objects.get(key)
+        return blob
+          ? {
+              uploaded: new Date(),
+              size: blob.size,
+              httpMetadata: { contentType: "image/webp" },
+              body: blob.stream(),
+              arrayBuffer: () => blob.arrayBuffer(),
+            }
+          : null
+      },
+    } as unknown as R2Bucket
+    const ai = {
+      run: async () => ({ choices: [{ message: { content: '{"items":[]}' } }] }),
+    } as unknown as Ai
+    setTestDatabaseBinding({ DB: d1, fitwear_kv: createTestKv(), MEAL_IMAGES: bucket, AI: ai })
+    const owner = (await account()).session.token
+    const stranger = (await account("other@fitwear.dev")).session.token
+    const upload = (bytes: string, type: string) => {
+      const form = new FormData()
+      form.append("image", new Blob([bytes], { type }), "meal.webp")
+      return app.handle(
+        new Request("http://localhost/meals/photos", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${owner}` },
+          body: form,
+        }),
+      )
+    }
+    expect((await upload("not WebP", "image/webp")).status).toBe(400)
+    const uploaded = await upload("RIFF\0\0\0\0WEBPVP8 ", "image/webp")
+    expect(uploaded.status).toBe(200)
+    const { photoId } = await uploaded.json()
+    expect((await request("/meals/analyze", stranger, "POST", { photoId })).status).toBe(404)
+    expect((await request("/meals/analyze", owner, "POST", { photoId })).status).toBe(200)
+    const meal = { mealType: "lunch", items: [foodItem], photoId }
+    expect((await request("/meals", stranger, "POST", meal)).status).toBe(404)
+    const saved = await request("/meals", owner, "POST", meal)
+    expect(saved.status).toBe(200)
+    const { imageUrl } = await saved.json()
+    const photo = await request(imageUrl, owner)
+    expect(await photo.json()).toEqual({
+      imageUrl: `data:image/webp;base64,${btoa("RIFF\0\0\0\0WEBPVP8 ")}`,
+    })
   })
 
   it("applies actual migrations and serves the complete seeded catalogue with guides", async () => {

@@ -545,7 +545,10 @@ describe("Integration Test: Auth API Endpoints", () => {
       const deletedKeys: string[] = []
       const bucket = {
         list: async ({ prefix }: { prefix?: string }) => ({
-          objects: [{ key: `${prefix}meal_1` }, { key: `${prefix}meal_2` }],
+          objects:
+            prefix === `${user.id}/`
+              ? [{ key: `${prefix}meal_1` }, { key: `${prefix}meal_2` }]
+              : [{ key: `${prefix}draft_1` }],
           truncated: false,
         }),
         delete: async (keys: string | string[]) => {
@@ -561,7 +564,11 @@ describe("Integration Test: Auth API Endpoints", () => {
         }),
       )
       expect(deleteRes.status).toBe(200)
-      expect(deletedKeys).toEqual([`${user.id}/meal_1`, `${user.id}/meal_2`])
+      expect(deletedKeys).toEqual([
+        `${user.id}/meal_1`,
+        `${user.id}/meal_2`,
+        `draft-meal-photos/${user.id}/draft_1`,
+      ])
     })
     it("paginates R2 cleanup across more than 1000 meal photos", async () => {
       const signUpRes = await app.handle(
@@ -586,6 +593,7 @@ describe("Integration Test: Auth API Endpoints", () => {
       const deleteBatchSizes: number[] = []
       const bucket = {
         list: async ({ prefix, cursor }: { prefix?: string; cursor?: string }) => {
+          if (prefix !== `${user.id}/`) return { objects: [], truncated: false }
           listCursors.push(cursor)
           const start = cursor ? 1000 : 0
           const objects = allKeys.slice(start, start + 1000)
