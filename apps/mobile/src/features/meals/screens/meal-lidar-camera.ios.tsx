@@ -15,9 +15,9 @@ import {
   type WorkletRuntime,
 } from "react-native-worklets"
 
-import type { MealDepth, MealLidarCameraProps } from "./meal-lidar-camera"
+import type { MealLidarCameraProps } from "./meal-lidar-camera"
+import { measureMealVolume } from "./measure-meal-volume"
 
-const gridSize = 6
 const resolution = { width: 1280, height: 960 }
 const options = {
   targetResolution: resolution,
@@ -32,67 +32,28 @@ export function useMealLidarAvailable() {
   )
 }
 
-function sampleDepth(
-  depth: Depth,
-  width: number,
-  height: number,
-  angle: number,
-): MealDepth | undefined {
+function measureDepth(depth: Depth, photoWidth: number, photoHeight: number) {
   "worklet"
   const calibration = depth.cameraCalibrationData
   if (
     depth.depthDataAccuracy !== "absolute" ||
     !calibration ||
-    Math.abs(depth.width / depth.height - width / height) > 0.02
+    Math.abs(depth.width / depth.height - photoWidth / photoHeight) > 0.02
   )
     return
   const converted = depth.pixelFormat === "depth-32-bit" ? depth : depth.convert("depth-32-bit")
   try {
-    const data = new Float32Array(converted.getDepthData())
-    const stride = converted.bytesPerRow / 4 || converted.width
-    const cellsMm: number[] = []
-    for (let row = 0; row < gridSize; row++) {
-      for (let col = 0; col < gridSize; col++) {
-        let x = col
-        let y = row
-        if (angle === 90) {
-          x = row
-          y = gridSize - 1 - col
-        }
-        if (angle === -90) {
-          x = gridSize - 1 - row
-          y = col
-        }
-        if (angle === 180) {
-          x = gridSize - 1 - col
-          y = gridSize - 1 - row
-        }
-        const samples: number[] = []
-        for (let sy = 0; sy < 5; sy++) {
-          for (let sx = 0; sx < 5; sx++) {
-            const px = Math.floor(((x + (sx + 0.5) / 5) * converted.width) / gridSize)
-            const py = Math.floor(((y + (sy + 0.5) / 5) * converted.height) / gridSize)
-            const metres = data[py * stride + px]
-            if (metres >= 0.1 && metres <= 3) samples.push(metres)
-          }
-        }
-        samples.sort((a, b) => a - b)
-        cellsMm.push(
-          samples.length >= 13 ? Math.round(samples[Math.floor(samples.length / 2)] * 1000) : 0,
-        )
-      }
-    }
-    if (cellsMm.filter(Boolean).length < 27) return
-    const fx =
-      (gridSize * calibration.cameraIntrinsicMatrix[0]) /
-      calibration.intrinsicMatrixReferenceDimensions.width
-    const fy =
-      (gridSize * calibration.cameraIntrinsicMatrix[4]) /
-      calibration.intrinsicMatrixReferenceDimensions.height
-    if (!(fx > 0 && fy > 0 && Number.isFinite(fx) && Number.isFinite(fy))) return
-    return Math.abs(angle) === 90
-      ? { cellsMm, focalCellsX: fy, focalCellsY: fx }
-      : { cellsMm, focalCellsX: fx, focalCellsY: fy }
+    const { width, height } = converted
+    const matrix = calibration.cameraIntrinsicMatrix
+    const reference = calibration.intrinsicMatrixReferenceDimensions
+    return measureMealVolume({
+      metres: new Float32Array(converted.getDepthData()),
+      width,
+      height,
+      stride: converted.bytesPerRow / 4 || width,
+      fx: (width * matrix[0]) / reference.width,
+      fy: (height * matrix[4]) / reference.height,
+    })
   } finally {
     if (converted !== depth) converted.dispose()
   }
@@ -140,7 +101,7 @@ export function MealLidarCamera({
       width: number,
       height: number,
       angle: number,
-      depth?: MealDepth,
+      portionVolumeMl?: number,
     ) => {
       if (!active) return
       try {
@@ -149,7 +110,7 @@ export function MealLidarCamera({
         try {
           if (angle) rotated = image.rotate(angle)
           const path = await rotated.saveToTemporaryFileAsync("jpg", 92)
-          if (active) onCapture(`file://${path}`, depth)
+          if (active) onCapture(`file://${path}`, portionVolumeMl)
         } finally {
           if (rotated !== image) rotated.dispose()
           image.dispose()
@@ -175,10 +136,10 @@ export function MealLidarCamera({
                   ? 180
                   : 0
           const depth = frames[1] as Depth | undefined
-          let evidence: MealDepth | undefined
+          let portionVolumeMl: number | undefined
           try {
             if (depth?.orientation === rgb.orientation && !depth.isMirrored)
-              evidence = sampleDepth(depth, rgb.width, rgb.height, angle)
+              portionVolumeMl = measureDepth(depth, rgb.width, rgb.height)
           } catch {
             // A bad depth buffer must not discard the RGB capture.
           }
@@ -191,7 +152,7 @@ export function MealLidarCamera({
             for (let row = 0; row < rgb.height; row++)
               tight.set(pixels.subarray(row * stride, row * stride + rowBytes), row * rowBytes)
           }
-          scheduleOnRN(saveCapture, tight.buffer, rgb.width, rgb.height, angle, evidence)
+          scheduleOnRN(saveCapture, tight.buffer, rgb.width, rgb.height, angle, portionVolumeMl)
         } catch {
           scheduleOnRN(onUnavailable)
         } finally {

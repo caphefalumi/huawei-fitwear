@@ -46,7 +46,7 @@ export type MealWriteInput = {
 export type AnalyzeMealInput = {
   photoId: string
   description?: string
-  depth?: { cellsMm: number[]; focalCellsX: number; focalCellsY: number }
+  portionVolumeMl?: number
 }
 
 export async function uploadMealPhoto(uri: string): Promise<string> {

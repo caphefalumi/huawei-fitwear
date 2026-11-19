@@ -23,13 +23,7 @@ const analysisBody = t.Union([
   t.Object({
     photoId: t.String({ pattern: MEAL_PHOTO_ID }),
     description,
-    depth: t.Optional(
-      t.Object({
-        cellsMm: t.Array(t.Integer({ minimum: 0, maximum: 3000 }), { minItems: 36, maxItems: 36 }),
-        focalCellsX: t.Number({ minimum: 1, maximum: 40 }),
-        focalCellsY: t.Number({ minimum: 1, maximum: 40 }),
-      }),
-    ),
+    portionVolumeMl: t.Optional(t.Integer({ minimum: 10, maximum: 2000 })),
   }),
 ])
 
@@ -181,8 +175,8 @@ export const mealAnalysis = new Elysia({ prefix: "/meals", detail: { tags: ["Mea
                 {
                   type: "text",
                   text: `Estimate the pictured meal. Food context: ${body.description ?? "(none)"}${
-                    "depth" in body && body.depth
-                      ? `\nLiDAR measurements from the same image: ${JSON.stringify(body.depth)}. The 36 entries are median distances in millimeters in a 6 by 6 grid, row-major from the top left. Zero means unavailable. Focal lengths are in grid-cell units; approximate local horizontal width is distance/focalCellsX, and height is distance/focalCellsY. Use these as approximate scale and surface height cues only. Do not treat depth as food volume, weight, or an ingredient measurement. Ignore depth where the food or its supporting surface cannot be distinguished.`
+                    "portionVolumeMl" in body && body.portionVolumeMl !== undefined
+                      ? `\nEstimated volume from LiDAR for one central portion: ${body.portionVolumeMl} mL. Use it as an approximate volume, not a weight. Apply it only if you can identify a single central food matching the portion; ignore it for mixed dishes, multiple plausible foods, or ambiguous scenes. Estimate weight using a density appropriate to the identified food, then estimate its nutrition for that weight.`
                       : ""
                   }`,
                 },
