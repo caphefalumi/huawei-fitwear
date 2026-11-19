@@ -84,6 +84,8 @@ jobs:
         with:
           persist-credentials: false
       - name: Install ArkTS linter
+        env:
+          CARGO_NET_GIT_FETCH_WITH_CLI: "true"
         run: cargo install --git https://github.com/ohos-rs/oxc-ark --rev bc16abcbcff59558146f4b85a766dcda8fa14c36 --locked oxk
       - name: Lint watch ArkTS
         run: oxk lint --config .github/arkts-lint.json apps/watch/entry/src/main/ets
@@ -119,6 +121,9 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node: "true"
+      - name: Expo Doctor
+        working-directory: apps/mobile
+        run: bunx expo-doctor@1.21.8
       - name: Typecheck
         run: bun run mobile:typecheck
       - name: Jest unit tests
