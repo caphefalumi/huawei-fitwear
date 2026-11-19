@@ -1,4 +1,4 @@
-import { act, fireEvent, render } from "@testing-library/react-native"
+import { fireEvent, render } from "@testing-library/react-native"
 import { router, useLocalSearchParams } from "expo-router"
 
 import { useHealth } from "@/features/health"
@@ -60,7 +60,6 @@ test("lists a group's exercises without prescriptions and opens a guide", async 
 })
 
 test("guide shows the main muscle first, the rest on Show all, and links weight to Profile", async () => {
-  jest.useFakeTimers()
   jest.mocked(useLocalSearchParams).mockReturnValue({ name: "bench-press" })
   const screen = await render(<ExerciseGuideScreen />)
   expect(screen.getByText("Chest")).toBeTruthy()
@@ -70,15 +69,21 @@ test("guide shows the main muscle first, the rest on Show all, and links weight 
   expect(screen.getByText("Front delt, Triceps")).toBeTruthy()
   expect(screen.getByText("Shoulder, Elbow, Wrist")).toBeTruthy()
 
-  await fireEvent.press(screen.getByLabelText("Play Bench press video"))
-  expect(screen.getByLabelText("Close video")).toBeTruthy()
-  await act(async () => {
-    jest.advanceTimersByTime(100)
-  })
-  await fireEvent.press(screen.getByLabelText("Close video"))
-
   await fireEvent.press(screen.getByLabelText(/^Your weight 42\.5 kg/))
   expect(router.push).toHaveBeenCalledWith("/training-weights?edit=bench-press")
+})
+
+test("opens, closes, and reopens the technique video", async () => {
+  jest.mocked(useLocalSearchParams).mockReturnValue({ name: "bench-press" })
+  const screen = await render(<ExerciseGuideScreen />)
+  const play = () => fireEvent.press(screen.getByRole("button", { name: "Play Bench press video" }))
+
+  expect(screen.queryByLabelText("Close video")).toBeNull()
+  await play()
+  await fireEvent.press(screen.getByLabelText("Close video"))
+  expect(screen.queryByLabelText("Close video")).toBeNull()
+  await play()
+  expect(screen.getByLabelText("Close video")).toBeTruthy()
 })
 
 test("edits one load, follows the level for the rest, and resets to default with undo", async () => {

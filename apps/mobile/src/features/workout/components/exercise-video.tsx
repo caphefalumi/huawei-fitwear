@@ -1,6 +1,6 @@
 import { Image } from "expo-image"
 import { useVideoPlayer, VideoView } from "expo-video"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Modal, StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
@@ -24,8 +24,12 @@ function Player({
   const player = useVideoPlayer(source, (video) => {
     video.loop = true
     video.muted = true
-    video.play()
   })
+
+  // On web, play() needs the VideoView to have attached its media element.
+  useEffect(() => {
+    player.play()
+  }, [player])
 
   return (
     <View
