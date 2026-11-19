@@ -8,9 +8,10 @@ import { Pressable } from "@/components/ui/pressable"
 import { affects, injuryTitle, useActiveInjuries } from "@/features/recovery"
 import { Palette as C } from "@/theme"
 
-import { VideoPlaceholder } from "../components/video-placeholder"
+import { ExerciseVideo } from "../components/exercise-video"
 import { formatLoad, loadUnit, useLoads } from "../store/training-weights.store"
 import { CATALOG, findExercise } from "../utils/catalog"
+import { exerciseLoops } from "../utils/exercise-loops"
 import { capitalize, EQUIPMENT_LABELS, exercisesIn } from "../utils/muscle-groups"
 
 const icons = {
@@ -31,6 +32,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 export function ExerciseGuideScreen() {
   const { name } = useLocalSearchParams<{ name?: string }>()
   const exercise = findExercise(name) ?? CATALOG[0]!
+  const video = exerciseLoops[exercise.key]
   const injury = useActiveInjuries().find((active) => affects(active.area, exercise))
   const load = useLoads().loadFor(exercise)
   const [showAll, setShowAll] = useState(false)
@@ -45,7 +47,9 @@ export function ExerciseGuideScreen() {
     <Screen contentStyle={styles.content}>
       <BackHeader label="Back" onPress={() => router.back()} />
 
-      <VideoPlaceholder title={exercise.name} />
+      {video !== undefined ? (
+        <ExerciseVideo key={exercise.key} title={exercise.name} source={video} />
+      ) : null}
 
       <PageHeading title={exercise.name} subtitle="Technique guide" />
 

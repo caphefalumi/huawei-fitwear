@@ -1,6 +1,7 @@
 import { Image } from "expo-image"
-import { useEffect, useRef, useState } from "react"
-import { Animated, Easing, Modal, StyleSheet, Text, View } from "react-native"
+import { useVideoPlayer, VideoView } from "expo-video"
+import { useState } from "react"
+import { Modal, StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/ui/pressable"
@@ -10,27 +11,21 @@ const icons = {
   play: require("@/assets/images/workout/play.svg"),
 }
 
-const CLIP_MS = 30_000
-
-/** Full-screen player stand-in until the real demo clips exist. */
-function Player({ title, onClose }: { title: string; onClose: () => void }) {
+function Player({
+  title,
+  source,
+  onClose,
+}: {
+  title: string
+  source: number
+  onClose: () => void
+}) {
   const insets = useSafeAreaInsets()
-  const [paused, setPaused] = useState(false)
-  const progress = useRef(new Animated.Value(0)).current
-
-  useEffect(() => {
-    if (paused) return
-    const loop = Animated.loop(
-      Animated.timing(progress, {
-        toValue: 1,
-        duration: CLIP_MS,
-        easing: Easing.linear,
-        useNativeDriver: false,
-      }),
-    )
-    loop.start()
-    return () => loop.stop()
-  }, [paused, progress])
+  const player = useVideoPlayer(source, (video) => {
+    video.loop = true
+    video.muted = true
+    video.play()
+  })
 
   return (
     <View
@@ -44,43 +39,23 @@ function Player({ title, onClose }: { title: string; onClose: () => void }) {
           <Text style={styles.closeLabel}>✕</Text>
         </Pressable>
       </View>
-      <View style={styles.stage}>
-        <Text style={styles.stageTitle}>Demo video placeholder</Text>
-        <Text style={styles.stageSub}>A 30 second clip will play here.</Text>
-      </View>
-      <View style={styles.bar}>
-        <Animated.View
-          style={[
-            styles.barFill,
-            { width: progress.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }) },
-          ]}
-        />
-      </View>
-      <View style={styles.controls}>
-        <Pressable
-          style={styles.playPause}
-          accessibilityLabel={paused ? "Play" : "Pause"}
-          onPress={() => setPaused((value) => !value)}
-        >
-          <Text style={styles.playPauseLabel}>{paused ? "▶" : "❚❚"}</Text>
-        </Pressable>
-      </View>
+      <VideoView player={player} style={styles.stage} contentFit="contain" nativeControls />
     </View>
   )
 }
 
-/** 16:9 video slot at the top of a technique guide; tapping opens the player. */
-export function VideoPlaceholder({ title }: { title: string }) {
+export function ExerciseVideo({ title, source }: { title: string; source: number }) {
   const [open, setOpen] = useState(false)
   return (
     <>
       <Pressable
         style={styles.slot}
+        accessibilityRole="button"
         accessibilityLabel={`Play ${title} video`}
         onPress={() => setOpen(true)}
       >
         <View style={styles.badge}>
-          <Text style={styles.badgeLabel}>Video</Text>
+          <Text style={styles.badgeLabel}>Technique loop</Text>
         </View>
         <View style={styles.play}>
           <Image
@@ -90,9 +65,6 @@ export function VideoPlaceholder({ title }: { title: string }) {
             contentFit="contain"
           />
         </View>
-        <View style={[styles.badge, styles.duration]}>
-          <Text style={styles.badgeLabel}>0:30</Text>
-        </View>
       </Pressable>
       <Modal
         visible={open}
@@ -101,7 +73,7 @@ export function VideoPlaceholder({ title }: { title: string }) {
         statusBarTranslucent
         onRequestClose={() => setOpen(false)}
       >
-        {open ? <Player title={title} onClose={() => setOpen(false)} /> : null}
+        {open ? <Player title={title} source={source} onClose={() => setOpen(false)} /> : null}
       </Modal>
     </>
   )
@@ -139,12 +111,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "rgba(0,0,0,0.45)",
   },
-  duration: {
-    top: undefined,
-    left: undefined,
-    bottom: 10,
-    right: 10,
-  },
   badgeLabel: {
     fontSize: 11,
     color: C.onAccent,
@@ -179,43 +145,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: C.onAccent,
   },
-  stage: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  stageTitle: {
-    fontSize: 15,
-    color: C.onAccent,
-  },
-  stageSub: {
-    fontSize: 12,
-    color: C.track,
-  },
-  bar: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    overflow: "hidden",
-  },
-  barFill: {
-    height: "100%",
-    backgroundColor: C.onAccent,
-  },
-  controls: {
-    alignItems: "center",
-  },
-  playPause: {
-    width: 60,
-    height: 60,
-    borderRadius: 100,
-    backgroundColor: C.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  playPauseLabel: {
-    fontSize: 18,
-    color: C.text,
-  },
+  stage: { flex: 1 },
 })
