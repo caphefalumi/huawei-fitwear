@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query"
 import { CameraView, useCameraPermissions } from "expo-camera"
 import { Image } from "expo-image"
 import { router } from "expo-router"
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { StyleSheet, Text, TextInput, View } from "react-native"
 import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -18,9 +18,10 @@ import { Palette as C } from "@/theme"
 import { analyzeMeal, uploadMealPhoto } from "../api/meals-api"
 import { icons } from "../components/meals-ui"
 import { useMeals } from "../hooks/meals-hooks"
+import { MealLidarCamera, useMealLidarAvailable, type MealDepth } from "./meal-lidar-camera"
 
 const TUTORIAL_STEPS = [
-  { title: "Add a ruler", detail: "Place a 15 cm ruler beside the plate or cup." },
+  { title: "Add a ruler", detail: "If you have one, place a 15 cm ruler beside the plate or cup." },
   { title: "Shoot from above", detail: "Keep the whole meal in frame and hold steady." },
 ]
 
@@ -28,15 +29,25 @@ export function MealCaptureScreen() {
   const insets = useSafeAreaInsets()
   const { tutorialSeen, dismissTutorial, setAnalysis, setDraftPhoto, items } = useMeals()
   const [description, setDescription] = useState("")
-  const [image, setImage] = useState<PickedImage | null>(null)
+  const [image, setImage] = useState<(PickedImage & { depth?: MealDepth }) | null>(null)
+  const [lidarFailed, setLidarFailed] = useState(false)
+  const [lidarCapture, setLidarCapture] = useState(0)
+  const lidarAvailable = useMealLidarAvailable()
+  const useLidar = lidarAvailable && !lidarFailed
   const analyzeMutation = useMutation({
-    mutationFn: async ({ image, description }: { image: PickedImage; description?: string }) => {
+    mutationFn: async ({
+      image,
+      description,
+    }: {
+      image: PickedImage & { depth?: MealDepth }
+      description?: string
+    }) => {
       const photoId =
         uploadedPhoto.current?.image === image
           ? uploadedPhoto.current.photoId
           : await uploadMealPhoto(image.uri)
       uploadedPhoto.current = { image, photoId }
-      return { photoId, items: await analyzeMeal({ photoId, description }) }
+      return { photoId, items: await analyzeMeal({ photoId, description, depth: image.depth }) }
     },
   })
   const [error, setError] = useState<string | null>(null)
@@ -56,8 +67,29 @@ export function MealCaptureScreen() {
     }
   }, [])
 
+  const disableLidar = useCallback(() => {
+    if (active.current) {
+      setLidarFailed(true)
+      setLidarCapture(0)
+      setError("Depth camera unavailable. Take a regular photo to continue.")
+    }
+  }, [])
+
+  const receiveLidarPhoto = useCallback(
+    async (uri: string, depth?: MealDepth) => {
+      try {
+        const prepared = await prepareMealImage(uri)
+        if (active.current) setImage({ ...prepared, depth })
+      } catch (cause) {
+        captureException(cause)
+        disableLidar()
+      }
+    },
+    [disableLidar],
+  )
+
   async function selectLibrary() {
-    if (busy) return
+    if (busy || lidarCapture) return
     setError(null)
     try {
       const picked = await pickImage(false)
@@ -74,8 +106,12 @@ export function MealCaptureScreen() {
     }
   }
   async function takePhoto() {
-    if (busy) return
+    if (busy || lidarCapture) return
     setError(null)
+    if (useLidar) {
+      setLidarCapture(1)
+      return
+    }
     try {
       const photo = await cameraRef.current?.takePictureAsync({ quality: 1 })
       if (!photo) throw new Error("Could not capture photo. Try again.")
@@ -168,6 +204,7 @@ export function MealCaptureScreen() {
                   accessibilityLabel="Retake photo"
                   onPress={() => {
                     setImage(null)
+                    setLidarCapture(0)
                     setError(null)
                   }}
                   style={styles.retake}
@@ -206,7 +243,16 @@ export function MealCaptureScreen() {
               </View>
             ) : (
               <View style={styles.preview}>
-                <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
+                {useLidar ? (
+                  <MealLidarCamera
+                    style={StyleSheet.absoluteFill}
+                    capture={lidarCapture}
+                    onCapture={receiveLidarPhoto}
+                    onUnavailable={disableLidar}
+                  />
+                ) : (
+                  <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
+                )}
                 <View pointerEvents="none" style={styles.guide}>
                   <View style={[styles.guideCorner, styles.guideTL]} />
                   <View style={[styles.guideCorner, styles.guideTR]} />
