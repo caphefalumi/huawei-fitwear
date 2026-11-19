@@ -1,6 +1,6 @@
-import { status } from "elysia"
+import { Elysia, status } from "elysia"
 
-import { getKv } from "../../db"
+import { getEmailConfig, getEmailQueue, getKv } from "../../db"
 import { consumeTokenBucket, type TokenBucketOptions } from "../../lib/token-bucket"
 
 export type AuthRateLimitAction =
@@ -100,7 +100,7 @@ export async function clearPasswordResetEmailSlot(email: string): Promise<void> 
   await kv.delete(await passwordResetKey(email))
 }
 
-export async function canSendPasswordResetEmail(email: string): Promise<ResetEmailSlot> {
+async function canSendPasswordResetEmail(email: string): Promise<ResetEmailSlot> {
   const kv = getKv()
   return kv
     ? takePasswordResetEmailSlot(kv, email)
@@ -126,7 +126,7 @@ export type AuthRateLimitSet = {
   headers: Record<string, string | number | undefined>
 }
 
-export async function assertAuthRateLimit(
+async function assertAuthRateLimit(
   request: Request,
   action: AuthRateLimitAction,
   set: AuthRateLimitSet,
@@ -172,3 +172,46 @@ export async function assertAuthRateLimit(
     })
   }
 }
+
+function readEmail(body: unknown): string | undefined {
+  if (body && typeof body === "object" && "email" in body && typeof body.email === "string") {
+    return body.email
+  }
+}
+
+export const authRateLimit = new Elysia({ name: "authRateLimit" }).macro({
+  rateLimit: (action: AuthRateLimitAction | { account: "sign-in" | "password-reset-confirm" }) => ({
+    beforeHandle: ({ request, body, set }) => {
+      if (typeof action === "string") return assertAuthRateLimit(request, action, set)
+      return assertAuthRateLimit(request, action.account, set, readEmail(body))
+    },
+  }),
+  passwordResetRateLimit: {
+    async resolve({ request, body, set }) {
+      await assertAuthRateLimit(request, "password-reset", set)
+      const { apiKey, from, passwordResetTemplateId } = getEmailConfig()
+      if (!apiKey || !from || !passwordResetTemplateId || !getEmailQueue()) {
+        return status(503, { success: false, message: "Password reset email is not configured." })
+      }
+
+      const email = readEmail(body)
+      if (email === undefined) throw new TypeError("Password reset middleware requires an email.")
+      let slot: ResetEmailSlot
+      try {
+        slot = await canSendPasswordResetEmail(email)
+      } catch {
+        console.error("Password reset email request failed.")
+        return { resetEmailSlot: { allowed: false, retryAfterSeconds: 30 } }
+      }
+      if (slot.dailyLimitReached) {
+        set.headers["Retry-After"] = String(slot.retryAfterSeconds)
+        return status(429, {
+          success: false,
+          message: "Too many requests. Try again later.",
+          resendAfterSeconds: slot.retryAfterSeconds,
+        })
+      }
+      return { resetEmailSlot: slot }
+    },
+  },
+})

@@ -78,6 +78,30 @@ function completionText(output: unknown): string {
   })
 }
 
+async function limitMealAnalysis({
+  user,
+  set,
+}: {
+  user: { id: string }
+  set: { headers: Record<string, string | number | undefined> }
+}) {
+  // Unconfigured analysis returns 503 without consuming quota.
+  if (!getAi()) return
+  const kv = getKv()
+  if (!kv) return
+  const allowance = await consumeTokenBucket(kv, `rl:meal-analysis:${user.id}`, {
+    capacity: 10,
+    refillPerSecond: 10 / 3600,
+  })
+  if (!allowance.allowed) {
+    set.headers["Retry-After"] = String(allowance.retryAfterSec)
+    throw status(429, {
+      success: false,
+      message: "Image analysis limit reached. Please try later or enter food manually.",
+    })
+  }
+}
+
 export const mealAnalysis = new Elysia({ prefix: "/meals", detail: { tags: ["Meals"] } })
   .use(authGuard)
   .get(
@@ -91,27 +115,13 @@ export const mealAnalysis = new Elysia({ prefix: "/meals", detail: { tags: ["Mea
   )
   .post(
     "/analyze",
-    async ({ user, body, set }) => {
+    async ({ body }) => {
       const ai = getAi()
       if (!ai)
         throw status(503, {
           success: false,
           message: "Cloud image analysis is not configured. Manual food entry is available.",
         })
-      const kv = getKv()
-      if (kv) {
-        const allowance = await consumeTokenBucket(kv, `rl:meal-analysis:${user.id}`, {
-          capacity: 10,
-          refillPerSecond: 10 / 3600,
-        })
-        if (!allowance.allowed) {
-          set.headers["Retry-After"] = String(allowance.retryAfterSec)
-          throw status(429, {
-            success: false,
-            message: "Image analysis limit reached. Please try later or enter food manually.",
-          })
-        }
-      }
       decodeMealImage({ data: body.image, mimeType: body.mimeType })
       let output: unknown
       try {
@@ -151,6 +161,7 @@ export const mealAnalysis = new Elysia({ prefix: "/meals", detail: { tags: ["Mea
     },
     {
       auth: true,
+      beforeHandle: ({ user, set }) => limitMealAnalysis({ user, set }),
       body: analysisBody,
       detail: { summary: "Estimate photographed meal nutrition with Workers AI for user review" },
     },
