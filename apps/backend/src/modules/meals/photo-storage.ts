@@ -3,7 +3,7 @@ import { Buffer } from "node:buffer"
 import { status } from "elysia"
 import { uuidv7 } from "uuidv7"
 
-import { getMealImages } from "../db"
+import { getMealImages } from "../../worker/bindings"
 
 export type MealImage = { data: string; mimeType: "image/jpeg" | "image/png" | "image/webp" }
 

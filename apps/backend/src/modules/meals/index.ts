@@ -1,8 +1,8 @@
 import { Elysia, t, type Static } from "elysia"
 
 import { DATE_KEY_PATTERN } from "../../lib/date"
-import { MEAL_PHOTO_ID } from "../../lib/meal-images"
 import { authGuard } from "../auth/service"
+import { MEAL_PHOTO_ID } from "./photo-storage"
 import { Meals } from "./service"
 
 const dateKey = t.String({

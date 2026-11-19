@@ -1,10 +1,11 @@
 import { and, eq, exists, gt, like, or } from "drizzle-orm"
 
-import { getDb, getEmailConfig, getEmailQueue, session, user, verification } from "../../db"
+import { getDb, session, user, verification } from "../../db"
 import { generateId, generateToken } from "../../lib/id"
-import { hashPassword, isPasswordWithinLimit } from "../../lib/password"
+import { getEmailConfig, getEmailQueue } from "../../worker/bindings"
 import { enqueueEmail } from "../email/queue"
 import type { PasswordResetBody, PasswordResetVerifyBody } from "./index"
+import { hashPassword, isPasswordWithinLimit } from "./password"
 import { clearPasswordResetEmailSlot } from "./rate-limit"
 
 const OTP_IDENTIFIER_PREFIX = "password-reset:"

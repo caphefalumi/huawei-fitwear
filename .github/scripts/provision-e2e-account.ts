@@ -1,4 +1,4 @@
-import { hashPassword, isPasswordWithinLimit } from "../../apps/backend/src/lib/password"
+import { hashPassword, isPasswordWithinLimit } from "../../apps/backend/src/modules/auth/password"
 import { createD1Query } from "./cleanup-maestro-account"
 
 // Explicit opt-in only, after staging isolation validation. Never alter an existing account.

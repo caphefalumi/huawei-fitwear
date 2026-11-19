@@ -1,4 +1,4 @@
-import { getEmailConfig, getEmailQueue } from "../../db"
+import { getEmailConfig, getEmailQueue } from "../../worker/bindings"
 export type EmailMessage =
   | { type: "welcome"; to: string; name: string | null }
   | { type: "password-reset"; to: string; otp: string; expiresAt: number }

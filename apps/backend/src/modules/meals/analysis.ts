@@ -1,16 +1,16 @@
 import { Value } from "@sinclair/typebox/value"
 import { Elysia, status, t, type Static } from "elysia"
 
-import { getAi, getKv } from "../../db"
+import { consumeTokenBucket } from "../../lib/token-bucket"
+import { getAi, getKv } from "../../worker/bindings"
+import { authGuard } from "../auth/service"
 import {
   decodeMealImage,
   draftMealPhotoDataUrl,
   MEAL_PHOTO_ID,
   readMealImage,
   uploadDraftMealPhoto,
-} from "../../lib/meal-images"
-import { consumeTokenBucket } from "../../lib/token-bucket"
-import { authGuard } from "../auth/service"
+} from "./photo-storage"
 import { Meals } from "./service"
 
 const description = t.Optional(t.String({ maxLength: 2000 }))

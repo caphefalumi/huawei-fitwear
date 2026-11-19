@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 
-import { getKv, withDatabaseBinding } from "../../src/db"
+import { getKv, withWorkerBindings } from "../../src/worker/bindings"
 import { createTestKv } from "../helpers/test-kv"
 
 describe("Concurrent Worker binding scope", () => {
@@ -8,12 +8,12 @@ describe("Concurrent Worker binding scope", () => {
     const first = createTestKv()
     const second = createTestKv()
     const { promise: barrier, resolve: release } = Promise.withResolvers<void>()
-    const pending = withDatabaseBinding({ fitwear_kv: first }, async () => {
+    const pending = withWorkerBindings({ fitwear_kv: first }, async () => {
       await barrier
       expect(getKv()).toBe(first)
       await getKv()!.put("owner", "first")
     })
-    await withDatabaseBinding({ fitwear_kv: second }, async () => {
+    await withWorkerBindings({ fitwear_kv: second }, async () => {
       await getKv()!.put("owner", "second")
       release()
       await pending

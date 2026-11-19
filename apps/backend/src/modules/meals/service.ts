@@ -4,7 +4,6 @@ import { status } from "elysia"
 import { getDb, mealItems as mealItemsTable, mealLogs as mealLogsTable } from "../../db"
 import { isDateKey, toDateKey } from "../../lib/date"
 import { generateId } from "../../lib/id"
-import { attachDraftMealPhoto, deleteMealImage, saveMealImage } from "../../lib/meal-images"
 import { sumNutrition, type NutritionTotals } from "../../lib/nutrition"
 import { Targets } from "../targets/service"
 import type {
@@ -14,6 +13,7 @@ import type {
   MealListQuery,
   MealUpdateBody,
 } from "./index"
+import { attachDraftMealPhoto, deleteMealImage, saveMealImage } from "./photo-storage"
 
 const DEFAULT_LIMIT = 20
 
