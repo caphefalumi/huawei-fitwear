@@ -1,6 +1,7 @@
 import { Elysia, t, type Static } from "elysia"
 
 import { authGuard } from "../auth/service"
+import { lookupPackagedFood } from "./barcode"
 import { Foods } from "./service"
 
 const FoodModel = {
@@ -28,6 +29,11 @@ export const foods = new Elysia({
       summary: "Search the food catalogue",
       description: "Case-insensitive substring search over food names, ordered alphabetically.",
     },
+  })
+  .get("/barcode/:barcode", ({ params }) => lookupPackagedFood(params.barcode), {
+    auth: true,
+    params: t.Object({ barcode: t.String({ pattern: "^(?:[0-9]{8}|[0-9]{12,14})$" }) }),
+    detail: { summary: "Look up packaged food nutrition by barcode in Open Food Facts" },
   })
   .get("/:foodId", ({ params }) => Foods.byId(params.foodId), {
     auth: true,

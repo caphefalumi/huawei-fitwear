@@ -17,6 +17,7 @@ import {
 
 import type { MealLidarCameraProps } from "./meal-lidar-camera"
 import { measureMealVolume } from "./measure-meal-volume"
+import { useMealBarcodeOutput } from "./use-meal-barcode-output"
 
 const resolution = { width: 1280, height: 960 }
 const options = {
@@ -62,12 +63,15 @@ function measureDepth(depth: Depth, photoWidth: number, photoHeight: number) {
 export function MealLidarCamera({
   style,
   capture,
+  scan,
+  onBarcode,
   onCapture,
   onUnavailable,
 }: MealLidarCameraProps) {
   const device = useCameraDevices().find(
     (candidate) => candidate.position === "back" && candidate.type === "lidar-depth",
   )
+  const scanner = useMealBarcodeOutput(scan, onBarcode)
   const [requested] = useState(() => createSynchronizable(0, { fixedType: true }))
   const outputs = useMemo(
     () => [
@@ -179,7 +183,7 @@ export function MealLidarCamera({
       device={device}
       style={style}
       isActive
-      outputs={outputs}
+      outputs={[...outputs, scanner]}
       onConfigured={() => {
         try {
           const synchronizer = VisionCamera.createOutputSynchronizer(outputs)

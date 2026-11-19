@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router"
 import { useEffect, useRef, useState } from "react"
-import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { Linking, ScrollView, StyleSheet, Text, View } from "react-native"
 import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
@@ -22,14 +22,42 @@ export function ReviewItemScreen() {
     description?: string
     log?: string
     id?: string
+    barcode?: string
+    unit?: string
+    kcal?: string
+    protein?: string
+    carbs?: string
+    fat?: string
   }>()
   const existing = (
     params.log ? history.find((meal) => meal.id === params.log)?.items : items
   )?.find((item) => item.id === params.id)
   const portion = existing ? splitDetail(existing.detail) : null
+  const scanValues = {
+    energy: params.kcal,
+    protein: params.protein,
+    carbs: params.carbs,
+    fat: params.fat,
+  }
+  const barcode =
+    !existing &&
+    typeof params.barcode === "string" &&
+    /^(?:[0-9]{8}|[0-9]{12,14})$/.test(params.barcode) &&
+    (params.unit === "g" || params.unit === "ml") &&
+    Object.values(scanValues).every(
+      (value) =>
+        typeof value === "string" &&
+        value.trim() &&
+        Number.isFinite(Number(value)) &&
+        Number(value) >= 0,
+    )
+      ? params.barcode
+      : null
   const [name, setName] = useState(existing?.name ?? params.name ?? "")
-  const [unit, setUnit] = useState<"g" | "ml">(portion?.unit === "ml" ? "ml" : "g")
-  const [amount, setAmount] = useState(portion ? String(portion.amount) : "")
+  const [unit, setUnit] = useState<"g" | "ml">(
+    portion?.unit === "ml" || (barcode && params.unit === "ml") ? "ml" : "g",
+  )
+  const [amount, setAmount] = useState(portion ? String(portion.amount) : barcode ? "100" : "")
   const [draft, setDraft] = useState<Record<NutrientKey, string>>(
     existing
       ? {
@@ -38,7 +66,12 @@ export function ReviewItemScreen() {
           carbs: String(existing.macros.carbs),
           fat: String(existing.macros.fat),
         }
-      : { energy: "", protein: "", carbs: "", fat: "" },
+      : {
+          energy: barcode ? (params.kcal ?? "") : "",
+          protein: barcode ? (params.protein ?? "") : "",
+          carbs: barcode ? (params.carbs ?? "") : "",
+          fat: barcode ? (params.fat ?? "") : "",
+        },
   )
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -49,6 +82,18 @@ export function ReviewItemScreen() {
       active.current = false
     }
   }, [])
+
+  function changeAmount(value: string) {
+    setAmount(value)
+    const quantity = Number(value)
+    if (!barcode || !Number.isFinite(quantity) || quantity <= 0) return
+    setDraft({
+      energy: String(Math.round((Number(params.kcal) * quantity) / 100)),
+      protein: String(Math.round((Number(params.protein) * quantity) / 10) / 10),
+      carbs: String(Math.round((Number(params.carbs) * quantity) / 10) / 10),
+      fat: String(Math.round((Number(params.fat) * quantity) / 10) / 10),
+    })
+  }
 
   async function handleAdd() {
     if (saving) return
@@ -118,10 +163,10 @@ export function ReviewItemScreen() {
 
         <View style={styles.heading}>
           <Text accessibilityRole="header" style={styles.title}>
-            {existing ? "Review item" : "Manual item"}
+            {existing ? "Review item" : barcode ? "Review product" : "Manual item"}
           </Text>
           <Text style={styles.subtitle}>
-            {existing
+            {existing || barcode
               ? "Review and correct the portion and nutrition before logging."
               : "Enter nutrition from a food label or your measured recipe."}
           </Text>
@@ -129,7 +174,11 @@ export function ReviewItemScreen() {
 
         <View style={styles.estimateBar}>
           <Text style={styles.estimateTag}>
-            {existing ? "Editable nutrition · review required" : "Manual entry · no AI estimate"}
+            {barcode
+              ? "Barcode match · review required"
+              : existing
+                ? "Editable nutrition · review required"
+                : "Manual entry · no AI estimate"}
           </Text>
           <Text style={styles.estimateCategory}>Full portion values</Text>
         </View>
@@ -147,18 +196,20 @@ export function ReviewItemScreen() {
 
         <Field label="Amount">
           <Box>
-            <ValueInput label="Amount" value={amount} onChangeText={setAmount} unit={unit} />
+            <ValueInput label="Amount" value={amount} onChangeText={changeAmount} unit={unit} />
           </Box>
         </Field>
-        <SegmentedChoice
-          label="Portion unit"
-          options={[
-            { value: "g", label: "g", accessibilityLabel: "Grams" },
-            { value: "ml", label: "ml", accessibilityLabel: "Milliliters" },
-          ]}
-          value={unit}
-          onChange={setUnit}
-        />
+        {!barcode ? (
+          <SegmentedChoice
+            label="Portion unit"
+            options={[
+              { value: "g", label: "g", accessibilityLabel: "Grams" },
+              { value: "ml", label: "ml", accessibilityLabel: "Milliliters" },
+            ]}
+            value={unit}
+            onChange={setUnit}
+          />
+        ) : null}
         {error ? (
           <Text accessibilityRole="alert" style={styles.footnote}>
             {error}
@@ -182,6 +233,19 @@ export function ReviewItemScreen() {
           {params.description ? `${params.description}. ` : ""}Enter values for the entire portion,
           not per 100 {unit}.
         </Text>
+        {barcode ? (
+          <Text
+            accessibilityRole="link"
+            style={styles.footnote}
+            onPress={() =>
+              void Linking.openURL(`https://world.openfoodfacts.org/product/${barcode}`).catch(
+                captureException,
+              )
+            }
+          >
+            Nutrition data: Open Food Facts. Check against the package label.
+          </Text>
+        ) : null}
 
         <Text style={styles.centerNote}>Review the name, amount, and nutrients above.</Text>
 

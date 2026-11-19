@@ -43,11 +43,7 @@ export type MealWriteInput = {
   body?: unknown
 }
 
-export type AnalyzeMealInput = {
-  photoId: string
-  description?: string
-  portionVolumeMl?: number
-}
+export type AnalyzeMealInput = { photoId: string; description?: string; portionVolumeMl?: number }
 
 export async function uploadMealPhoto(uri: string): Promise<string> {
   const body = new FormData()
@@ -111,6 +107,30 @@ export async function searchFoods(query: string, signal?: AbortSignal): Promise<
       fat: food.fatPer100G,
     },
   }))
+}
+
+export async function lookupBarcodeFood(
+  barcode: string,
+  signal: AbortSignal,
+): Promise<FoodEntry | null> {
+  const { food } = await apiRequest<{ food: ApiFood | null }>(
+    `/foods/barcode/${encodeURIComponent(barcode)}`,
+    { signal },
+  )
+  if (!food) return null
+  return {
+    id: food.id,
+    name: food.name,
+    serving: `Per 100 ${food.servingUnit}`,
+    unit: food.servingUnit,
+    glyph: food.glyph,
+    per100: {
+      kcal: food.caloriesPer100,
+      protein: food.proteinPer100G,
+      carbs: food.carbsPer100G,
+      fat: food.fatPer100G,
+    },
+  }
 }
 
 export function writeMeal({ path, method, body }: MealWriteInput): Promise<unknown> {

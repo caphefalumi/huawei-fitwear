@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "bun:test"
+import { beforeEach, describe, expect, it, spyOn } from "bun:test"
 
 import { Meals } from "../../src/modules/meals/service"
 import { app, setTestDatabaseBinding } from "../helpers/test-app"
@@ -63,6 +63,49 @@ describe("Persistent feature APIs", () => {
       ["/workouts", "POST", { sessionTitle: "Chest", workoutSplit: "Chest" }],
     ] as const)
       expect((await request(path, undefined, method, body)).status).toBe(401)
+  })
+
+  it("looks up packaged food nutrition and distinguishes an unknown barcode from provider failure", async () => {
+    const { session } = await account()
+    const requestProduct = (barcode: string) => request(`/foods/barcode/${barcode}`, session.token)
+    const upstream = spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        Response.json({
+          status: 1,
+          product: {
+            product_name: "Orange juice",
+            product_quantity_unit: "ml",
+            nutriments: {
+              "energy-kj_100g": 167.36,
+              proteins_100g: 0.5,
+              carbohydrates_100g: 9,
+              fat_100g: 0,
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(Response.json({ status: 0 }, { status: 404 }))
+      .mockResolvedValueOnce(new Response(null, { status: 429 }))
+    try {
+      expect((await request("/foods/barcode/012345678905")).status).toBe(401)
+      expect((await requestProduct("bad-code")).status).toBe(422)
+      expect(upstream).not.toHaveBeenCalled()
+      const result = await requestProduct("012345678905")
+      expect(result.status).toBe(200)
+      expect((await result.json()).food).toMatchObject({
+        name: "Orange juice",
+        servingUnit: "ml",
+        caloriesPer100: 40,
+        proteinPer100G: 0.5,
+        carbsPer100G: 9,
+        fatPer100G: 0,
+      })
+      expect(String(upstream.mock.calls[0][0])).toContain("/product/012345678905.json")
+      expect(await (await requestProduct("012345678906")).json()).toEqual({ food: null })
+      expect((await requestProduct("012345678907")).status).toBe(502)
+    } finally {
+      upstream.mockRestore()
+    }
   })
 
   it("limits meal analysis per authenticated user before invoking AI", async () => {
