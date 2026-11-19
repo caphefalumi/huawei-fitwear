@@ -4,7 +4,6 @@ import { StyleSheet, Text, View } from "react-native"
 
 import { BackHeader, PageHeading, Screen } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
 import { capitalize, EQUIPMENT_LABELS, exercisesIn, groupFromParam } from "../utils/muscle-groups"
@@ -15,7 +14,6 @@ const icons = {
 
 /** Every exercise in one muscle group, as a library to learn from. */
 export function GroupPlanScreen() {
-  useMarkInteractive()
   const { group: param } = useLocalSearchParams<{ group?: string }>()
   const group = groupFromParam(param)
   const exercises = exercisesIn(group)

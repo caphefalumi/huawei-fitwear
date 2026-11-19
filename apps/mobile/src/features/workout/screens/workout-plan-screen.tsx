@@ -8,7 +8,6 @@ import { Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
 import { dateKey, useHealth } from "@/features/health"
 import { injuryEffect, useActiveInjuries } from "@/features/recovery"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
 
@@ -88,7 +87,6 @@ function ExerciseRows({ routine }: { routine: Routine }) {
 }
 
 export function WorkoutPlanScreen() {
-  useMarkInteractive()
   const { plan } = useHealth()
   const minutes = usePlanPreferences((state) => state.minutes)
   const injuries = useActiveInjuries()

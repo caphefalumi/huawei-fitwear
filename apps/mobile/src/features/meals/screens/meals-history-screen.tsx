@@ -5,7 +5,6 @@ import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/ui/pressable"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
 import { icons } from "../components/meals-ui"
@@ -25,7 +24,6 @@ const metricOf = (item: MealLog, key: Exclude<SortKey, "newest">) =>
   key === "kcal" ? item.kcal : item.macros[key]
 
 export function MealsHistoryScreen() {
-  useMarkInteractive()
   const insets = useSafeAreaInsets()
   const { history } = useMeals()
   const [query, setQuery] = useState("")

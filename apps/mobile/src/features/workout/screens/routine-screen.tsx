@@ -6,7 +6,6 @@ import { BackHeader, Button, PageHeading, Screen } from "@/components/ui"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Pressable } from "@/components/ui/pressable"
 import { dateKey } from "@/features/health"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
 
@@ -56,7 +55,6 @@ function ExerciseRow({ exercise, index }: { exercise: RoutineExercise; index: nu
 
 /** One day's routine, with Start workout. Any training day can start, with a warning for back-to-back full body. */
 export function RoutineScreen() {
-  useMarkInteractive()
   const { date: param } = useLocalSearchParams<{ date?: string }>()
   const now = usePlanNow()
   const date = fromDateKey(param) ?? now

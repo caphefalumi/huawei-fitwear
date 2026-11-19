@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/react-native"
 import { isCancel } from "axios"
 import { router } from "expo-router"
 import { useIsFocused } from "expo-router/react-navigation"
@@ -20,9 +19,9 @@ import Animated, { useReducedMotion } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/ui/pressable"
+import { captureException } from "@/lib/analytics/posthog"
 import { ApiError } from "@/lib/api/client"
 import { validateEmail } from "@/lib/forms/form-validation"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
 
 import { AuthField } from "../components/auth-field"
 import {
@@ -42,7 +41,6 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
   const isFocused = useIsFocused()
   const reducedMotion = useReducedMotion()
   const { signIn, pending, error: authError } = useAuth()
-  useMarkInteractive()
   const handleCreateAccount = onCreateAccount ?? (() => router.replace("/(auth)/sign-up"))
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -139,7 +137,7 @@ export function LoginScreen({ onCreateAccount }: { onCreateAccount?: () => void 
       } else if (cause instanceof ApiError && (cause.status === 400 || cause.status === 422)) {
         setValidationError("Check your email address and try again.")
       } else {
-        Sentry.captureException(cause)
+        captureException(cause)
         setValidationError(
           cause instanceof ApiError && cause.status >= 500
             ? "Something went wrong on our end. Try again."

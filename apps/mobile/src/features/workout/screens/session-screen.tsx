@@ -9,7 +9,6 @@ import { Pressable } from "@/components/ui/pressable"
 import { Toggle } from "@/components/ui/toggle"
 import { dateKey } from "@/features/health"
 import { posthog } from "@/lib/analytics/posthog"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { planNow, usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
 
@@ -53,7 +52,6 @@ function Stat({ value, label }: { value: string; label: string }) {
 
 /** Guided workout: one set at a time, a rest timer between sets, then a summary. */
 export function SessionScreen() {
-  useMarkInteractive()
   const { date: param } = useLocalSearchParams<{ date?: string }>()
   const planToday = usePlanNow()
   const input = usePlanInput()

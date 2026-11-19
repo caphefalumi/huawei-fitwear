@@ -8,7 +8,6 @@ import { Pressable } from "@/components/ui/pressable"
 import { Sheet, SheetActions } from "@/components/ui/sheet"
 import { Toggle } from "@/components/ui/toggle"
 import { dateKey, useHealth } from "@/features/health"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { planNow, usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
 
@@ -526,7 +525,6 @@ function InjuryCard({
 }
 
 export function InjuriesScreen() {
-  useMarkInteractive()
   const today = dateKey(usePlanNow())
   const { sex } = useHealth()
   const stored = useInjuries((state) => state.injuries)

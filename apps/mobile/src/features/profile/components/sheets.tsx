@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/react-native"
 import { useEffect, useRef, useState } from "react"
 import { Alert, StyleSheet, Text, TextInput, View } from "react-native"
 
@@ -15,6 +14,7 @@ import {
   SESSION_MINUTES,
   usePlanPreferences,
 } from "@/features/workout"
+import { captureException } from "@/lib/analytics/posthog"
 import { apiErrorMessage } from "@/lib/api/client"
 import { validateBirthDate } from "@/lib/forms/form-validation"
 import { Palette as C } from "@/theme"
@@ -48,7 +48,7 @@ function useSave(onClose: () => void) {
       await mutation()
       if (active.current) onClose()
     } catch (cause) {
-      Sentry.captureException(cause)
+      captureException(cause)
       if (active.current) setError(apiErrorMessage(cause, "your profile", "save"))
     } finally {
       busy.current = false

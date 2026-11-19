@@ -11,13 +11,11 @@
     "preview": {
       "distribution": "internal",
       "channel": "preview",
-      "environment": "preview",
-      "uploadSourceMaps": true
+      "environment": "preview"
     },
     "production": {
       "channel": "production",
-      "environment": "production",
-      "uploadSourceMaps": true
+      "environment": "production"
     }
   }
 }

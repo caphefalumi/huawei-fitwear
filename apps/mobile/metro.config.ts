@@ -1,10 +1,10 @@
 import path from "node:path"
 
-import { getSentryExpoConfig } from "@sentry/react-native/metro.js"
 import type { CustomResolver } from "metro-resolver"
+import { getPostHogExpoConfig } from "posthog-react-native/metro"
 
 const projectRoot = import.meta.dirname
-const config = getSentryExpoConfig(projectRoot)
+const config = getPostHogExpoConfig(projectRoot)
 
 // Bun symlinks some packages into a second physical React. Web hooks then
 // crash with "Cannot read properties of null (reading 'useContext')".

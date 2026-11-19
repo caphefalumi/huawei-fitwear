@@ -12,7 +12,6 @@ import {
   validateEmail,
   validatePassword,
 } from "@/lib/forms/form-validation"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
 
 import { AuthField } from "../components/auth-field"
 import { DateOfBirthField } from "../components/date-of-birth-field"
@@ -29,7 +28,6 @@ type FieldKey = "name" | "email" | "password" | "birthDate" | "terms"
 export function SignUpScreen({ onSignIn }: { onSignIn?: () => void } = {}) {
   const insets = useSafeAreaInsets()
   const { signUp, pending, error: serverError } = useAuth()
-  useMarkInteractive()
   const handleSignIn = onSignIn ?? (() => router.replace(APP_ROUTES.login))
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")

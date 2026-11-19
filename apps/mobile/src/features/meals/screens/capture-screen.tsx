@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/react-native"
 import { useMutation } from "@tanstack/react-query"
 import { CameraView, useCameraPermissions } from "expo-camera"
 import { Image } from "expo-image"
@@ -12,9 +11,8 @@ import { BackHeader, Button } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
 import { Sheet } from "@/components/ui/sheet"
 import { pickImage, prepareMealImage, type PickedImage } from "@/features/camera"
-import { posthog } from "@/lib/analytics/posthog"
+import { captureException, posthog } from "@/lib/analytics/posthog"
 import { ApiError, apiErrorMessage } from "@/lib/api/client"
-import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
 import { analyzeMeal, uploadMealPhoto } from "../api/meals-api"
@@ -27,7 +25,6 @@ const TUTORIAL_STEPS = [
 ]
 
 export function MealCaptureScreen() {
-  useMarkInteractive()
   const insets = useSafeAreaInsets()
   const { tutorialSeen, dismissTutorial, setAnalysis, setDraftPhoto, items } = useMeals()
   const [description, setDescription] = useState("")
@@ -66,7 +63,7 @@ export function MealCaptureScreen() {
       const picked = await pickImage(false)
       if (picked && active.current) setImage(picked)
     } catch (cause) {
-      Sentry.captureException(cause)
+      captureException(cause)
       if (active.current) {
         setError(
           cause instanceof ApiError
@@ -85,7 +82,7 @@ export function MealCaptureScreen() {
       const prepared = await prepareMealImage(photo.uri)
       if (active.current) setImage(prepared)
     } catch (cause) {
-      Sentry.captureException(cause)
+      captureException(cause)
       if (active.current) {
         setError(
           cause instanceof ApiError
@@ -123,7 +120,7 @@ export function MealCaptureScreen() {
       })
       router.push("/meal")
     } catch (cause) {
-      Sentry.captureException(cause)
+      captureException(cause)
       if (active.current && current === request.current)
         setError(
           cause instanceof ApiError

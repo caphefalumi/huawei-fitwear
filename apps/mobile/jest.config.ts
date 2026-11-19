@@ -6,7 +6,7 @@ module.exports = {
   testMatch: ["<rootDir>/src/**/*.test.[jt]s?(x)"],
   testPathIgnorePatterns: ["/node_modules/", "/e2e/", "/\\.maestro/"],
   transformIgnorePatterns: [
-    "node_modules/(?!(.bun|(jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|standard-navigation))",
+    "node_modules/(?!(.bun|(jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|native-base|react-native-svg|standard-navigation))",
   ],
   moduleNameMapper: {
     "^@/assets/(.*)$": "<rootDir>/assets/$1",
