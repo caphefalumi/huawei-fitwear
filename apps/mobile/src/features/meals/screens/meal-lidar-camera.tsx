@@ -1,11 +1,9 @@
 import type { StyleProp, ViewStyle } from "react-native"
 
-export type MealDepth = { cellsMm: number[]; focalCellsX: number; focalCellsY: number }
-
 export type MealLidarCameraProps = {
   style: StyleProp<ViewStyle>
   capture: number
-  onCapture: (uri: string, depth?: MealDepth) => void
+  onCapture: (uri: string, portionVolumeMl?: number) => void
   onUnavailable: () => void
 }
 
