@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { BackHeader, Button, SectionHeading } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
 import { apiErrorMessage } from "@/lib/api/client"
+import { posthog } from "@/lib/analytics/posthog"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
@@ -101,6 +102,7 @@ export function AddItemScreen() {
         },
         mealId,
       )
+      posthog?.capture("meal_item_added", { source: "database" })
       if (active.current) router.back()
     } catch (cause) {
       Sentry.captureException(cause)

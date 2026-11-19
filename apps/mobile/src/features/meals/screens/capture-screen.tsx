@@ -13,6 +13,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Sheet } from "@/components/ui/sheet"
 import { pickImage, prepareMealImage, type PickedImage } from "@/features/camera"
 import { ApiError, apiErrorMessage } from "@/lib/api/client"
+import { posthog, posthogLogger } from "@/lib/analytics/posthog"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
@@ -24,6 +25,43 @@ const TUTORIAL_STEPS = [
   { title: "Add a ruler", detail: "Place a 15 cm ruler beside the plate or cup." },
   { title: "Shoot from above", detail: "Keep the whole meal in frame and hold steady." },
 ]
+
+// Manual AI Observability payloads include the description and model response by default.
+// Set this to false before collecting analysis content that must not reach PostHog.
+const CAPTURE_AI_CONTENT = true
+
+function mealAnalysisTraceId() {
+  return `meal-analysis-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+function captureMealAnalysisGeneration(
+  traceId: string,
+  description: string | undefined,
+  items: Awaited<ReturnType<typeof analyzeMeal>>,
+  latencySeconds: number,
+) {
+  posthog?.capture("$ai_generation", {
+    $ai_trace_id: traceId,
+    $ai_session_id: null,
+    $ai_span_name: "meal_photo_analysis",
+    $ai_provider: "cloudflare",
+    $ai_latency: latencySeconds,
+    ...(CAPTURE_AI_CONTENT
+      ? {
+          $ai_input: [
+            {
+              role: "user",
+              content: [
+                { type: "image", image: "uploaded meal photo" },
+                ...(description ? [{ type: "text", text: description }] : []),
+              ],
+            },
+          ],
+          $ai_output_choices: [{ role: "assistant", content: JSON.stringify(items) }],
+        }
+      : {}),
+  })
+}
 
 export function MealCaptureScreen() {
   useMarkInteractive()
@@ -38,7 +76,12 @@ export function MealCaptureScreen() {
           ? uploadedPhoto.current.photoId
           : await uploadMealPhoto(image.uri)
       uploadedPhoto.current = { image, photoId }
-      return { photoId, items: await analyzeMeal({ photoId, description }) }
+      const traceId = mealAnalysisTraceId()
+      const analysisStartedAt = Date.now()
+      const items = await analyzeMeal({ photoId, description })
+      const analysisDurationMs = Date.now() - analysisStartedAt
+      captureMealAnalysisGeneration(traceId, description, items, analysisDurationMs / 1000)
+      return { photoId, items, analysisDurationMs }
     },
   })
   const [error, setError] = useState<string | null>(null)
@@ -108,17 +151,25 @@ export function MealCaptureScreen() {
     setError(null)
     analyzeMutation.reset()
     try {
-      const { items: result, photoId } = await analyzeMutation.mutateAsync({
+      const { items: result, photoId, analysisDurationMs } = await analyzeMutation.mutateAsync({
         image,
         ...(description.trim() ? { description: description.trim() } : {}),
       })
       if (!active.current || current !== request.current) return
       if (!result.length)
         throw new Error("No food was identified. Try another photo or enter items manually.")
+      posthog?.capture("meal_analysis_completed", { identified_item_count: result.length })
+      posthogLogger.info("meal_analysis_completed", {
+        identified_item_count: result.length,
+        analysis_duration_ms: analysisDurationMs,
+      })
       setAnalysis(result, image.uri, { photoId })
       router.push("/meal")
     } catch (cause) {
       Sentry.captureException(cause)
+      posthogLogger.error("meal_analysis_failed", {
+        failure_type: cause instanceof ApiError ? "api_error" : "analysis_error",
+      })
       if (active.current && current === request.current)
         setError(
           cause instanceof ApiError

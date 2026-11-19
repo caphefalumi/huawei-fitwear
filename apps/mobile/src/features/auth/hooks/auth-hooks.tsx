@@ -20,6 +20,7 @@ import {
   userFacingAuthError,
   userFacingSessionError,
 } from "@/lib/api/client"
+import { posthog, posthogLogger } from "@/lib/analytics/posthog"
 import { sessionStorage } from "@/lib/storage"
 
 import {
@@ -130,6 +131,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const clearSession = useCallback(async () => {
     revision.current += 1
+    posthog?.reset()
     setApiToken(null)
     setAuthenticated(false)
     queryClient.clear()
@@ -214,7 +216,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [session, clearSession, setError])
 
   const authenticate = useCallback(
-    async (sendRequest: () => Promise<AuthenticationSessionResponse>) => {
+    async (
+      sendRequest: () => Promise<AuthenticationSessionResponse>,
+      event: "signed_in" | "account_created",
+    ) => {
       if (busy.current) throw new Error("An authentication request is already running.")
       busy.current = true
       setPending(true)
@@ -228,6 +233,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
         await sessionStorage.setToken(result.session.token)
         if (currentRevision !== revision.current) return
         queryClient.removeQueries()
+        posthog?.identify(result.user.id, {
+          $set: {
+            email: result.user.email,
+            ...(result.user.name ? { name: result.user.name } : {}),
+          },
+        })
+        posthog?.capture(event)
+        posthogLogger.info("authentication_completed", { authentication_flow: event })
         setApiToken(result.session.token)
         queryClient.setQueryData(authQueryKeys.session, result)
         setAuthenticated(true)
@@ -244,11 +257,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
   )
 
   const signIn = useCallback(
-    (email: string, password: string) => authenticate(() => sendSignIn({ email, password })),
+    (email: string, password: string) =>
+      authenticate(() => sendSignIn({ email, password }), "signed_in"),
     [authenticate],
   )
   const signUp = useCallback(
-    (body: SignUpBody) => authenticate(() => sendSignUp(body)),
+    (body: SignUpBody) => authenticate(() => sendSignUp(body), "account_created"),
     [authenticate],
   )
 
@@ -260,6 +274,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const signOut = useCallback(() => {
     setError(null)
+    posthog?.capture("signed_out")
     revision.current += 1
     const localRevision = revision.current
     void signOutAsync(sendSignOut()).catch((cause) => {
@@ -284,6 +299,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setPending(true)
     try {
       await deleteAccountAsync()
+      posthog?.capture("account_deleted")
       await clearSession()
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) {

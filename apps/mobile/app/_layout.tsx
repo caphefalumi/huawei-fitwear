@@ -6,6 +6,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router"
 import * as SplashScreen from "expo-splash-screen"
 import { type PropsWithChildren } from "react"
 import { Text, useColorScheme, View } from "react-native"
+import { PostHogProvider } from "posthog-react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 
@@ -15,13 +16,14 @@ import { APP_ROUTES, AuthProvider, useAuth } from "@/features/auth"
 import { HealthProvider } from "@/features/health"
 import { MealsProvider } from "@/features/meals"
 import { WorkoutProvider } from "@/features/workout"
+import { posthog } from "@/lib/analytics/posthog"
 import { queryClient } from "@/lib/query/client"
 
 SplashScreen.preventAutoHideAsync()
 
 function AppRoot() {
   const colorScheme = useColorScheme()
-  return (
+  const app = (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
@@ -35,6 +37,8 @@ function AppRoot() {
       </AuthProvider>
     </QueryClientProvider>
   )
+
+  return posthog ? <PostHogProvider client={posthog}>{app}</PostHogProvider> : app
 }
 
 function AccountProviders({ children }: PropsWithChildren) {

@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { BackHeader, Button } from "@/components/ui"
 import { apiErrorMessage } from "@/lib/api/client"
+import { posthog } from "@/lib/analytics/posthog"
 import { useMarkInteractive } from "@/lib/monitoring/observe"
 import { Palette as C } from "@/theme"
 
@@ -87,6 +88,10 @@ export function ReviewItemScreen() {
       }
       if (existing) await updateItem(existing.id, item, params.log)
       else await addItem(item, params.log)
+      posthog?.capture("meal_item_saved", {
+        entry_method: existing ? "reviewed" : "manual",
+        meal_scope: params.log ? "historical" : "current",
+      })
       if (!active.current) return
       if (existing || params.log) router.back()
       else router.navigate("/meal")
