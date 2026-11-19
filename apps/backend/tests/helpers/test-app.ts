@@ -1,5 +1,5 @@
 import { app as fitwearApp } from "../../src/app"
-import { withDatabaseBinding, type WorkerBindings } from "../../src/db"
+import { withWorkerBindings, type WorkerBindings } from "../../src/worker/bindings"
 import { createTestEmailQueue } from "./test-email-queue"
 
 const fallbackEmailQueue = createTestEmailQueue().queue
@@ -10,5 +10,5 @@ export function setTestDatabaseBinding(next: WorkerBindings) {
 }
 
 export const app = {
-  handle: (request: Request) => withDatabaseBinding(bindings, () => fitwearApp.handle(request)),
+  handle: (request: Request) => withWorkerBindings(bindings, () => fitwearApp.handle(request)),
 }

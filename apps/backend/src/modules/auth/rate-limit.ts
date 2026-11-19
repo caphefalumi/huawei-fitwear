@@ -1,7 +1,7 @@
 import { Elysia, status } from "elysia"
 
-import { getEmailConfig, getEmailQueue, getKv } from "../../db"
 import { consumeTokenBucket, type TokenBucketOptions } from "../../lib/token-bucket"
+import { getEmailConfig, getEmailQueue, getKv } from "../../worker/bindings"
 
 export type AuthRateLimitAction =
   | "sign-in"

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 
-import { decodeMealImage } from "../../src/lib/meal-images"
+import { decodeMealImage } from "../../src/modules/meals/photo-storage"
 
 describe("Meal image input boundary", () => {
   const png =

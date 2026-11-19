@@ -3,12 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test"
 import { like } from "drizzle-orm"
 
 import type { Database } from "../../src/db"
-import { withDatabaseBinding } from "../../src/db"
 import { verification } from "../../src/db/schema"
 import { requestPasswordReset } from "../../src/modules/auth/password-reset"
 import { takePasswordResetEmailSlot } from "../../src/modules/auth/rate-limit"
 import { consumeEmailBatch } from "../../src/modules/email/queue"
 import type { EmailMessage } from "../../src/modules/email/queue"
+import { withWorkerBindings } from "../../src/worker/bindings"
 import { app, setTestDatabaseBinding } from "../helpers/test-app"
 import { createTestDatabase } from "../helpers/test-db"
 import { createTestEmailQueue } from "../helpers/test-email-queue"
@@ -196,7 +196,7 @@ describe("Password reset integration", () => {
       ack: () => {},
       retry: () => {},
     }
-    await withDatabaseBinding(
+    await withWorkerBindings(
       {
         RESEND_API_KEY: "test-resend-key",
         RESEND_FROM: "VoocHealth <support@example.test>",
@@ -353,7 +353,7 @@ describe("Password reset integration", () => {
     `)
 
     await expect(
-      withDatabaseBinding(
+      withWorkerBindings(
         {
           DB: d1,
           fitwear_kv: createTestKv(),
@@ -431,7 +431,7 @@ describe("Password reset integration", () => {
     })
     const { resetToken } = (await verified.json()) as { resetToken: string }
 
-    await withDatabaseBinding(
+    await withWorkerBindings(
       {
         DB: d1,
         fitwear_kv: createTestKv(),

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "bun:test"
 
-import { withDatabaseBinding } from "../../src/db"
 import { consumeEmailBatch, isEmailMessage, type EmailMessage } from "../../src/modules/email/queue"
+import { withWorkerBindings } from "../../src/worker/bindings"
 
 const originalFetch = globalThis.fetch
 
@@ -51,7 +51,7 @@ describe("Email queue consumer", () => {
       sends++
       return Response.json({})
     }) as typeof fetch
-    await withDatabaseBinding({ RESEND_API_KEY: "key", RESEND_FROM: "sender@example.test" }, () =>
+    await withWorkerBindings({ RESEND_API_KEY: "key", RESEND_FROM: "sender@example.test" }, () =>
       consumeEmailBatch({ messages: [expired] } as unknown as MessageBatch<unknown>),
     )
     expect(expired.acked).toBe(true)
@@ -83,7 +83,7 @@ describe("Email queue consumer", () => {
       to: "two@example.test",
       name: null,
     } satisfies EmailMessage)
-    await withDatabaseBinding(
+    await withWorkerBindings(
       {
         RESEND_API_KEY: "key",
         RESEND_FROM: "sender@example.test",

@@ -4,15 +4,15 @@ import { Elysia, status } from "elysia"
 import { getDb, user as userTable, session as sessionTable } from "../../db"
 import { isValidBirthDate } from "../../lib/date"
 import { generateId, generateToken } from "../../lib/id"
-import { deleteUserMealImages } from "../../lib/meal-images"
+import { enqueueEmail } from "../email/queue"
+import { deleteUserMealImages } from "../meals/photo-storage"
+import type { SignUpBody, SignInBody, UpdateUserBody } from "./index"
 import {
   hashPassword,
   isPasswordWithinLimit,
   needsPasswordRehash,
   verifyPassword,
-} from "../../lib/password"
-import { enqueueEmail } from "../email/queue"
-import type { SignUpBody, SignInBody, UpdateUserBody } from "./index"
+} from "./password"
 
 // Public dummy verifier, never an account credential. Match the current PBKDF2 work factor
 // so unknown accounts do not bypass password verification.

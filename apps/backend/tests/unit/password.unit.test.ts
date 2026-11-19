@@ -5,7 +5,7 @@ import {
   isPasswordWithinLimit,
   needsPasswordRehash,
   verifyPassword,
-} from "../../src/lib/password"
+} from "../../src/modules/auth/password"
 
 describe("Password hashing and legacy compatibility", () => {
   it("hashes passwords using PBKDF2-HMAC-SHA256 at 100,000 iterations", async () => {

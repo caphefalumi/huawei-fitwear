@@ -12,15 +12,16 @@ Code is organized into isolated, feature-driven business domains:
 apps/backend/
 ├── src/app.ts              # Elysia plugin composition and compiled app
 ├── src/index.ts            # Cloudflare Worker entrypoint and per-invocation bindings
-├── src/db/                 # Schema and request-scoped binding access
-├── src/lib/                # Web Crypto IDs, bcrypt, nutrition/date logic, private photos
+├── src/db/                 # Drizzle schema and D1 client
+├── src/worker/             # Per-invocation Worker bindings (D1, KV, AI, R2, Queue)
+├── src/lib/                # Shared IDs, dates, nutrition and token buckets
 ├── src/modules/
-│   ├── auth/               # Email/password accounts, sessions, profile updates and reset requests
+│   ├── auth/               # Accounts, sessions, password hashing, reset and rate limits
 │   ├── email/              # Typed Queue messages and Resend consumer
 │   ├── user/               # Current profile
 │   ├── foods/              # Searchable per-100g/ml food catalogue
 │   ├── targets/            # Stored daily targets or profile-derived estimates
-│   ├── meals/              # Logs/items, daily summaries, image inference/private photo reads
+│   ├── meals/              # Logs, summaries, image inference and private photo storage
 │   ├── health/             # Daily weight history and recovery schedules
 │   ├── exercises/          # Catalogue, technique cues and repetition/time units
 │   └── workouts/           # Sessions, sets, completion and training statistics
