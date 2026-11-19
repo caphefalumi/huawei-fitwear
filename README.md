@@ -14,32 +14,6 @@ Mobile defaults to the deployed API at https://fitwear-backend.dangduytoan13l.wo
 
 ---
 
-## Repository Structure
-
-```text
-huawei-fitwear/
-├── apps/
-│   ├── mobile/              # React Native / Expo application
-│   │   ├── src/             # Application source (app, components, hooks)
-│   │   ├── app.json         # Expo configuration
-│   │   ├── package.json     # Mobile dependencies & scripts
-│   │   ├── tsconfig.json    # TypeScript configuration
-│   │   └── README.md        # Mobile & Expo Go guide
-│   └── watch/               # HarmonyOS NEXT ArkTS application
-│       ├── AppScope/        # Global app metadata and resources
-│       ├── entry/           # Wearable entry module (EntryAbility, pages)
-│       ├── build-profile.json5 # HarmonyOS target & SDK settings
-│       ├── code-linter.json5   # ArkTS linter rules
-│       ├── hvigorfile.ts    # Hvigor build engine script
-│       ├── oh-package.json5 # HarmonyOS dependencies
-│       └── README.md        # Watch-specific guide
-├── package.json             # Monorepo scripts
-├── AGENTS.md                # Agent guidelines & project boundaries
-└── README.md
-```
-
----
-
 ## Prerequisites
 
 | Tool                     | Purpose                        | Requirement                  |
