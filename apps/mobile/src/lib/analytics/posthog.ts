@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Constants from "expo-constants"
 import PostHog from "posthog-react-native"
 
@@ -41,6 +42,7 @@ export const posthog =
             unhandledRejections: true,
           },
         },
+        debug: __DEV__,
       })
     : undefined
 
