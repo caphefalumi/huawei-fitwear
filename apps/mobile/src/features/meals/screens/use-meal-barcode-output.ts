@@ -1,17 +1,13 @@
-import {
-  useBarcodeScannerOutput,
-  type TargetBarcodeFormat as BarcodeFormat,
-} from "react-native-vision-camera-barcode-scanner"
+import { useBarcodeScannerOutput } from "react-native-vision-camera-barcode-scanner"
 
 import { captureException } from "@/lib/analytics/posthog"
 
+import { FOOD_BARCODE_FORMATS } from "./food-barcode-formats"
 import type { MealCameraOptions } from "./meal-camera"
-
-const FOOD_FORMATS: BarcodeFormat[] = ["ean-13", "upc-a", "ean-8", "upc-e"]
 
 export function useMealBarcodeOutput(scan: boolean, onBarcode: MealCameraOptions["onBarcode"]) {
   const scanner = useBarcodeScannerOutput({
-    barcodeFormats: FOOD_FORMATS,
+    barcodeFormats: FOOD_BARCODE_FORMATS,
     onError: captureException,
     onBarcodeScanned(barcodes) {
       if (!scan) return

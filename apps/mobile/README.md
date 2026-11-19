@@ -16,9 +16,9 @@ Saved-session startup validation also uses `networkMode: "always"` with no retri
 
 Meals, portions, daily nutrition, profile preferences, weights, recovery schedules and workout sessions/sets use the API. Empty accounts show empty states, not seeded personal data. Camera/library images are sent to Workers AI only after tapping **Analyze photo**; review estimates before logging. Logged images are stored privately in R2 and read through authenticated requests. Manual food/label entry works independently of inference.
 
-On iOS and Android, center a packaged-food barcode in the regular meal camera to preview its nutrition from Open Food Facts. Only the barcode is sent for lookup, not a photo. Tap **Review product** to prefill an editable 100 g or 100 mL portion; nothing is logged automatically. Dismiss the preview to keep taking photos, or enter nutrition from the label if the product is missing or the lookup fails.
+On iOS and Android, center a packaged-food barcode in the meal camera or choose a photo that shows the full barcode. Photo detection runs on the device; only the barcode is sent to look up nutrition in Open Food Facts. Tap **Review product** to prefill an editable 100 g or 100 mL portion. If nutrition is missing, use the package label; if lookup fails, try again. Dismissing the sheet leaves the photo available for optional analysis.
 
-The native meal camera uses VisionCamera (AVFoundation barcode metadata on iOS and ML Kit on Android). Rebuild the native development client after the camera dependency changes. Web uses the browser photo picker and does not scan barcodes.
+The native meal camera uses VisionCamera, with AVFoundation for live iOS scanning and ML Kit for live Android and still-photo scanning. Rebuild the native development client after camera dependency changes. Web uses the browser photo picker and does not scan barcodes.
 
 On supported iPhones, the meal camera can also estimate the volume of one centered food on a flat plate from synchronized rear LiDAR depth. Only the approximate milliliters are sent when analyzing the meal photo; raw depth is not uploaded. If depth is unavailable, analysis uses the photo alone. The ruler is optional.
 
