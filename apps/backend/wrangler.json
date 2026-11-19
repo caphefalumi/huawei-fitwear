@@ -39,7 +39,7 @@
       "bucket_name": "fitwear-meal-images"
     }
   ],
-  "triggers": { "crons": ["17 * * * *"] },
+  "triggers": { "crons": ["0 0 * * *"] },
   "queues": {
     "producers": [
       {
