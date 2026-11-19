@@ -41,11 +41,6 @@ function generateResetOtp(): string {
   return String(value[0]! % 10_000).padStart(4, "0")
 }
 
-export function isPasswordResetConfigured(): boolean {
-  const { apiKey, from, passwordResetTemplateId } = getEmailConfig()
-  return Boolean(apiKey && from && passwordResetTemplateId && getEmailQueue())
-}
-
 export async function requestPasswordReset(email: string): Promise<void> {
   const { apiKey, from, passwordResetTemplateId } = getEmailConfig()
   if (!apiKey || !from || !passwordResetTemplateId || !getEmailQueue()) {

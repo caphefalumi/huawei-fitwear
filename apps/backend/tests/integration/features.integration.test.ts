@@ -65,6 +65,31 @@ describe("Persistent feature APIs", () => {
       expect((await request(path, undefined, method, body)).status).toBe(401)
   })
 
+  it("limits meal analysis per authenticated user before invoking AI", async () => {
+    let calls = 0
+    const ai = {
+      run: async () => {
+        calls += 1
+        return { choices: [{ message: { content: '{"items":[]}' } }] }
+      },
+    } as unknown as Ai
+    setTestDatabaseBinding({ DB: d1, fitwear_kv: createTestKv(), AI: ai })
+    const { session } = await account()
+    const other = await account("other@fitwear.dev")
+    const image = { image: btoa("\xff\xd8\xff" + "test-image"), mimeType: "image/jpeg" }
+    const analyze = (token?: string) => request("/meals/analyze", token, "POST", image)
+
+    expect((await analyze()).status).toBe(401)
+    for (let i = 0; i < 10; i += 1) {
+      expect((await analyze(session.token)).status).toBe(200)
+    }
+    const limited = await analyze(session.token)
+    expect(limited.status).toBe(429)
+    expect(Number(limited.headers.get("Retry-After"))).toBeGreaterThan(0)
+    expect((await analyze(other.session.token)).status).toBe(200)
+    expect(calls).toBe(11)
+  })
+
   it("applies actual migrations and serves the complete seeded catalogue with guides", async () => {
     const { session } = await account()
     const response = await request("/exercises?limit=200", session.token)

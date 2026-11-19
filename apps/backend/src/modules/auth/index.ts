@@ -2,13 +2,12 @@ import { Elysia, t, type Static } from "elysia"
 
 import {
   InvalidPasswordResetToken,
-  isPasswordResetConfigured,
   passwordResetMessage,
   requestPasswordReset,
   resetPassword,
   verifyPasswordResetCode,
 } from "./password-reset"
-import { assertAuthRateLimit, canSendPasswordResetEmail } from "./rate-limit"
+import { authRateLimit } from "./rate-limit"
 import { Auth, authGuard } from "./service"
 
 export const AuthSchemas = {
@@ -102,6 +101,7 @@ export const auth = new Elysia({
 })
   .use(authModels)
   .use(authGuard)
+  .use(authRateLimit)
   .post(
     "/sign-up",
     async ({ body, cookie: { session_token } }) => {
@@ -116,8 +116,7 @@ export const auth = new Elysia({
       return res
     },
     {
-      beforeHandle: ({ request, body, set }) =>
-        assertAuthRateLimit(request, "sign-up", set, body.email),
+      rateLimit: "sign-up",
       body: "auth.signUpBody",
       detail: {
         summary: "Register a new user account",
@@ -140,8 +139,7 @@ export const auth = new Elysia({
       return res
     },
     {
-      beforeHandle: ({ request, body, set }) =>
-        assertAuthRateLimit(request, "sign-in", set, body.email),
+      rateLimit: { account: "sign-in" },
       body: "auth.signInBody",
       detail: {
         summary: "Sign in with credentials",
@@ -151,34 +149,22 @@ export const auth = new Elysia({
   )
   .post(
     "/password-reset",
-    async ({ body, set }) => {
-      if (!isPasswordResetConfigured()) {
-        set.status = 503
-        return { success: false, message: "Password reset email is not configured." }
-      }
-      let resendAfterSeconds = 30
-      try {
-        const slot = await canSendPasswordResetEmail(body.email)
-        resendAfterSeconds = slot.retryAfterSeconds
-        if (slot.dailyLimitReached) {
-          set.status = 429
-          set.headers["Retry-After"] = String(resendAfterSeconds)
-          return {
-            success: false,
-            message: "Too many requests. Try again later.",
-            resendAfterSeconds,
-          }
-        }
-        if (slot.allowed) {
+    async ({ body, resetEmailSlot }) => {
+      if (resetEmailSlot.allowed) {
+        try {
           await requestPasswordReset(body.email)
+        } catch {
+          console.error("Password reset email request failed.")
         }
-      } catch {
-        console.error("Password reset email request failed.")
       }
-      return { success: true, message: passwordResetMessage, resendAfterSeconds }
+      return {
+        success: true,
+        message: passwordResetMessage,
+        resendAfterSeconds: resetEmailSlot.retryAfterSeconds,
+      }
     },
     {
-      beforeHandle: ({ request, set }) => assertAuthRateLimit(request, "password-reset", set),
+      passwordResetRateLimit: true,
       body: "auth.passwordResetRequestBody",
       detail: {
         summary: "Request a password reset email",
@@ -204,8 +190,7 @@ export const auth = new Elysia({
       }
     },
     {
-      beforeHandle: ({ request, body, set }) =>
-        assertAuthRateLimit(request, "password-reset-confirm", set, body.email),
+      rateLimit: { account: "password-reset-confirm" },
       body: "auth.passwordResetVerifyBody",
       detail: { summary: "Verify a four-digit password reset code" },
     },
@@ -231,8 +216,7 @@ export const auth = new Elysia({
       }
     },
     {
-      beforeHandle: ({ request, set }) =>
-        assertAuthRateLimit(request, "password-reset-confirm", set),
+      rateLimit: "password-reset-confirm",
       body: "auth.passwordResetBody",
       detail: { summary: "Set a new password with a short-lived reset token" },
     },
