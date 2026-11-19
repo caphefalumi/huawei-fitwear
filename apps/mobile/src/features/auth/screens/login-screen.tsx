@@ -19,6 +19,7 @@ import Animated, { useReducedMotion } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/ui/pressable"
+import { captureException } from "@/lib/analytics/posthog"
 import { ApiError } from "@/lib/api/client"
 import { validateEmail } from "@/lib/forms/form-validation"
 

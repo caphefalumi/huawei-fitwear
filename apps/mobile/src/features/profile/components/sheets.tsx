@@ -14,6 +14,7 @@ import {
   SESSION_MINUTES,
   usePlanPreferences,
 } from "@/features/workout"
+import { captureException } from "@/lib/analytics/posthog"
 import { apiErrorMessage } from "@/lib/api/client"
 import { validateBirthDate } from "@/lib/forms/form-validation"
 import { Palette as C } from "@/theme"

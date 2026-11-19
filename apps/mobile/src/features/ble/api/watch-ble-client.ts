@@ -8,6 +8,8 @@ import {
   Subscription,
 } from "react-native-ble-plx"
 
+import { captureException } from "@/lib/analytics/posthog"
+
 import {
   BLE_MAX_MESSAGE_BYTES,
   BLE_REQUESTED_MTU,

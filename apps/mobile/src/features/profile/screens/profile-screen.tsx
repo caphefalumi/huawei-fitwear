@@ -11,6 +11,7 @@ import { useAuth } from "@/features/auth"
 import { useHealth } from "@/features/health"
 import { PERIOD_AREA, PeriodSheet, useActiveInjuries, useInjuries } from "@/features/recovery"
 import { emphasisFor, useLoads, usePlanPreferences } from "@/features/workout"
+import { captureException } from "@/lib/analytics/posthog"
 import { Palette as C } from "@/theme"
 
 import {

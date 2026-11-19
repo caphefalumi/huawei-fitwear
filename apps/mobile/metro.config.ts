@@ -1,6 +1,7 @@
 import path from "node:path"
 
 import type { CustomResolver } from "metro-resolver"
+import { getPostHogExpoConfig } from "posthog-react-native/metro"
 
 const projectRoot = import.meta.dirname
 const config = getPostHogExpoConfig(projectRoot)

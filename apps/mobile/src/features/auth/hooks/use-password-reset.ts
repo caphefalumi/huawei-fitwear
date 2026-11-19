@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { AppState } from "react-native"
 
+import { captureException } from "@/lib/analytics/posthog"
 import { userFacingPasswordResetError } from "@/lib/api/client"
 import { validateEmail, validatePassword } from "@/lib/forms/form-validation"
 

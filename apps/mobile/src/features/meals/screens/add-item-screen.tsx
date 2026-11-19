@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { BackHeader, Button, SectionHeading } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
+import { captureException } from "@/lib/analytics/posthog"
 import { apiErrorMessage } from "@/lib/api/client"
 import { Palette as C } from "@/theme"
 
