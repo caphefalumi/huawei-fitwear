@@ -1,21 +1,7 @@
-import {
-  CameraView,
-  useCameraPermissions,
-  type BarcodeScanningResult,
-  type BarcodeSettings,
-} from "expo-camera"
 import { Image } from "expo-image"
 import { router, useLocalSearchParams } from "expo-router"
 import { useEffect, useRef, useState } from "react"
-import {
-  ActivityIndicator,
-  Linking,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native"
+import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { BackHeader, Button, SectionHeading } from "@/components/ui"
@@ -24,7 +10,6 @@ import { captureException } from "@/lib/analytics/posthog"
 import { apiErrorMessage } from "@/lib/api/client"
 import { Palette as C } from "@/theme"
 
-import { lookupBarcodeFood } from "../api/meals-api"
 import { Box, Field, NutrientGrid, SearchInput, ValueInput, icons } from "../components/meals-ui"
 import {
   useFoodSearch,
@@ -43,38 +28,17 @@ const toDraft = (estimate: MealEstimate) => ({
   fat: String(estimate.fat),
 })
 
-const barcodeScannerSettings: BarcodeSettings = {
-  barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"],
-}
-
-function lookupCode({ data, type }: BarcodeScanningResult) {
-  if (!/^(?:[0-9]{8}|[0-9]{12,14})$/.test(data)) return null
-  if (type !== "upc_e" || data.length !== 8) return data
-  const [system, a, b, c, d, e, last, check] = data
-  if (last <= "2") return `${system}${a}${b}${last}0000${c}${d}${e}${check}`
-  if (last === "3") return `${system}${a}${b}${c}00000${d}${e}${check}`
-  if (last === "4") return `${system}${a}${b}${c}${d}00000${e}${check}`
-  return `${system}${a}${b}${c}${d}${e}0000${last}${check}`
-}
-
 export function AddItemScreen() {
   const insets = useSafeAreaInsets()
   const { addItem } = useMeals()
   const { log: mealId } = useLocalSearchParams<{ log?: string }>()
   const [error, setError] = useState<string | null>(null)
-  const [scanning, setScanning] = useState(false)
-  const [scanPending, setScanPending] = useState(false)
-  const [scanNotice, setScanNotice] = useState<string | null>(null)
-  const [permission, requestPermission] = useCameraPermissions()
-  const scanRequest = useRef<AbortController | null>(null)
   const [saving, setSaving] = useState(false)
   const active = useRef(true)
   useEffect(() => {
     active.current = true
     return () => {
       active.current = false
-      scanRequest.current?.abort()
-      scanRequest.current = null
     }
   }, [])
   const [query, setQuery] = useState("")
@@ -90,52 +54,6 @@ export function AddItemScreen() {
 
   const { matches, error: searchError, loading } = useFoodSearch(query)
   const noMatch = query.trim().length > 0 && !loading && !searchError && matches.length === 0
-
-  function closeScanner() {
-    scanRequest.current?.abort()
-    scanRequest.current = null
-    setScanPending(false)
-    setScanNotice(null)
-    setScanning(false)
-  }
-
-  function enterManually() {
-    closeScanner()
-    router.push({
-      pathname: "/review-item",
-      params: { name: query, ...(mealId ? { log: mealId } : {}) },
-    })
-  }
-
-  async function scanBarcode(event: BarcodeScanningResult) {
-    if (scanRequest.current || scanNotice) return
-    const barcode = lookupCode(event)
-    if (!barcode) return
-    const request = new AbortController()
-    scanRequest.current = request
-    setScanPending(true)
-    try {
-      const food = await lookupBarcodeFood(barcode, request.signal)
-      if (request.signal.aborted) return
-      if (!food) {
-        setScanNotice("No complete nutrition data found. Enter it from the package label.")
-        return
-      }
-      setAmount("100")
-      setSelected(food)
-      setDraft(toDraft(estimatePortion(food, 100)))
-      closeScanner()
-    } catch {
-      if (!request.signal.aborted) {
-        setScanNotice("Could not look up the barcode. Scan again or enter nutrition manually.")
-      }
-    } finally {
-      if (scanRequest.current === request) {
-        // Hold the scan lock until the user explicitly scans again or closes.
-        setScanPending(false)
-      }
-    }
-  }
 
   function selectFood(food: FoodEntry) {
     const estimate = estimatePortion(food, Number(amount) || 100)
@@ -190,68 +108,6 @@ export function AddItemScreen() {
     }
   }
 
-  if (scanning) {
-    return (
-      <ScrollView
-        style={styles.screen}
-        contentContainerStyle={[
-          styles.content,
-          { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-        ]}
-      >
-        <BackHeader label="Add Item" onPress={closeScanner} />
-        <Text accessibilityRole="header" style={styles.title}>
-          Scan barcode
-        </Text>
-        {scanPending ? (
-          <View style={styles.hintCard} accessibilityLiveRegion="polite">
-            <ActivityIndicator color={C.text} />
-            <Text style={styles.hintNote}>Looking up product…</Text>
-          </View>
-        ) : scanNotice ? (
-          <>
-            <Text accessibilityRole="alert" style={styles.footnote}>
-              {scanNotice}
-            </Text>
-            <Button
-              variant="secondary"
-              label="Scan again"
-              onPress={() => {
-                scanRequest.current = null
-                setScanNotice(null)
-              }}
-            />
-          </>
-        ) : permission?.granted ? (
-          <>
-            <CameraView
-              style={styles.scanner}
-              facing="back"
-              barcodeScannerSettings={barcodeScannerSettings}
-              onBarcodeScanned={scanBarcode}
-              onMountError={() => setScanNotice("Camera unavailable. Enter nutrition manually.")}
-            />
-            <Text style={styles.hintNote}>Center the barcode in the camera preview.</Text>
-          </>
-        ) : permission ? (
-          <>
-            <Text style={styles.hintNote}>Camera access is needed to scan a barcode.</Text>
-            {permission.canAskAgain ? (
-              <Button label="Allow camera access" onPress={requestPermission} />
-            ) : (
-              <Text style={styles.hintNote}>
-                Enable camera access in settings, or enter nutrition manually.
-              </Text>
-            )}
-          </>
-        ) : (
-          <ActivityIndicator color={C.text} />
-        )}
-        <Button variant="secondary" label="Enter nutrition manually" onPress={enterManually} />
-      </ScrollView>
-    )
-  }
-
   return (
     <ScrollView
       style={styles.screen}
@@ -285,10 +141,16 @@ export function AddItemScreen() {
           {error ?? searchError}
         </Text>
       ) : null}
-      {Platform.OS !== "web" && !selected ? (
-        <Button variant="secondary" label="Scan barcode" onPress={() => setScanning(true)} />
-      ) : null}
-      <Button variant="secondary" label="Enter nutrition manually" onPress={enterManually} />
+      <Button
+        variant="secondary"
+        label="Enter nutrition manually"
+        onPress={() =>
+          router.push({
+            pathname: "/review-item",
+            params: { name: query, ...(mealId ? { log: mealId } : {}) },
+          })
+        }
+      />
 
       {selected ? (
         <Field label="Search food">
@@ -423,19 +285,6 @@ export function AddItemScreen() {
             protein · {selected.per100.carbs} g carbs · {selected.per100.fat} g fat. Edit values as
             needed.
           </Text>
-          {selected.id.startsWith("off-") ? (
-            <Text
-              accessibilityRole="link"
-              style={styles.footnote}
-              onPress={() =>
-                void Linking.openURL(
-                  `https://world.openfoodfacts.org/product/${selected.id.slice(4)}`,
-                ).catch(captureException)
-              }
-            >
-              Nutrition data: Open Food Facts. Check against the package label.
-            </Text>
-          ) : null}
 
           <Button label="Add Item" disabled={saving} busy={saving} onPress={handleAdd} />
         </>
@@ -445,11 +294,6 @@ export function AddItemScreen() {
 }
 
 const styles = StyleSheet.create({
-  scanner: {
-    aspectRatio: 1.5,
-    borderRadius: 14,
-    overflow: "hidden",
-  },
   screen: {
     flex: 1,
     backgroundColor: C.background,

@@ -1,8 +1,10 @@
-import { fireEvent, render } from "@testing-library/react-native"
+import { act, fireEvent, render } from "@testing-library/react-native"
 import { useCameraPermissions } from "expo-camera"
+import { router } from "expo-router"
 
 import { useMeals } from "@/features/meals"
 import { MealCaptureScreen } from "@/features/meals/screens/capture-screen"
+import { apiRequest } from "@/lib/api/client"
 
 const mockTakePicture = jest.fn()
 const mockRequestPermission = jest.fn()
@@ -11,12 +13,13 @@ jest.mock("expo-camera", () => {
   const RN = require("react-native")
   const MockCameraView = React.forwardRef((props: object, ref: object) => {
     React.useImperativeHandle(ref, () => ({ takePictureAsync: mockTakePicture }))
-    return <RN.View {...props} />
+    return <RN.View {...props} testID="meal-capture-camera" />
   })
   MockCameraView.displayName = "MockCameraView"
   return { CameraView: MockCameraView, useCameraPermissions: jest.fn() }
 })
 jest.mock("expo-router", () => ({ router: { push: jest.fn(), back: jest.fn() } }))
+jest.mock("expo-router/react-navigation", () => ({ useIsFocused: () => true }))
 jest.mock("expo-image-manipulator", () => ({
   SaveFormat: { WEBP: "webp" },
   ImageManipulator: {
@@ -68,6 +71,70 @@ function mockPermission(granted: boolean) {
 beforeEach(() => {
   jest.clearAllMocks()
   mockPermission(true)
+})
+
+test("camera detects a barcode once, previews it, and waits for confirmation", async () => {
+  mockMeals(true)
+  jest.mocked(apiRequest).mockResolvedValueOnce({
+    food: {
+      id: "off-042100005264",
+      name: "Packaged oats",
+      servingUnit: "g",
+      glyph: "wheat",
+      caloriesPer100: 370,
+      proteinPer100G: 13,
+      carbsPer100G: 60,
+      fatPer100G: 7,
+    },
+  })
+  const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
+  const camera = screen.getByTestId("meal-capture-camera")
+  await act(async () => {
+    const event = { type: "upc_e", data: "04252614" }
+    await Promise.all([
+      fireEvent(camera, "barcodeScanned", event),
+      fireEvent(camera, "barcodeScanned", event),
+    ])
+  })
+  expect(apiRequest).toHaveBeenCalledTimes(1)
+  expect(apiRequest).toHaveBeenCalledWith("/foods/barcode/042100005264", expect.any(Object))
+  expect(screen.getByText("Packaged oats")).toBeTruthy()
+  expect(router.push).not.toHaveBeenCalled()
+  await fireEvent.press(screen.getByText("Review product"))
+  expect(router.push).toHaveBeenCalledWith({
+    pathname: "/review-item",
+    params: {
+      barcode: "042100005264",
+      name: "Packaged oats",
+      unit: "g",
+      kcal: "370",
+      protein: "13",
+      carbs: "60",
+      fat: "7",
+    },
+  })
+})
+
+test("a dismissed result does not reopen for the same barcode, and another code can use manual entry", async () => {
+  mockMeals(true)
+  jest.mocked(apiRequest).mockResolvedValue({ food: null })
+  const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
+  const scan = (data: string) =>
+    fireEvent(screen.getByTestId("meal-capture-camera"), "barcodeScanned", { type: "ean13", data })
+  await act(async () => {
+    await scan("3017620422003")
+  })
+  await fireEvent.press(screen.getByLabelText("Dismiss barcode result"))
+  await act(async () => {
+    await scan("3017620422003")
+  })
+  expect(apiRequest).toHaveBeenCalledTimes(1)
+  await act(async () => {
+    await scan("3017620422004")
+  })
+  expect(screen.getByText(/No nutrition data found/)).toBeTruthy()
+  await fireEvent.press(screen.getByText("Enter nutrition manually"))
+  expect(router.push).toHaveBeenCalledWith({ pathname: "/review-item", params: {} })
 })
 
 test("first capture shows two tips and no longer shows the old intro or guideline label", async () => {
