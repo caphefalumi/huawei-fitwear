@@ -109,6 +109,30 @@ export async function searchFoods(query: string, signal?: AbortSignal): Promise<
   }))
 }
 
+export async function lookupBarcodeFood(
+  barcode: string,
+  signal: AbortSignal,
+): Promise<FoodEntry | null> {
+  const { food } = await apiRequest<{ food: ApiFood | null }>(
+    `/foods/barcode/${encodeURIComponent(barcode)}`,
+    { signal },
+  )
+  if (!food) return null
+  return {
+    id: food.id,
+    name: food.name,
+    serving: `Per 100 ${food.servingUnit}`,
+    unit: food.servingUnit,
+    glyph: food.glyph,
+    per100: {
+      kcal: food.caloriesPer100,
+      protein: food.proteinPer100G,
+      carbs: food.carbsPer100G,
+      fat: food.fatPer100G,
+    },
+  }
+}
+
 export function writeMeal({ path, method, body }: MealWriteInput): Promise<unknown> {
   return apiRequest<unknown>(path, { method, ...(body === undefined ? {} : { body }) })
 }
