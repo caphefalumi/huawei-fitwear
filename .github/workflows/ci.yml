@@ -119,6 +119,9 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node: "true"
+      - name: Expo Doctor
+        working-directory: apps/mobile
+        run: bunx expo-doctor@1.21.8
       - name: Typecheck
         run: bun run mobile:typecheck
       - name: Jest unit tests
