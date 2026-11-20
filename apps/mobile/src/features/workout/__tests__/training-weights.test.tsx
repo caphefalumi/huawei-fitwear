@@ -1,5 +1,7 @@
 import { fireEvent, render } from "@testing-library/react-native"
 import { router, useLocalSearchParams } from "expo-router"
+import { useIsFocused } from "expo-router/react-navigation"
+import { AccessibilityInfo } from "react-native"
 
 import { useHealth } from "@/features/health"
 import { useInjuries } from "@/features/recovery"
@@ -12,6 +14,7 @@ import {
 import { ExerciseGuideScreen } from "@/features/workout/screens/exercise-guide-screen"
 import { GroupPlanScreen } from "@/features/workout/screens/group-plan-screen"
 import { TrainingWeightsScreen } from "@/features/workout/screens/training-weights-screen"
+import { loadExerciseLoop } from "@/features/workout/utils/exercise-loop-cache"
 
 jest.mock("@/features/health", () => ({
   ...jest.requireActual("@/features/health"),
@@ -21,6 +24,22 @@ jest.mock("expo-router", () => ({
   router: { push: jest.fn(), back: jest.fn(), replace: jest.fn() },
   useLocalSearchParams: jest.fn(),
 }))
+jest.mock("expo-router/react-navigation", () => ({ useIsFocused: jest.fn() }))
+jest.mock("@/features/workout/utils/exercise-loop-cache", () => ({ loadExerciseLoop: jest.fn() }))
+jest.mock("@/assets/exercise-loops/0025.webp", () => 25)
+jest.mock("expo-image", () => {
+  const React = require("react")
+  const { View } = require("react-native")
+  return {
+    Image: React.forwardRef((props: object, ref: React.Ref<unknown>) => {
+      React.useImperativeHandle(ref, () => ({
+        startAnimating: jest.fn(),
+        stopAnimating: jest.fn(),
+      }))
+      return <View {...props} />
+    }),
+  }
+})
 jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }))
@@ -31,6 +50,9 @@ beforeEach(() => {
   jest.clearAllMocks()
   jest.mocked(useHealth).mockReturnValue({ sex: "Male", weightKg: 70 } as never)
   jest.mocked(useLocalSearchParams).mockReturnValue({})
+  jest.mocked(useIsFocused).mockReturnValue(true)
+  jest.mocked(loadExerciseLoop).mockResolvedValue("file:///cache/v1-0025.gif")
+  jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false)
   useInjuries.setState({ injuries: [] })
   usePlanPreferences.setState({ experience: "Regular" })
   useTrainingWeights.setState({ level: null, custom: {} })
@@ -73,17 +95,45 @@ test("guide shows the main muscle first, the rest on Show all, and links weight 
   expect(router.push).toHaveBeenCalledWith("/training-weights?edit=bench-press")
 })
 
-test("opens, closes, and reopens the technique video", async () => {
+test("autoplays the inline technique animation and honors pause and route focus", async () => {
   jest.mocked(useLocalSearchParams).mockReturnValue({ name: "bench-press" })
   const screen = await render(<ExerciseGuideScreen />)
-  const play = () => fireEvent.press(screen.getByRole("button", { name: "Play Bench press video" }))
+  const demonstration = () => screen.getByLabelText("Bench press demonstration")
+  const play = () => screen.getByRole("button", { name: "Play Bench press animation" })
+  const pause = () => screen.getByRole("button", { name: "Pause Bench press animation" })
 
-  expect(screen.queryByLabelText("Close video")).toBeNull()
-  await play()
-  await fireEvent.press(screen.getByLabelText("Close video"))
-  expect(screen.queryByLabelText("Close video")).toBeNull()
-  await play()
-  expect(screen.getByLabelText("Close video")).toBeTruthy()
+  expect(loadExerciseLoop).toHaveBeenCalledWith("0025")
+  expect(demonstration()).toHaveProp("source", { uri: "file:///cache/v1-0025.gif" })
+  expect(demonstration()).toHaveProp("autoplay", true)
+  await fireEvent.press(pause())
+  expect(demonstration()).toHaveProp("autoplay", false)
+  await fireEvent.press(play())
+  expect(demonstration()).toHaveProp("autoplay", true)
+
+  jest.mocked(useIsFocused).mockReturnValue(false)
+  await screen.rerender(<ExerciseGuideScreen />)
+  expect(demonstration()).toHaveProp("autoplay", false)
+  jest.mocked(useIsFocused).mockReturnValue(true)
+  await screen.rerender(<ExerciseGuideScreen />)
+  expect(demonstration()).toHaveProp("autoplay", true)
+})
+
+test("keeps the technique still under reduced motion until the user presses play", async () => {
+  jest.mocked(AccessibilityInfo.isReduceMotionEnabled).mockResolvedValue(true)
+  const screen = await render(<ExerciseGuideScreen />)
+  const demonstration = () => screen.getByLabelText("Bench press demonstration")
+
+  expect(demonstration()).toHaveProp("autoplay", false)
+  await fireEvent.press(screen.getByRole("button", { name: "Play Bench press animation" }))
+  expect(demonstration()).toHaveProp("autoplay", true)
+})
+
+test("shows the bundled technique still if the GIF is unavailable", async () => {
+  jest.mocked(loadExerciseLoop).mockRejectedValueOnce(new Error("offline"))
+  const screen = await render(<ExerciseGuideScreen />)
+
+  expect(screen.getByLabelText("Bench press demonstration")).toHaveProp("source", 25)
+  expect(screen.getByText("Animation unavailable")).toBeTruthy()
 })
 
 test("edits one load, follows the level for the rest, and resets to default with undo", async () => {

@@ -6,11 +6,11 @@ import { Button } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
 import { Colors, Palette as C, tokens } from "@/theme"
 
-import type { FoodEntry } from "../hooks/meals-hooks"
+import type { BarcodeProduct } from "../api/meals-api"
 
 export type BarcodeResult =
   | { kind: "loading" | "missing" | "error"; code: string }
-  | { kind: "found"; code: string; food: FoodEntry }
+  | { kind: "found"; code: string; product: BarcodeProduct }
 
 export function BarcodeResultSheet({
   result,
@@ -23,7 +23,7 @@ export function BarcodeResultSheet({
   visible: boolean
   onClose: () => void
   onRetry: () => void
-  onReview: () => void
+  onReview: (useLabelPhoto: boolean) => void
 }) {
   const dark = useColorScheme() === "dark"
   const colors = {
@@ -34,23 +34,32 @@ export function BarcodeResultSheet({
     tint: dark ? Colors.dark.backgroundSelected : C.accentTint,
     icon: dark ? C.accentSoft : C.accent,
   }
-  const food = result?.kind === "found" ? result.food : null
+  const product = result?.kind === "found" ? result.product : null
+  const incomplete =
+    product &&
+    (product.per100.kcal == null ||
+      product.per100.protein == null ||
+      product.per100.carbs == null ||
+      product.per100.fat == null)
   const loading = result?.kind === "loading"
   const failed = result?.kind === "error"
-  const title = food
-    ? food.name
+  const title = product
+    ? (product.name ?? "Product found")
     : loading
       ? "Checking barcode…"
       : failed
         ? "Couldn’t check barcode"
-        : "Nutrition not available"
-  const detail = food
-    ? "Review the portion and nutrition before adding it."
+        : "Product not found"
+  const detail = product
+    ? incomplete
+      ? "Product found, but some nutrition is missing. Use the package label to fill it in."
+      : "Review the portion and nutrition before adding it."
     : loading
       ? "Looking up the product in Open Food Facts."
       : failed
-        ? "Try again, or enter the nutrition from the package label."
-        : "Open Food Facts has no complete nutrition for this code. You can enter it from the package label."
+        ? "Try again or use the nutrition facts printed on the package."
+        : "Open Food Facts has no match. Use the nutrition facts printed on the package."
+  const showFallback = !product || incomplete
 
   return (
     <BottomSheet isPresented={visible} onDismiss={onClose} containerColor={colors.surface}>
@@ -91,9 +100,15 @@ export function BarcodeResultSheet({
               <Text selectable style={[styles.metadata, { color: colors.muted }]}>
                 Barcode {result.code}
               </Text>
-              {food ? (
+              {product?.brand ? (
+                <Text selectable style={[styles.metadata, { color: colors.muted }]}>
+                  {product.brand}
+                </Text>
+              ) : null}
+              {product?.per100.kcal != null ? (
                 <Text style={[styles.energy, { color: colors.text }]}>
-                  {Math.round(food.per100.kcal)} kcal per 100 {food.unit} · Open Food Facts
+                  {product.per100.kcal.toLocaleString(undefined, { maximumFractionDigits: 2 })} kcal
+                  per 100 {product.servingUnit === "ml" ? "mL" : "g"} · Open Food Facts
                 </Text>
               ) : null}
             </View>
@@ -101,19 +116,29 @@ export function BarcodeResultSheet({
               <ActivityIndicator accessibilityLabel="Looking up barcode" color={colors.muted} />
             ) : (
               <View style={styles.actions}>
-                <Button
-                  label={
-                    food ? "Review product" : failed ? "Try again" : "Enter nutrition manually"
-                  }
-                  onPress={failed ? onRetry : onReview}
-                />
-                {failed ? (
-                  <Pressable onPress={onReview} style={styles.secondary}>
-                    <Text style={[styles.secondaryLabel, { color: colors.icon }]}>
-                      Enter nutrition manually
-                    </Text>
-                  </Pressable>
-                ) : null}
+                {showFallback ? (
+                  <>
+                    <Button label="Scan nutrition label" onPress={() => onReview(true)} />
+                    <Button
+                      variant="secondary"
+                      label="Enter nutrition manually"
+                      onPress={() => onReview(false)}
+                    />
+                    {failed ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={onRetry}
+                        style={styles.secondary}
+                      >
+                        <Text style={[styles.secondaryLabel, { color: colors.icon }]}>
+                          Try again
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                  </>
+                ) : (
+                  <Button label="Review product" onPress={() => onReview(false)} />
+                )}
               </View>
             )}
           </View>

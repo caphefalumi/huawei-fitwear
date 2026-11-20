@@ -14,9 +14,14 @@ if (Platform.OS !== "web" || typeof window !== "undefined") {
     })
     return () => subscription.remove()
   })
+}
 
+// On native AuthProvider owns reconnect, so Query cannot resume before session validation.
+if (Platform.OS === "web" && typeof window !== "undefined") {
   onlineManager.setEventListener((setOnline) => {
-    void getNetworkStateAsync().then((state) => setOnline(isOnline(state)))
+    void getNetworkStateAsync()
+      .then((state) => setOnline(isOnline(state)))
+      .catch(() => {})
     const subscription = addNetworkStateListener((state) => setOnline(isOnline(state)))
     return () => subscription.remove()
   })
@@ -32,6 +37,7 @@ export const queryClient = new QueryClient({
         failureCount < 3 && (!(error instanceof ApiError) || error.retryable),
       retryDelay: (attempt) => Math.min(750 * 2 ** attempt + Math.random() * 250, 8_000),
     },
-    mutations: { retry: false },
+    // A native offline write must fail in the API client, not wait to replay at reconnect.
+    mutations: { retry: false, networkMode: Platform.OS === "web" ? "online" : "always" },
   },
 })

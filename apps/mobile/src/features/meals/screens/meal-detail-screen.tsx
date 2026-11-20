@@ -13,7 +13,7 @@ import { fromApiMeal, mealsQueryKeys, useMeals } from "../hooks/meals-hooks"
 import { MealResultScreen } from "./meal-result-screen"
 
 export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: () => void }) {
-  const { user } = useAuth()
+  const { user, offline } = useAuth()
   const { history, loading } = useMeals()
   const saved = history.find((item) => item.id === logId)
   const detailQuery = useQuery({
@@ -23,6 +23,8 @@ export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: ()
   })
   const loaded = detailQuery.data
   const error = detailQuery.error ? apiErrorMessage(detailQuery.error, "this meal") : null
+  const waitingForHistory = loading && !detailQuery.isFetching
+  const unavailableOffline = offline || detailQuery.fetchStatus === "paused"
 
   if (logId && !saved && !loaded) {
     return (
@@ -38,8 +40,16 @@ export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: ()
         <Text accessibilityRole="header" style={{ color: C.text, fontSize: 20, fontWeight: "600" }}>
           Meal
         </Text>
-        {detailQuery.isLoading ? <LoadingSkeleton label="Loading meal" rows={3} /> : null}
-        {error ? (
+        {!unavailableOffline && (waitingForHistory || detailQuery.isLoading) ? (
+          <LoadingSkeleton label="Loading meal" rows={3} />
+        ) : null}
+        {unavailableOffline ? (
+          <FetchErrorState
+            title="Meal unavailable offline"
+            message="This meal isn't saved on this device. Reconnect to load it."
+            onBack={onBack}
+          />
+        ) : error ? (
           <FetchErrorState
             title={
               detailQuery.error instanceof Error &&
@@ -57,7 +67,7 @@ export function MealDetailScreen({ logId, onBack }: { logId?: string; onBack: ()
             onBack={onBack}
           />
         ) : null}
-        {!error && !detailQuery.isLoading ? (
+        {!unavailableOffline && !error && !waitingForHistory && !detailQuery.isLoading ? (
           <FetchErrorState
             title="Meal unavailable"
             message="This meal could not be found."

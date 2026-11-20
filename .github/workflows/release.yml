@@ -20,6 +20,31 @@ jobs:
       contents: read
       pull-requests: read
 
+  exercise-gifs:
+    name: Deploy exercise GIFs
+    needs: ci
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Upload exercise GIFs to R2
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if [[ -d assets/exercise-loops ]]; then
+            while IFS= read -r -d '' file; do
+              bunx wrangler r2 object put "voochealth-exercise-gifs/${file#assets/}" \
+                --file "$file" --content-type image/gif --remote
+            done < <(find assets/exercise-loops -type f -name '*.gif' -print0)
+          fi
+
   deploy:
     name: Migrate and deploy backend
     needs: ci

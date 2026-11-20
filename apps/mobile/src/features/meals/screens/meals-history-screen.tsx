@@ -25,7 +25,7 @@ const metricOf = (item: MealLog, key: Exclude<SortKey, "newest">) =>
 
 export function MealsHistoryScreen() {
   const insets = useSafeAreaInsets()
-  const { history } = useMeals()
+  const { history, historyState } = useMeals()
   const [query, setQuery] = useState("")
   const [sort, setSort] = useState<SortKey>("newest")
   const [descending, setDescending] = useState(true)
@@ -95,8 +95,18 @@ export function MealsHistoryScreen() {
         })}
       </ScrollView>
 
-      {items.length === 0 ? (
-        <Text style={styles.empty}>No meals match “{query.trim()}”.</Text>
+      {historyState === "offline" ? (
+        <Text style={styles.empty}>
+          No meal history is saved on this device. Reconnect to load it.
+        </Text>
+      ) : historyState === "loading" ? (
+        <Text style={styles.empty}>Loading meals…</Text>
+      ) : historyState === "error" ? (
+        <Text style={styles.empty}>Could not load meal history.</Text>
+      ) : items.length === 0 ? (
+        <Text style={styles.empty}>
+          {query.trim() ? `No meals match “${query.trim()}”.` : "No meals logged yet."}
+        </Text>
       ) : (
         items.map((item) => (
           <Pressable

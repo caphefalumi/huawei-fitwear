@@ -19,6 +19,7 @@ export async function prepareMealImage(uri: string): Promise<PickedImage> {
 
 export async function pickImage(
   camera: boolean,
+  { allowsEditing = true }: { allowsEditing?: boolean } = {},
 ): Promise<(PickedImage & { sourceUri: string }) | null> {
   if (camera && Platform.OS !== "web") {
     const permission = await ImagePicker.requestCameraPermissionsAsync()
@@ -32,7 +33,7 @@ export async function pickImage(
   const options: ImagePicker.ImagePickerOptions = {
     mediaTypes: ["images"],
     quality: 1,
-    allowsEditing: true,
+    allowsEditing,
   }
   const result = camera
     ? await ImagePicker.launchCameraAsync(options)

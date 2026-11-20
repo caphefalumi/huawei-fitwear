@@ -153,12 +153,16 @@ test("a dismissed result does not reopen for the same barcode, and another code 
   await act(async () => {
     await scan("3017620422004")
   })
-  expect(screen.getByText("Nutrition not available")).toBeTruthy()
+  expect(screen.getByText("Product not found")).toBeTruthy()
+  expect(screen.getByText("Scan nutrition label")).toBeTruthy()
   await fireEvent.press(screen.getByText("Enter nutrition manually"))
-  expect(router.push).toHaveBeenCalledWith({ pathname: "/review-item", params: {} })
+  expect(router.push).toHaveBeenCalledWith({
+    pathname: "/review-item",
+    params: { barcode: "3017620422004" },
+  })
 })
 
-test("library photo barcode sends only the code and a catalog miss leaves the photo available", async () => {
+test("a known gallery barcode with no nutrition shows the product and opens label recovery", async () => {
   mockMeals(true)
   jest.mocked(pickImage).mockResolvedValueOnce({
     uri: "file://meal.webp",
@@ -169,18 +173,62 @@ test("library photo barcode sends only the code and a catalog miss leaves the ph
     value: "8934609206834",
     compressedUpc: false,
   })
-  jest.mocked(apiRequest).mockResolvedValueOnce({ food: null })
+  jest.mocked(apiRequest).mockResolvedValueOnce({
+    food: null,
+    product: { name: "Bánh Quy Quasure Light Hộp 140g", servingUnit: "g", per100: {} },
+  })
 
   const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
   await fireEvent.press(screen.getByLabelText("Choose from library"))
   await screen.findByText("Barcode 8934609206834")
-  expect(screen.getByText("Nutrition not available")).toBeTruthy()
+  expect(screen.getByText("Bánh Quy Quasure Light Hộp 140g")).toBeTruthy()
+  expect(screen.queryByText(/0 kcal/)).toBeNull()
   expect(scanMealPhoto).toHaveBeenCalledWith("file://label.jpg", expect.anything())
   expect(apiRequest).toHaveBeenCalledTimes(1)
   expect(apiRequest).toHaveBeenCalledWith("/foods/barcode/8934609206834", expect.any(Object))
-  await fireEvent.press(screen.getByLabelText("Dismiss barcode result"))
-  expect(screen.getByLabelText("Selected meal photo")).toBeTruthy()
-  expect(screen.getByLabelText("Analyze photo").props.accessibilityState.disabled).toBe(false)
+  await fireEvent.press(screen.getByText("Scan nutrition label"))
+  expect(router.push).toHaveBeenCalledWith({
+    pathname: "/review-item",
+    params: {
+      barcode: "8934609206834",
+      name: "Bánh Quy Quasure Light Hộp 140g",
+      unit: "g",
+      labelPhoto: "1",
+    },
+  })
+})
+
+test("typing a barcode uses catalog lookup without a camera and preserves numeric zero", async () => {
+  mockMeals(true)
+  mockCameraGranted = false
+  jest.mocked(apiRequest).mockResolvedValueOnce({
+    food: null,
+    product: {
+      name: "Packaged snack",
+      brand: "Example Brand",
+      servingUnit: "g",
+      per100: { kcal: 145, fat: 0 },
+    },
+  })
+  const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
+  await fireEvent.press(screen.getByText("Type barcode"))
+  expect(screen.getByLabelText("Look up barcode").props.accessibilityState.disabled).toBe(true)
+  await fireEvent.changeText(screen.getByLabelText("Barcode number"), "1000000000001")
+  await fireEvent.press(screen.getByText("Look up barcode"))
+  expect(await screen.findByText("Example Brand")).toBeTruthy()
+  expect(apiRequest).toHaveBeenCalledWith("/foods/barcode/1000000000001", expect.any(Object))
+  await fireEvent.press(screen.getByText("Enter nutrition manually"))
+  expect(router.push).toHaveBeenCalledWith({
+    pathname: "/review-item",
+    params: {
+      barcode: "1000000000001",
+      name: "Packaged snack",
+      brand: "Example Brand",
+      unit: "g",
+      kcal: "145",
+      fat: "0",
+    },
+  })
 })
 
 test("retaking a photo ignores a barcode that finishes decoding late", async () => {
@@ -222,8 +270,10 @@ test("a lookup error can retry the same barcode without scanning again", async (
 
   const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
   await fireEvent.press(screen.getByLabelText("Choose from library"))
+  expect(await screen.findByText("Scan nutrition label")).toBeTruthy()
+  expect(screen.getByText("Enter nutrition manually")).toBeTruthy()
   await fireEvent.press(await screen.findByText("Try again"))
-  expect(await screen.findByText("Nutrition not available")).toBeTruthy()
+  expect(await screen.findByText("Product not found")).toBeTruthy()
   expect(scanMealPhoto).toHaveBeenCalledTimes(1)
   expect(apiRequest).toHaveBeenCalledTimes(2)
 })

@@ -65,7 +65,7 @@ describe("Persistent feature APIs", () => {
       expect((await request(path, undefined, method, body)).status).toBe(401)
   })
 
-  it("looks up packaged food nutrition and distinguishes an unknown barcode from provider failure", async () => {
+  it("keeps legacy food numeric and returns identity and partial nutrition for known barcodes", async () => {
     const { session } = await account()
     const requestProduct = (barcode: string) => request(`/foods/barcode/${barcode}`, session.token)
     const upstream = spyOn(globalThis, "fetch")
@@ -84,6 +84,22 @@ describe("Persistent feature APIs", () => {
           },
         }),
       )
+      .mockResolvedValueOnce(
+        Response.json({
+          status: 1,
+          product: { product_name: "Bánh Quy Quasure Light Hộp 140g" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          status: 1,
+          product: {
+            product_name: "Packaged snack",
+            brands: "Example Brand",
+            nutriments: { "energy-kcal_100g": 145, proteins_100g: null, fat_100g: 0 },
+          },
+        }),
+      )
       .mockResolvedValueOnce(Response.json({ status: 0 }, { status: 404 }))
       .mockResolvedValueOnce(new Response(null, { status: 429 }))
     try {
@@ -92,7 +108,10 @@ describe("Persistent feature APIs", () => {
       expect(upstream).not.toHaveBeenCalled()
       const result = await requestProduct("012345678905")
       expect(result.status).toBe(200)
-      expect((await result.json()).food).toMatchObject({
+      const complete = await result.json()
+      expect(complete.food).toEqual({
+        id: "off-012345678905",
+        glyph: "droplet",
         name: "Orange juice",
         servingUnit: "ml",
         caloriesPer100: 40,
@@ -100,7 +119,26 @@ describe("Persistent feature APIs", () => {
         carbsPer100G: 9,
         fatPer100G: 0,
       })
+      expect(complete.product).toEqual({
+        name: "Orange juice",
+        servingUnit: "ml",
+        per100: { kcal: 40, protein: 0.5, carbs: 9, fat: 0 },
+      })
       expect(String(upstream.mock.calls[0][0])).toContain("/product/012345678905.json")
+      expect(await (await requestProduct("8934609206834")).json()).toEqual({
+        food: null,
+        product: { name: "Bánh Quy Quasure Light Hộp 140g", servingUnit: "g", per100: {} },
+      })
+      expect(String(upstream.mock.calls[1][0])).toContain("/product/8934609206834.json")
+      expect(await (await requestProduct("1000000000001")).json()).toEqual({
+        food: null,
+        product: {
+          name: "Packaged snack",
+          brand: "Example Brand",
+          servingUnit: "g",
+          per100: { kcal: 145, fat: 0 },
+        },
+      })
       expect(await (await requestProduct("012345678906")).json()).toEqual({ food: null })
       expect((await requestProduct("012345678907")).status).toBe(502)
     } finally {
@@ -133,7 +171,7 @@ describe("Persistent feature APIs", () => {
     expect(calls).toBe(11)
   })
 
-  it("uploads WebP once and uses its private reference for analysis and saving", async () => {
+  it("keeps photos private and transcribes labels independently of meal estimating", async () => {
     const objects = new Map<string, Blob>()
     const bucket = {
       async put(key: string, value: Blob | ReadableStream) {
@@ -153,10 +191,11 @@ describe("Persistent feature APIs", () => {
       },
     } as unknown as R2Bucket
     const aiInputs: unknown[] = []
+    let aiOutput = '{"items":[]}'
     const ai = {
       run: async (_model: string, input: unknown) => {
         aiInputs.push(input)
-        return { choices: [{ message: { content: '{"items":[]}' } }] }
+        return { choices: [{ message: { content: aiOutput } }] }
       },
     } as unknown as Ai
     setTestDatabaseBinding({ DB: d1, fitwear_kv: createTestKv(), MEAL_IMAGES: bucket, AI: ai })
@@ -188,6 +227,36 @@ describe("Persistent feature APIs", () => {
       (await request("/meals/analyze", owner, "POST", { photoId, portionVolumeMl: -10 })).status,
     ).toBe(422)
     expect(aiInputs).toHaveLength(2)
+    const label = (token?: string) => request("/meals/analyze-label", token, "POST", { photoId })
+    expect((await label()).status).toBe(401)
+    expect((await label(stranger)).status).toBe(404)
+    expect(aiInputs).toHaveLength(2)
+
+    aiOutput = JSON.stringify({
+      name: "Drink",
+      basis: { kind: "serving", unit: "ml", amount: 250 },
+      nutrition: { energy: { value: 418.4, unit: "kJ" }, protein: null, carbs: 5.5, fat: 0 },
+    })
+    const labelResponse = await label(owner)
+    expect(labelResponse.status).toBe(200)
+    expect(await labelResponse.json()).toEqual({
+      name: "Drink",
+      basis: { kind: "serving", unit: "ml", amount: 250 },
+      nutrition: { kcal: 100, protein: null, carbs: 5.5, fat: 0 },
+    })
+    expect(JSON.stringify(aiInputs[2])).toContain("Transcribe only")
+    expect(JSON.stringify(aiInputs[2])).not.toContain("Estimate the pictured meal")
+
+    aiOutput = JSON.stringify({
+      name: null,
+      basis: null,
+      nutrition: { energy: { value: 200, unit: "kcal" }, protein: 1, carbs: 5, fat: 0 },
+    })
+    expect(await (await label(owner)).json()).toEqual({
+      name: null,
+      basis: null,
+      nutrition: { kcal: null, protein: null, carbs: null, fat: null },
+    })
     const meal = { mealType: "lunch", items: [foodItem], photoId }
     expect((await request("/meals", stranger, "POST", meal)).status).toBe(404)
     const saved = await request("/meals", owner, "POST", meal)

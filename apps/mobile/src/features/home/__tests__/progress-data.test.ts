@@ -33,12 +33,10 @@ test("uses completed backend statistics and preserves zero-activity days", () =>
     "Week",
     [],
     {
-      completedSessionCount: 3,
-      totalDurationSeconds: 3690,
       byDate: [
-        { date: "2025-12-28", sessionCount: 1 },
-        { date: "2026-01-03", sessionCount: 2 },
-        { date: "2025-12-27", sessionCount: 99 },
+        { date: "2025-12-28", sessionCount: 1, totalDurationSeconds: 1800 },
+        { date: "2026-01-03", sessionCount: 2, totalDurationSeconds: 1890 },
+        { date: "2025-12-27", sessionCount: 99, totalDurationSeconds: 5000 },
       ],
     },
     now,
@@ -53,13 +51,11 @@ test("groups longer ranges without dropping sessions at bucket boundaries", () =
     "Month",
     [],
     {
-      completedSessionCount: 4,
-      totalDurationSeconds: 0,
       byDate: [
-        { date: "2025-12-05", sessionCount: 1 },
-        { date: "2025-12-13", sessionCount: 1 },
-        { date: "2025-12-20", sessionCount: 1 },
-        { date: "2026-01-03", sessionCount: 1 },
+        { date: "2025-12-05", sessionCount: 1, totalDurationSeconds: 0 },
+        { date: "2025-12-13", sessionCount: 1, totalDurationSeconds: 0 },
+        { date: "2025-12-20", sessionCount: 1, totalDurationSeconds: 0 },
+        { date: "2026-01-03", sessionCount: 1, totalDurationSeconds: 0 },
       ],
     },
     now,
