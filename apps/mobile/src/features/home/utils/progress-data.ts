@@ -1,10 +1,7 @@
+import type { WorkoutStats } from "@/features/workout/api/workout-api"
+
 export const RANGES = ["Week", "Month", "3 mo", "Year"] as const
 export type Range = (typeof RANGES)[number]
-export type WorkoutStats = {
-  completedSessionCount: number
-  totalDurationSeconds: number
-  byDate: { date: string; sessionCount: number }[]
-}
 export type RangeData = {
   delta: string
   weights: number[]
@@ -45,15 +42,19 @@ export function progressData(
       sessions: 0,
     }
   })
+  let completedSessionCount = 0
+  let durationSeconds = 0
+  const start = new Date(`${from}T12:00:00`)
   for (const day of stats?.byDate ?? []) {
     if (day.date < from || day.date > to) continue
-    const start = new Date(`${from}T12:00:00`)
     const current = new Date(`${day.date}T12:00:00`)
     const elapsed = Math.round((current.getTime() - start.getTime()) / 86_400_000)
     const index = Math.min(count - 1, Math.floor((elapsed * count) / RANGE_DAYS[range]))
     buckets[index].sessions += day.sessionCount
+    completedSessionCount += day.sessionCount
+    durationSeconds += day.totalDurationSeconds
   }
-  const minutes = Math.floor((stats?.totalDurationSeconds ?? 0) / 60)
+  const minutes = Math.floor(durationSeconds / 60)
   return {
     delta: change === null ? "Not enough logs" : `${change > 0 ? "+" : ""}${change.toFixed(1)} kg`,
     weights: selected.map((log) => log.weightKg),
@@ -65,7 +66,7 @@ export function progressData(
       : [],
     bars: buckets,
     sessionsNote: stats
-      ? `${stats.completedSessionCount} completed sessions`
+      ? `${completedSessionCount} completed sessions`
       : "Training data unavailable",
     duration: stats ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : "—",
     durationNote: `total duration · last ${RANGE_DAYS[range]} days`,

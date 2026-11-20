@@ -163,6 +163,7 @@ export function userFacingAccountDeleteError(error: unknown): string {
 
 const REQUEST_TIMEOUT_MS = 12_000
 let apiToken: string | null = null
+let accountRequestsPaused = false
 const expirationListeners = new Set<() => void>()
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -230,17 +231,24 @@ apiClient.interceptors.response.use(undefined, (cause: unknown) => {
   if (cause.code === "ECONNABORTED" || cause.code === "ETIMEDOUT") {
     return Promise.reject(new ApiError("The request timed out.", 0, "TIMEOUT"))
   }
-  return Promise.reject(
-    new ApiError(
-      "Could not reach the server. Check your connection and try again.",
-      0,
-      "NETWORK_ERROR",
-    ),
-  )
+  if (cause.code === "ERR_NETWORK") {
+    return Promise.reject(
+      new ApiError(
+        "Could not reach the server. Check your connection and try again.",
+        0,
+        "NETWORK_ERROR",
+      ),
+    )
+  }
+  return Promise.reject(new ApiError("The request could not be sent.", 0, "REQUEST_ERROR"))
 })
 
 export function setApiToken(token: string | null) {
   apiToken = token
+}
+
+export function pauseAccountRequests(paused: boolean) {
+  accountRequestsPaused = paused
 }
 
 export function onSessionExpired(listener: () => void) {
@@ -252,10 +260,13 @@ export function onSessionExpired(listener: () => void) {
 
 export async function apiRequest<T>(
   path: string,
-  options: { method?: string; body?: unknown; signal?: AbortSignal } = {},
+  options: { method?: string; body?: unknown; signal?: AbortSignal; validateSession?: true } = {},
 ): Promise<T> {
   if (!path.startsWith("/") || path.startsWith("//")) {
     throw new ApiError("API paths must begin with a single slash.", 0, "INVALID_PATH")
+  }
+  if (apiToken && accountRequestsPaused && !options.validateSession) {
+    throw new ApiError("Reconnect to use this feature.", 0, "OFFLINE")
   }
   const response = await apiClient.request<T>({
     url: path,
