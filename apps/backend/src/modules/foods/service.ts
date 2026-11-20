@@ -18,6 +18,12 @@ const vietnameseSearch = vietnameseFoods.map((food) => ({
   id: `usda-fdc-${food.fdc_id}`,
   names: [food.name_vi, ...food.aliases_vi, food.name_en].map(normalizeFoodSearch),
 }))
+const vietnameseNames = new Map(vietnameseSearch.map((food) => [food.id, food.name]))
+
+function withVietnameseName(food: Food): Food {
+  const name = vietnameseNames.get(food.id)
+  return name ? { ...food, name } : food
+}
 
 function catalog(): AiSearchInstance {
   const namespace = getAiSearch()
@@ -110,6 +116,7 @@ export abstract class Foods {
       if (lookupError && foods.size === 0) throw lookupError
     }
     const combined = [...foods.values()]
+      .map(withVietnameseName)
       .sort((a, b) => a.name.localeCompare(b.name))
       .slice(0, query.limit ?? DEFAULT_LIMIT)
     return { foods: combined, count: combined.length }
@@ -123,7 +130,7 @@ export abstract class Foods {
     if (!food) {
       throw status(404, { success: false, message: "Food not found" })
     }
-    return food
+    return withVietnameseName(food)
   }
 
   static async estimatePortion(foodId: string, weightG: number, d1?: D1Database) {

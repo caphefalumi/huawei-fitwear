@@ -15,6 +15,10 @@ const rice = {
   carbsPer100G: 28,
   fatPer100G: 0.28,
 }
+const riceDisplay = {
+  ...rice,
+  name: vietnameseFoods.find((food) => food.fdc_id === 2708403)!.name_vi,
+}
 
 function searchBinding(text = JSON.stringify(rice)) {
   const searches: AiSearchSearchRequest[] = []
@@ -82,12 +86,12 @@ describe("food catalog search", () => {
       for (const name of [entry.name_vi, entry.aliases_vi[0], entry.name_en]) {
         for (const query of [name.toUpperCase(), normalizeFoodSearch(name).toUpperCase()]) {
           const result = await Foods.search({ q: query, limit: 100 }, d1)
-          expect(result.foods).toContainEqual(food)
+          expect(result.foods).toContainEqual({ ...food, name: entry.name_vi })
           expect(result.count).toBe(result.foods.length)
         }
       }
       const strokeQuery = await Foods.search({ q: "ĐƯA LEO", limit: 100 }, d1)
-      expect(strokeQuery.foods).toContainEqual(food)
+      expect(strokeQuery.foods).toContainEqual({ ...food, name: entry.name_vi })
     })
     expect(requestedKeys).toContain(`${food.id}.txt`)
   })
@@ -107,7 +111,7 @@ describe("food catalog search", () => {
     } as unknown as AiSearchNamespace
     await withWorkerBindings({ AI_SEARCH: namespace }, async () => {
       const result = await Foods.search({ q: "dua leo" }, d1)
-      expect(result.foods).toContainEqual(rice)
+      expect(result.foods).toContainEqual(riceDisplay)
     })
   })
   it("limits overlay lookups to the requested result limit", async () => {
@@ -148,10 +152,10 @@ describe("food catalog search", () => {
           carbsPer100G: 3,
           fatPer100G: 4,
         },
-        rice,
+        riceDisplay,
       ])
       expect(result.count).toBe(2)
-      expect(await Foods.byId(rice.id, d1)).toEqual(rice)
+      expect(await Foods.byId(rice.id, d1)).toEqual(riceDisplay)
       expect((await Foods.estimatePortion(rice.id, 200, d1)).nutrition).toEqual({
         caloriesKcal: 258,
         proteinG: 5.3,
