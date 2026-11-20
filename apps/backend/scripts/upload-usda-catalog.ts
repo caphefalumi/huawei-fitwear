@@ -37,10 +37,10 @@ type Envelope<T> = {
 async function request<T>(url: string, init: RequestInit = {}): Promise<Envelope<T>> {
   for (let attempt = 0; ; attempt++) {
     const response = await fetch(url, { ...init, headers: { ...headers, ...init.headers } })
-    const body = (await response.json().catch(() => ({
+    const body = ((await response.json().catch(() => null)) ?? {
       success: false,
-      errors: [{ code: 0, message: "Non-JSON response from Cloudflare" }],
-    }))) as Envelope<T>
+      errors: [{ code: 0, message: "Empty or non-JSON response from Cloudflare" }],
+    }) as Envelope<T>
     if (response.ok && body.success) return body
     const transient =
       (response.status === 429 &&
