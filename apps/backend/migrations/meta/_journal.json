@@ -57,6 +57,13 @@
       "when": 1794477827381,
       "tag": "0007_workout_set_warmup",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1794477827382,
+      "tag": "0008_usda_food_catalog",
+      "breakpoints": true
     }
   ]
 }

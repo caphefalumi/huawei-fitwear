@@ -372,6 +372,38 @@ test("food search maps backend catalogue units and nutrients", async () => {
   ])
 })
 
+test("browses the food catalogue on an empty query and still searches typed names", async () => {
+  request.mockImplementation(async (path) => ({
+    foods: [
+      {
+        id: path.includes("Milk") ? "milk" : "apple",
+        name: path.includes("Milk") ? "Milk" : "Apple",
+        servingUnit: "g",
+        glyph: "leaf",
+        caloriesPer100: 52,
+        proteinPer100G: 0.3,
+        carbsPer100G: 14,
+        fatPer100G: 0.2,
+      },
+    ],
+  }))
+  const view = await renderHook(({ query }: { query: string }) => useFoodSearch(query, true), {
+    initialProps: { query: "" },
+    wrapper: createQueryWrapper(),
+  })
+  await waitFor(() => expect(view.result.current.matches[0]?.name).toBe("Apple"))
+  expect(request).toHaveBeenCalledWith(
+    "/foods?q=",
+    expect.objectContaining({ signal: expect.any(AbortSignal) }),
+  )
+  await view.rerender({ query: "Milk" })
+  await waitFor(() => expect(view.result.current.matches[0]?.name).toBe("Milk"))
+  expect(request).toHaveBeenCalledWith(
+    "/foods?q=Milk",
+    expect.objectContaining({ signal: expect.any(AbortSignal) }),
+  )
+})
+
 test("captured photo stays with failed drafts and saves by photo ID", async () => {
   const { result } = await renderHook(() => useMeals(), {
     wrapper: createQueryWrapper(MealsProvider),
