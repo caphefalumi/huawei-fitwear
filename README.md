@@ -12,6 +12,8 @@ Dual-device fitness ecosystem pairing a mobile client with a HarmonyOS smartwatc
 
 Mobile defaults to the deployed API at https://fitwear-backend.dangduytoan13l.workers.dev. Override `EXPO_PUBLIC_API_URL` in `apps/mobile/.env.local` for local development; use a LAN-reachable address for physical phones.
 
+The **Release** workflow uploads all GIFs under `assets/exercise-loops/` to the `voochealth-exercise-gifs` R2 bucket on every successful release from `main`, including manual releases. The production `CLOUDFLARE_API_TOKEN` needs R2 object write access. Uploads do not delete remote objects. Mobile caches GIFs by version; publish changed animations under a new version and update the app's version to refresh existing caches.
+
 ---
 
 ## Prerequisites
