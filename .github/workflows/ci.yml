@@ -83,7 +83,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+      - name: Cache ArkTS linter
+        uses: actions/cache@v4
+        id: cache-arkts-lint
+        with:
+          path: ~/.cargo/bin/oxk
+          key: ${{ runner.os }}-arkts-lint-bc16abcbcff59558146f4b85a766dcda8fa14c36
       - name: Install ArkTS linter
+        if: steps.cache-arkts-lint.outputs.cache-hit != 'true'
         env:
           CARGO_NET_GIT_FETCH_WITH_CLI: "true"
         run: cargo install --git https://github.com/ohos-rs/oxc-ark --rev bc16abcbcff59558146f4b85a766dcda8fa14c36 --locked oxk
