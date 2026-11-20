@@ -1,6 +1,7 @@
 import { act, fireEvent, render } from "@testing-library/react-native"
 import { router } from "expo-router"
 
+import { useAuth } from "@/features/auth/hooks/auth-hooks"
 import { useHealth } from "@/features/health"
 import { useInjuries } from "@/features/recovery"
 import { usePlanPreferences } from "@/features/workout"
@@ -29,6 +30,7 @@ jest.mock("react-native-safe-area-context", () => ({
 
 beforeEach(() => {
   jest.clearAllMocks()
+  jest.mocked(useAuth).mockReturnValue({ user: { id: "user-1" } } as never)
   jest.mocked(useHealth).mockReturnValue({
     sex: "Male",
     plan: { goal: "Maintain", sessions: 3, activity: "Moderate", targetWeightKg: null },

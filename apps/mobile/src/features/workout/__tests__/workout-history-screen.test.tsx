@@ -81,10 +81,7 @@ test("opens a saved workout and retries pagination without hiding existing entri
   loadMore.mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce(undefined)
   const screen = await render(<WorkoutHistoryScreen />)
   await fireEvent.press(screen.getByText("Strength day"))
-  expect(router.push).toHaveBeenCalledWith({
-    pathname: "/workout-history/[id]",
-    params: { id: "workout-1" },
-  })
+  expect(router.push).toHaveBeenCalledWith("/workout-history/workout-1")
   await fireEvent.press(screen.getByText("Load more"))
   expect(await screen.findByText("Could not load more workouts. Please try again.")).toBeTruthy()
   expect(screen.getByText("Strength day")).toBeTruthy()
