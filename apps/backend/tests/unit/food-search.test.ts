@@ -57,6 +57,44 @@ describe("food search normalization", () => {
 })
 
 describe("food catalog search", () => {
+  it("finds common unaccented and regional Vietnamese queries", async () => {
+    const cases = [
+      { query: "ga nuong", name: "Gà nướng không rõ phần và tình trạng da" },
+      { query: "thom", name: "Dứa sống" },
+      { query: "heo", name: "Thịt lợn xay sống" },
+    ]
+    const entries = cases.map(({ name }) => {
+      const entry = vietnameseFoods.find((food) => food.name_vi === name)
+      if (!entry) throw new Error(`Missing Vietnamese food: ${name}`)
+      return entry
+    })
+    const namespace = {
+      get: () => ({
+        search: async () => ({ chunks: [] }),
+        items: {
+          list: async ({ key }: { key: string }) => ({ result: [{ id: key, key }] }),
+          get: (key: string) => ({
+            download: async () => {
+              const food = { ...rice, id: key.replace(/\.txt$/, "") }
+              const text = JSON.stringify(food)
+              return { body: new Blob([text]).stream(), size: text.length }
+            },
+          }),
+        },
+      }),
+    } as unknown as AiSearchNamespace
+    const { d1 } = createTestDatabase()
+    await withWorkerBindings({ AI_SEARCH: namespace }, async () => {
+      for (const [index, { query, name }] of cases.entries()) {
+        const result = await Foods.search({ q: query, limit: 100 }, d1)
+        expect(result.foods).toContainEqual({
+          ...rice,
+          id: `usda-fdc-${entries[index]!.fdc_id}`,
+          name,
+        })
+      }
+    })
+  })
   it("finds Vietnamese names, aliases, and English names using USDA nutrients", async () => {
     const entry = vietnameseFoods.find((food) => food.fdc_id === 2346406)
     expect(entry).toBeDefined()
