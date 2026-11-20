@@ -15,7 +15,12 @@
       "bundleIdentifier": "com.fitwear.mobile"
     },
     "android": {
-      "permissions": ["android.permission.CAMERA"],
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.health.READ_WEIGHT",
+        "android.permission.health.READ_HEART_RATE",
+        "android.permission.health.WRITE_EXERCISE"
+      ],
       "package": "com.fitwear.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -32,6 +37,15 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "react-native-health-connect",
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "Read your weight and heart rate when you request them.",
+          "NSHealthUpdateUsageDescription": "Save completed workouts you choose to share.",
+          "background": false
+        }
+      ],
       [
         "expo-image-picker",
         {

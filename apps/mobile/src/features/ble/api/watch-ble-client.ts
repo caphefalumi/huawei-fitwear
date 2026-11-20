@@ -56,7 +56,6 @@ async function requestAndroidBlePermissions(): Promise<boolean> {
     const result = await PermissionsAndroid.requestMultiple([
       PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
       PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
     ])
     return (
       result["android.permission.BLUETOOTH_SCAN"] === PermissionsAndroid.RESULTS.GRANTED &&
@@ -205,6 +204,7 @@ export class WatchBleClient {
           // Register disconnect listener immediately so drops during discovery are caught
           this.disconnectSub = connected.onDisconnected((_error, device) => {
             if (session !== this.session) return
+            this.session++
             this.cleanupSubscriptions({ keepStateListener: true })
             if (this.connectedDevice?.id === device?.id) {
               this.connectedDevice = null

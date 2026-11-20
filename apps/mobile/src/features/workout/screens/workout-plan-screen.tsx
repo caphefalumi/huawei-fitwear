@@ -1,5 +1,5 @@
 import { Image } from "expo-image"
-import { router, useFocusEffect } from "expo-router"
+import { router, useFocusEffect, type Href } from "expo-router"
 import { useCallback, useEffect, useState } from "react"
 import { StyleSheet, Text, View } from "react-native"
 import Animated, { FadeInUp } from "react-native-reanimated"
@@ -131,6 +131,13 @@ export function WorkoutPlanScreen() {
           title="Workout plan"
           subtitle={`${plan.sessions ?? 3}x/week · ${minutes} min · ${plan.goal}`}
         />
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel="Workout history"
+          onPress={() => router.push("/workout-history" as Href)}
+        >
+          <Text style={styles.viewLink}>Workout history ›</Text>
+        </Pressable>
 
         <View style={styles.week}>
           {week.map(({ date, routine }) => {

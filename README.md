@@ -24,13 +24,16 @@ Meet VoocHealth, a fitness companion for your phone with a HarmonyOS watch app. 
 ## Features
 
 - **Workouts**
-  Track sessions, exercises, sets, and weights. Explore exercise technique guides as you train and revisit your workout history.
+  Log sets and weights, revisit saved workouts, and get load suggestions based on completed sets. Edit routines with warm-ups and supersets; routine edits are stored on the current device. Export and import completed workouts in Account & data.
 
 - **Meals and nutrition**
   Log meals and portions and follow your daily nutrition. Add foods manually, scan a packaged-food barcode, or use a photo to get an estimate you can review and edit before logging.
 
 - **Progress and recovery**
   Keep your weight, profile, and recovery schedule alongside your training and nutrition records. Your account keeps your history available across sessions.
+
+- **Device health**
+  On supported devices, explicitly read weight and heart rate or share a completed workout with Apple Health or Health Connect. These integrations require a native development build and device permissions; Apple Health also requires HealthKit provisioning.
 
 > Meal photo estimates are provided as guidance, not measurements.
 

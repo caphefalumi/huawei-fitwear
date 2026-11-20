@@ -26,6 +26,10 @@ export type RoutineExercise = {
   /** Rest after each set, in seconds. */
   rest: number
   liked?: boolean
+  /** Warm-ups are performed before working sets. */
+  warmUp?: boolean
+  /** Adjacent exercises with the same value are performed as a superset. */
+  superset?: string
 }
 export type Routine = {
   name: string
@@ -52,6 +56,7 @@ export type PlanInput = {
   experience?: Experience
   /** Reps the user chose to keep after a workout, by `repTargetKey`. */
   repTargets?: Record<string, number>
+  customRoutines?: Record<string, Routine>
 }
 
 /** Rep targets are kept per routine, so Upper A and Upper B can differ. */
@@ -396,7 +401,46 @@ export function routineOn(date: Date, input: PlanInput): Routine {
     const week = Math.floor(daysBetween(FIRST_WEEK, today) / 7)
     kind = (week * schedule.length + slot) % 2 ? "Full Body B" : "Full Body A"
   }
-  return sessionFor(kind, input, today, !!period || !!wholeBody(UNWELL_AREA))
+  const generated = sessionFor(kind, input, today, !!period || !!wholeBody(UNWELL_AREA))
+  const custom = input.customRoutines?.[kind]
+  if (!custom) return generated
+  const exercises = custom.exercises.flatMap((item) => {
+    const catalog = findExercise(item.key)
+    if (
+      !catalog ||
+      input.injuries.some(
+        (injury) =>
+          !isWholeBody(injury.area) &&
+          phaseOn(injury, today) === "exclude" &&
+          affects(injury.area, catalog),
+      )
+    )
+      return []
+    const light =
+      !!period ||
+      !!wholeBody(UNWELL_AREA) ||
+      input.injuries.some(
+        (injury) =>
+          !isWholeBody(injury.area) &&
+          phaseOn(injury, today) === "light" &&
+          affects(injury.area, catalog),
+      )
+    const sets = light ? Math.min(item.sets, 2) : item.sets
+    return [
+      { ...item, sets, prescription: `${sets}x${item.reps}${item.unit === "seconds" ? "s" : ""}` },
+    ]
+  })
+  return {
+    ...custom,
+    exercises,
+    sets: exercises.reduce((sum, item) => sum + item.sets, 0),
+    minutes: Math.round(
+      exercises.reduce(
+        (sum, item) => sum + (item.sets * (SET_SECONDS + item.rest)) / 60 + SETUP_MINUTES,
+        0,
+      ),
+    ),
+  }
 }
 
 export function routinesFor(input: PlanInput, date = new Date()): RoutinePair {

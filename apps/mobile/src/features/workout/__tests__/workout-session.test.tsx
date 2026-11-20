@@ -1,9 +1,12 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { act, fireEvent, render } from "@testing-library/react-native"
 import { router, useLocalSearchParams } from "expo-router"
 
+import { useAuth } from "@/features/auth"
 import { dateKey, useHealth } from "@/features/health"
 import { useInjuries } from "@/features/recovery"
 import { usePlanPreferences, useTrainingWeights } from "@/features/workout"
+import { writeWorkout } from "@/features/workout/api/workout-api"
 import { RoutineScreen } from "@/features/workout/screens/routine-screen"
 import { SessionScreen } from "@/features/workout/screens/session-screen"
 import { useWorkoutLog } from "@/features/workout/store/workout-log.store"
@@ -13,6 +16,15 @@ import { planNow, useDemoClock } from "@/lib/time/demo-clock"
 jest.mock("expo-router", () => ({
   router: { push: jest.fn(), back: jest.fn(), dismissTo: jest.fn() },
   useLocalSearchParams: jest.fn(),
+}))
+jest.mock("@/features/auth", () => ({
+  ...jest.requireActual("@/features/auth"),
+  useAuth: jest.fn(),
+}))
+jest.mock("@/features/workout/api/workout-api", () => ({ writeWorkout: jest.fn() }))
+jest.mock("@/lib/api/client", () => ({
+  ...jest.requireActual("@/lib/api/client"),
+  apiRequest: jest.fn().mockResolvedValue({ exercises: [] }),
 }))
 jest.mock("@/features/health", () => ({
   ...jest.requireActual("@/features/health"),
@@ -40,6 +52,8 @@ const shift = (date: Date, days: number) => {
 
 beforeEach(() => {
   jest.clearAllMocks()
+  jest.mocked(useAuth).mockReturnValue({ user: { id: "user-1" } } as never)
+  jest.mocked(writeWorkout).mockResolvedValue({} as never)
   jest.mocked(useHealth).mockReturnValue({
     sex: "Male",
     weightKg: 70,
@@ -104,7 +118,13 @@ test("runs set by set with rest, then sums up and keeps the new reps", async () 
   jest.useFakeTimers()
   const routine = routineOn(planNow(), input)
   const first = routine.exercises[0]!
-  const screen = await render(<SessionScreen />)
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const screen = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await screen.findByRole("header", { name: first.name })
 
   expect(screen.getByRole("header", { name: first.name })).toBeTruthy()
   expect(screen.getByText(new RegExp(`^Set 1 of ${first.sets}`))).toBeTruthy()
@@ -130,8 +150,28 @@ test("runs set by set with rest, then sums up and keeps the new reps", async () 
   expect(screen.getByText(String(routine.exercises.length))).toBeTruthy()
   expect(screen.getByText(String(routine.sets))).toBeTruthy()
   expect(screen.getByText("Use these reps next time")).toBeTruthy()
+  jest.mocked(writeWorkout).mockRejectedValueOnce(new Error("Network unavailable"))
+  await fireEvent.press(screen.getByText("Save workout"))
+  expect(screen.getByRole("alert")).toBeTruthy()
+  expect(router.dismissTo).not.toHaveBeenCalled()
+  const firstAttempt = jest.mocked(writeWorkout).mock.calls[0]![0]
 
-  await fireEvent.press(screen.getByText("Done"))
+  await fireEvent.press(screen.getByText("Save workout"))
+  expect(jest.mocked(writeWorkout).mock.calls[1]![0]).toEqual(firstAttempt)
+  expect(writeWorkout).toHaveBeenCalledWith(
+    expect.objectContaining({
+      path: "/workouts/completed",
+      body: expect.objectContaining({
+        sets: expect.arrayContaining([
+          expect.objectContaining({
+            exerciseId: first.key,
+            userConfirmedReps: first.reps + 1,
+            weightKg: expect.any(Number),
+          }),
+        ]),
+      }),
+    }),
+  )
   expect(usePlanPreferences.getState().repTargets).toEqual({
     [repTargetKey(routine.name, first.key)]: first.reps + 1,
   })

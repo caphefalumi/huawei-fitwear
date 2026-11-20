@@ -36,6 +36,7 @@ export type WorkoutSet = {
   detectedReps: number | null
   restDurationSeconds: number | null
   avgHrBpm: number | null
+  isWarmup?: boolean
   exercise: Exercise
 }
 

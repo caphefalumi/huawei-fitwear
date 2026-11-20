@@ -1,22 +1,35 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import * as Crypto from "expo-crypto"
 import * as Haptics from "expo-haptics"
 import { router, useLocalSearchParams } from "expo-router"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { StyleSheet, Text, View } from "react-native"
 
 import { BackHeader, Button, Card, PageHeading, Screen } from "@/components/ui"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Pressable } from "@/components/ui/pressable"
 import { Toggle } from "@/components/ui/toggle"
+import { useAuth } from "@/features/auth"
 import { dateKey } from "@/features/health"
 import { posthog } from "@/lib/analytics/posthog"
+import { apiErrorMessage, apiRequest } from "@/lib/api/client"
 import { planNow, usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
 
+import { writeWorkout } from "../api/workout-api"
+import { workoutQueryKeys } from "../hooks/workout-hooks"
 import { usePlanInput, usePlanPreferences } from "../store/plan-preferences.store"
-import { formatLoad, loadUnit, useLoads } from "../store/training-weights.store"
+import { formatLoad, loadStep, loadUnit, useLoads } from "../store/training-weights.store"
 import { useWorkoutLog } from "../store/workout-log.store"
 import { findExercise } from "../utils/catalog"
-import { fromDateKey, repTargetKey, routineOn, type RoutineExercise } from "../utils/routines"
+import { nextLoad, type ExerciseProgression } from "../utils/progression"
+import {
+  fromDateKey,
+  repTargetKey,
+  routineOn,
+  type PlanInput,
+  type RoutineExercise,
+} from "../utils/routines"
 
 const REST_EXTRA_SECONDS = 15
 const TICK_MS = 250
@@ -34,12 +47,7 @@ const average = (values: number[]) =>
 
 type Phase = "set" | "rest" | "summary"
 
-function useWeightLabel(exercise?: RoutineExercise) {
-  const { loadFor } = useLoads()
-  const catalog = findExercise(exercise?.key)
-  const load = catalog ? loadFor(catalog) : null
-  return load && catalog ? `${formatLoad(load.kg)} ${loadUnit(catalog)}` : "Body weight"
-}
+type LoggedSet = { reps: number; weightKg: number }
 
 function Stat({ value, label }: { value: string; label: string }) {
   return (
@@ -50,22 +58,70 @@ function Stat({ value, label }: { value: string; label: string }) {
   )
 }
 
-/** Guided workout: one set at a time, a rest timer between sets, then a summary. */
 export function SessionScreen() {
-  const { date: param } = useLocalSearchParams<{ date?: string }>()
-  const planToday = usePlanNow()
   const input = usePlanInput()
+  const { user } = useAuth()
+  const { routineOwner, routineStorageError, loadRoutines } = usePlanPreferences()
+  if (!user || routineOwner !== user.id || routineStorageError) {
+    return (
+      <Screen>
+        <BackHeader label="Back" onPress={() => router.back()} />
+        <PageHeading
+          title={routineStorageError ? "Could not load routines" : "Loading routines…"}
+        />
+        {routineStorageError && user ? (
+          <Button label="Retry" onPress={() => loadRoutines(user.id)} />
+        ) : null}
+      </Screen>
+    )
+  }
+  return <ActiveSession input={input} />
+}
+
+/** Guided workout: one set at a time, a rest timer between sets, then a summary. */
+function ActiveSession({ input }: { input: PlanInput }) {
+  const { date: param } = useLocalSearchParams<{ date?: string }>()
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
+  const planToday = usePlanNow()
   // Freeze the routine at the start so plan changes mid-workout don't reshuffle it.
   const [routine] = useState(() => routineOn(fromDateKey(param) ?? planToday, input))
-  const slots = routine.exercises.flatMap((exercise, index) =>
-    Array.from({ length: exercise.sets }, (_, set) => ({ index, set })),
-  )
+  const progression = useQuery({
+    queryKey: [...workoutQueryKeys.all(user?.id ?? "signed-out"), "progression"],
+    queryFn: ({ signal }) =>
+      apiRequest<{ exercises: ExerciseProgression[] }>("/workouts/progression", { signal }),
+    enabled: Boolean(user?.id),
+  })
+  const slots: { index: number; set: number }[] = []
+  for (let index = 0; index < routine.exercises.length;) {
+    const first = routine.exercises[index]!
+    let end = index + 1
+    if (first.superset) {
+      while (end < routine.exercises.length && routine.exercises[end]!.superset === first.superset)
+        end++
+    }
+    const rounds = Math.max(...routine.exercises.slice(index, end).map((entry) => entry.sets))
+    for (let set = 0; set < rounds; set++) {
+      for (let member = index; member < end; member++) {
+        if (set < routine.exercises[member]!.sets) slots.push({ index: member, set })
+      }
+    }
+    index = end
+  }
   const saveRepTargets = usePlanPreferences((state) => state.saveRepTargets)
   const addFinished = useWorkoutLog((state) => state.add)
 
   const [phase, setPhase] = useState<Phase>("set")
   const [position, setPosition] = useState(0)
-  const [logged, setLogged] = useState<(number | undefined)[][]>(() =>
+  const [skipped, setSkipped] = useState<number[]>([])
+  const { loadFor } = useLoads()
+  const [weights, setWeights] = useState(() =>
+    routine.exercises.map((item) => {
+      const catalog = findExercise(item.key)
+      return catalog ? (loadFor(catalog)?.kg ?? 0) : 0
+    }),
+  )
+  const [logged, setLogged] = useState<(LoggedSet | undefined)[][]>(() =>
     routine.exercises.map((exercise) => Array.from({ length: exercise.sets }, () => undefined)),
   )
   const [draft, setDraft] = useState(routine.exercises[0]?.reps ?? 0)
@@ -75,6 +131,26 @@ export function SessionScreen() {
   const [finishedAt, setFinishedAt] = useState<number | null>(null)
   const [keepReps, setKeepReps] = useState(true)
   const [leaving, setLeaving] = useState(false)
+  const [saveId] = useState(() => Crypto.randomUUID())
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const appliedProgression = useRef(false)
+  const [skipProgression, setSkipProgression] = useState(false)
+
+  useEffect(() => {
+    const records = progression.data?.exercises
+    if (!records || appliedProgression.current) return
+    appliedProgression.current = true
+    setWeights((current) =>
+      routine.exercises.map((item, index) => {
+        const history = records.find((entry) => entry.exerciseId === item.key)
+        const exercise = findExercise(item.key)
+        return history && exercise && !item.warmUp && exercise.equipment !== "bodyweight"
+          ? nextLoad(history, item.sets, loadStep(exercise))
+          : (current[index] ?? 0)
+      }),
+    )
+  }, [progression.data, routine])
 
   useEffect(() => {
     if (phase === "summary") return
@@ -91,7 +167,12 @@ export function SessionScreen() {
 
   const slot = slots[Math.min(position, slots.length - 1)]
   const exercise = routine.exercises[slot?.index ?? 0]
-  const weight = useWeightLabel(exercise)
+  const catalog = findExercise(exercise?.key)
+  const weightKg = weights[slot?.index ?? 0] ?? 0
+  const weight =
+    catalog && catalog.equipment !== "bodyweight"
+      ? `${formatLoad(weightKg)} ${loadUnit(catalog)}`
+      : "Body weight"
 
   const finish = () => {
     setFinishedAt(Date.now())
@@ -102,12 +183,17 @@ export function SessionScreen() {
     if (!slot || !exercise) return
     setLogged((previous) =>
       previous.map((sets, index) =>
-        index === slot.index ? sets.map((value, set) => (set === slot.set ? draft : value)) : sets,
+        index === slot.index
+          ? sets.map((value, set) => (set === slot.set ? { reps: draft, weightKg } : value))
+          : sets,
       ),
     )
-    const following = slots[position + 1]
+    const next = slots.findIndex(
+      (entry, index) => index > position && !skipped.includes(entry.index),
+    )
+    const following = slots[next]
     if (!following) return finish()
-    setPosition(position + 1)
+    setPosition(next)
     if (following.index !== slot.index) setDraft(routine.exercises[following.index]!.reps)
     setRestEndsAt(Date.now() + exercise.rest * 1000)
     setNow(Date.now())
@@ -115,8 +201,11 @@ export function SessionScreen() {
   }
 
   const skipExercise = () => {
+    if (!slot) return
+    setSkipped((previous) => [...previous, slot.index])
     const following = slots.findIndex(
-      (item, index) => index > position && item.index !== slot?.index,
+      (item, index) =>
+        index > position && item.index !== slot.index && !skipped.includes(item.index),
     )
     if (following < 0) return finish()
     setPosition(following)
@@ -126,20 +215,76 @@ export function SessionScreen() {
 
   // Summary numbers from what was actually logged.
   const done = routine.exercises
-    .map((item, index) => ({ item, sets: logged[index]!.filter((value) => value !== undefined) }))
+    .map((item, index) => ({
+      item,
+      sets: logged[index]!.filter((value): value is LoggedSet => value !== undefined),
+    }))
     .filter(({ sets }) => sets.length)
   const totalSets = done.reduce((sum, { sets }) => sum + sets.length, 0)
   const sum = (unit: RoutineExercise["unit"]) =>
     done
       .filter(({ item }) => item.unit === unit)
-      .reduce((total, { sets }) => total + sets.reduce((acc, value) => acc + value, 0), 0)
-  const changed = done.filter(({ item, sets }) => average(sets) !== item.reps)
+      .reduce((total, { sets }) => total + sets.reduce((acc, value) => acc + value.reps, 0), 0)
+  const changed = done.filter(({ item, sets }) => {
+    const reps = average(sets.map((set) => set.reps))
+    return reps > 0 && reps !== item.reps
+  })
 
-  const close = () => {
+  const close = async () => {
+    if (saving) return
+    if (totalSets) {
+      if (!user?.id) {
+        setSaveError("Sign in to save your workout.")
+        return
+      }
+      setSaving(true)
+      setSaveError(null)
+      try {
+        const sets = slots
+          .flatMap(({ index, set }) => {
+            const entry = logged[index]?.[set]
+            const item = routine.exercises[index]
+            return entry && item
+              ? [
+                  {
+                    exerciseId: item.key,
+                    weightKg: entry.weightKg,
+                    isWarmup: Boolean(item.warmUp),
+                    targetReps: item.reps,
+                    userConfirmedReps: entry.reps,
+                    restDurationSeconds: item.rest,
+                  },
+                ]
+              : []
+          })
+          .map((entry, index) => ({ ...entry, setIndex: index + 1 }))
+        await writeWorkout({
+          path: "/workouts/completed",
+          method: "POST",
+          body: {
+            id: saveId,
+            sessionTitle: routine.name,
+            workoutSplit: routine.name,
+            startedAt: new Date(startedAt).toISOString(),
+            completedAt: new Date(finishedAt ?? Date.now()).toISOString(),
+            sets,
+          },
+        })
+        void queryClient.invalidateQueries({ queryKey: workoutQueryKeys.all(user.id) })
+      } catch (error) {
+        setSaveError(apiErrorMessage(error, "your workout", "save"))
+        setSaving(false)
+        return
+      }
+      setSaving(false)
+    }
     if (keepReps && changed.length)
       saveRepTargets(
         Object.fromEntries(
-          changed.map(({ item, sets }) => [repTargetKey(routine.name, item.key), average(sets)]),
+          changed.map(({ item, sets }) => [
+            repTargetKey(routine.name, item.key),
+            average(sets.map((set) => set.reps)),
+          ]),
         ),
       )
     if (totalSets) {
@@ -152,6 +297,35 @@ export function SessionScreen() {
       })
     }
     router.dismissTo("/workout")
+  }
+
+  if (!skipProgression && !progression.data) {
+    return (
+      <Screen contentStyle={styles.content}>
+        <BackHeader label="Back" onPress={() => router.back()} />
+        <PageHeading
+          title={progression.isError ? "Could not load previous workouts" : "Preparing workout"}
+          subtitle={
+            progression.isError
+              ? "Retry for progression suggestions, or continue without them."
+              : "Loading your previous training…"
+          }
+        />
+        {progression.isError ? (
+          <>
+            <Button label="Retry" onPress={() => void progression.refetch()} />
+            <Button
+              label="Continue without suggestions"
+              variant="secondary"
+              onPress={() => {
+                appliedProgression.current = true
+                setSkipProgression(true)
+              }}
+            />
+          </>
+        ) : null}
+      </Screen>
+    )
   }
 
   if (!exercise || !slot)
@@ -192,13 +366,29 @@ export function SessionScreen() {
               <View key={item.key} style={styles.summaryRow}>
                 <Text style={styles.summaryName}>{item.name}</Text>
                 <Text style={styles.summaryValue}>
-                  {sets.join(", ")}
+                  {sets.map((set) => set.reps).join(", ")}
                   {item.unit === "seconds" ? "s" : " reps"}
                 </Text>
               </View>
             ))}
           </Card>
         ) : null}
+        {progression.data
+          ? done.map(({ item, sets }) => {
+              const previous = progression.data.exercises.find(
+                (entry) => entry.exerciseId === item.key,
+              )
+              const best = Math.max(
+                0,
+                ...sets.filter((set) => set.reps > 0).map((set) => set.weightKg),
+              )
+              return previous && best > previous.maxWeightKg ? (
+                <Text key={item.key} style={styles.summaryMeta}>
+                  New weight record: {item.name} · {formatLoad(best)} kg
+                </Text>
+              ) : null
+            })
+          : null}
 
         {changed.length ? (
           <View style={styles.keep}>
@@ -217,7 +407,16 @@ export function SessionScreen() {
           </View>
         ) : null}
 
-        <Button label="Done" onPress={close} />
+        {saveError ? (
+          <Text accessibilityRole="alert" style={styles.summaryMeta}>
+            {saveError}
+          </Text>
+        ) : null}
+        <Button
+          label={totalSets ? "Save workout" : "Done"}
+          onPress={() => void close()}
+          busy={saving}
+        />
       </Screen>
     )
   }
@@ -292,6 +491,40 @@ export function SessionScreen() {
               </Pressable>
             </View>
 
+            {catalog && catalog.equipment !== "bodyweight" ? (
+              <Card style={styles.repCard}>
+                <View style={styles.stepper}>
+                  <Pressable
+                    style={styles.stepButton}
+                    accessibilityLabel="Decrease weight"
+                    onPress={() =>
+                      setWeights((values) =>
+                        values.map((value, index) =>
+                          index === slot.index ? Math.max(0, value - loadStep(catalog)) : value,
+                        ),
+                      )
+                    }
+                  >
+                    <Text style={styles.stepLabel}>−</Text>
+                  </Pressable>
+                  <Text style={styles.stepUnit}>{weight}</Text>
+                  <Pressable
+                    style={styles.stepButton}
+                    accessibilityLabel="Increase weight"
+                    onPress={() =>
+                      setWeights((values) =>
+                        values.map((value, index) =>
+                          index === slot.index ? Math.min(1000, value + loadStep(catalog)) : value,
+                        ),
+                      )
+                    }
+                  >
+                    <Text style={styles.stepLabel}>+</Text>
+                  </Pressable>
+                </View>
+              </Card>
+            ) : null}
+
             <Card style={styles.repCard}>
               <View style={styles.stepper}>
                 <Pressable
@@ -314,7 +547,11 @@ export function SessionScreen() {
                 <Pressable
                   style={styles.stepButton}
                   accessibilityLabel={exercise.unit === "seconds" ? "More seconds" : "More reps"}
-                  onPress={() => setDraft((value) => value + (exercise.unit === "seconds" ? 5 : 1))}
+                  onPress={() =>
+                    setDraft((value) =>
+                      Math.min(999, value + (exercise.unit === "seconds" ? 5 : 1)),
+                    )
+                  }
                 >
                   <Text style={styles.stepLabel}>+</Text>
                 </Pressable>

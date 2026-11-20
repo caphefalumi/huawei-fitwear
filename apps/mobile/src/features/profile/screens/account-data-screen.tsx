@@ -1,3 +1,5 @@
+import { useQueryClient } from "@tanstack/react-query"
+import { Directory, File } from "expo-file-system"
 import { router } from "expo-router"
 import { useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
@@ -6,13 +8,64 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Pressable } from "@/components/ui/pressable"
 import { Sheet, SheetActions } from "@/components/ui/sheet"
 import { useAuth } from "@/features/auth"
+import { workoutQueryKeys } from "@/features/workout/hooks/workout-hooks"
 import { Palette as C } from "@/theme"
+
+import { exportWorkoutArchive, importWorkoutArchive } from "../workout-portability"
 
 export function AccountDataScreen() {
   const insets = useSafeAreaInsets()
   const { user, deleteAccount, pending } = useAuth()
   const [confirming, setConfirming] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const [portabilityBusy, setPortabilityBusy] = useState(false)
+  const [portabilityMessage, setPortabilityMessage] = useState<string | null>(null)
+
+  const exportWorkouts = async () => {
+    if (!user || portabilityBusy) return
+    setPortabilityBusy(true)
+    setPortabilityMessage(null)
+    try {
+      const archive = await exportWorkoutArchive(user.id)
+      const directory = await Directory.pickDirectoryAsync()
+      const file = directory.createFile(
+        `voochealth-workouts-${Date.now()}.json`,
+        "application/json",
+      )
+      await file.write(archive.text)
+      setPortabilityMessage(
+        `Saved ${archive.completed} completed workouts.${archive.unfinished ? ` ${archive.unfinished} unfinished workouts were not included.` : ""}`,
+      )
+    } catch (error) {
+      setPortabilityMessage(
+        error instanceof Error ? error.message : "Could not export workouts. Please try again.",
+      )
+    } finally {
+      setPortabilityBusy(false)
+    }
+  }
+
+  const importWorkouts = async () => {
+    if (!user || portabilityBusy) return
+    setPortabilityBusy(true)
+    setPortabilityMessage(null)
+    try {
+      const selection = await File.pickFileAsync({ mimeTypes: ["application/json", "text/plain"] })
+      if (selection.canceled) return
+      const count = await importWorkoutArchive(await selection.result.text(), user.id)
+      setPortabilityMessage(
+        `Imported ${count} completed workouts. Existing matching workouts were kept.`,
+      )
+    } catch (error) {
+      setPortabilityMessage(
+        error instanceof Error ? error.message : "Could not import workouts. Please try again.",
+      )
+    } finally {
+      await queryClient.invalidateQueries({ queryKey: workoutQueryKeys.all(user.id) })
+      setPortabilityBusy(false)
+    }
+  }
 
   const removeAccount = async () => {
     setDeleteError(null)
@@ -53,6 +106,41 @@ export function AccountDataScreen() {
               {user?.email ?? "—"}
             </Text>
           </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text accessibilityRole="header" style={styles.sectionTitle}>
+            Workout history
+          </Text>
+          <Text style={styles.consequence}>
+            Export completed workouts to a JSON file, or import a VoocHealth workout file.
+            Unfinished workouts are not included.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Export workout history"
+            disabled={portabilityBusy || !user}
+            style={styles.emailRow}
+            onPress={() => void exportWorkouts()}
+          >
+            <Text style={styles.rowLabel}>
+              {portabilityBusy ? "Working…" : "Export workout history"}
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Import workout history"
+            disabled={portabilityBusy || !user}
+            style={styles.emailRow}
+            onPress={() => void importWorkouts()}
+          >
+            <Text style={styles.rowLabel}>Import workout history</Text>
+          </Pressable>
+          {portabilityMessage ? (
+            <Text accessibilityRole="alert" selectable style={styles.consequence}>
+              {portabilityMessage}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.deleteArea}>

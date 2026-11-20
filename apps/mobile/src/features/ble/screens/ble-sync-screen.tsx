@@ -110,16 +110,14 @@ export function BleSyncScreen() {
     errorText,
     messages,
     connect,
-    connectSimulatedWatch,
-    simulateWatchNotification,
     sendTextToWatch,
     disconnect,
     clearMessages,
-  } = useWatchBle({ enableSimulator: true })
+  } = useWatchBle()
 
   const [imu, setImu] = useState<ImuPacket | null>(null)
   const [imuAge, setImuAge] = useState(0)
-  const [phoneDraft, setPhoneDraft] = useState("Start Set: Bench Press")
+  const [phoneDraft, setPhoneDraft] = useState("")
   const [sendFeedback, setSendFeedback] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const lastPacketMs = useRef<number>(0)
@@ -134,6 +132,13 @@ export function BleSyncScreen() {
       posthogLog.info("watch connection established", { connection_mode: mode })
     }
     previousConnectionMode.current = mode
+  }, [mode])
+
+  useEffect(() => {
+    if (mode === "disconnected") {
+      setImu(null)
+      lastPacketMs.current = 0
+    }
   }, [mode])
 
   // Monitor the latest incoming watch message for IMU data
@@ -242,10 +247,10 @@ export function BleSyncScreen() {
               )}
             </View>
             <ThemedText type="title" style={styles.headerTitle}>
-              BLE Sync Test
+              Watch Bluetooth
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              Huawei Watch · IMU Stream & Bidirectional Messaging
+              Start BLE IMU Sync in the VoocHealth app on your HarmonyOS watch.
             </ThemedText>
           </View>
 
@@ -257,7 +262,7 @@ export function BleSyncScreen() {
                 <ThemedText type="smallBold">{statusLabel}</ThemedText>
                 {isConnected && (
                   <ThemedText type="code" themeColor="textSecondary">
-                    UUID: F17E0001 · 1.6 Hz live
+                    VoocHealth watch service · F17E0001
                   </ThemedText>
                 )}
               </View>
@@ -287,39 +292,11 @@ export function BleSyncScreen() {
                       Connect Watch
                     </ThemedText>
                   </Pressable>
-
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.btn,
-                      styles.btnSecondary,
-                      pressed && styles.btnPressed,
-                    ]}
-                    onPress={connectSimulatedWatch}
-                  >
-                    <ThemedText type="smallBold" style={styles.btnText}>
-                      Simulate Watch
-                    </ThemedText>
-                  </Pressable>
                 </>
               )}
 
               {isConnected && (
                 <>
-                  {mode === "ble-simulated" && (
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.btn,
-                        styles.btnSecondary,
-                        pressed && styles.btnPressed,
-                      ]}
-                      onPress={() => simulateWatchNotification?.()}
-                    >
-                      <ThemedText type="smallBold" style={styles.btnText}>
-                        Emit Packet
-                      </ThemedText>
-                    </Pressable>
-                  )}
-
                   <Pressable
                     style={({ pressed }) => [
                       styles.btn,
@@ -391,12 +368,7 @@ export function BleSyncScreen() {
               Quick Presets:
             </ThemedText>
             <View style={styles.presetRow}>
-              {[
-                "Start Set: Bench Press",
-                "Rest Timer: 60s",
-                "Next: Incline DB 24kg",
-                "Done: Workout Saved",
-              ].map((txt) => (
+              {["Start Set: Bench Press", "Rest Timer: 60s", "Next: Incline DB 24kg"].map((txt) => (
                 <Pressable
                   key={txt}
                   disabled={!isConnected}
@@ -426,39 +398,43 @@ export function BleSyncScreen() {
               )}
             </View>
 
-            {/* Accelerometer */}
-            <View style={styles.sensorBlock}>
-              <ThemedText type="smallBold" style={styles.sensorTitle}>
-                Accelerometer (m/s²)
-              </ThemedText>
-              <AxisRow axis="X" value={imu?.ax ?? 0} max={20} color="#38BDF8" />
-              <AxisRow axis="Y" value={imu?.ay ?? 0} max={20} color="#34D399" />
-              <AxisRow axis="Z" value={imu?.az ?? 0} max={20} color="#F472B6" />
-              <View style={styles.magRow}>
-                <ThemedText type="small" themeColor="textSecondary">
-                  Magnitude:{" "}
-                </ThemedText>
-                <ThemedText type="code">{(imu?.mag ?? 0).toFixed(2)} m/s²</ThemedText>
-              </View>
-            </View>
+            {imu ? (
+              <>
+                {/* Accelerometer */}
+                <View style={styles.sensorBlock}>
+                  <ThemedText type="smallBold" style={styles.sensorTitle}>
+                    Accelerometer (m/s²)
+                  </ThemedText>
+                  <AxisRow axis="X" value={imu?.ax ?? 0} max={20} color="#38BDF8" />
+                  <AxisRow axis="Y" value={imu?.ay ?? 0} max={20} color="#34D399" />
+                  <AxisRow axis="Z" value={imu?.az ?? 0} max={20} color="#F472B6" />
+                  <View style={styles.magRow}>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Magnitude:{" "}
+                    </ThemedText>
+                    <ThemedText type="code">{(imu?.mag ?? 0).toFixed(2)} m/s²</ThemedText>
+                  </View>
+                </View>
 
-            <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
+                <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
 
-            {/* Gyroscope */}
-            <View style={styles.sensorBlock}>
-              <ThemedText type="smallBold" style={styles.sensorTitle}>
-                Gyroscope (rad/s)
-              </ThemedText>
-              <AxisRow axis="X" value={imu?.gx ?? 0} max={10} color="#A78BFA" />
-              <AxisRow axis="Y" value={imu?.gy ?? 0} max={10} color="#FB923C" />
-              <AxisRow axis="Z" value={imu?.gz ?? 0} max={10} color="#FBBF24" />
-            </View>
-
-            {!imu && !isConnected ? (
+                {/* Gyroscope */}
+                <View style={styles.sensorBlock}>
+                  <ThemedText type="smallBold" style={styles.sensorTitle}>
+                    Gyroscope (rad/s)
+                  </ThemedText>
+                  <AxisRow axis="X" value={imu?.gx ?? 0} max={10} color="#A78BFA" />
+                  <AxisRow axis="Y" value={imu?.gy ?? 0} max={10} color="#FB923C" />
+                  <AxisRow axis="Z" value={imu?.gz ?? 0} max={10} color="#FBBF24" />
+                </View>
+              </>
+            ) : (
               <ThemedText type="small" themeColor="textSecondary" style={styles.placeholderText}>
-                Connect to watch to see live IMU data
+                {isConnected
+                  ? "Waiting for IMU data from the watch"
+                  : "Connect to watch to see live IMU data"}
               </ThemedText>
-            ) : null}
+            )}
           </ThemedView>
 
           {/* ── Message log ── */}

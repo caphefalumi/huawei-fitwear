@@ -1,14 +1,17 @@
-import { and, asc, count, desc, eq, gte, isNotNull, lt, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, gte, inArray, isNotNull, lt, ne, sql } from "drizzle-orm"
 import { status } from "elysia"
 
 import { exercises, getDb, workoutSessions, workoutSets } from "../../db"
 import { isDateKey, shiftDateKey, toDateKey } from "../../lib/date"
 import { generateId } from "../../lib/id"
+import { getDatabaseBinding } from "../../worker/bindings"
 import { Exercises } from "../exercises/service"
 import type {
+  CompletedWorkoutBody,
   WorkoutCompleteBody,
   WorkoutCreateBody,
   WorkoutListQuery,
+  WorkoutProgressionQuery,
   WorkoutSetBody,
   WorkoutSetUpdateBody,
   WorkoutStatsQuery,
@@ -34,6 +37,147 @@ export abstract class Workouts {
     if (!row.sessionTitle || !row.workoutSplit) throw badRequest("Title and split are required")
     await getDb(d1).insert(workoutSessions).values(row).run()
     return Workouts.byId(userId, row.id, d1)
+  }
+
+  static async createCompleted(userId: string, body: CompletedWorkoutBody, d1?: D1Database) {
+    const db = getDb(d1)
+    const existing = await db
+      .select({ userId: workoutSessions.userId })
+      .from(workoutSessions)
+      .where(eq(workoutSessions.id, body.id))
+      .get()
+    if (existing) return Workouts.byId(userId, body.id, d1)
+
+    const sessionTitle = body.sessionTitle.trim()
+    const workoutSplit = body.workoutSplit.trim()
+    if (!sessionTitle || !workoutSplit) throw badRequest("Title and split are required")
+    const startedAt = parseTimestamp(body.startedAt)
+    const completedAt = parseTimestamp(body.completedAt)
+    if (completedAt < startedAt) throw badRequest("Completion must not precede the start")
+    if (
+      body.avgHeartRateBpm != null &&
+      body.maxHeartRateBpm != null &&
+      body.avgHeartRateBpm > body.maxHeartRateBpm
+    )
+      throw badRequest("Average heart rate must not exceed maximum")
+    if (new Set(body.sets.map((set) => set.setIndex)).size !== body.sets.length)
+      throw badRequest("Set indexes must be unique")
+
+    const exerciseIds = [...new Set(body.sets.map((set) => set.exerciseId))]
+    if (exerciseIds.length) {
+      const found = await db
+        .select({ id: exercises.id })
+        .from(exercises)
+        .where(inArray(exercises.id, exerciseIds))
+        .all()
+      if (found.length !== exerciseIds.length)
+        throw status(404, { success: false, message: "Exercise not found" })
+    }
+
+    const client = d1 ?? getDatabaseBinding()
+    if (!client) throw new Error("D1Database binding is required")
+    const createdAt = Math.floor(Date.now() / 1000)
+    const sets = body.sets.map((set) => ({ ...set, id: generateId() }))
+    // changes() is evaluated by the second statement in the same D1 transaction:
+    // a concurrent retry that lost the session insert must not insert its sets.
+    await client.batch([
+      client
+        .prepare(`INSERT INTO workout_sessions
+          (id, "userId", "sessionTitle", "workoutSplit", "startedAt", "completedAt",
+           "avgHeartRateBpm", "maxHeartRateBpm", "createdAt")
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`)
+        .bind(
+          body.id,
+          userId,
+          sessionTitle,
+          workoutSplit,
+          Math.floor(startedAt.getTime() / 1000),
+          Math.floor(completedAt.getTime() / 1000),
+          body.avgHeartRateBpm ?? null,
+          body.maxHeartRateBpm ?? null,
+          createdAt,
+        ),
+      client
+        .prepare(`INSERT INTO workout_sets
+          (id, "workoutSessionId", "exerciseId", "setIndex", "weightKg", "targetReps",
+           "detectedReps", "userConfirmedReps", "restDurationSeconds", "avgHrBpm", "isWarmup", "createdAt")
+          SELECT json_extract(value, '$.id'), ?, json_extract(value, '$.exerciseId'),
+            json_extract(value, '$.setIndex'), json_extract(value, '$.weightKg'),
+            coalesce(json_extract(value, '$.targetReps'), 10), json_extract(value, '$.detectedReps'),
+            json_extract(value, '$.userConfirmedReps'), json_extract(value, '$.restDurationSeconds'),
+            json_extract(value, '$.avgHrBpm'), coalesce(json_extract(value, '$.isWarmup'), 0), ?
+          FROM json_each(?) WHERE changes() > 0`)
+        .bind(body.id, createdAt, JSON.stringify(sets)),
+    ])
+    return Workouts.byId(userId, body.id, d1)
+  }
+
+  static async progression(userId: string, query: WorkoutProgressionQuery, d1?: D1Database) {
+    const rows = await getDb(d1)
+      .select({
+        exerciseId: workoutSets.exerciseId,
+        sessionId: workoutSessions.id,
+        completedAt: workoutSessions.completedAt,
+        setIndex: workoutSets.setIndex,
+        weightKg: workoutSets.weightKg,
+        targetReps: workoutSets.targetReps,
+        userConfirmedReps: workoutSets.userConfirmedReps,
+      })
+      .from(workoutSets)
+      .innerJoin(workoutSessions, eq(workoutSets.workoutSessionId, workoutSessions.id))
+      .where(
+        and(
+          eq(workoutSessions.userId, userId),
+          isNotNull(workoutSessions.completedAt),
+          eq(workoutSets.isWarmup, false),
+          query.excludeSessionId ? ne(workoutSessions.id, query.excludeSessionId) : undefined,
+        ),
+      )
+      .orderBy(
+        asc(workoutSets.exerciseId),
+        desc(workoutSessions.completedAt),
+        desc(workoutSessions.id),
+        asc(workoutSets.setIndex),
+      )
+      .all()
+    const exercises = new Map<
+      string,
+      {
+        exerciseId: string
+        latestSessionId: string
+        completedAt: Date | null
+        sets: {
+          setIndex: number
+          weightKg: number
+          targetReps: number
+          userConfirmedReps: number
+        }[]
+        maxWeightKg: number
+      }
+    >()
+    for (const row of rows) {
+      let exercise = exercises.get(row.exerciseId)
+      if (!exercise) {
+        exercise = {
+          exerciseId: row.exerciseId,
+          latestSessionId: row.sessionId,
+          completedAt: row.completedAt,
+          sets: [],
+          maxWeightKg: row.userConfirmedReps > 0 ? row.weightKg : 0,
+        }
+        exercises.set(row.exerciseId, exercise)
+      }
+      if (row.userConfirmedReps > 0)
+        exercise.maxWeightKg = Math.max(exercise.maxWeightKg, row.weightKg)
+      if (row.sessionId === exercise.latestSessionId)
+        exercise.sets.push({
+          setIndex: row.setIndex,
+          weightKg: row.weightKg,
+          targetReps: row.targetReps,
+          userConfirmedReps: row.userConfirmedReps,
+        })
+    }
+    return { exercises: [...exercises.values()] }
   }
 
   static async list(userId: string, query: WorkoutListQuery, d1?: D1Database) {
