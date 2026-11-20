@@ -85,7 +85,12 @@ for (const food of foods) {
     pending.push(food)
   } else if (
     item.metadata?.catalog_sha256 !==
-    new Bun.CryptoHasher("sha256").update(JSON.stringify(food)).digest("hex")
+      new Bun.CryptoHasher("sha256").update(JSON.stringify(food)).digest("hex") &&
+    !(await (async () => {
+      const response = await fetch(`${base}/${encodeURIComponent(item.id)}/download`, { headers })
+      if (!response.ok) throw new Error(`AI Search download ${response.status}: ${item.key}`)
+      return (await response.text()) === JSON.stringify(food)
+    })())
   ) {
     // Never overwrite an existing item: it may be user data or a different catalog release.
     throw new Error(
