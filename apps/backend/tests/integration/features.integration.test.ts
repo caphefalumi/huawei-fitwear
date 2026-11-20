@@ -282,6 +282,13 @@ describe("Persistent feature APIs", () => {
     expect(
       exercises.some((exercise: { muscleGroup: string }) => exercise.muscleGroup === "Shoulders"),
     ).toBe(true)
+    setTestDatabaseBinding({
+      DB: d1,
+      fitwear_kv: createTestKv(),
+      AI_SEARCH: {
+        get: () => ({ search: async () => ({ chunks: [] }) }),
+      } as unknown as AiSearchNamespace,
+    })
     const { foods } = await (await request("/foods?q=rice", session.token)).json()
     expect(foods.length).toBeGreaterThan(0)
     expect(foods.every((food: { caloriesPer100: number }) => food.caloriesPer100 > 0)).toBe(true)

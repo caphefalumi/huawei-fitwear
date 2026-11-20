@@ -3,11 +3,11 @@ import { describe, expect, it } from "bun:test"
 import { readFileSync } from "node:fs"
 
 const migration = readFileSync(
-  new URL("../../migrations/0008_usda_food_catalog.sql", import.meta.url),
+  new URL("../../scripts/usda_food_catalog.sql", import.meta.url),
   "utf8",
 )
 
-describe("USDA food catalog migration", () => {
+describe("USDA food catalog source", () => {
   it("preserves existing foods, imports sourced nutrients and is safe to rerun", () => {
     const db = new Database(":memory:")
     try {

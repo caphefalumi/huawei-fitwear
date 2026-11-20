@@ -27,7 +27,8 @@ export const foods = new Elysia({
     query: FoodModel.searchQuery,
     detail: {
       summary: "Search the food catalogue",
-      description: "Case-insensitive substring search over food names, ordered alphabetically.",
+      description:
+        "Search the food catalogue; omit the query to browse existing foods alphabetically.",
     },
   })
   .get("/barcode/:barcode", ({ params }) => lookupPackagedFood(params.barcode), {
