@@ -1,5 +1,5 @@
 import { onlineManager, QueryClient } from "@tanstack/react-query"
-import { act, render, renderHook, waitFor } from "@testing-library/react-native"
+import { act, cleanup, render, renderHook, waitFor } from "@testing-library/react-native"
 import { AxiosError, type AxiosResponse } from "axios"
 import { addNetworkStateListener, getNetworkStateAsync, NetworkStateType } from "expo-network"
 import * as SecureStore from "expo-secure-store"
@@ -128,41 +128,58 @@ const workoutKey = ["workouts", "member-a", "history"] as const
 const weights = [{ id: "weight-a", loggedDate: "2026-01-01", weightKg: 72.5 }]
 const wifi = { isConnected: true, isInternetReachable: true, type: NetworkStateType.WIFI }
 const airplane = { isConnected: false, isInternetReachable: false, type: NetworkStateType.NONE }
+const clients = new Set<QueryClient>()
+
+function accountWrapper(onClient?: (client: QueryClient) => void) {
+  return createQueryWrapper(AuthProvider, (client) => {
+    client.setDefaultOptions({
+      queries: { gcTime: Infinity, retry: false },
+      mutations: { gcTime: Infinity, retry: false },
+    })
+    clients.add(client)
+    onClient?.(client)
+  })
+}
 
 async function seedSnapshot() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const client = new QueryClient({
+    defaultOptions: { queries: { gcTime: Infinity, retry: false } },
+  })
   const stop = openOfflineCache(client, { accountId: "member-a", sessionId: "session-a" })
-  await client.fetchQuery({ queryKey: weightKey, queryFn: () => Promise.resolve(weights) })
-  client.setQueryData(weightKey, [{ ...weights[0], weightKg: -1 }])
-  await client.fetchQuery({
-    queryKey: mealKey,
-    queryFn: () =>
-      Promise.resolve([
-        {
-          id: "meal-a",
-          name: "Lunch",
-          items: [],
-          macros: { protein: 15, carbs: 24, fat: 10 },
-          imageUrl: "https://private.example/meal",
-          photoId: "private-photo",
-        },
-      ]),
-  })
-  await client.fetchQuery({
-    queryKey: workoutKey,
-    queryFn: () =>
-      Promise.resolve({
-        pages: [{ count: 1, sessions: [{ id: "workout-a", sets: ["raw-attempt"] }] }],
-        pageParams: [0],
-      }),
-  })
-  await client.fetchQuery({
-    queryKey: ["meals", "member-a", "photo", "meal-a"],
-    queryFn: () => Promise.resolve("https://private.example/signed"),
-  })
-  await waitFor(() => expect([...disk.files.values()][0]).toContain("workout-a"))
-  stop()
-  client.clear()
+  try {
+    await client.fetchQuery({ queryKey: weightKey, queryFn: () => Promise.resolve(weights) })
+    client.setQueryData(weightKey, [{ ...weights[0], weightKg: -1 }])
+    await client.fetchQuery({
+      queryKey: mealKey,
+      queryFn: () =>
+        Promise.resolve([
+          {
+            id: "meal-a",
+            name: "Lunch",
+            items: [],
+            macros: { protein: 15, carbs: 24, fat: 10 },
+            imageUrl: "https://private.example/meal",
+            photoId: "private-photo",
+          },
+        ]),
+    })
+    await client.fetchQuery({
+      queryKey: workoutKey,
+      queryFn: () =>
+        Promise.resolve({
+          pages: [{ count: 1, sessions: [{ id: "workout-a", sets: ["raw-attempt"] }] }],
+          pageParams: [0],
+        }),
+    })
+    await client.fetchQuery({
+      queryKey: ["meals", "member-a", "photo", "meal-a"],
+      queryFn: () => Promise.resolve("https://private.example/signed"),
+    })
+    await waitFor(() => expect([...disk.files.values()][0]).toContain("workout-a"))
+  } finally {
+    stop()
+    client.clear()
+  }
 }
 
 async function seedLease(response = authenticated()) {
@@ -173,8 +190,7 @@ async function seedLease(response = authenticated()) {
 
 function renderAccount() {
   const client = { current: null as QueryClient | null }
-  const wrapper = createQueryWrapper(AuthProvider, (queryClient) => {
-    queryClient.setDefaultOptions({ queries: { gcTime: Infinity, retry: false } })
+  const wrapper = accountWrapper((queryClient) => {
     client.current = queryClient
   })
   return renderHook(() => useAuth(), { wrapper }).then((view) => ({
@@ -202,7 +218,10 @@ beforeEach(() => {
   setApiToken(null)
 })
 
-afterEach(() => {
+afterEach(async () => {
+  await cleanup()
+  for (const client of clients) client.clear()
+  clients.clear()
   onlineManager.setOnline(true)
   setApiToken(null)
 })
@@ -211,7 +230,7 @@ test("restores a saved session only after the server validates it", async () => 
   saved.getToken.mockResolvedValue("secret-a")
   request.mockResolvedValue(json(200, authenticated()))
   const { result } = await renderHook(() => useAuth(), {
-    wrapper: createQueryWrapper(AuthProvider),
+    wrapper: accountWrapper(),
   })
   await waitFor(() => expect(result.current.loading).toBe(false))
   expect(result.current.user?.id).toBe("member-a")
@@ -223,7 +242,7 @@ test("offline saved-session validation releases startup without trusting or dele
   onlineManager.setOnline(false)
   request.mockRejectedValue(new AxiosError("Network Error", "ERR_NETWORK"))
   const first = await renderHook(() => useAuth(), {
-    wrapper: createQueryWrapper(AuthProvider),
+    wrapper: accountWrapper(),
   })
   await waitFor(() => expect(first.result.current.loading).toBe(false))
   expect(first.result.current.user).toBeNull()
@@ -237,7 +256,7 @@ test("offline saved-session validation releases startup without trusting or dele
 
   request.mockResolvedValue(json(200, authenticated()))
   const restored = await renderHook(() => useAuth(), {
-    wrapper: createQueryWrapper(AuthProvider),
+    wrapper: accountWrapper(),
   })
   await waitFor(() => expect(restored.result.current.loading).toBe(false))
   expect(restored.result.current.user?.id).toBe(user.id)
@@ -247,7 +266,7 @@ test("revoked credentials cannot restore private account state", async () => {
   saved.getToken.mockResolvedValue("revoked-token")
   request.mockResolvedValue(json(401, { message: "Session expired" }))
   const { result } = await renderHook(() => useAuth(), {
-    wrapper: createQueryWrapper(AuthProvider),
+    wrapper: accountWrapper(),
   })
   await waitFor(() => expect(result.current.loading).toBe(false))
   expect(result.current.user).toBeNull()
@@ -312,7 +331,7 @@ test("shows offline mode if Wi-Fi is connected but the API cannot be reached", a
   await seedLease()
   saved.getToken.mockResolvedValue("secret-a")
   request.mockRejectedValue(new AxiosError("Network Error", "ERR_NETWORK"))
-  const Wrapper = createQueryWrapper(AuthProvider)
+  const Wrapper = accountWrapper()
   const screen = await render(
     <Wrapper>
       <SafeAreaProvider
@@ -408,7 +427,7 @@ test("clears local state on sign-out and cannot restore another account's file a
 
 test("failed login stays signed out and surfaces server error", async () => {
   const { result } = await renderHook(() => useAuth(), {
-    wrapper: createQueryWrapper(AuthProvider),
+    wrapper: accountWrapper(),
   })
   await waitFor(() => expect(result.current.loading).toBe(false))
   request.mockResolvedValue(json(401, { message: "Invalid email or password" }))
@@ -428,7 +447,7 @@ test.each(["sign-in", "sign-up", "request reset", "verify reset", "complete rese
   "offline %s rejects and releases the form instead of queuing until reconnect",
   async (action) => {
     const { result } = await renderHook(() => useAuth(), {
-      wrapper: createQueryWrapper(AuthProvider),
+      wrapper: accountWrapper(),
     })
     await waitFor(() => expect(result.current.loading).toBe(false))
     const actions = {
@@ -463,10 +482,7 @@ test.each(["sign-in", "sign-up", "request reset", "verify reset", "complete rese
 )
 
 test("sign-out clears local private state before server revocation completes", async () => {
-  const client = { current: null as QueryClient | null }
-  const wrapper = createQueryWrapper(AuthProvider, (queryClient) => {
-    client.current = queryClient
-  })
+  const wrapper = accountWrapper()
   const { result } = await renderHook(() => useAuth(), { wrapper })
   await waitFor(() => expect(result.current.loading).toBe(false))
   request.mockResolvedValueOnce(json(200, authenticated()))
@@ -494,7 +510,7 @@ test("sign-out clears local private state before server revocation completes", a
 
 test("deleteAccount deletes user on server and clears local private state", async () => {
   const { result } = await renderHook(() => useAuth(), {
-    wrapper: createQueryWrapper(AuthProvider),
+    wrapper: accountWrapper(),
   })
   await waitFor(() => expect(result.current.loading).toBe(false))
   request.mockResolvedValueOnce(json(200, authenticated()))
@@ -512,7 +528,7 @@ test("deleteAccount deletes user on server and clears local private state", asyn
 
 test("failed account deletion keeps the signed-in user and local session", async () => {
   const { result } = await renderHook(() => useAuth(), {
-    wrapper: createQueryWrapper(AuthProvider),
+    wrapper: accountWrapper(),
   })
   await waitFor(() => expect(result.current.loading).toBe(false))
   request.mockResolvedValueOnce(json(200, authenticated()))

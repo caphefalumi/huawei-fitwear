@@ -1,5 +1,5 @@
 import { onlineManager } from "@tanstack/react-query"
-import { act, fireEvent, waitFor } from "@testing-library/react-native"
+import { act, cleanup, fireEvent, waitFor } from "@testing-library/react-native"
 
 import { useMeals } from "@/features/meals"
 import { MealDetailScreen } from "@/features/meals/screens/meal-detail-screen"
@@ -77,6 +77,7 @@ test("an uncached offline meal shows a reconnect message instead of not found", 
     expect(screen.queryByText("This meal could not be found.")).toBeNull()
     expect(request).not.toHaveBeenCalled()
   } finally {
+    await cleanup()
     onlineManager.setOnline(true)
   }
 })
@@ -92,6 +93,7 @@ test("cached history details remain readable offline without trying to fetch the
     expect(screen.getByText("Cached meal")).toBeTruthy()
     expect(request).not.toHaveBeenCalled()
   } finally {
+    await cleanup()
     onlineManager.setOnline(true)
   }
 })
