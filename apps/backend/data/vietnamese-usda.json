@@ -1,0 +1,2781 @@
+[
+  {
+    "fdc_id": 321360,
+    "name_vi": "Cà chua bi sống",
+    "aliases_vi": ["cà chua nho"],
+    "name_en": "Tomatoes, grape, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 323505,
+    "name_vi": "Cải kale sống",
+    "aliases_vi": ["cải xoăn"],
+    "name_en": "Kale, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 325430,
+    "name_vi": "Đào vàng sống",
+    "aliases_vi": [],
+    "name_en": "Peaches, yellow, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 327046,
+    "name_vi": "Kiwi xanh sống",
+    "aliases_vi": [],
+    "name_en": "Kiwifruit, green, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 327357,
+    "name_vi": "Xuân đào sống",
+    "aliases_vi": ["đào trơn"],
+    "name_en": "Nectarines, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 746769,
+    "name_vi": "Xà lách romaine sống",
+    "aliases_vi": ["xà lách diếp"],
+    "name_en": "Lettuce, cos or romaine, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 746770,
+    "name_vi": "Dưa lưới ruột cam sống",
+    "aliases_vi": [],
+    "name_en": "Melons, cantaloupe, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 746771,
+    "name_vi": "Cam navel sống",
+    "aliases_vi": ["cam rốn"],
+    "name_en": "Oranges, raw, navels",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 746773,
+    "name_vi": "Lê Bartlett sống",
+    "aliases_vi": [],
+    "name_en": "Pears, raw, bartlett",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 747447,
+    "name_vi": "Bông cải xanh sống",
+    "aliases_vi": ["súp lơ xanh"],
+    "name_en": "Broccoli, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 790577,
+    "name_vi": "Hành tây đỏ sống",
+    "aliases_vi": [],
+    "name_en": "Onions, red, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 790646,
+    "name_vi": "Hành tây vàng sống",
+    "aliases_vi": [],
+    "name_en": "Onions, yellow, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 1104647,
+    "name_vi": "Tỏi sống",
+    "aliases_vi": [],
+    "name_en": "Garlic, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 1104962,
+    "name_vi": "Hành tây trắng sống",
+    "aliases_vi": [],
+    "name_en": "Onions, white, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 1105073,
+    "name_vi": "Chuối chín nẫu sống",
+    "aliases_vi": [],
+    "name_en": "Bananas, overripe, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 1105314,
+    "name_vi": "Chuối chín sống",
+    "aliases_vi": [],
+    "name_en": "Bananas, ripe and slightly ripe, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 1750339,
+    "name_vi": "Táo Red Delicious còn vỏ sống",
+    "aliases_vi": [],
+    "name_en": "Apples, red delicious, with skin, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 1750340,
+    "name_vi": "Táo Fuji còn vỏ sống",
+    "aliases_vi": [],
+    "name_en": "Apples, fuji, with skin, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 1750341,
+    "name_vi": "Táo Gala còn vỏ sống",
+    "aliases_vi": [],
+    "name_en": "Apples, gala, with skin, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 1750342,
+    "name_vi": "Táo Granny Smith còn vỏ sống",
+    "aliases_vi": ["táo xanh Granny Smith"],
+    "name_en": "Apples, granny smith, with skin, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 1750343,
+    "name_vi": "Táo Honeycrisp còn vỏ sống",
+    "aliases_vi": [],
+    "name_en": "Apples, honeycrisp, with skin, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2258586,
+    "name_vi": "Cà rốt trưởng thành sống",
+    "aliases_vi": [],
+    "name_en": "Carrots, mature, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2258587,
+    "name_vi": "Cà rốt non sống",
+    "aliases_vi": ["cà rốt baby"],
+    "name_en": "Carrots, baby, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2258588,
+    "name_vi": "Ớt chuông xanh sống",
+    "aliases_vi": ["ớt ngọt xanh"],
+    "name_en": "Peppers, bell, green, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2258589,
+    "name_vi": "Ớt chuông vàng sống",
+    "aliases_vi": ["ớt ngọt vàng"],
+    "name_en": "Peppers, bell, yellow, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2258590,
+    "name_vi": "Ớt chuông đỏ sống",
+    "aliases_vi": ["ớt ngọt đỏ"],
+    "name_en": "Peppers, bell, red, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2258591,
+    "name_vi": "Ớt chuông cam sống",
+    "aliases_vi": ["ớt ngọt cam"],
+    "name_en": "Peppers, bell, orange, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346388,
+    "name_vi": "Xà lách iceberg sống",
+    "aliases_vi": ["xà lách búp"],
+    "name_en": "Lettuce, iceberg, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346389,
+    "name_vi": "Xà lách romaine xanh sống",
+    "aliases_vi": [],
+    "name_en": "Lettuce, romaine, green, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346390,
+    "name_vi": "Xà lách lá đỏ sống",
+    "aliases_vi": [],
+    "name_en": "Lettuce, leaf, red, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346391,
+    "name_vi": "Xà lách lá xanh sống",
+    "aliases_vi": [],
+    "name_en": "Lettuce, leaf, green, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346392,
+    "name_vi": "Hạt thông sống",
+    "aliases_vi": [],
+    "name_en": "Nuts, pine nuts, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346393,
+    "name_vi": "Hạnh nhân nguyên hạt sống",
+    "aliases_vi": [],
+    "name_en": "Nuts, almonds, whole, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346394,
+    "name_vi": "Óc chó Anh sống",
+    "aliases_vi": ["quả óc chó"],
+    "name_en": "Nuts, walnuts, English, halves, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346395,
+    "name_vi": "Hạt hồ đào sống",
+    "aliases_vi": ["hạt pecan"],
+    "name_en": "Nuts, pecans, halves, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346398,
+    "name_vi": "Dứa sống",
+    "aliases_vi": ["thơm", "khóm"],
+    "name_en": "Pineapple, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346399,
+    "name_vi": "Anh đào ngọt đỏ sẫm sống",
+    "aliases_vi": ["cherry đỏ"],
+    "name_en": "Cherries, sweet, dark red, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346400,
+    "name_vi": "Đậu que xanh sống",
+    "aliases_vi": ["đậu cô ve"],
+    "name_en": "Beans, snap, green, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346401,
+    "name_vi": "Khoai tây russet bỏ vỏ sống",
+    "aliases_vi": [],
+    "name_en": "Potatoes, russet, without skin, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346402,
+    "name_vi": "Khoai tây đỏ bỏ vỏ sống",
+    "aliases_vi": [],
+    "name_en": "Potatoes, red, without skin, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346403,
+    "name_vi": "Khoai tây vàng bỏ vỏ sống",
+    "aliases_vi": [],
+    "name_en": "Potatoes, gold, without skin, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346404,
+    "name_vi": "Khoai lang ruột cam bỏ vỏ sống",
+    "aliases_vi": [],
+    "name_en": "Sweet potatoes, orange flesh, without skin, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346405,
+    "name_vi": "Cần tây sống",
+    "aliases_vi": [],
+    "name_en": "Celery, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346406,
+    "name_vi": "Dưa chuột còn vỏ sống",
+    "aliases_vi": ["dưa leo"],
+    "name_en": "Cucumber, with peel, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346407,
+    "name_vi": "Bắp cải xanh sống",
+    "aliases_vi": [],
+    "name_en": "Cabbage, green, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346408,
+    "name_vi": "Bắp cải tím sống",
+    "aliases_vi": ["bắp cải đỏ"],
+    "name_en": "Cabbage, red, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346409,
+    "name_vi": "Dâu tây sống",
+    "aliases_vi": [],
+    "name_en": "Strawberries, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346410,
+    "name_vi": "Mâm xôi đỏ sống",
+    "aliases_vi": ["phúc bồn tử đỏ"],
+    "name_en": "Raspberries, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346411,
+    "name_vi": "Việt quất sống",
+    "aliases_vi": [],
+    "name_en": "Blueberries, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346412,
+    "name_vi": "Nho đỏ không hạt sống",
+    "aliases_vi": [],
+    "name_en": "Grapes, red, seedless, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2346413,
+    "name_vi": "Nho xanh không hạt sống",
+    "aliases_vi": [],
+    "name_en": "Grapes, green, seedless, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2512380,
+    "name_vi": "Gạo lứt hạt dài sống không bổ sung vi chất",
+    "aliases_vi": [],
+    "name_en": "Rice, brown, long grain, unenriched, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2512381,
+    "name_vi": "Gạo trắng hạt dài sống không bổ sung vi chất",
+    "aliases_vi": [],
+    "name_en": "Rice, white, long grain, unenriched, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2514743,
+    "name_vi": "Thịt bò xay sống 90% nạc",
+    "aliases_vi": [],
+    "name_en": "Beef, ground, 90% lean meat / 10% fat, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2514744,
+    "name_vi": "Thịt bò xay sống 80% nạc",
+    "aliases_vi": [],
+    "name_en": "Beef, ground, 80% lean meat / 20% fat, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2514745,
+    "name_vi": "Thịt lợn xay sống",
+    "aliases_vi": ["thịt heo xay sống"],
+    "name_en": "Pork, ground, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2514746,
+    "name_vi": "Thịt gà xay sống có phụ gia",
+    "aliases_vi": [],
+    "name_en": "Chicken, ground, with additives, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2514747,
+    "name_vi": "Thịt gà tây xay sống 93% nạc",
+    "aliases_vi": [],
+    "name_en": "Turkey, ground, 93% lean/ 7% fat, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2515373,
+    "name_vi": "Hạt Brazil sống",
+    "aliases_vi": [],
+    "name_en": "Nuts, brazilnuts, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2515374,
+    "name_vi": "Hạt điều sống",
+    "aliases_vi": [],
+    "name_en": "Nuts, cashew nuts, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2515375,
+    "name_vi": "Hạt phỉ sống",
+    "aliases_vi": [],
+    "name_en": "Nuts, hazelnuts or filberts, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2515376,
+    "name_vi": "Lạc sống",
+    "aliases_vi": ["đậu phộng sống"],
+    "name_en": "Peanuts, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2515378,
+    "name_vi": "Hạt mắc ca sống",
+    "aliases_vi": ["hạt macadamia"],
+    "name_en": "Nuts, macadamia nuts, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2515379,
+    "name_vi": "Hạt dẻ cười sống",
+    "aliases_vi": ["hạt hồ trăn"],
+    "name_en": "Nuts, pistachio nuts, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2515380,
+    "name_vi": "Nhân hạt bí sống",
+    "aliases_vi": [],
+    "name_en": "Seeds, pumpkin seeds (pepitas), raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2515381,
+    "name_vi": "Nhân hạt hướng dương sống",
+    "aliases_vi": [],
+    "name_en": "Seeds, sunflower seed, kernel, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2646168,
+    "name_vi": "Thịt thăn lợn không xương sống",
+    "aliases_vi": ["thịt thăn heo sống"],
+    "name_en": "Pork, loin, boneless, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2646169,
+    "name_vi": "Thăn nội lợn không xương sống",
+    "aliases_vi": ["thăn chuột heo sống"],
+    "name_en": "Pork, loin, tenderloin, boneless, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2646170,
+    "name_vi": "Ức gà không xương không da sống",
+    "aliases_vi": [],
+    "name_en": "Chicken, breast, boneless, skinless, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2646171,
+    "name_vi": "Đùi gà không xương không da sống",
+    "aliases_vi": [],
+    "name_en": "Chicken, thigh, boneless, skinless, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2646172,
+    "name_vi": "Thịt bò ribeye không xương sống",
+    "aliases_vi": [],
+    "name_en": "Beef, ribeye, steak, boneless, choice, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2646173,
+    "name_vi": "Thịt bò đùi trên không xương sống",
+    "aliases_vi": [],
+    "name_en": "Beef, round, top round, boneless, choice, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2646174,
+    "name_vi": "Thịt bò vai không xương sống",
+    "aliases_vi": [],
+    "name_en": "Beef, chuck, roast, boneless, choice, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2646175,
+    "name_vi": "Thịt bò sườn bụng không xương sống",
+    "aliases_vi": ["bò flank"],
+    "name_en": "Beef, flank, steak, boneless, choice, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2684440,
+    "name_vi": "Cá hồi sockeye tự nhiên sống",
+    "aliases_vi": ["cá hồi đỏ sống"],
+    "name_en": "Fish, salmon, sockeye, wild caught, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2684441,
+    "name_vi": "Cá hồi Đại Tây Dương nuôi sống",
+    "aliases_vi": [],
+    "name_en": "Fish, salmon, Atlantic, farm raised, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2684442,
+    "name_vi": "Cá rô phi nuôi sống",
+    "aliases_vi": [],
+    "name_en": "Fish, tilapia, farm raised, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2684443,
+    "name_vi": "Tôm nuôi sống",
+    "aliases_vi": [],
+    "name_en": "Crustaceans, shrimp, farm raised, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2684444,
+    "name_vi": "Cá tuyết Đại Tây Dương tự nhiên sống",
+    "aliases_vi": [],
+    "name_en": "Fish, cod, Atlantic, wild caught, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2684445,
+    "name_vi": "Cá da trơn nuôi sống",
+    "aliases_vi": [],
+    "name_en": "Fish, catfish, farm raised, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2685568,
+    "name_vi": "Bí ngòi xanh còn vỏ sống",
+    "aliases_vi": [],
+    "name_en": "Squash, summer, green, zucchini, includes skin, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2685569,
+    "name_vi": "Bí ngòi vàng còn vỏ sống",
+    "aliases_vi": [],
+    "name_en": "Squash, summer, yellow, includes skin, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2685570,
+    "name_vi": "Bí đỏ butternut sống",
+    "aliases_vi": ["bí hồ lô"],
+    "name_en": "Squash, winter, butternut, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2685571,
+    "name_vi": "Bí acorn sống",
+    "aliases_vi": [],
+    "name_en": "Squash, winter, acorn, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2685572,
+    "name_vi": "Cải thìa sống",
+    "aliases_vi": ["cải chíp"],
+    "name_en": "Cabbage, bok choy, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2685573,
+    "name_vi": "Súp lơ trắng sống",
+    "aliases_vi": ["bông cải trắng"],
+    "name_en": "Cauliflower, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2685574,
+    "name_vi": "Cải collard sống",
+    "aliases_vi": [],
+    "name_en": "Collards, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2685575,
+    "name_vi": "Bắp cải Brussels sống",
+    "aliases_vi": ["bắp cải tí hon"],
+    "name_en": "Brussels sprouts, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2685576,
+    "name_vi": "Củ dền sống",
+    "aliases_vi": [],
+    "name_en": "Beets, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2685577,
+    "name_vi": "Cà tím sống",
+    "aliases_vi": [],
+    "name_en": "Eggplant, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710815,
+    "name_vi": "Mơ còn vỏ sống",
+    "aliases_vi": [],
+    "name_en": "Apricot, with skin, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710816,
+    "name_vi": "Dưa mật sống",
+    "aliases_vi": ["dưa honeydew"],
+    "name_en": "Melons, honeydew, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710817,
+    "name_vi": "Chuối plantain chín sống",
+    "aliases_vi": ["chuối nấu chín"],
+    "name_en": "Plantains, ripe, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710818,
+    "name_vi": "Chuối plantain chưa chín sống",
+    "aliases_vi": [],
+    "name_en": "Plantains, underripe, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710819,
+    "name_vi": "Hạt chia khô sống",
+    "aliases_vi": [],
+    "name_en": "Chia seeds, dry, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710820,
+    "name_vi": "Lúa mì bulgur khô sống",
+    "aliases_vi": [],
+    "name_en": "Bulgur, dry, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710821,
+    "name_vi": "Gạo dại khô sống",
+    "aliases_vi": [],
+    "name_en": "Wild rice, dry, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710822,
+    "name_vi": "Rau rocket non sống",
+    "aliases_vi": ["rau arugula non"],
+    "name_en": "Arugula, baby, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710823,
+    "name_vi": "Măng tây xanh sống",
+    "aliases_vi": [],
+    "name_en": "Asparagus, green, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710824,
+    "name_vi": "Bơ Hass bỏ vỏ sống",
+    "aliases_vi": [],
+    "name_en": "Avocado, Hass, peeled, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710825,
+    "name_vi": "Gạo đen sống không bổ sung vi chất",
+    "aliases_vi": [],
+    "name_en": "Rice, black, unenriched, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710826,
+    "name_vi": "Ngô ngọt vàng trắng tươi sống",
+    "aliases_vi": ["bắp ngọt"],
+    "name_en": "Corn, sweet, yellow and white kernels,  fresh, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710827,
+    "name_vi": "Hạt lúa mì einkorn khô sống",
+    "aliases_vi": [],
+    "name_en": "Einkorn, grain, dry, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710828,
+    "name_vi": "Lúa mì farro xát vỏ khô sống",
+    "aliases_vi": [],
+    "name_en": "Farro, pearled, dry, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710829,
+    "name_vi": "Hạt fonio khô sống",
+    "aliases_vi": [],
+    "name_en": "Fonio, grain, dry, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710830,
+    "name_vi": "Hạt lúa mì khorasan khô sống",
+    "aliases_vi": [],
+    "name_en": "Khorasan, grain, dry, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710831,
+    "name_vi": "Kiwi xanh bỏ vỏ sống",
+    "aliases_vi": [],
+    "name_en": "Kiwifruit (kiwi), green, peeled, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710832,
+    "name_vi": "Quýt không hạt bỏ vỏ sống",
+    "aliases_vi": [],
+    "name_en": "Mandarin, seedless, peeled, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710833,
+    "name_vi": "Xoài Tommy Atkins bỏ vỏ sống",
+    "aliases_vi": [],
+    "name_en": "Mango, Tommy Atkins, peeled, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710834,
+    "name_vi": "Xoài Ataulfo bỏ vỏ sống",
+    "aliases_vi": [],
+    "name_en": "Mango, Ataulfo, peeled, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710835,
+    "name_vi": "Bột ngô masa harina khô sống",
+    "aliases_vi": ["bột bắp masa"],
+    "name_en": "Corn flour, masa harina, white or yellow, dry, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710836,
+    "name_vi": "Lê Anjou xanh còn vỏ sống",
+    "aliases_vi": [],
+    "name_en": "Pear, Anjou, green, with skin, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710837,
+    "name_vi": "Mận đen còn vỏ sống",
+    "aliases_vi": [],
+    "name_en": "Plum, black, with skin, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710838,
+    "name_vi": "Gạo đỏ khô sống không bổ sung vi chất",
+    "aliases_vi": [],
+    "name_en": "Rice, red, unenriched, dry, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710839,
+    "name_vi": "Cám cao lương trắng khô",
+    "aliases_vi": [],
+    "name_en": "Sorghum bran, white, unenriched, dry, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710840,
+    "name_vi": "Bột cao lương trắng khô",
+    "aliases_vi": [],
+    "name_en": "Sorghum flour, white, pearled, unenriched, dry, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710841,
+    "name_vi": "Hạt cao lương trắng đã xát khô",
+    "aliases_vi": [],
+    "name_en": "Sorghum grain, white, pearled, unenriched, dry, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710842,
+    "name_vi": "Hạt cao lương trắng nguyên cám khô",
+    "aliases_vi": [],
+    "name_en": "Sorghum, whole grain, white, dry, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2710843,
+    "name_vi": "Chuối plantain chín nẫu sống",
+    "aliases_vi": [],
+    "name_en": "Plantains, overripe, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2727572,
+    "name_vi": "Thịt bò thăn ngoại New York sống",
+    "aliases_vi": [],
+    "name_en": "Beef, short loin (NY strip steak), raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2727573,
+    "name_vi": "Bít tết thăn nội bò sống",
+    "aliases_vi": [],
+    "name_en": "Beef, tenderloin steak, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2727574,
+    "name_vi": "Bít tết thăn lưng bò sống",
+    "aliases_vi": [],
+    "name_en": "Beef, top sirloin steak, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2727578,
+    "name_vi": "Bí đỏ làm bánh bỏ vỏ bỏ hạt sống",
+    "aliases_vi": [],
+    "name_en": "Squash, pie pumpkin, peeled, seeded, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2747653,
+    "name_vi": "Lá củ dền sống",
+    "aliases_vi": [],
+    "name_en": "Beet greens, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2747655,
+    "name_vi": "Củ thì là tây sống",
+    "aliases_vi": ["củ fennel"],
+    "name_en": "Fennel, bulb, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2747659,
+    "name_vi": "Củ parsnip sống",
+    "aliases_vi": ["củ cải vàng parsnip"],
+    "name_en": "Parsnips, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2747660,
+    "name_vi": "Ớt banana bỏ hạt sống",
+    "aliases_vi": [],
+    "name_en": "Peppers, banana or Hungarian wax, seeded, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2747661,
+    "name_vi": "Ớt jalapeno bỏ hạt sống",
+    "aliases_vi": [],
+    "name_en": "Peppers, jalapeno, seeded, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2747662,
+    "name_vi": "Ớt poblano bỏ hạt sống",
+    "aliases_vi": [],
+    "name_en": "Peppers, poblano, seeded, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2747663,
+    "name_vi": "Ớt serrano bỏ hạt sống",
+    "aliases_vi": [],
+    "name_en": "Peppers, serrano, seeded, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2747664,
+    "name_vi": "Rau radicchio sống",
+    "aliases_vi": ["rau diếp xoăn đỏ"],
+    "name_en": "Radicchio, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2747665,
+    "name_vi": "Củ cải đỏ sống",
+    "aliases_vi": [],
+    "name_en": "Radishes, red, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2747674,
+    "name_vi": "Củ cải turnip sống",
+    "aliases_vi": [],
+    "name_en": "Turnips, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2747676,
+    "name_vi": "Vỏ dưa hấu không hạt sống",
+    "aliases_vi": [],
+    "name_en": "Watermelon, seedless, rind only, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2705853,
+    "name_vi": "Thịt bò xay sống",
+    "aliases_vi": [],
+    "name_en": "Beef, ground, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2705892,
+    "name_vi": "Mỡ lưng nấu chín",
+    "aliases_vi": [],
+    "name_en": "Fat back, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706137,
+    "name_vi": "Thịt vịt chín ăn da",
+    "aliases_vi": [],
+    "name_en": "Duck, cooked, skin eaten",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706138,
+    "name_vi": "Thịt vịt chín bỏ da",
+    "aliases_vi": [],
+    "name_en": "Duck, cooked, skin not eaten",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706139,
+    "name_vi": "Vịt quay ăn da",
+    "aliases_vi": [],
+    "name_en": "Duck, roasted, skin eaten",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706140,
+    "name_vi": "Vịt quay bỏ da",
+    "aliases_vi": [],
+    "name_en": "Duck, roasted, skin not eaten",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706147,
+    "name_vi": "Chim bồ câu nấu chín",
+    "aliases_vi": [],
+    "name_en": "Dove, cooked, NS as to cooking method",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706148,
+    "name_vi": "Chim bồ câu chiên",
+    "aliases_vi": [],
+    "name_en": "Dove, fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706149,
+    "name_vi": "Chim cút nấu chín",
+    "aliases_vi": [],
+    "name_en": "Quail, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706223,
+    "name_vi": "Cá sống không rõ loại",
+    "aliases_vi": [],
+    "name_en": "Fish, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706238,
+    "name_vi": "Cá da trơn chiên",
+    "aliases_vi": [],
+    "name_en": "Fish, catfish, fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706244,
+    "name_vi": "Cá tuyết chiên",
+    "aliases_vi": [],
+    "name_en": "Fish, cod, fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706267,
+    "name_vi": "Cá thu chiên",
+    "aliases_vi": [],
+    "name_en": "Fish, mackerel, fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706281,
+    "name_vi": "Cá chim pompano chiên",
+    "aliases_vi": [],
+    "name_en": "Fish, pompano, fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706284,
+    "name_vi": "Cá hồi sống",
+    "aliases_vi": [],
+    "name_en": "Fish, salmon, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706289,
+    "name_vi": "Cá hồi chiên",
+    "aliases_vi": [],
+    "name_en": "Fish, salmon, fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706308,
+    "name_vi": "Cá ngừ sống",
+    "aliases_vi": [],
+    "name_en": "Fish, tuna, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706310,
+    "name_vi": "Cá ngừ nấu chín",
+    "aliases_vi": [],
+    "name_en": "Fish, tuna, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706322,
+    "name_vi": "Cá rô phi chiên",
+    "aliases_vi": [],
+    "name_en": "Fish, tilapia, fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706333,
+    "name_vi": "Mực nấu chín",
+    "aliases_vi": [],
+    "name_en": "Calamari, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706334,
+    "name_vi": "Mực chiên",
+    "aliases_vi": [],
+    "name_en": "Calamari, fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706338,
+    "name_vi": "Nghêu sống",
+    "aliases_vi": ["ngao sống"],
+    "name_en": "Clams, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706341,
+    "name_vi": "Nghêu chiên",
+    "aliases_vi": ["ngao chiên"],
+    "name_en": "Clams, fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706347,
+    "name_vi": "Tôm càng nước ngọt chiên",
+    "aliases_vi": [],
+    "name_en": "Crayfish, fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706348,
+    "name_vi": "Tôm càng nước ngọt nấu chín",
+    "aliases_vi": [],
+    "name_en": "Crayfish, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706351,
+    "name_vi": "Hàu sống",
+    "aliases_vi": [],
+    "name_en": "Oysters, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706354,
+    "name_vi": "Hàu chiên",
+    "aliases_vi": [],
+    "name_en": "Oysters, fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706359,
+    "name_vi": "Sò điệp chiên",
+    "aliases_vi": [],
+    "name_en": "Scallops, fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2706364,
+    "name_vi": "Tôm chiên",
+    "aliases_vi": [],
+    "name_en": "Shrimp, fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707152,
+    "name_vi": "Trứng nguyên quả sống",
+    "aliases_vi": [],
+    "name_en": "Egg, whole, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707153,
+    "name_vi": "Trứng nguyên quả nấu chín",
+    "aliases_vi": [],
+    "name_en": "Egg, whole, cooked, NS as to cooking method",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707155,
+    "name_vi": "Trứng nguyên quả chiên",
+    "aliases_vi": [],
+    "name_en": "Egg, whole, fried, NS as to fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707168,
+    "name_vi": "Lòng trắng trứng sống",
+    "aliases_vi": [],
+    "name_en": "Egg, white only, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707169,
+    "name_vi": "Lòng trắng trứng nấu chín",
+    "aliases_vi": [],
+    "name_en": "Egg, white, cooked, NS as to fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707170,
+    "name_vi": "Lòng trắng trứng nấu chín không thêm chất béo",
+    "aliases_vi": [],
+    "name_en": "Egg, white, cooked, no added fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707171,
+    "name_vi": "Lòng trắng trứng nấu chín có thêm chất béo",
+    "aliases_vi": [],
+    "name_en": "Egg, white, cooked, fat added",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707172,
+    "name_vi": "Lòng đỏ trứng sống",
+    "aliases_vi": [],
+    "name_en": "Egg, yolk only, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707173,
+    "name_vi": "Lòng đỏ trứng nấu chín",
+    "aliases_vi": [],
+    "name_en": "Egg, yolk only, cooked, NS as to fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707174,
+    "name_vi": "Lòng đỏ trứng nấu chín không thêm chất béo",
+    "aliases_vi": [],
+    "name_en": "Egg, yolk only, cooked, no added fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707175,
+    "name_vi": "Lòng đỏ trứng nấu chín có thêm chất béo",
+    "aliases_vi": [],
+    "name_en": "Egg, yolk only, cooked, fat added",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707176,
+    "name_vi": "Trứng vịt nấu chín",
+    "aliases_vi": [],
+    "name_en": "Duck egg, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707177,
+    "name_vi": "Trứng ngỗng nấu chín",
+    "aliases_vi": [],
+    "name_en": "Goose egg, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707367,
+    "name_vi": "Đậu tằm nấu chín",
+    "aliases_vi": [],
+    "name_en": "Fava beans, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707370,
+    "name_vi": "Đậu hồng nấu chín",
+    "aliases_vi": [],
+    "name_en": "Pink beans, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707388,
+    "name_vi": "Đậu nành nấu chín",
+    "aliases_vi": ["đậu tương nấu chín"],
+    "name_en": "Soybeans, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707389,
+    "name_vi": "Đậu xanh nấu chín",
+    "aliases_vi": [],
+    "name_en": "Mung beans, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707436,
+    "name_vi": "Đậu nành non nấu chín",
+    "aliases_vi": ["đậu edamame chín"],
+    "name_en": "Edamame, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707449,
+    "name_vi": "Đậu phụ tẩm bột chiên",
+    "aliases_vi": ["đậu hũ tẩm bột chiên"],
+    "name_en": "Soybean curd, breaded, fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707513,
+    "name_vi": "Lạc luộc",
+    "aliases_vi": ["đậu phộng luộc"],
+    "name_en": "Peanuts, boiled",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707515,
+    "name_vi": "Lạc rang muối",
+    "aliases_vi": ["đậu phộng rang muối"],
+    "name_en": "Peanuts, roasted, salted",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2707516,
+    "name_vi": "Lạc rang không muối",
+    "aliases_vi": ["đậu phộng rang không muối"],
+    "name_en": "Peanuts, roasted, unsalted",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708351,
+    "name_vi": "Mì rau củ nấu chín",
+    "aliases_vi": [],
+    "name_en": "Pasta, vegetable, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708352,
+    "name_vi": "Mì sợi nấu chín",
+    "aliases_vi": [],
+    "name_en": "Noodles, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708353,
+    "name_vi": "Mì nguyên cám nấu chín",
+    "aliases_vi": [],
+    "name_en": "Noodles, whole grain, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708355,
+    "name_vi": "Miến đậu xanh nấu chín",
+    "aliases_vi": [],
+    "name_en": "Long rice noodles, made from mung beans, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708356,
+    "name_vi": "Bún gạo nấu chín",
+    "aliases_vi": ["mì gạo chín"],
+    "name_en": "Rice noodles, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708357,
+    "name_vi": "Mì pasta nấu chín",
+    "aliases_vi": [],
+    "name_en": "Pasta, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708358,
+    "name_vi": "Mì pasta nguyên cám nấu chín",
+    "aliases_vi": [],
+    "name_en": "Pasta, whole grain, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708402,
+    "name_vi": "Cơm chín không rõ loại",
+    "aliases_vi": [],
+    "name_en": "Rice, cooked, NFS",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708403,
+    "name_vi": "Cơm trắng không rõ lượng chất béo",
+    "aliases_vi": [],
+    "name_en": "Rice, white, cooked, NS as to fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708404,
+    "name_vi": "Cơm trắng nấu với dầu",
+    "aliases_vi": [],
+    "name_en": "Rice, white, cooked, made with oil",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708405,
+    "name_vi": "Cơm trắng nấu với bơ",
+    "aliases_vi": [],
+    "name_en": "Rice, white, cooked, made with butter",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708406,
+    "name_vi": "Cơm trắng nấu với bơ thực vật",
+    "aliases_vi": [],
+    "name_en": "Rice, white, cooked, made with margarine",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708408,
+    "name_vi": "Cơm trắng không thêm chất béo",
+    "aliases_vi": [],
+    "name_en": "Rice, white, cooked, no added fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708409,
+    "name_vi": "Cơm gạo lứt không rõ lượng chất béo",
+    "aliases_vi": [],
+    "name_en": "Rice, brown, cooked, NS as to fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708410,
+    "name_vi": "Cơm gạo lứt nấu với dầu",
+    "aliases_vi": [],
+    "name_en": "Rice, brown, cooked, fat added, made with oil",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708411,
+    "name_vi": "Cơm gạo lứt nấu với bơ",
+    "aliases_vi": [],
+    "name_en": "Rice, brown, cooked, made with butter",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708412,
+    "name_vi": "Cơm gạo lứt nấu với bơ thực vật",
+    "aliases_vi": [],
+    "name_en": "Rice, brown, cooked, made with margarine",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708414,
+    "name_vi": "Cơm gạo lứt không thêm chất béo",
+    "aliases_vi": [],
+    "name_en": "Rice, brown, cooked, no added fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708416,
+    "name_vi": "Cơm nấu với sữa",
+    "aliases_vi": [],
+    "name_en": "Rice, cooked, with milk",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708422,
+    "name_vi": "Cơm gạo nếp trắng",
+    "aliases_vi": ["xôi trắng"],
+    "name_en": "Rice, white, cooked, glutinous",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708423,
+    "name_vi": "Gạo dại nấu chín không rõ lượng chất béo",
+    "aliases_vi": [],
+    "name_en": "Rice, wild, 100%, cooked, NS as to fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708424,
+    "name_vi": "Gạo dại nấu chín không thêm chất béo",
+    "aliases_vi": [],
+    "name_en": "Rice, wild, 100%, cooked, no added fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708441,
+    "name_vi": "Couscous nấu chín không thêm gia vị",
+    "aliases_vi": [],
+    "name_en": "Couscous, plain, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708489,
+    "name_vi": "Yến mạch sống",
+    "aliases_vi": [],
+    "name_en": "Oats, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708705,
+    "name_vi": "Hoành thánh hoặc bánh xếp chiên",
+    "aliases_vi": [],
+    "name_en": "Wonton, dumpling or pot sticker, fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708706,
+    "name_vi": "Hoành thánh hoặc bánh xếp chiên không thịt",
+    "aliases_vi": [],
+    "name_en": "Wonton, dumpling or pot sticker, fried, no meat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708951,
+    "name_vi": "Cơm chiên không thịt",
+    "aliases_vi": ["cơm rang chay"],
+    "name_en": "Rice, fried, meatless",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708953,
+    "name_vi": "Cơm chiên gà",
+    "aliases_vi": ["cơm rang gà"],
+    "name_en": "Rice, fried, with chicken",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708954,
+    "name_vi": "Cơm chiên thịt lợn",
+    "aliases_vi": ["cơm rang thịt heo"],
+    "name_en": "Rice, fried, with pork",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708955,
+    "name_vi": "Cơm chiên bò",
+    "aliases_vi": ["cơm rang bò"],
+    "name_en": "Rice, fried, with beef",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2708956,
+    "name_vi": "Cơm chiên tôm",
+    "aliases_vi": ["cơm rang tôm"],
+    "name_en": "Rice, fried, with shrimp",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709164,
+    "name_vi": "Quýt clementine sống",
+    "aliases_vi": [],
+    "name_en": "Clementine, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709165,
+    "name_vi": "Bưởi chùm sống",
+    "aliases_vi": ["grapefruit"],
+    "name_en": "Grapefruit, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709167,
+    "name_vi": "Quất sống",
+    "aliases_vi": ["tắc"],
+    "name_en": "Kumquat, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709168,
+    "name_vi": "Chanh vàng sống",
+    "aliases_vi": [],
+    "name_en": "Lemon, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709170,
+    "name_vi": "Chanh xanh sống",
+    "aliases_vi": [],
+    "name_en": "Lime, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709171,
+    "name_vi": "Cam sống",
+    "aliases_vi": [],
+    "name_en": "Orange, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709175,
+    "name_vi": "Quýt sống",
+    "aliases_vi": [],
+    "name_en": "Tangerine, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709215,
+    "name_vi": "Táo tây sống",
+    "aliases_vi": [],
+    "name_en": "Apple, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709221,
+    "name_vi": "Mơ sống",
+    "aliases_vi": [],
+    "name_en": "Apricot, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709223,
+    "name_vi": "Quả bơ sống",
+    "aliases_vi": [],
+    "name_en": "Avocado, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709224,
+    "name_vi": "Chuối sống",
+    "aliases_vi": [],
+    "name_en": "Banana, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709226,
+    "name_vi": "Dưa lưới ruột cam sống",
+    "aliases_vi": [],
+    "name_en": "Cantaloupe, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709228,
+    "name_vi": "Khế sống",
+    "aliases_vi": [],
+    "name_en": "Starfruit, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709231,
+    "name_vi": "Anh đào sống",
+    "aliases_vi": ["cherry"],
+    "name_en": "Cherries, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709235,
+    "name_vi": "Sung tây sống",
+    "aliases_vi": [],
+    "name_en": "Fig, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709237,
+    "name_vi": "Nho sống",
+    "aliases_vi": [],
+    "name_en": "Grapes, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709238,
+    "name_vi": "Ổi sống",
+    "aliases_vi": [],
+    "name_en": "Guava, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709239,
+    "name_vi": "Kiwi sống",
+    "aliases_vi": [],
+    "name_en": "Kiwi fruit, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709241,
+    "name_vi": "Dưa mật sống",
+    "aliases_vi": [],
+    "name_en": "Honeydew melon, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709242,
+    "name_vi": "Xoài sống",
+    "aliases_vi": [],
+    "name_en": "Mango, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709245,
+    "name_vi": "Xuân đào sống",
+    "aliases_vi": [],
+    "name_en": "Nectarine, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709246,
+    "name_vi": "Đu đủ sống",
+    "aliases_vi": [],
+    "name_en": "Papaya, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709248,
+    "name_vi": "Chanh dây sống",
+    "aliases_vi": ["chanh leo"],
+    "name_en": "Passion fruit, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709249,
+    "name_vi": "Đào sống",
+    "aliases_vi": [],
+    "name_en": "Peach, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709254,
+    "name_vi": "Lê sống",
+    "aliases_vi": [],
+    "name_en": "Pear, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709255,
+    "name_vi": "Lê châu Á sống",
+    "aliases_vi": [],
+    "name_en": "Pear, Asian, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709259,
+    "name_vi": "Hồng sống",
+    "aliases_vi": [],
+    "name_en": "Persimmon, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709265,
+    "name_vi": "Mận sống",
+    "aliases_vi": [],
+    "name_en": "Plum, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709267,
+    "name_vi": "Lựu sống",
+    "aliases_vi": [],
+    "name_en": "Pomegranate, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709270,
+    "name_vi": "Dưa hấu sống",
+    "aliases_vi": [],
+    "name_en": "Watermelon, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709273,
+    "name_vi": "Mâm xôi đen sống",
+    "aliases_vi": ["blackberry"],
+    "name_en": "Blackberries, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709279,
+    "name_vi": "Nam việt quất sống",
+    "aliases_vi": ["cranberry"],
+    "name_en": "Cranberries, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709388,
+    "name_vi": "Khoai tây tươi luộc bỏ vỏ không thêm chất béo",
+    "aliases_vi": [],
+    "name_en": "Potato, boiled, from fresh, peel not eaten, no added fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709395,
+    "name_vi": "Khoai tây tươi luộc ăn vỏ không thêm chất béo",
+    "aliases_vi": [],
+    "name_en": "Potato, boiled, from fresh,  peel eaten, no added fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709404,
+    "name_vi": "Khoai tây tươi nướng ăn vỏ không thêm chất béo",
+    "aliases_vi": [],
+    "name_en": "Potato, roasted, from fresh, peel eaten, no added fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709411,
+    "name_vi": "Khoai tây tươi nướng bỏ vỏ không thêm chất béo",
+    "aliases_vi": [],
+    "name_en": "Potato, roasted, from fresh, peel not eaten, no added fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709458,
+    "name_vi": "Khoai tây tươi chiên que",
+    "aliases_vi": [],
+    "name_en": "Potato, french fries, from fresh, fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709558,
+    "name_vi": "Chuối plantain nấu chín không thêm chất béo",
+    "aliases_vi": [],
+    "name_en": "Plantain, cooked, no added fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709560,
+    "name_vi": "Chuối plantain sống",
+    "aliases_vi": [],
+    "name_en": "Plantain, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709564,
+    "name_vi": "Sắn nấu chín",
+    "aliases_vi": ["khoai mì nấu chín"],
+    "name_en": "Cassava, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709567,
+    "name_vi": "Khoai sọ nấu chín",
+    "aliases_vi": [],
+    "name_en": "Taro, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709571,
+    "name_vi": "Lá củ dền nấu chín",
+    "aliases_vi": [],
+    "name_en": "Beet greens, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709586,
+    "name_vi": "Rau cải xoong sống",
+    "aliases_vi": [],
+    "name_en": "Cress, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709587,
+    "name_vi": "Rau cải xoong nấu chín",
+    "aliases_vi": [],
+    "name_en": "Cress, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709600,
+    "name_vi": "Cải kale tươi nấu chín không thêm chất béo",
+    "aliases_vi": [],
+    "name_en": "Kale, fresh, cooked, no added fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709606,
+    "name_vi": "Cải bẹ xanh sống",
+    "aliases_vi": ["cải xanh"],
+    "name_en": "Mustard greens, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709607,
+    "name_vi": "Cải bẹ xanh tươi nấu chín không thêm chất béo",
+    "aliases_vi": [],
+    "name_en": "Mustard greens, fresh, cooked, no added fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709614,
+    "name_vi": "Rau bina sống",
+    "aliases_vi": ["cải bó xôi", "rau chân vịt"],
+    "name_en": "Spinach, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709615,
+    "name_vi": "Rau bina tươi nấu chín không thêm chất béo",
+    "aliases_vi": ["cải bó xôi chín"],
+    "name_en": "Spinach, fresh, cooked, no added fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709633,
+    "name_vi": "Lá khoai môn nấu chín",
+    "aliases_vi": [],
+    "name_en": "Taro leaves, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709639,
+    "name_vi": "Cải xoong sống",
+    "aliases_vi": [],
+    "name_en": "Watercress, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709640,
+    "name_vi": "Cải xoong nấu chín",
+    "aliases_vi": [],
+    "name_en": "Watercress, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709645,
+    "name_vi": "Bông cải xanh tươi nấu chín không thêm chất béo",
+    "aliases_vi": [],
+    "name_en": "Broccoli, fresh, cooked, no added fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709657,
+    "name_vi": "Cải làn sống",
+    "aliases_vi": ["cải rổ"],
+    "name_en": "Broccoli, chinese, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709658,
+    "name_vi": "Cải làn nấu chín",
+    "aliases_vi": ["cải rổ chín"],
+    "name_en": "Broccoli, Chinese, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709660,
+    "name_vi": "Cà rốt sống",
+    "aliases_vi": [],
+    "name_en": "Carrots, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2709664,
+    "name_vi": "Cà rốt tươi nấu chín không thêm chất béo",
+    "aliases_vi": [],
+    "name_en": "Carrots, fresh, cooked, no added fat",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168148,
+    "name_vi": "Đùi ếch sống",
+    "aliases_vi": [],
+    "name_en": "Frog legs, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168151,
+    "name_vi": "Táo ta sống",
+    "aliases_vi": [],
+    "name_en": "Jujube, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168170,
+    "name_vi": "Bụp giấm sống",
+    "aliases_vi": ["atiso đỏ"],
+    "name_en": "Roselle, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168171,
+    "name_vi": "Quả roi sống",
+    "aliases_vi": ["trái mận miền Nam"],
+    "name_en": "Rose-apples, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168175,
+    "name_vi": "Na sống",
+    "aliases_vi": ["mãng cầu ta"],
+    "name_en": "Sugar-apples, (sweetsop), raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169086,
+    "name_vi": "Vải sống",
+    "aliases_vi": [],
+    "name_en": "Litchis, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169089,
+    "name_vi": "Nhãn sống",
+    "aliases_vi": [],
+    "name_en": "Longans, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168384,
+    "name_vi": "Giá cỏ linh lăng sống",
+    "aliases_vi": [],
+    "name_en": "Alfalfa seeds, sprouted, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168385,
+    "name_vi": "Rau dền sống",
+    "aliases_vi": [],
+    "name_en": "Amaranth leaves, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168391,
+    "name_vi": "Ngọn khổ qua sống",
+    "aliases_vi": ["ngọn mướp đắng"],
+    "name_en": "Balsam-pear (bitter gourd), leafy tips, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168392,
+    "name_vi": "Ngọn khổ qua luộc không muối",
+    "aliases_vi": ["ngọn mướp đắng luộc"],
+    "name_en": "Balsam-pear (bitter gourd), leafy tips, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168393,
+    "name_vi": "Khổ qua sống",
+    "aliases_vi": ["mướp đắng"],
+    "name_en": "Balsam-pear (bitter gourd), pods, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168394,
+    "name_vi": "Khổ qua luộc không muối",
+    "aliases_vi": ["mướp đắng luộc"],
+    "name_en": "Balsam-pear (bitter gourd), pods, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168405,
+    "name_vi": "Đậu đũa non cả quả sống",
+    "aliases_vi": [],
+    "name_en": "Cowpeas, young pods with seeds, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168414,
+    "name_vi": "Mướp sống",
+    "aliases_vi": [],
+    "name_en": "Gourd, dishcloth (towelgourd), raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168415,
+    "name_vi": "Mướp luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Gourd, dishcloth (towelgourd), cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168416,
+    "name_vi": "Lá chùm ngây sống",
+    "aliases_vi": [],
+    "name_en": "Drumstick leaves, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168417,
+    "name_vi": "Lá chùm ngây luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Drumstick leaves, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168419,
+    "name_vi": "Rau đay sống",
+    "aliases_vi": [],
+    "name_en": "Jute, potherb, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168420,
+    "name_vi": "Rau đay luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Jute, potherb, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168425,
+    "name_vi": "Su hào luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Kohlrabi, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168430,
+    "name_vi": "Củ sen luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Lotus root, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168437,
+    "name_vi": "Nấm hương nấu chín không muối",
+    "aliases_vi": ["nấm đông cô chín"],
+    "name_en": "Mushrooms, shiitake, cooked, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168447,
+    "name_vi": "Lá bí đỏ luộc không muối",
+    "aliases_vi": ["rau bí luộc"],
+    "name_en": "Pumpkin leaves, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168448,
+    "name_vi": "Bí đỏ sống",
+    "aliases_vi": [],
+    "name_en": "Pumpkin, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168449,
+    "name_vi": "Bí đỏ luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Pumpkin, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168451,
+    "name_vi": "Củ cải trắng sống",
+    "aliases_vi": [],
+    "name_en": "Radishes, oriental, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168452,
+    "name_vi": "Củ cải trắng luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Radishes, oriental, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168457,
+    "name_vi": "Rong bẹ sống",
+    "aliases_vi": ["tảo bẹ"],
+    "name_en": "Seaweed, kelp, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168458,
+    "name_vi": "Rong biển laver sống",
+    "aliases_vi": [],
+    "name_en": "Seaweed, laver, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168459,
+    "name_vi": "Hoa điên điển sống",
+    "aliases_vi": [],
+    "name_en": "Sesbania flower, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168463,
+    "name_vi": "Rau bina luộc không muối",
+    "aliases_vi": ["cải bó xôi luộc"],
+    "name_en": "Spinach, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168482,
+    "name_vi": "Khoai lang sống",
+    "aliases_vi": [],
+    "name_en": "Sweet potato, raw, unprepared (Includes foods for USDA's Food Distribution Program)",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168483,
+    "name_vi": "Khoai lang nướng còn vỏ chỉ lấy ruột không muối",
+    "aliases_vi": [],
+    "name_en": "Sweet potato, cooked, baked in skin, flesh, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168484,
+    "name_vi": "Khoai lang luộc bỏ vỏ",
+    "aliases_vi": [],
+    "name_en": "Sweet potato, cooked, boiled, without skin",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168486,
+    "name_vi": "Khoai môn nấu chín không muối",
+    "aliases_vi": [],
+    "name_en": "Taro, cooked, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168487,
+    "name_vi": "Lá khoai môn sống",
+    "aliases_vi": [],
+    "name_en": "Taro leaves, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168488,
+    "name_vi": "Lá khoai môn hấp không muối",
+    "aliases_vi": [],
+    "name_en": "Taro leaves, cooked, steamed, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168489,
+    "name_vi": "Dọc khoai môn sống",
+    "aliases_vi": [],
+    "name_en": "Taro shoots, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168490,
+    "name_vi": "Củ dong riềng sống",
+    "aliases_vi": [],
+    "name_en": "Arrowroot, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168491,
+    "name_vi": "Lá cải cúc sống",
+    "aliases_vi": ["tần ô sống"],
+    "name_en": "Chrysanthemum leaves, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168492,
+    "name_vi": "Rau dền luộc có muối",
+    "aliases_vi": [],
+    "name_en": "Amaranth leaves, cooked, boiled, drained, with salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168497,
+    "name_vi": "Măng luộc có muối",
+    "aliases_vi": [],
+    "name_en": "Bamboo shoots, cooked, boiled, drained, with salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168499,
+    "name_vi": "Giá đỗ xanh luộc có muối",
+    "aliases_vi": [],
+    "name_en": "Mung beans, mature seeds, sprouted, cooked, boiled, drained, with salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168514,
+    "name_vi": "Bắp cải luộc có muối",
+    "aliases_vi": [],
+    "name_en": "Cabbage, common, cooked, boiled, drained, with salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168515,
+    "name_vi": "Bắp cải tím luộc có muối",
+    "aliases_vi": [],
+    "name_en": "Cabbage, red, cooked, boiled, drained, with salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168517,
+    "name_vi": "Cải thìa luộc có muối",
+    "aliases_vi": ["cải chíp luộc"],
+    "name_en": "Cabbage, chinese (pak-choi), cooked, boiled, drained, with salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168520,
+    "name_vi": "Súp lơ trắng luộc có muối",
+    "aliases_vi": ["bông cải trắng luộc"],
+    "name_en": "Cauliflower, cooked, boiled, drained, with salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168522,
+    "name_vi": "Cải cúc luộc có muối",
+    "aliases_vi": ["tần ô luộc"],
+    "name_en": "Chrysanthemum, garland, cooked, boiled, drained, with salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168525,
+    "name_vi": "Ngô ngọt vàng luộc có muối",
+    "aliases_vi": ["bắp ngọt luộc"],
+    "name_en": "Corn, sweet, yellow, cooked, boiled, drained, with salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168530,
+    "name_vi": "Mướp luộc có muối",
+    "aliases_vi": [],
+    "name_en": "Gourd, dishcloth (towelgourd), cooked, boiled, drained, with salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168531,
+    "name_vi": "Lá chùm ngây luộc có muối",
+    "aliases_vi": [],
+    "name_en": "Drumstick leaves, cooked, boiled, drained, with salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168532,
+    "name_vi": "Quả chùm ngây luộc có muối",
+    "aliases_vi": [],
+    "name_en": "Drumstick pods, cooked, boiled, drained, with salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168536,
+    "name_vi": "Củ sen luộc có muối",
+    "aliases_vi": [],
+    "name_en": "Lotus root, cooked, boiled, drained, with salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168537,
+    "name_vi": "Nấm mỡ luộc có muối",
+    "aliases_vi": [],
+    "name_en": "Mushrooms, white, cooked, boiled, drained, with salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168573,
+    "name_vi": "Sả sống",
+    "aliases_vi": [],
+    "name_en": "Lemon grass (citronella), raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168580,
+    "name_vi": "Nấm bào ngư sống",
+    "aliases_vi": ["nấm sò sống"],
+    "name_en": "Mushrooms, oyster, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168591,
+    "name_vi": "Hạt sen sống",
+    "aliases_vi": [],
+    "name_en": "Seeds, lotus seeds, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168264,
+    "name_vi": "Óc lợn sống",
+    "aliases_vi": ["óc heo sống"],
+    "name_en": "Pork, fresh, variety meats and by-products, brain, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168267,
+    "name_vi": "Tim lợn sống",
+    "aliases_vi": ["tim heo sống"],
+    "name_en": "Pork, fresh, variety meats and by-products, heart, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168268,
+    "name_vi": "Tim lợn hầm",
+    "aliases_vi": ["tim heo hầm"],
+    "name_en": "Pork, fresh, variety meats and by-products, heart, cooked, braised",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168269,
+    "name_vi": "Má lợn sống",
+    "aliases_vi": ["má heo sống"],
+    "name_en": "Pork, fresh, variety meats and by-products, jowl, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168270,
+    "name_vi": "Thận lợn sống",
+    "aliases_vi": ["cật heo sống"],
+    "name_en": "Pork, fresh, variety meats and by-products, kidneys, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168271,
+    "name_vi": "Phổi lợn hầm",
+    "aliases_vi": ["phổi heo hầm"],
+    "name_en": "Pork, fresh, variety meats and by-products, lungs, cooked, braised",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168275,
+    "name_vi": "Lưỡi lợn sống",
+    "aliases_vi": ["lưỡi heo sống"],
+    "name_en": "Pork, fresh, variety meats and by-products, tongue, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168276,
+    "name_vi": "Lưỡi lợn hầm",
+    "aliases_vi": ["lưỡi heo hầm"],
+    "name_en": "Pork, fresh, variety meats and by-products, tongue, cooked, braised",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168290,
+    "name_vi": "Chân lợn ninh",
+    "aliases_vi": ["chân giò heo ninh"],
+    "name_en": "Pork, fresh, variety meats and by-products, feet, cooked, simmered",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168291,
+    "name_vi": "Đuôi lợn sống",
+    "aliases_vi": ["đuôi heo sống"],
+    "name_en": "Pork, fresh, variety meats and by-products, tail, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168299,
+    "name_vi": "Sườn lưng lợn sống",
+    "aliases_vi": ["sườn heo sống"],
+    "name_en": "Pork, fresh, backribs, separable lean and fat, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168300,
+    "name_vi": "Sườn lưng lợn nướng",
+    "aliases_vi": ["sườn heo nướng"],
+    "name_en": "Pork, fresh, backribs, separable lean and fat, cooked, roasted",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168323,
+    "name_vi": "Dạ dày lợn ninh",
+    "aliases_vi": ["bao tử heo ninh"],
+    "name_en": "Pork, fresh, variety meats and by-products, stomach, cooked, simmered",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168622,
+    "name_vi": "Óc bò sống",
+    "aliases_vi": [],
+    "name_en": "Beef, variety meats and by-products, brain, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168623,
+    "name_vi": "Óc bò áp chảo",
+    "aliases_vi": [],
+    "name_en": "Beef, variety meats and by-products, brain, cooked, pan-fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168624,
+    "name_vi": "Óc bò ninh",
+    "aliases_vi": [],
+    "name_en": "Beef, variety meats and by-products, brain, cooked, simmered",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168625,
+    "name_vi": "Tim bò sống",
+    "aliases_vi": [],
+    "name_en": "Beef, variety meats and by-products, heart, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168626,
+    "name_vi": "Gan bò hầm",
+    "aliases_vi": [],
+    "name_en": "Beef, variety meats and by-products, liver, cooked, braised",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168627,
+    "name_vi": "Gan bò áp chảo",
+    "aliases_vi": [],
+    "name_en": "Beef, variety meats and by-products, liver, cooked, pan-fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168628,
+    "name_vi": "Phổi bò sống",
+    "aliases_vi": [],
+    "name_en": "Beef, variety meats and by-products, lungs, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168629,
+    "name_vi": "Phổi bò hầm",
+    "aliases_vi": [],
+    "name_en": "Beef, variety meats and by-products, lungs, cooked, braised",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168871,
+    "name_vi": "Kê nấu chín",
+    "aliases_vi": [],
+    "name_en": "Millet, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168872,
+    "name_vi": "Cám yến mạch sống",
+    "aliases_vi": [],
+    "name_en": "Oat bran, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168873,
+    "name_vi": "Cám yến mạch nấu chín",
+    "aliases_vi": [],
+    "name_en": "Oat bran, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168907,
+    "name_vi": "Mì soba nấu chín",
+    "aliases_vi": [],
+    "name_en": "Noodles, japanese, soba, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168909,
+    "name_vi": "Mì somen nấu chín",
+    "aliases_vi": [],
+    "name_en": "Noodles, japanese, somen, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168917,
+    "name_vi": "Hạt quinoa nấu chín",
+    "aliases_vi": ["hạt diêm mạch chín"],
+    "name_en": "Quinoa, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 168918,
+    "name_vi": "Hạt teff nấu chín",
+    "aliases_vi": [],
+    "name_en": "Teff, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169137,
+    "name_vi": "Giá đỗ xanh luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Mung beans, mature seeds, sprouted, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169138,
+    "name_vi": "Giá đỗ xanh xào",
+    "aliases_vi": [],
+    "name_en": "Mung beans, mature seeds, sprouted, cooked, stir-fried",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169141,
+    "name_vi": "Đậu que xanh luộc không muối",
+    "aliases_vi": ["đậu cô ve luộc"],
+    "name_en": "Beans, snap, green, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169202,
+    "name_vi": "Rau dền luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Amaranth leaves, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169210,
+    "name_vi": "Măng sống",
+    "aliases_vi": [],
+    "name_en": "Bamboo shoots, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169211,
+    "name_vi": "Măng luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Bamboo shoots, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169222,
+    "name_vi": "Đậu đũa sống",
+    "aliases_vi": [],
+    "name_en": "Yardlong bean, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169223,
+    "name_vi": "Đậu đũa luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Yardlong bean, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169225,
+    "name_vi": "Dưa chuột bỏ vỏ sống",
+    "aliases_vi": ["dưa leo gọt vỏ"],
+    "name_en": "Cucumber, peeled, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169229,
+    "name_vi": "Cà tím luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Eggplant, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169231,
+    "name_vi": "Gừng sống",
+    "aliases_vi": [],
+    "name_en": "Ginger root, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169232,
+    "name_vi": "Bầu sống",
+    "aliases_vi": [],
+    "name_en": "Gourd, white-flowered (calabash), raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169233,
+    "name_vi": "Bầu luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Gourd, white-flowered (calabash), cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169237,
+    "name_vi": "Mộc nhĩ sống",
+    "aliases_vi": ["nấm mèo sống"],
+    "name_en": "Jew's ear, (pepeao), raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169242,
+    "name_vi": "Nấm hương sống",
+    "aliases_vi": ["nấm đông cô sống"],
+    "name_en": "Mushrooms, shiitake, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169250,
+    "name_vi": "Củ sen sống",
+    "aliases_vi": [],
+    "name_en": "Lotus root, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169251,
+    "name_vi": "Nấm mỡ sống",
+    "aliases_vi": [],
+    "name_en": "Mushrooms, white, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169252,
+    "name_vi": "Nấm mỡ luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Mushrooms, white, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169257,
+    "name_vi": "Cải bẹ xanh luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Mustard greens, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169260,
+    "name_vi": "Đậu bắp sống",
+    "aliases_vi": [],
+    "name_en": "Okra, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169261,
+    "name_vi": "Đậu bắp luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Okra, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169270,
+    "name_vi": "Hoa bí sống",
+    "aliases_vi": [],
+    "name_en": "Pumpkin flowers, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169271,
+    "name_vi": "Hoa bí luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Pumpkin flowers, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169272,
+    "name_vi": "Lá bí đỏ sống",
+    "aliases_vi": ["rau bí sống"],
+    "name_en": "Pumpkin leaves, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169274,
+    "name_vi": "Rau sam sống",
+    "aliases_vi": [],
+    "name_en": "Purslane, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169275,
+    "name_vi": "Rau sam luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Purslane, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169281,
+    "name_vi": "Hoa điên điển hấp không muối",
+    "aliases_vi": [],
+    "name_en": "Sesbania flower, cooked, steamed, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169282,
+    "name_vi": "Đậu nành non sống",
+    "aliases_vi": ["đậu tương non"],
+    "name_en": "Soybeans, green, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169283,
+    "name_vi": "Đậu nành non luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Soybeans, green, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169284,
+    "name_vi": "Giá đậu nành sống",
+    "aliases_vi": [],
+    "name_en": "Soybeans, mature seeds, sprouted, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169302,
+    "name_vi": "Rau muống luộc không muối",
+    "aliases_vi": [],
+    "name_en": "Water convolvulus, cooked, boiled, drained, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169303,
+    "name_vi": "Lá khoai lang sống",
+    "aliases_vi": ["rau lang sống"],
+    "name_en": "Sweet potato leaves, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169304,
+    "name_vi": "Lá khoai lang hấp không muối",
+    "aliases_vi": ["rau lang hấp"],
+    "name_en": "Sweet potato leaves, cooked, steamed, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169308,
+    "name_vi": "Khoai môn sống",
+    "aliases_vi": [],
+    "name_en": "Taro, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169309,
+    "name_vi": "Dọc khoai môn nấu chín",
+    "aliases_vi": [],
+    "name_en": "Taro shoots, cooked, without salt",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169382,
+    "name_vi": "Nấm kim châm sống",
+    "aliases_vi": [],
+    "name_en": "Mushrooms, enoki, raw",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 169392,
+    "name_vi": "Cải làn nấu chín",
+    "aliases_vi": ["cải rổ chín"],
+    "name_en": "Broccoli, chinese, cooked",
+    "reviewed": false
+  },
+  {
+    "fdc_id": 2705932,
+    "name_vi": "Gà nướng không rõ phần và tình trạng da",
+    "aliases_vi": ["gà quay"],
+    "name_en": "Chicken, NS as to part, baked, broiled, or roasted, NS as to skin eaten",
+    "reviewed": false
+  }
+]

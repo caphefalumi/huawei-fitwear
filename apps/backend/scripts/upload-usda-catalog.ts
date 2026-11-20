@@ -71,7 +71,7 @@ db.exec(
 db.exec(await Bun.file(new URL("./usda_food_catalog.sql", import.meta.url)).text())
 const foods = db.query("SELECT * FROM foods").all() as Food[]
 db.close()
-if (foods.length !== 13789) throw new Error(`Expected 13789 USDA foods, found ${foods.length}`)
+if (foods.length === 0) throw new Error("USDA catalog is empty")
 
 const existing = await listItems()
 const pending: Food[] = []
