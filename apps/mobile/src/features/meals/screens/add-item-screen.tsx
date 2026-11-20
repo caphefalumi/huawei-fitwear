@@ -52,8 +52,9 @@ export function AddItemScreen() {
   })
   const [description, setDescription] = useState("")
 
-  const { matches, error: searchError, loading } = useFoodSearch(query)
-  const noMatch = query.trim().length > 0 && !loading && !searchError && matches.length === 0
+  const { matches, error: searchError, loading, retry } = useFoodSearch(query, true)
+  const noMatch =
+    !selected && query.trim().length > 0 && !loading && !searchError && matches.length === 0
 
   function selectFood(food: FoodEntry) {
     const estimate = estimatePortion(food, Number(amount) || 100)
@@ -133,7 +134,7 @@ export function AddItemScreen() {
             ? "Search the food and drinks database."
             : selected
               ? "Search the database, add a portion, and review the nutrition estimate before logging."
-              : "Search for a food, then add its portion."}
+              : "Browse the database or search for a food, then add its portion."}
         </Text>
       </View>
       {error || searchError ? (
@@ -173,9 +174,17 @@ export function AddItemScreen() {
         />
       )}
 
-      {!selected && query.trim().length > 0 && !noMatch ? (
+      {!selected && loading ? <Text style={styles.footnote}>Loading foods…</Text> : null}
+      {!selected && searchError ? (
+        <Button variant="secondary" label="Try again" onPress={() => void retry()} />
+      ) : null}
+
+      {!selected && matches.length > 0 ? (
         <>
-          <SectionHeading title="Database results" actionLabel={`${matches.length} matches`} />
+          <SectionHeading
+            title={query.trim() ? "Database results" : "Food database"}
+            actionLabel={`${matches.length} ${query.trim() ? "matches" : "foods"}`}
+          />
 
           {matches.map((food) => (
             <View key={food.id} style={styles.resultCard}>
@@ -206,12 +215,10 @@ export function AddItemScreen() {
         </>
       ) : null}
 
-      {!selected && !query.trim() ? (
+      {!selected && !query.trim() && !loading && !searchError && matches.length === 0 ? (
         <View style={styles.hintCard}>
-          <Text style={styles.hintTitle}>Search the database</Text>
-          <Text style={styles.hintNote}>
-            Type a food name to see matches, then pick a portion weight.
-          </Text>
+          <Text style={styles.hintTitle}>No foods available</Text>
+          <Text style={styles.hintNote}>Try again later or enter nutrition manually.</Text>
         </View>
       ) : null}
 

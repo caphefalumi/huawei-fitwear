@@ -33,6 +33,7 @@
   "ai": {
     "binding": "AI"
   },
+  "ai_search_namespaces": [{ "binding": "AI_SEARCH", "namespace": "vooc-health" }],
   "r2_buckets": [
     {
       "binding": "MEAL_IMAGES",
@@ -85,6 +86,7 @@
       "ai": {
         "binding": "AI"
       },
+      "ai_search_namespaces": [{ "binding": "AI_SEARCH", "namespace": "vooc-health" }],
       "r2_buckets": [
         {
           "binding": "MEAL_IMAGES",
@@ -137,6 +139,7 @@
       "ai": {
         "binding": "AI"
       },
+      "ai_search_namespaces": [{ "binding": "AI_SEARCH", "namespace": "vooc-health" }],
       "r2_buckets": [
         {
           "binding": "MEAL_IMAGES",

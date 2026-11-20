@@ -494,7 +494,7 @@ export function useMeals(): MealsContextValue {
   return value
 }
 
-export function useFoodSearch(query: string) {
+export function useFoodSearch(query: string, browse = false) {
   const { user } = useAuth()
   const normalized = query.trim()
   const [debounced, setDebounced] = useState(normalized)
@@ -504,17 +504,25 @@ export function useFoodSearch(query: string) {
   }, [normalized])
   const searchQuery = useQuery({
     queryKey: mealsQueryKeys.foodSearch(user?.id ?? "signed-out", debounced),
-    enabled: Boolean(user?.id && debounced),
+    enabled: Boolean(user?.id && (debounced || browse)),
     queryFn: ({ signal }) => searchFoods(debounced, signal),
   })
   const matches = debounced === normalized ? (searchQuery.data ?? []) : []
   return {
     matches,
-    error: searchQuery.error ? apiErrorMessage(searchQuery.error, "food search") : null,
-    loading: Boolean(normalized && (debounced !== normalized || searchQuery.isLoading)),
+    error:
+      debounced === normalized && searchQuery.error
+        ? apiErrorMessage(searchQuery.error, "food search")
+        : null,
+    loading: Boolean((normalized || browse) && (debounced !== normalized || searchQuery.isLoading)),
     refreshing: searchQuery.isFetching && !searchQuery.isLoading,
     empty: Boolean(
-      normalized && debounced === normalized && !searchQuery.isLoading && matches.length === 0,
+      (normalized || browse) &&
+      debounced === normalized &&
+      !searchQuery.isLoading &&
+      !searchQuery.error &&
+      matches.length === 0,
     ),
+    retry: searchQuery.refetch,
   }
 }
