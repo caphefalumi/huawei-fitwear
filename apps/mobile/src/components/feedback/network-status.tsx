@@ -2,12 +2,14 @@ import { useNetworkState } from "expo-network"
 import { StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
+import { useAuth } from "@/features/auth"
 import { Palette as C } from "@/theme"
 
 export function NetworkStatusBanner() {
   const state = useNetworkState()
+  const { offline } = useAuth()
   const insets = useSafeAreaInsets()
-  if (state.isInternetReachable !== false && state.isConnected !== false) return null
+  if (!offline && state.isInternetReachable !== false && state.isConnected !== false) return null
 
   return (
     <View
@@ -28,7 +30,10 @@ export function NetworkStatusBanner() {
       >
         <Text style={styles.iconMark}>!</Text>
       </View>
-      <Text style={styles.message}>You're offline. Saved information may be out of date.</Text>
+      <Text style={styles.message}>
+        Offline mode. Saved information may be out of date. Saving to your account requires a
+        connection.
+      </Text>
     </View>
   )
 }

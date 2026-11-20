@@ -9,6 +9,7 @@ import {
   fetchExerciseCatalog,
   fetchWorkoutHistory,
   fetchWorkoutSession,
+  fetchWorkoutStats,
   writeWorkout,
   type WorkoutWriteInput,
 } from "../api/workout-api"
@@ -60,6 +61,7 @@ export type SetInput = {
 export type WorkoutState = {
   exercises: Exercise[]
   sessions: WorkoutSession[]
+  historyMessage: string | null
   loading: boolean
   refreshing: boolean
   error: string | null
@@ -83,6 +85,15 @@ export const workoutQueryKeys = {
   progress: (userId: string) => [...workoutQueryKeys.all(userId), "stats"] as const,
   detail: (userId: string, sessionId: string) =>
     [...workoutQueryKeys.all(userId), "session", sessionId] as const,
+}
+
+export function useWorkoutProgress() {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: workoutQueryKeys.progress(user?.id ?? "signed-out"),
+    enabled: Boolean(user?.id),
+    queryFn: ({ signal }) => fetchWorkoutStats(signal),
+  })
 }
 
 function useWorkoutState(): WorkoutState {
@@ -221,6 +232,14 @@ function useWorkoutState(): WorkoutState {
   return {
     exercises: catalogQuery.data ?? [],
     sessions,
+    historyMessage:
+      historyQuery.data !== undefined
+        ? null
+        : historyQuery.fetchStatus === "paused"
+          ? "No workout history is saved on this device."
+          : historyQuery.isError
+            ? apiErrorMessage(historyQuery.error, "your workout history")
+            : "Loading workouts…",
     loading,
     refresh,
     refreshing: (catalogQuery.isFetching || historyQuery.isFetching) && !loading,

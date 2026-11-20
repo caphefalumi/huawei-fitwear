@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { onlineManager, useMutation, useQueryClient } from "@tanstack/react-query"
+import { addNetworkStateListener, getNetworkStateAsync, type NetworkState } from "expo-network"
 import {
   createContext,
   useCallback,
@@ -8,23 +9,24 @@ import {
   useState,
   type PropsWithChildren,
 } from "react"
-import { AppState } from "react-native"
+import { AppState, Platform } from "react-native"
 
 import { captureException, posthog } from "@/lib/analytics/posthog"
 import {
   ApiError,
   apiErrorMessage,
   onSessionExpired,
+  pauseAccountRequests,
   setApiToken,
   userFacingAccountDeleteError,
   userFacingAuthError,
   userFacingSessionError,
 } from "@/lib/api/client"
+import { clearOfflineCache, openOfflineCache } from "@/lib/query/offline-cache"
 import { sessionStorage } from "@/lib/storage"
 
 import {
-  authQueryKeys,
-  authSessionQueryOptions,
+  getSession,
   sendSignIn,
   sendDeleteAccount,
   sendPasswordReset,
@@ -49,7 +51,14 @@ export type {
   UpdateUserBody,
 }
 import { useAuthUiStore } from "../store/auth-ui-store"
-import { isLoggedIn } from "../utils/is-logged-in"
+import {
+  clearOfflineIdentity,
+  readOfflineIdentity,
+  validatedIdentity,
+  writeOfflineIdentity,
+  type OfflineIdentity,
+  type SessionUser,
+} from "../utils/offline-session"
 
 export const APP_ROUTES = {
   welcome: "/",
@@ -59,7 +68,8 @@ export const APP_ROUTES = {
 } as const
 
 type AuthContextValue = {
-  user: AuthUser | null
+  user: SessionUser | null
+  offline?: boolean
   loading: boolean
   pending: boolean
   error: string | null
@@ -84,11 +94,8 @@ function identifyUser(user: AuthUser) {
 }
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const sessionQuery = useQuery({ ...authSessionQueryOptions(), enabled: false })
-  const authenticated = useAuthUiStore((state) => state.authenticated)
-  const setAuthenticated = useAuthUiStore((state) => state.setAuthenticated)
-  const user = authenticated ? (sessionQuery.data?.user ?? null) : null
-  const session = authenticated ? (sessionQuery.data?.session ?? null) : null
+  const [session, setSession] = useState<{ user: SessionUser; expiresAt: string } | null>(null)
+  const [offline, setOffline] = useState(false)
   const [loading, setLoading] = useState(true)
   const pending = useAuthUiStore((state) => state.pending)
   const setPending = useAuthUiStore((state) => state.setPending)
@@ -96,6 +103,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const setError = useAuthUiStore((state) => state.setError)
   const revision = useRef(0)
   const busy = useRef(false)
+  const credential = useRef<{ token: string; identity: OfflineIdentity | null } | null>(null)
+  const reachable = useRef<boolean | undefined>(undefined)
+  const cloudAvailable = useRef(false)
+  const stopSnapshot = useRef<(() => void) | null>(null)
+  const storageWork = useRef(Promise.resolve())
   const queryClient = useQueryClient()
   const authenticateMutation = useMutation({
     mutationKey: ["auth", "authenticate"],
@@ -122,14 +134,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
   })
   const signOutMutation = useMutation({
     mutationKey: ["auth", "sign-out"],
+    networkMode: "always",
     mutationFn: (request: Promise<unknown>) => request,
   })
   const deleteAccountMutation = useMutation({
     mutationKey: ["auth", "delete-account"],
+    networkMode: "always",
     mutationFn: sendDeleteAccount,
   })
   const updateUserMutation = useMutation({
     mutationKey: ["auth", "update-user"],
+    networkMode: "always",
     mutationFn: sendUpdateUser,
   })
   const { mutateAsync: authenticateAsync } = authenticateMutation
@@ -137,66 +152,250 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const { mutateAsync: deleteAccountAsync } = deleteAccountMutation
   const { mutateAsync: updateUserAsync } = updateUserMutation
 
-  const clearSession = useCallback(async () => {
+  const queueStorage = useCallback((work: () => Promise<void>) => {
+    const next = storageWork.current.then(work)
+    storageWork.current = next.catch(() => {})
+    return next
+  }, [])
+
+  const setCloudAvailable = useCallback((available: boolean) => {
+    cloudAvailable.current = available
+    if (Platform.OS === "web") return
+    pauseAccountRequests(!available)
+    onlineManager.setOnline(available)
+    setOffline(!available)
+  }, [])
+
+  const dropSession = useCallback(() => {
     revision.current += 1
+    credential.current = null
+    stopSnapshot.current?.()
+    stopSnapshot.current = null
     posthog?.reset()
     setApiToken(null)
-    setAuthenticated(false)
+    setCloudAvailable(false)
+    setSession(null)
     queryClient.clear()
-    await sessionStorage.clearToken()
-  }, [queryClient, setAuthenticated])
+  }, [queryClient, setCloudAvailable])
+
+  const clearSession = useCallback(() => {
+    dropSession()
+    return queueStorage(async () => {
+      const results = await Promise.allSettled([
+        sessionStorage.clearToken(),
+        clearOfflineIdentity(),
+        Promise.resolve().then(clearOfflineCache),
+      ])
+      if (results.some((result) => result.status === "rejected")) {
+        throw new Error("Could not remove all saved account data.")
+      }
+    })
+  }, [dropSession, queueStorage])
+
+  const showSession = useCallback(
+    (identity: OfflineIdentity, user: SessionUser) => {
+      stopSnapshot.current ??= openOfflineCache(queryClient, {
+        accountId: identity.user.id,
+        sessionId: identity.sessionId,
+      })
+      setSession({ user, expiresAt: identity.expiresAt })
+      setError(null)
+    },
+    [queryClient, setError],
+  )
+
+  const saveLease = useCallback(
+    (token: string, identity: OfflineIdentity) =>
+      queueStorage(() => writeOfflineIdentity(token, identity)).catch(() => {
+        // Storage failure cannot turn a successful server sign-in into an error.
+        captureException(new Error("Could not save the offline session."))
+      }),
+    [queueStorage],
+  )
   useEffect(() => {
     useAuthUiStore.getState().reset()
   }, [])
 
   useEffect(() => {
     let active = true
-    const hydrateRevision = revision.current
+    let validation: AbortController | null = null
+    let networkVersion = 0
+    const native = Platform.OS !== "web"
+    const startRevision = revision.current
+
+    function showSavedSession() {
+      const saved = credential.current
+      if (!saved?.identity || !(Date.parse(saved.identity.expiresAt) > Date.now())) return false
+      setApiToken(saved.token)
+      // A warm session already has its full user; only a cold restore needs the projection.
+      if (!stopSnapshot.current) showSession(saved.identity, saved.identity.user)
+      return true
+    }
+
+    const clearSavedOfflineData = () =>
+      queueStorage(async () => {
+        await Promise.allSettled([
+          clearOfflineIdentity(),
+          Promise.resolve().then(clearOfflineCache),
+        ])
+      })
+
+    async function validate() {
+      const saved = credential.current
+      if (!active || !saved || validation) return
+      const currentRevision = revision.current
+      const controller = new AbortController()
+      const stillCurrent = () =>
+        active && !controller.signal.aborted && revision.current === currentRevision
+      validation = controller
+      const { token, identity: previous } = saved
+      setApiToken(token)
+      try {
+        const response = await getSession(controller.signal)
+        if (!stillCurrent()) return
+        const identity = validatedIdentity(response, token)
+        if (
+          !identity ||
+          (previous &&
+            (previous.user.id !== identity.user.id || previous.sessionId !== identity.sessionId))
+        ) {
+          throw new ApiError("The server returned an invalid session.", 0, "INVALID_SESSION")
+        }
+        await saveLease(token, identity)
+        if (!stillCurrent()) return
+        credential.current = { token, identity }
+        showSession(identity, response.user)
+        identifyUser(response.user)
+        setCloudAvailable(reachable.current !== false)
+      } catch (cause) {
+        if (!stillCurrent()) return
+        if (
+          native &&
+          cause instanceof ApiError &&
+          cause.status === 0 &&
+          (cause.code === "NETWORK_ERROR" || cause.code === "TIMEOUT")
+        ) {
+          setCloudAvailable(false)
+          if (showSavedSession()) return
+          if (previous) {
+            setError("Your session expired. Please sign in again.")
+            await clearSession().catch(() => {
+              setError("Session expired, but saved account data could not be removed.")
+            })
+            return
+          }
+          setApiToken(null)
+          setError(userFacingSessionError(cause))
+          await clearSavedOfflineData()
+        } else if (
+          cause instanceof ApiError &&
+          (cause.status === 401 || cause.status === 403 || cause.code === "INVALID_SESSION")
+        ) {
+          setError("Your session expired. Please sign in again.")
+          await clearSession().catch(() => {
+            setError("Session expired, but saved account data could not be removed.")
+          })
+        } else {
+          dropSession()
+          captureException(cause)
+          setError(userFacingSessionError(cause))
+        }
+      } finally {
+        if (validation === controller) validation = null
+      }
+    }
+
     async function hydrate() {
       try {
         const token = await sessionStorage.getToken()
-        if (!active || revision.current !== hydrateRevision || !token) return
-        setApiToken(token)
-        const result = await queryClient.fetchQuery({
-          ...authSessionQueryOptions(),
-          // Startup must settle offline without trusting an unvalidated token.
-          networkMode: "always",
-          retry: false,
-          staleTime: 0,
-        })
-        if (!active || revision.current !== hydrateRevision) return
-        if (!isLoggedIn(result.session)) {
-          await clearSession()
-          setError("Your session expired. Sign in again.")
+        if (!active || revision.current !== startRevision) return
+        if (!token) {
+          await clearSavedOfflineData()
           return
         }
-        setAuthenticated(true)
-        identifyUser(result.user)
+        const identity = await readOfflineIdentity(token).catch(() => null)
+        if (!active || revision.current !== startRevision) return
+        credential.current = { token, identity }
+        if (native && reachable.current === false) {
+          if (!showSavedSession()) {
+            setError("Could not restore your session. Sign in again when you're back online.")
+            await clearSavedOfflineData()
+          }
+          return
+        }
+        await validate()
       } catch (cause) {
-        captureException(cause)
-        if (active) {
-          setApiToken(null)
-          setAuthenticated(false)
+        if (active && revision.current === startRevision) {
+          captureException(cause)
           setError(userFacingSessionError(cause))
         }
       } finally {
         if (active) setLoading(false)
       }
     }
+
     const unsubscribe = onSessionExpired(() => {
       if (!active) return
       setError("Your session expired. Please sign in again.")
-      void clearSession().catch((cause) => {
-        captureException(cause)
-        setError("Session expired, but saved credentials could not be removed. Sign in again.")
+      void clearSession().catch(() => {
+        setError("Session expired, but saved account data could not be removed.")
       })
     })
+
+    function updateNetwork(state: NetworkState) {
+      const wasReachable = reachable.current
+      const available = state.isConnected !== false && state.isInternetReachable !== false
+      reachable.current = available
+      if (!available) {
+        setCloudAvailable(false)
+        if (credential.current) {
+          if (!showSavedSession()) {
+            setError("Could not restore your session. Sign in again when you're back online.")
+          }
+          setLoading(false)
+        }
+      } else if (!cloudAvailable.current) {
+        if (wasReachable === false && validation) {
+          validation.abort()
+          validation = null
+        }
+        void validate()
+      }
+    }
+
+    setCloudAvailable(false)
+    const network = native
+      ? addNetworkStateListener((state) => {
+          networkVersion += 1
+          updateNetwork(state)
+        })
+      : undefined
+    function readNetwork() {
+      const version = networkVersion
+      void getNetworkStateAsync()
+        .then((state) => {
+          if (active && networkVersion === version) updateNetwork(state)
+        })
+        .catch(() => {})
+    }
+    if (native) readNetwork()
+    const foreground = native
+      ? AppState.addEventListener("change", (state) => {
+          if (state === "active" && !cloudAvailable.current) readNetwork()
+        })
+      : undefined
     void hydrate()
     return () => {
       active = false
+      validation?.abort()
+      network?.remove()
+      foreground?.remove()
       unsubscribe()
+      stopSnapshot.current?.()
+      stopSnapshot.current = null
+      if (native) pauseAccountRequests(false)
     }
-  }, [clearSession, queryClient, setAuthenticated, setError])
+  }, [clearSession, dropSession, queueStorage, saveLease, setCloudAvailable, setError, showSession])
 
   useEffect(() => {
     if (!session) return
@@ -233,16 +432,30 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const currentRevision = ++revision.current
       try {
         const result = await authenticateAsync(sendRequest)
-        if (!isLoggedIn(result.session)) {
+        const identity = validatedIdentity(result)
+        if (!identity) {
           throw new ApiError("The server returned an invalid session.", 0, "INVALID_SESSION")
         }
-        await sessionStorage.setToken(result.session.token)
         if (currentRevision !== revision.current) return
-        queryClient.removeQueries()
-        setApiToken(result.session.token)
-        queryClient.setQueryData(authQueryKeys.session, result)
-        setAuthenticated(true)
+        if (credential.current) {
+          await clearSession().catch(() => {
+            captureException(new Error("Could not remove the previous account's saved data."))
+          })
+        } else {
+          dropSession()
+        }
+        const installRevision = currentRevision + 1
+        if (revision.current !== installRevision) return
+        const { token } = result.session
+        await queueStorage(() => sessionStorage.setToken(token))
+        if (revision.current !== installRevision) return
+        await saveLease(token, identity)
+        if (revision.current !== installRevision) return
+        credential.current = { token, identity }
+        setApiToken(token)
+        showSession(identity, result.user)
         identifyUser(result.user)
+        setCloudAvailable(reachable.current !== false)
       } catch (cause) {
         if (!(cause instanceof ApiError && cause.status < 500)) captureException(cause)
         setError(userFacingAuthError(cause))
@@ -252,7 +465,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setPending(false)
       }
     },
-    [authenticateAsync, queryClient, setAuthenticated, setError, setPending],
+    [
+      authenticateAsync,
+      clearSession,
+      dropSession,
+      queueStorage,
+      saveLease,
+      setCloudAvailable,
+      setError,
+      setPending,
+      showSession,
+    ],
   )
 
   const signIn = useCallback(
@@ -272,9 +495,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const signOut = useCallback(() => {
     setError(null)
-    revision.current += 1
+    const request = sendSignOut()
+    const clearing = clearSession()
     const localRevision = revision.current
-    void signOutAsync(sendSignOut()).catch((cause) => {
+    void signOutAsync(request).catch((cause) => {
       if (revision.current !== localRevision) return
       if (!(cause instanceof ApiError && cause.status === 401)) {
         captureException(cause)
@@ -283,10 +507,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
         )
       }
     })
-    return clearSession().catch((cause) => {
+    return clearing.catch((cause) => {
       captureException(cause)
       if (revision.current === localRevision)
-        setError("Signed out on this device, but saved credentials could not be removed.")
+        setError("Signed out on this device, but some saved account data could not be removed.")
     })
   }, [clearSession, signOutAsync, setError])
   const deleteAccount = useCallback(async () => {
@@ -317,13 +541,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const currentRevision = revision.current
       try {
         const result = await updateUserAsync(body)
-        if (currentRevision === revision.current) {
-          queryClient.setQueryData<AuthenticationSessionResponse>(
-            authQueryKeys.session,
-            (previous) => (previous ? { ...previous, user: result } : previous),
-          )
+        if (
+          currentRevision === revision.current &&
+          result.id === credential.current?.identity?.user.id
+        ) {
+          setSession((previous) => (previous ? { ...previous, user: result } : null))
+          await queryClient.invalidateQueries({ queryKey: ["meals", result.id, "summary"] })
         }
-        await queryClient.invalidateQueries({ queryKey: ["meals", result.id, "summary"] })
       } catch (cause) {
         captureException(cause)
         setError(apiErrorMessage(cause, "your profile", "save"))
@@ -336,7 +560,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
   return (
     <AuthContext.Provider
       value={{
-        user,
+        user: session?.user ?? null,
+        offline: offline && Boolean(session),
         loading,
         pending,
         error,

@@ -1,6 +1,12 @@
 import { status } from "elysia"
 
-const fields = "product_name,nutriments,nutrition_data_per,product_quantity_unit"
+const fields = "product_name,brands,nutriments,nutrition_data_per,product_quantity_unit"
+
+function nutrient(value: unknown, max: number) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= max
+    ? value
+    : undefined
+}
 
 export async function lookupPackagedFood(barcode: string) {
   let payload: unknown
@@ -32,39 +38,35 @@ export async function lookupPackagedFood(barcode: string) {
   ) {
     return { food: null }
   }
-  const { product_name, nutriments, nutrition_data_per, product_quantity_unit } =
+  const { product_name, brands, nutriments, nutrition_data_per, product_quantity_unit } =
     payload.product as Record<string, unknown>
-  if (
-    typeof product_name !== "string" ||
-    !product_name.trim() ||
-    !nutriments ||
-    typeof nutriments !== "object"
-  ) {
-    return { food: null }
-  }
-  const values = nutriments as Record<string, unknown>
-  const energyKj = values["energy-kj_100g"] ?? values.energy_100g
+  const values =
+    nutriments && typeof nutriments === "object" ? (nutriments as Record<string, unknown>) : {}
+  const energyKj = nutrient(values["energy-kj_100g"], 4184) ?? nutrient(values.energy_100g, 4184)
   const kcal =
-    values["energy-kcal_100g"] ?? (typeof energyKj === "number" ? energyKj / 4.184 : undefined)
-  const protein = values.proteins_100g
-  const carbs = values.carbohydrates_100g
-  const fat = values.fat_100g
-  const valid = (value: unknown, max: number): value is number =>
-    typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= max
-  if (!valid(kcal, 1000) || !valid(protein, 100) || !valid(carbs, 100) || !valid(fat, 100)) {
-    return { food: null }
-  }
+    nutrient(values["energy-kcal_100g"], 1000) ??
+    (energyKj === undefined ? undefined : energyKj / 4.184)
+  const protein = nutrient(values.proteins_100g, 100)
+  const carbs = nutrient(values.carbohydrates_100g, 100)
+  const fat = nutrient(values.fat_100g, 100)
+  const name =
+    typeof product_name === "string" ? product_name.trim().slice(0, 200) || undefined : undefined
+  const brand = typeof brands === "string" ? brands.trim().slice(0, 200) || undefined : undefined
   const servingUnit = nutrition_data_per === "100ml" || product_quantity_unit === "ml" ? "ml" : "g"
-  return {
-    food: {
-      id: `off-${barcode}`,
-      name: product_name.trim().slice(0, 200),
-      servingUnit,
-      glyph: servingUnit === "ml" ? "droplet" : "wheat",
-      caloriesPer100: kcal,
-      proteinPer100G: protein,
-      carbsPer100G: carbs,
-      fatPer100G: fat,
-    },
-  }
+  const product = { name, brand, servingUnit, per100: { kcal, protein, carbs, fat } }
+  // Installed clients assume every nutrition field in `food` is numeric.
+  const food =
+    name && kcal !== undefined && protein !== undefined && carbs !== undefined && fat !== undefined
+      ? {
+          id: `off-${barcode}`,
+          name,
+          servingUnit,
+          glyph: servingUnit === "ml" ? "droplet" : "wheat",
+          caloriesPer100: kcal,
+          proteinPer100G: protein,
+          carbsPer100G: carbs,
+          fatPer100G: fat,
+        }
+      : null
+  return { food, product }
 }
