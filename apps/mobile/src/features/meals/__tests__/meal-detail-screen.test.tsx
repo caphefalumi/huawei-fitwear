@@ -1,4 +1,5 @@
-import { act, fireEvent, waitFor } from "@testing-library/react-native"
+import { onlineManager } from "@tanstack/react-query"
+import { act, cleanup, fireEvent, waitFor } from "@testing-library/react-native"
 
 import { useMeals } from "@/features/meals"
 import { MealDetailScreen } from "@/features/meals/screens/meal-detail-screen"
@@ -64,4 +65,35 @@ test("loads a meal by encoded route ID and retries a failed request", async () =
     expect.objectContaining({ signal: expect.any(AbortSignal) }),
   )
   expect(onBack).not.toHaveBeenCalled()
+})
+
+test("an uncached offline meal shows a reconnect message instead of not found", async () => {
+  onlineManager.setOnline(false)
+  try {
+    const screen = await renderWithProviders(
+      <MealDetailScreen logId="not-cached" onBack={jest.fn()} />,
+    )
+    expect(screen.getByText("Meal unavailable offline")).toBeTruthy()
+    expect(screen.queryByText("This meal could not be found.")).toBeNull()
+    expect(request).not.toHaveBeenCalled()
+  } finally {
+    await cleanup()
+    onlineManager.setOnline(true)
+  }
+})
+
+test("cached history details remain readable offline without trying to fetch the meal", async () => {
+  onlineManager.setOnline(false)
+  useMealsMock.mockReturnValue({
+    history: [{ id: "saved", name: "Cached meal" }],
+    loading: false,
+  } as never)
+  try {
+    const screen = await renderWithProviders(<MealDetailScreen logId="saved" onBack={jest.fn()} />)
+    expect(screen.getByText("Cached meal")).toBeTruthy()
+    expect(request).not.toHaveBeenCalled()
+  } finally {
+    await cleanup()
+    onlineManager.setOnline(true)
+  }
 })

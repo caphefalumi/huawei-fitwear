@@ -1,4 +1,4 @@
-import { notifyManager, useQuery } from "@tanstack/react-query"
+import { notifyManager, onlineManager, useQuery } from "@tanstack/react-query"
 import type { QueryClient } from "@tanstack/react-query"
 import { act, renderHook, waitFor } from "@testing-library/react-native"
 import { act as reactAct } from "react"
@@ -160,6 +160,19 @@ test("new account has an empty draft and uses the server daily summary", async (
   expect(result.current.history).toEqual([])
   expect(result.current.loggedKcal).toBe(260)
   expect(result.current.summary).toEqual(summary)
+})
+
+test("an uncached offline meal history is unavailable, not a successfully empty history", async () => {
+  onlineManager.setOnline(false)
+  try {
+    const view = await renderHook(() => useMeals(), { wrapper: createQueryWrapper(MealsProvider) })
+    expect(view.result.current.historyState).toBe("offline")
+    expect(view.result.current.error).toMatch(/No nutrition summary for today is saved/)
+    expect(request).not.toHaveBeenCalled()
+    await view.unmount()
+  } finally {
+    onlineManager.setOnline(true)
+  }
 })
 
 test("draft CRUD is local until awaited logging persists the complete meal", async () => {

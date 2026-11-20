@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { onlineManager, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   createContext,
   useCallback,
@@ -184,6 +184,7 @@ type MealsContextValue = {
   setMealType: (type: MealType) => void
   items: MealItem[]
   totals: MealEstimate
+  historyState: "ready" | "loading" | "offline" | "error"
   draftImage: string | null
   setAnalysis: (items: ApiMealItem[], imageUri: string, image: MealImage) => void
   setDraftPhoto: (imageUri: string, image: MealImage) => void
@@ -266,6 +267,14 @@ export function MealsProvider({ children }: { children: ReactNode }) {
     queryFn: ({ signal }) => fetchMealSummary(summaryDate, signal),
   })
   const history = historyQuery.data ?? []
+  const historyState =
+    historyQuery.data !== undefined
+      ? "ready"
+      : historyQuery.fetchStatus === "paused"
+        ? "offline"
+        : historyQuery.isError
+          ? "error"
+          : "loading"
   const summary = summaryQuery.data ?? null
   const loading = historyQuery.isLoading || summaryQuery.isLoading
   const { refetch: refetchHistory } = historyQuery
@@ -327,7 +336,11 @@ export function MealsProvider({ children }: { children: ReactNode }) {
     },
   })
   const error = [historyQuery.error, summaryQuery.error].find((cause) => cause instanceof Error)
-  const errorMessage = error ? apiErrorMessage(error, "your meals") : null
+  const errorMessage = error
+    ? apiErrorMessage(error, "your meals")
+    : !summary && summaryQuery.fetchStatus === "paused"
+      ? "No nutrition summary for today is saved on this device."
+      : null
   const actionError = writeMutation.error
     ? apiErrorMessage(writeMutation.error, "that change", "save")
     : null
@@ -348,13 +361,13 @@ export function MealsProvider({ children }: { children: ReactNode }) {
       ...(onSuccess ? { onSuccess } : {}),
     })) as T
   useEffect(() => {
-    if (user?.updatedAt) void refetchSummary()
+    if (user?.updatedAt && onlineManager.isOnline()) void refetchSummary()
   }, [user?.updatedAt, refetchSummary])
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         setSummaryDate(localDate())
-        void refresh()
+        if (onlineManager.isOnline()) void refresh().catch(() => {})
       }
     })
     let midnight: ReturnType<typeof setTimeout>
@@ -363,7 +376,6 @@ export function MealsProvider({ children }: { children: ReactNode }) {
       next.setHours(24, 0, 0, 0)
       midnight = setTimeout(() => {
         setSummaryDate(localDate())
-        void refresh()
         schedule()
       }, next.getTime() - Date.now())
     }
@@ -445,6 +457,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
         setDraftPhoto,
         setAnalysis: (next, imageUri, image) => setAnalysis(next.map(fromApiItem), imageUri, image),
         history,
+        historyState,
         summary,
         loading,
         refreshing,

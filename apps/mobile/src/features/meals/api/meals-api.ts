@@ -37,6 +37,24 @@ type ApiFood = {
   fatPer100G: number
 }
 
+type Nutrient = "kcal" | "protein" | "carbs" | "fat"
+
+export type BarcodeProduct = {
+  name?: string
+  brand?: string
+  servingUnit: "g" | "ml"
+  per100: Partial<Record<Nutrient, number>>
+}
+
+export type LabelReading = {
+  name: string | null
+  basis:
+    | { kind: "per100"; unit: "g" | "ml" }
+    | { kind: "serving"; unit: "g" | "ml"; amount: number }
+    | null
+  nutrition: Record<Nutrient, number | null>
+}
+
 export type MealWriteInput = {
   path: string
   method: string
@@ -90,6 +108,13 @@ export async function analyzeMeal(input: AnalyzeMealInput): Promise<ApiMealItem[
   ).items
 }
 
+export function readNutritionLabel(photoId: string) {
+  return apiRequest<LabelReading>("/meals/analyze-label", {
+    method: "POST",
+    body: { photoId },
+  })
+}
+
 export async function searchFoods(query: string, signal?: AbortSignal): Promise<FoodEntry[]> {
   const result = await apiRequest<{ foods: ApiFood[] }>(`/foods?q=${encodeURIComponent(query)}`, {
     signal,
@@ -112,18 +137,16 @@ export async function searchFoods(query: string, signal?: AbortSignal): Promise<
 export async function lookupBarcodeFood(
   barcode: string,
   signal: AbortSignal,
-): Promise<FoodEntry | null> {
-  const { food } = await apiRequest<{ food: ApiFood | null }>(
+): Promise<BarcodeProduct | null> {
+  const { food, product } = await apiRequest<{ food: ApiFood | null; product?: BarcodeProduct }>(
     `/foods/barcode/${encodeURIComponent(barcode)}`,
     { signal },
   )
+  if (product) return product
   if (!food) return null
   return {
-    id: food.id,
     name: food.name,
-    serving: `Per 100 ${food.servingUnit}`,
-    unit: food.servingUnit,
-    glyph: food.glyph,
+    servingUnit: food.servingUnit,
     per100: {
       kcal: food.caloriesPer100,
       protein: food.proteinPer100G,

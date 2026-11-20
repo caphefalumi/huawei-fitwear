@@ -5,6 +5,8 @@ import { Animated, Easing, StyleSheet, Text, View } from "react-native"
 import { BackHeader, Card, PageHeading, Screen } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
 import { useHealth } from "@/features/health"
+import { useWorkouts } from "@/features/workout"
+import { useWorkoutProgress } from "@/features/workout/hooks/workout-hooks"
 import { Palette as C } from "@/theme"
 
 import { WeightChart } from "../components/weight-chart"
@@ -30,10 +32,11 @@ function ActivityBar({ height, index }: { height: number; index: number }) {
 }
 
 export function ProgressScreen() {
-  const { weightKg, weights } = useHealth()
+  const { weightKg, weights, plan, loading: weightsLoading } = useHealth()
+  const { sessions, historyMessage } = useWorkouts()
+  const stats = useWorkoutProgress()
   const [range, setRange] = useState<Range>("Month")
-  const data = progressData(range, weights, null)
-  const latestWeight = weightKg ?? data.weights.at(-1) ?? 0
+  const data = progressData(range, weights, stats.data ?? null)
   const maxSessions = Math.max(1, ...data.bars.map((bar) => bar.sessions))
 
   return (
@@ -65,7 +68,9 @@ export function ProgressScreen() {
           </View>
         </View>
 
-        <Text style={styles.bigValue}>{latestWeight.toFixed(1)} kg</Text>
+        <Text style={styles.bigValue}>
+          {weightKg !== null ? `${weightKg.toFixed(1)} kg` : weightsLoading ? "Loading…" : "—"}
+        </Text>
 
         <WeightChart key={range} weights={data.weights} />
 
@@ -77,13 +82,17 @@ export function ProgressScreen() {
           ))}
         </View>
 
-        <Text style={styles.cardNote}>Goal 70.0 kg · Updated Oct 7</Text>
+        {plan.targetWeightKg !== null ? (
+          <Text style={styles.cardNote}>Goal {plan.targetWeightKg.toFixed(1)} kg</Text>
+        ) : null}
       </Card>
 
       <Card>
         <View style={styles.weightHeader}>
           <Text style={styles.cardTitle}>Training activity</Text>
-          <Text style={styles.cardNote}>{data.sessionsNote}</Text>
+          <Text style={styles.cardNote}>
+            {stats.isLoading ? "Loading training activity…" : data.sessionsNote}
+          </Text>
         </View>
 
         <View key={range} style={styles.bars}>
@@ -100,10 +109,21 @@ export function ProgressScreen() {
           <Text style={styles.cardNote}>{data.durationNote}</Text>
         </View>
 
-        <Text style={styles.cardNote}>
-          Logged sessions and total workout time. Weighted exercises are tracked separately in your
-          workout history.
-        </Text>
+        <Text style={styles.cardNote}>Logged sessions and total workout time.</Text>
+      </Card>
+
+      <Card>
+        <Text style={styles.cardTitle}>Recent workouts</Text>
+        {sessions.length ? (
+          sessions.map((entry) => (
+            <View key={entry.id} style={styles.weightHeader}>
+              <Text style={styles.cardNote}>{entry.sessionTitle}</Text>
+              <Text style={styles.cardNote}>{new Date(entry.startedAt).toLocaleDateString()}</Text>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.cardNote}>{historyMessage ?? "No recent workouts."}</Text>
+        )}
       </Card>
 
       <Card>

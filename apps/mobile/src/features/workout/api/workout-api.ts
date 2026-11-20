@@ -4,6 +4,9 @@ import type { Exercise, SessionWithSets, WorkoutSession } from "../hooks/workout
 
 export type WorkoutPage = { sessions: WorkoutSession[]; count: number }
 export type WorkoutWriteInput = { path: string; method: string; body?: unknown }
+export type WorkoutStats = {
+  byDate: { date: string; sessionCount: number; totalDurationSeconds: number }[]
+}
 
 export async function fetchExerciseCatalog(signal?: AbortSignal): Promise<Exercise[]> {
   const initial = await apiRequest<{ exercises: Exercise[]; count: number }>(
@@ -24,6 +27,11 @@ export async function fetchExerciseCatalog(signal?: AbortSignal): Promise<Exerci
 
 export function fetchWorkoutHistory(pageParam: number, signal?: AbortSignal): Promise<WorkoutPage> {
   return apiRequest<WorkoutPage>(`/workouts?limit=20&offset=${pageParam}`, { signal })
+}
+
+export function fetchWorkoutStats(signal?: AbortSignal): Promise<WorkoutStats> {
+  const from = new Date(Date.now() - 365 * 86_400_000).toISOString().slice(0, 10)
+  return apiRequest<WorkoutStats>(`/workouts/stats?from=${from}`, { signal })
 }
 
 export function fetchWorkoutSession(id: string, signal?: AbortSignal): Promise<SessionWithSets> {
