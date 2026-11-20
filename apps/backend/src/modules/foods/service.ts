@@ -1,4 +1,4 @@
-import { asc, eq, like } from "drizzle-orm"
+import { asc, eq, sql } from "drizzle-orm"
 import { status } from "elysia"
 
 import { getDb, foods as foodsTable } from "../../db"
@@ -16,7 +16,9 @@ export abstract class Foods {
       ? await db
           .select()
           .from(foodsTable)
-          .where(like(foodsTable.name, `%${term}%`))
+          .where(
+            sql`${foodsTable}.rowid IN (SELECT rowid FROM food_names_fts WHERE name LIKE ${`%${term}%`})`,
+          )
           .orderBy(asc(foodsTable.name))
           .limit(query.limit ?? DEFAULT_LIMIT)
           .all()
