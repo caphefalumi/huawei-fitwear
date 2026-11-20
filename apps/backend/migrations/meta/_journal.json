@@ -64,13 +64,6 @@
       "when": 1794477827382,
       "tag": "0008_usda_food_catalog",
       "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "6",
-      "when": 1794477827383,
-      "tag": "0009_food_search_index",
-      "breakpoints": true
     }
   ]
 }
