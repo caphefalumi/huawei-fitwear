@@ -89,14 +89,11 @@ jobs:
         with:
           path: ~/.cargo/bin/oxk
           key: ${{ runner.os }}-arkts-lint-bc16abcbcff59558146f4b85a766dcda8fa14c36
-      - name: Install cargo-binstall
-        if: steps.cache-arkts-lint.outputs.cache-hit != 'true'
-        uses: cargo-bins/cargo-binstall@main
       - name: Install ArkTS linter
         if: steps.cache-arkts-lint.outputs.cache-hit != 'true'
         env:
           CARGO_NET_GIT_FETCH_WITH_CLI: "true"
-        run: cargo binstall --no-confirm --git https://github.com/ohos-rs/oxc-ark --locked oxk
+        run: cargo install --git https://github.com/ohos-rs/oxc-ark --rev bc16abcbcff59558146f4b85a766dcda8fa14c36 --locked oxk
       - name: Lint watch ArkTS
         run: oxk lint --config .github/arkts-lint.json apps/watch/entry/src/main/ets
 
