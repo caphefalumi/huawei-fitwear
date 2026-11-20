@@ -33,10 +33,24 @@ type Envelope<T> = {
   result_info?: { total_count: number }
   errors?: { code: number; message: string }[]
 }
+async function fetchRead(url: string, init: RequestInit): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fetch(url, { ...init, signal: AbortSignal.timeout(30000) })
+    } catch (error) {
+      if (attempt >= 8) throw error
+      await sleep(Math.min(1000 * 2 ** attempt, 30000))
+    }
+  }
+}
 
 async function request<T>(url: string, init: RequestInit = {}): Promise<Envelope<T>> {
   for (let attempt = 0; ; attempt++) {
-    const response = await fetch(url, { ...init, headers: { ...headers, ...init.headers } })
+    const options = { ...init, headers: { ...headers, ...init.headers } }
+    const response =
+      !init.method || init.method === "GET"
+        ? await fetchRead(url, options)
+        : await fetch(url, options)
     const body = ((await response.json().catch(() => null)) ?? {
       success: false,
       errors: [{ code: 0, message: "Empty or non-JSON response from Cloudflare" }],
@@ -91,7 +105,7 @@ async function checkExisting() {
         new Bun.CryptoHasher("sha256").update(JSON.stringify(food)).digest("hex") &&
       !(await (async () => {
         for (let attempt = 0; ; attempt++) {
-          const response = await fetch(`${base}/${encodeURIComponent(item.id)}/download`, {
+          const response = await fetchRead(`${base}/${encodeURIComponent(item.id)}/download`, {
             headers,
           })
           if (response.ok) return (await response.text()) === JSON.stringify(food)
