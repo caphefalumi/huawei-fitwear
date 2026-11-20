@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Pressable } from "@/components/ui/pressable"
 import { Palette as C } from "@/theme"
 
+import { MealPhoto } from "../components/meal-photo"
 import { icons } from "../components/meals-ui"
 import { useMeals, type MealLog } from "../hooks/meals-hooks"
 
@@ -114,11 +115,7 @@ export function MealsHistoryScreen() {
             style={styles.card}
             onPress={() => router.push(`/meal?log=${item.id}`)}
           >
-            <Image
-              source={require("@/assets/images/meals/meal-photo.png")}
-              style={styles.photo}
-              contentFit="cover"
-            />
+            <MealPhoto mealId={item.id} imageUrl={item.imageUrl} style={styles.photo} compact />
             <View style={styles.copy}>
               <Text style={styles.name} numberOfLines={1}>
                 {item.name}
