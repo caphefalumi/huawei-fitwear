@@ -1,7 +1,7 @@
 <br />
 
 <p align="center">
-  <img src="assets/voochealth-logo.webp" alt="VoocHealth logo" width="370" />
+  <img src="assets/voochealth-logo.png" alt="VoocHealth logo" width="370" />
 </p>
 
 <h1 align="center">VoocHealth</h1>
