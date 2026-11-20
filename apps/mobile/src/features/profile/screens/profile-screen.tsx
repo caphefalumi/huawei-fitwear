@@ -14,6 +14,7 @@ import { emphasisFor, useLoads, usePlanPreferences } from "@/features/workout"
 import { captureException } from "@/lib/analytics/posthog"
 import { Palette as C } from "@/theme"
 
+import { ExerciseMediaSettings } from "../components/exercise-media-settings"
 import {
   ActivitySheet,
   BirthdateSheet,
@@ -213,6 +214,8 @@ export function ProfileScreen() {
           />
         </View>
       </View>
+
+      <ExerciseMediaSettings />
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Account</Text>

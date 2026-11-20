@@ -6,6 +6,11 @@ import { useHealth } from "@/features/health"
 import { ProfileScreen } from "@/features/profile/screens/profile-screen"
 import { useDeveloperMode } from "@/features/profile/store/developer-mode.store"
 import { PERIOD_AREA, useInjuries } from "@/features/recovery"
+import {
+  clearExerciseLoopCache,
+  exerciseLoopCacheBytes,
+  subscribeToExerciseLoopCache,
+} from "@/features/workout/utils/exercise-loop-cache"
 
 jest.mock("@/features/auth/hooks/auth-hooks", () => ({ useAuth: jest.fn() }))
 jest.mock("@/lib/api/client", () => ({
@@ -37,6 +42,11 @@ jest.mock("@/features/profile/components/sheets", () => ({
   WeightSheet: () => null,
 }))
 jest.mock("expo-router", () => ({ router: { push: jest.fn(), back: jest.fn() } }))
+jest.mock("@/features/workout/utils/exercise-loop-cache", () => ({
+  clearExerciseLoopCache: jest.fn(),
+  exerciseLoopCacheBytes: jest.fn(() => 0),
+  subscribeToExerciseLoopCache: jest.fn(() => () => {}),
+}))
 jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }))
@@ -115,6 +125,26 @@ test("opens exercise preferences and injuries from the plan section", async () =
   await fireEvent.press(screen.getByRole("button", { name: "Injuries, None" }))
   expect(router.push).toHaveBeenNthCalledWith(1, "/exercise-preferences")
   expect(router.push).toHaveBeenNthCalledWith(2, "/injuries")
+})
+
+test("shows actual exercise cache usage and updates to zero on clear", async () => {
+  let onCacheChanged: (() => void) | undefined
+  jest.mocked(exerciseLoopCacheBytes).mockReturnValue(260_000)
+  jest.mocked(subscribeToExerciseLoopCache).mockImplementationOnce((listener) => {
+    onCacheChanged = listener
+    return () => {
+      onCacheChanged = undefined
+    }
+  })
+  jest.mocked(clearExerciseLoopCache).mockImplementationOnce(() => {
+    jest.mocked(exerciseLoopCacheBytes).mockReturnValue(0)
+    onCacheChanged?.()
+  })
+  const screen = await render(<ProfileScreen />)
+  expect(screen.getByText("0.26 MB cached")).toBeTruthy()
+  await fireEvent.press(screen.getByRole("button", { name: "Clear exercise cache" }))
+  expect(clearExerciseLoopCache).toHaveBeenCalledTimes(1)
+  expect(screen.getByText("0.00 MB cached")).toBeTruthy()
 })
 
 test("shows unset height and restores account actions", async () => {
