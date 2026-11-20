@@ -90,9 +90,18 @@ async function checkExisting() {
       item.metadata?.catalog_sha256 !==
         new Bun.CryptoHasher("sha256").update(JSON.stringify(food)).digest("hex") &&
       !(await (async () => {
-        const response = await fetch(`${base}/${encodeURIComponent(item.id)}/download`, { headers })
-        if (!response.ok) throw new Error(`AI Search download ${response.status}: ${item.key}`)
-        return (await response.text()) === JSON.stringify(food)
+        for (let attempt = 0; ; attempt++) {
+          const response = await fetch(`${base}/${encodeURIComponent(item.id)}/download`, {
+            headers,
+          })
+          if (response.ok) return (await response.text()) === JSON.stringify(food)
+          if ((response.status === 429 || response.status >= 500) && attempt < 8) {
+            const retryAfter = Number(response.headers.get("Retry-After")) || 0
+            await sleep(Math.max(retryAfter * 1000, Math.min(1000 * 2 ** attempt, 30000)))
+            continue
+          }
+          throw new Error(`AI Search download ${response.status}: ${item.key}`)
+        }
       })())
     ) {
       throw new Error(
