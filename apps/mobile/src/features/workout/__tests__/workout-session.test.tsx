@@ -67,6 +67,9 @@ beforeEach(() => {
     emphasis: null,
     experience: "Regular",
     repTargets: {},
+    routineOwner: null,
+    customRoutines: {},
+    routineStorageError: null,
   })
   useTrainingWeights.setState({ level: null, custom: {} })
   useWorkoutLog.setState({ finished: [] })
@@ -76,6 +79,38 @@ beforeEach(() => {
 })
 
 afterEach(() => jest.useRealTimers())
+test("superset members alternate without rest until the round ends", async () => {
+  const original = routineOn(planNow(), input)
+  const [first, second] = original.exercises
+  const routine = {
+    ...original,
+    exercises: [
+      { ...first!, sets: 2, superset: "pair" },
+      { ...second!, sets: 2, superset: "pair" },
+    ],
+  }
+  usePlanPreferences.setState({
+    routineOwner: "user-1",
+    routineStorageError: null,
+    customRoutines: { [routine.name]: routine },
+  })
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const screen = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await screen.findByRole("header", { name: first!.name })
+  await fireEvent.press(screen.getByText("Done set"))
+  expect(screen.getByRole("header", { name: second!.name })).toBeTruthy()
+  expect(screen.queryByText("Skip rest")).toBeNull()
+  await fireEvent.press(screen.getByText("Done set"))
+  expect(screen.getByText("Skip rest")).toBeTruthy()
+  await fireEvent.press(screen.getByText("Skip rest"))
+  expect(screen.getByRole("header", { name: first!.name })).toBeTruthy()
+  await screen.unmount()
+  queryClient.clear()
+})
 
 test("routines carry sets, rest by goal and kept rep targets", () => {
   const monday = planNow()

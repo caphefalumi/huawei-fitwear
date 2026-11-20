@@ -195,6 +195,14 @@ function ActiveSession({ input }: { input: PlanInput }) {
     if (!following) return finish()
     setPosition(next)
     if (following.index !== slot.index) setDraft(routine.exercises[following.index]!.reps)
+    if (
+      exercise.superset &&
+      exercise.superset === routine.exercises[following.index]?.superset &&
+      following.set === slot.set
+    ) {
+      setPhase("set")
+      return
+    }
     setRestEndsAt(Date.now() + exercise.rest * 1000)
     setNow(Date.now())
     setPhase("rest")
