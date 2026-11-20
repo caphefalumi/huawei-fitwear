@@ -79,29 +79,33 @@ if (foods.length === 0) throw new Error("USDA catalog is empty")
 const existing = await listItems()
 const pending: Food[] = []
 const retry: Item[] = []
-for (const food of foods) {
-  const item = existing.get(`${food.id}.txt`)
-  if (!item) {
-    pending.push(food)
-  } else if (
-    item.metadata?.catalog_sha256 !==
-      new Bun.CryptoHasher("sha256").update(JSON.stringify(food)).digest("hex") &&
-    !(await (async () => {
-      const response = await fetch(`${base}/${encodeURIComponent(item.id)}/download`, { headers })
-      if (!response.ok) throw new Error(`AI Search download ${response.status}: ${item.key}`)
-      return (await response.text()) === JSON.stringify(food)
-    })())
-  ) {
-    // Never overwrite an existing item: it may be user data or a different catalog release.
-    throw new Error(
-      `Existing item ${item.key} does not match the USDA seed; refusing to overwrite it`,
-    )
-  } else if (item.status === "error") {
-    retry.push(item)
-  } else if (item.status === "skipped") {
-    throw new Error(`Existing item ${item.key} was skipped: ${item.error ?? ""}`)
+let checked = 0
+async function checkExisting() {
+  while (checked < foods.length) {
+    const food = foods[checked++]!
+    const item = existing.get(`${food.id}.txt`)
+    if (!item) {
+      pending.push(food)
+    } else if (
+      item.metadata?.catalog_sha256 !==
+        new Bun.CryptoHasher("sha256").update(JSON.stringify(food)).digest("hex") &&
+      !(await (async () => {
+        const response = await fetch(`${base}/${encodeURIComponent(item.id)}/download`, { headers })
+        if (!response.ok) throw new Error(`AI Search download ${response.status}: ${item.key}`)
+        return (await response.text()) === JSON.stringify(food)
+      })())
+    ) {
+      throw new Error(
+        `Existing item ${item.key} does not match the USDA seed; refusing to overwrite it`,
+      )
+    } else if (item.status === "error") {
+      retry.push(item)
+    } else if (item.status === "skipped") {
+      throw new Error(`Existing item ${item.key} was skipped: ${item.error ?? ""}`)
+    }
   }
 }
+await Promise.all(Array.from({ length: 6 }, () => checkExisting()))
 console.log(
   `Found ${foods.length - pending.length} existing USDA foods; uploading ${pending.length}`,
 )
