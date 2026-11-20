@@ -79,6 +79,8 @@ function RootNavigator() {
           <Stack.Screen name="(workout)/plan" />
           <Stack.Screen name="(workout)/routine" />
           <Stack.Screen name="(workout)/session" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="(workout)/workout-history/index" />
+          <Stack.Screen name="(workout)/workout-history/[id]" />
           <Stack.Screen name="(details)/injuries" />
           <Stack.Screen name="(details)/meal" />
           <Stack.Screen name="(modals)/add-item" />

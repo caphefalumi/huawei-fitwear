@@ -1,0 +1,20 @@
+INSERT INTO `exercises` (`id`, `name`, `muscleGroup`, `equipment`, `defaultSets`, `defaultReps`, `repetitionUnit`) VALUES
+('high-to-low-cable-fly', 'High-to-low cable fly', 'Chest', 'cable', 3, 12, 'reps'),
+('push-up', 'Push-up', 'Chest', 'bodyweight', 3, 10, 'reps'),
+('chest-supported-row', 'Chest-supported row', 'Back', 'dumbbell', 3, 10, 'reps'),
+('barbell-squat', 'Barbell squat', 'Legs', 'barbell', 3, 10, 'reps'),
+('hip-thrust', 'Hip thrust', 'Legs', 'dumbbell', 3, 12, 'reps'),
+('seated-leg-curl', 'Seated leg curl', 'Legs', 'machine', 3, 12, 'reps'),
+('leg-extension', 'Leg extension', 'Legs', 'machine', 3, 12, 'reps'),
+('bulgarian-split-squat', 'Bulgarian split squat', 'Legs', 'dumbbell', 3, 10, 'reps'),
+('walking-lunge', 'Walking lunge', 'Legs', 'dumbbell', 3, 10, 'reps'),
+('cable-glute-kickback', 'Cable glute kickback', 'Legs', 'cable', 3, 12, 'reps'),
+('hip-abduction-machine', 'Hip abduction machine', 'Legs', 'machine', 3, 12, 'reps'),
+('machine-shoulder-press', 'Machine shoulder press', 'Shoulders', 'machine', 3, 12, 'reps'),
+('overhead-rope-extension', 'Overhead rope extension', 'Arms', 'cable', 3, 12, 'reps'),
+('incline-dumbbell-curl', 'Incline dumbbell curl', 'Arms', 'dumbbell', 3, 12, 'reps'),
+('cable-crunch', 'Cable crunch', 'Core', 'cable', 3, 12, 'reps'),
+('pallof-press', 'Pallof press', 'Core', 'cable', 3, 10, 'reps'),
+('russian-twist', 'Russian twist', 'Core', 'bodyweight', 3, 12, 'reps'),
+('hanging-leg-raise', 'Hanging leg raise', 'Core', 'bodyweight', 3, 10, 'reps')
+ON CONFLICT DO NOTHING;

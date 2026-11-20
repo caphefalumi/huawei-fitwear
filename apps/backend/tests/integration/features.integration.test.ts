@@ -520,6 +520,221 @@ describe("Persistent feature APIs", () => {
     ).toBeNull()
   })
 
+  it("seeds every locally guided exercise without changing existing units", async () => {
+    const ids = [
+      "high-to-low-cable-fly",
+      "push-up",
+      "chest-supported-row",
+      "barbell-squat",
+      "hip-thrust",
+      "seated-leg-curl",
+      "leg-extension",
+      "bulgarian-split-squat",
+      "walking-lunge",
+      "cable-glute-kickback",
+      "hip-abduction-machine",
+      "machine-shoulder-press",
+      "overhead-rope-extension",
+      "incline-dumbbell-curl",
+      "cable-crunch",
+      "pallof-press",
+      "russian-twist",
+      "hanging-leg-raise",
+    ]
+    for (const id of ids) {
+      const exercise = await d1
+        .prepare("SELECT id, repetitionUnit FROM exercises WHERE id = ?")
+        .bind(id)
+        .first<{ id: string; repetitionUnit: string }>()
+      expect(exercise).toEqual({ id, repetitionUnit: "reps" })
+    }
+    expect(
+      await d1
+        .prepare("SELECT repetitionUnit FROM exercises WHERE id = 'plank'")
+        .first<{ repetitionUnit: string }>(),
+    ).toEqual({ repetitionUnit: "seconds" })
+  })
+
+  it("atomically saves completed workouts and safely retries without crossing ownership", async () => {
+    const own = await account()
+    const other = await account("other-atomic-workouts@fitwear.dev")
+    const body = {
+      id: "client-session-1",
+      sessionTitle: "Chest",
+      workoutSplit: "Push",
+      startedAt: "2026-01-10T10:00:00Z",
+      completedAt: "2026-01-10T10:30:00Z",
+      avgHeartRateBpm: 120,
+      maxHeartRateBpm: 150,
+      sets: [
+        {
+          exerciseId: "bench-press",
+          setIndex: 1,
+          weightKg: 30,
+          targetReps: 10,
+          detectedReps: 8,
+          userConfirmedReps: 9,
+          restDurationSeconds: 90,
+          avgHrBpm: 130,
+        },
+        { exerciseId: "push-up", setIndex: 2, weightKg: 0, userConfirmedReps: 12, isWarmup: true },
+        { exerciseId: "plank", setIndex: 3, weightKg: 0, targetReps: 999, userConfirmedReps: 999 },
+      ],
+    }
+    expect((await request("/workouts/completed", undefined, "POST", body)).status).toBe(401)
+    const response = await request("/workouts/completed", own.session.token, "POST", body)
+    expect(response.status).toBe(200)
+    const saved = await response.json()
+    expect(saved).toMatchObject({
+      id: body.id,
+      sessionTitle: body.sessionTitle,
+      avgHeartRateBpm: 120,
+      sets: [
+        { ...body.sets[0], isWarmup: false, exercise: { id: "bench-press" } },
+        { ...body.sets[1], targetReps: 10, exercise: { id: "push-up" } },
+        { ...body.sets[2], isWarmup: false, exercise: { id: "plank" } },
+      ],
+    })
+    const retry = await request("/workouts/completed", own.session.token, "POST", {
+      ...body,
+      sessionTitle: "Changed",
+      sets: [],
+    })
+    expect(await retry.json()).toEqual(saved)
+    expect((await request("/workouts/completed", other.session.token, "POST", body)).status).toBe(
+      404,
+    )
+    expect((await (await request("/workouts", other.session.token)).json()).count).toBe(0)
+    expect((await (await request("/workouts/stats", own.session.token)).json()).totalSets).toBe(3)
+
+    for (const [patch, expected] of [
+      [{ sets: [body.sets[0], body.sets[0]] }, 400],
+      [{ sets: [{ ...body.sets[0], exerciseId: "missing" }] }, 404],
+      [{ completedAt: "2026-01-10T09:00:00Z" }, 400],
+      [{ avgHeartRateBpm: 160, maxHeartRateBpm: 100 }, 400],
+    ] as const) {
+      const invalid = await request("/workouts/completed", own.session.token, "POST", {
+        ...body,
+        ...patch,
+        id: `invalid-${expected}-${Object.keys(patch)[0]}`,
+      })
+      expect(invalid.status).toBe(expected)
+    }
+    expect((await (await request("/workouts", own.session.token)).json()).count).toBe(1)
+
+    await d1.exec(`CREATE TRIGGER fail_workout_set BEFORE INSERT ON workout_sets
+      BEGIN SELECT RAISE(ABORT, 'injected set failure'); END;`)
+    expect(
+      (await request("/workouts/completed", own.session.token, "POST", { ...body, id: "rollback" }))
+        .status,
+    ).toBe(500)
+    expect((await request("/workouts/rollback", own.session.token)).status).toBe(404)
+    expect((await (await request("/workouts", own.session.token)).json()).count).toBe(1)
+  })
+
+  it("does not append sets when another request wins the session insert race", async () => {
+    const own = await account()
+    const batch = d1.batch.bind(d1)
+    const spy = spyOn(d1, "batch").mockImplementationOnce(async (statements) => {
+      await d1
+        .prepare(`INSERT INTO workout_sessions
+        (id, "userId", "sessionTitle", "workoutSplit", "startedAt", "completedAt", "createdAt")
+        VALUES (?, ?, ?, ?, ?, ?, ?)`)
+        .bind("raced", own.user.id, "Winner", "Push", 1767261600, 1767265200, 1767265200)
+        .run()
+      return batch(statements)
+    })
+    try {
+      const response = await request("/workouts/completed", own.session.token, "POST", {
+        id: "raced",
+        sessionTitle: "Loser",
+        workoutSplit: "Push",
+        startedAt: "2026-01-01T10:00:00Z",
+        completedAt: "2026-01-01T11:00:00Z",
+        sets: [{ exerciseId: "bench-press", setIndex: 1, weightKg: 50, userConfirmedReps: 10 }],
+      })
+      expect(response.status).toBe(200)
+      expect(await response.json()).toMatchObject({ id: "raced", sessionTitle: "Winner", sets: [] })
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it("returns only completed owned exercise history for progression", async () => {
+    const own = await account()
+    const other = await account("other-progression@fitwear.dev")
+    const base = {
+      sessionTitle: "Chest",
+      workoutSplit: "Push",
+      startedAt: "2026-01-01T10:00:00Z",
+      completedAt: "2026-01-01T11:00:00Z",
+      sets: [
+        {
+          exerciseId: "bench-press",
+          setIndex: 1,
+          weightKg: 60,
+          targetReps: 10,
+          userConfirmedReps: 10,
+        },
+      ],
+    }
+    for (const body of [
+      { ...base, id: "older" },
+      {
+        ...base,
+        id: "newer",
+        startedAt: "2026-01-02T10:00:00Z",
+        completedAt: "2026-01-02T11:00:00Z",
+        sets: [
+          { ...base.sets[0], weightKg: 50, userConfirmedReps: 8 },
+          { ...base.sets[0], setIndex: 2, weightKg: 300, isWarmup: true },
+          { ...base.sets[0], setIndex: 3, exerciseId: "push-up", isWarmup: true },
+        ],
+      },
+    ])
+      expect((await request("/workouts/completed", own.session.token, "POST", body)).status).toBe(
+        200,
+      )
+    expect(
+      (
+        await request("/workouts/completed", other.session.token, "POST", {
+          ...base,
+          id: "other",
+          sets: [{ ...base.sets[0], weightKg: 200 }],
+        })
+      ).status,
+    ).toBe(200)
+    const active = await (
+      await request("/workouts", own.session.token, "POST", {
+        sessionTitle: "Active",
+        workoutSplit: "Push",
+      })
+    ).json()
+    await request(`/workouts/${active.id}/sets`, own.session.token, "POST", {
+      exerciseId: "bench-press",
+      weightKg: 100,
+      userConfirmedReps: 10,
+    })
+    expect((await request("/workouts/progression")).status).toBe(401)
+    const result = await (await request("/workouts/progression", own.session.token)).json()
+    expect(result.exercises).toEqual([
+      {
+        exerciseId: "bench-press",
+        latestSessionId: "newer",
+        completedAt: "2026-01-02T11:00:00.000Z",
+        maxWeightKg: 60,
+        sets: [{ setIndex: 1, weightKg: 50, targetReps: 10, userConfirmedReps: 8 }],
+      },
+    ])
+    const excluded = await (
+      await request("/workouts/progression?excludeSessionId=newer", own.session.token)
+    ).json()
+    expect(excluded.exercises[0]).toMatchObject({ latestSessionId: "older", maxWeightKg: 60 })
+    expect(
+      (await (await request("/workouts/progression", other.session.token)).json()).exercises[0],
+    ).toMatchObject({ latestSessionId: "other", maxWeightKg: 200 })
+  })
+
   it("persists set CRUD, prevents cross-user access and aggregates completed workouts only", async () => {
     const own = await account()
     const other = await account("other-workouts@fitwear.dev")

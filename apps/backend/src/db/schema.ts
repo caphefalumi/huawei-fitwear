@@ -264,6 +264,7 @@ export const workoutSets = sqliteTable(
     userConfirmedReps: integer("userConfirmedReps").notNull(),
     restDurationSeconds: integer("restDurationSeconds"),
     avgHrBpm: integer("avgHrBpm"),
+    isWarmup: integer("isWarmup", { mode: "boolean" }).notNull().default(false),
     createdAt: integer("createdAt", { mode: "timestamp" })
       .notNull()
       .$defaultFn(() => new Date()),

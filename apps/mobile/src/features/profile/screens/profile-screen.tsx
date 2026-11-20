@@ -9,6 +9,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Toggle } from "@/components/ui/toggle"
 import { useAuth } from "@/features/auth"
 import { useHealth } from "@/features/health"
+import { DeviceHealthSettings } from "@/features/health/components/device-health-settings"
 import { PERIOD_AREA, PeriodSheet, useActiveInjuries, useInjuries } from "@/features/recovery"
 import { emphasisFor, useLoads, usePlanPreferences } from "@/features/workout"
 import { captureException } from "@/lib/analytics/posthog"
@@ -216,6 +217,16 @@ export function ProfileScreen() {
       </View>
 
       <ExerciseMediaSettings />
+      <DeviceHealthSettings />
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Watch</Text>
+        <ProfileRow
+          label="Connect VoocHealth watch"
+          value="Bluetooth"
+          onPress={() => router.push("/ble-sync")}
+        />
+      </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Account</Text>

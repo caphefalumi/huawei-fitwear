@@ -18,7 +18,7 @@ struct BleSyncDemoPage {
 
   // ── Text Messaging state ───────────────────────────────────────────────────
   @Local lastReceivedFromPhone: string = 'Waiting for phone...';
-  @Local watchDraftText: string = 'Rep 12 | HR 148 bpm';
+  @Local watchDraftText: string = '';
   @Local lastSentToPhone: string = '—';
 
   // ── Live IMU (throttled) ───────────────────────────────────────────────────
