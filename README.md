@@ -42,6 +42,14 @@ The VoocHealth watch app brings the experience to HarmonyOS watches, with access
 
 Have an idea or found a problem? Share it through [GitHub issues](https://github.com/caphefalumi/huawei-fitwear/issues).
 
+## Contributors
+
+Thanks to everyone who has contributed to VoocHealth.
+
+<a href="https://github.com/caphefalumi/huawei-fitwear/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=caphefalumi/huawei-fitwear" alt="VoocHealth contributors" />
+</a>
+
 ## License
 
 VoocHealth is available under the [MIT License](LICENSE).
