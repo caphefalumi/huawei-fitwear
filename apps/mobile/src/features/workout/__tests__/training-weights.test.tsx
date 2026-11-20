@@ -15,7 +15,6 @@ import { ExerciseGuideScreen } from "@/features/workout/screens/exercise-guide-s
 import { GroupPlanScreen } from "@/features/workout/screens/group-plan-screen"
 import { TrainingWeightsScreen } from "@/features/workout/screens/training-weights-screen"
 import { loadExerciseLoop } from "@/features/workout/utils/exercise-loop-cache"
-import { exerciseLoops } from "@/features/workout/utils/exercise-loops"
 
 jest.mock("@/features/health", () => ({
   ...jest.requireActual("@/features/health"),
@@ -27,6 +26,7 @@ jest.mock("expo-router", () => ({
 }))
 jest.mock("expo-router/react-navigation", () => ({ useIsFocused: jest.fn() }))
 jest.mock("@/features/workout/utils/exercise-loop-cache", () => ({ loadExerciseLoop: jest.fn() }))
+jest.mock("@/assets/exercise-loops/0025.webp", () => 25)
 jest.mock("expo-image", () => {
   const React = require("react")
   const { View } = require("react-native")
@@ -132,10 +132,7 @@ test("shows the bundled technique still if the GIF is unavailable", async () => 
   jest.mocked(loadExerciseLoop).mockRejectedValueOnce(new Error("offline"))
   const screen = await render(<ExerciseGuideScreen />)
 
-  expect(screen.getByLabelText("Bench press demonstration")).toHaveProp(
-    "source",
-    exerciseLoops["bench-press"]?.[1],
-  )
+  expect(screen.getByLabelText("Bench press demonstration")).toHaveProp("source", 25)
   expect(screen.getByText("Animation unavailable")).toBeTruthy()
 })
 
