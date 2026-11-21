@@ -8,6 +8,7 @@ import { Card, PageHeading, Screen, SectionHeading } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
 import { useAuth } from "@/features/auth"
 import { useHealth } from "@/features/health"
+import { dateLabel } from "@/features/health/hooks/health-hooks"
 import { useMeals } from "@/features/meals"
 import { injuryEffect, injuryTitle, useActiveInjuries } from "@/features/recovery"
 import { useRoutines } from "@/features/workout"
@@ -20,12 +21,8 @@ import { MacroBar } from "../components/ui"
 import { WeightChart } from "../components/weight-chart"
 import { nutritionView } from "../utils/nutrition-view"
 
-const DEMO_WEIGHTS = [72.8, 72.5, 72.3, 72.1, 71.9, 71.7, 71.5]
-const WEEK_ACTIVE = [true, true, false, true, true, false, true]
-
 const icons = {
   chevronRight: require("@/assets/images/home/chevron-right.svg"),
-  previousLog: require("@/assets/images/home/previous-log.svg"),
   shieldCheck: require("@/assets/images/home/shield-check.svg"),
   check: require("@/assets/images/home/check.svg"),
 }
@@ -48,7 +45,7 @@ function useCountUp(target: number, duration = 600) {
 }
 
 export function HomeScreen() {
-  const { weightKg, weightUpdated } = useHealth()
+  const { weights, loading: weightsLoading, error: weightsError } = useHealth()
   const injuries = useActiveInjuries()
   const { summary, error: mealsError } = useMeals()
   const [visit, setVisit] = useState(0)
@@ -74,17 +71,13 @@ export function HomeScreen() {
   const dateLine = usePlanNow()
     .toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
     .toUpperCase()
-  const latestWeightKg = weightKg ?? DEMO_WEIGHTS[DEMO_WEIGHTS.length - 1]
-  const weights =
-    latestWeightKg >= 70 && latestWeightKg <= 74
-      ? [...DEMO_WEIGHTS.slice(0, -1), latestWeightKg]
-      : DEMO_WEIGHTS
+  const latestWeight = weights.at(-1)
 
   return (
     <Screen>
       <View style={styles.topRow}>
         <Text style={styles.date}>{dateLine}</Text>
-        <Text style={styles.name}>{user?.name?.trim() || "Sam N."}</Text>
+        {user?.name?.trim() ? <Text style={styles.name}>{user.name.trim()}</Text> : null}
       </View>
 
       <PageHeading title="Today" style={styles.heading} />
@@ -104,18 +97,10 @@ export function HomeScreen() {
               Complete profile to see your daily target
             </Text>
           ) : null}
-          <Text style={styles.focusMuted} numberOfLines={1}>
-            {injuries.length ? injuryTitle(injuries) : "Watch connected"}
-          </Text>
-          <View style={styles.weekDots}>
-            {WEEK_ACTIVE.map((active, index) => (
-              <View
-                // ponytail: static demo strip, real activity data when health store has it
-                key={index}
-                style={[styles.dot, active ? styles.dotActive : styles.dotIdle]}
-              />
-            ))}
-          </View>
+          {injuries.length ? <Text style={styles.focusMuted}>{injuryTitle(injuries)}</Text> : null}
+          <Pressable onPress={() => router.push("/ble-sync")}>
+            <Text style={styles.focusMuted}>Watch sync</Text>
+          </Pressable>
         </Card>
       </Animated.View>
 
@@ -195,28 +180,22 @@ export function HomeScreen() {
               <Text style={styles.weightLabel} numberOfLines={1}>
                 Latest weight
               </Text>
-              <View style={styles.weightValueRow}>
-                <Text style={styles.weightValue} numberOfLines={1}>
-                  {latestWeightKg.toFixed(1)}
+              {latestWeight ? (
+                <>
+                  <View style={styles.weightValueRow}>
+                    <Text style={styles.weightValue}>{latestWeight.weightKg.toFixed(1)}</Text>
+                    <Text style={styles.weightUnit}>kg</Text>
+                  </View>
+                  <Text style={styles.weightSub}>Logged {dateLabel(latestWeight.loggedDate)}</Text>
+                </>
+              ) : (
+                <Text style={styles.weightSub}>
+                  {weightsLoading ? "Loading weight…" : (weightsError ?? "No weight logged yet.")}
                 </Text>
-                <Text style={styles.weightUnit}>kg</Text>
-              </View>
-              <Text style={styles.weightSub} numberOfLines={1}>
-                {weightUpdated ? "Logged Oct 8" : "−1.2 kg in 4 weeks"}
-              </Text>
+              )}
             </View>
-            <WeightChart weights={weights} />
-
-            {weightUpdated ? (
-              <View style={styles.previousRow}>
-                <Image
-                  source={icons.previousLog}
-                  style={styles.previousChart}
-                  contentFit="contain"
-                />
-                <Text style={styles.previousText}>Previous · Oct 7</Text>
-                <Text style={styles.previousValue}>72.0 kg</Text>
-              </View>
+            {weights.length > 1 ? (
+              <WeightChart weights={weights.slice(-7).map(({ weightKg }) => weightKg)} />
             ) : null}
           </Card>
         </Pressable>
@@ -315,23 +294,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: C.textMuted,
   },
-  weekDots: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 6,
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  dotActive: {
-    backgroundColor: C.accent,
-  },
-  dotIdle: {
-    borderWidth: 1,
-    borderColor: C.border,
-  },
   section: {
     gap: 10,
   },
@@ -359,25 +321,6 @@ const styles = StyleSheet.create({
   weightSub: {
     fontSize: 11,
     color: C.textMuted,
-  },
-  previousRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  previousChart: {
-    width: 44,
-    height: 20,
-  },
-  previousText: {
-    flex: 1,
-    fontSize: 11,
-    color: C.textMuted,
-  },
-  previousValue: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: C.text,
   },
   recovery: {
     flexDirection: "row",

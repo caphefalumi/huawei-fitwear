@@ -1,9 +1,11 @@
 import { Image } from "expo-image"
 import { router } from "expo-router"
+import { usePreventRemove } from "expo-router/react-navigation"
 import { useState } from "react"
 import { StyleSheet, Text, View, type ViewStyle } from "react-native"
 
 import { BackHeader, Button, PageHeading, Screen } from "@/components/ui"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Pressable } from "@/components/ui/pressable"
 import { Sheet, SheetActions } from "@/components/ui/sheet"
 import { Toggle } from "@/components/ui/toggle"
@@ -536,6 +538,11 @@ export function InjuriesScreen() {
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<{ area: InjuryArea; target: EditTarget } | null>(null)
   const changed = JSON.stringify(draft) !== JSON.stringify(initial)
+  const [repeatExit, setRepeatExit] = useState<(() => void) | null>(null)
+  const [exitApproved, setExitApproved] = useState(false)
+  const disableExitGuard = usePreventRemove(changed && !exitApproved, ({ repeat }) => {
+    setRepeatExit(() => repeat)
+  })
   const editingInjury = draft.find((injury) => injury.area === editing?.area) ?? null
 
   return (
@@ -568,7 +575,21 @@ export function InjuriesScreen() {
         disabled={!changed}
         onPress={() => {
           save(draft)
+          setExitApproved(true)
+          disableExitGuard()
           router.back()
+        }}
+      />
+      <ConfirmDialog
+        visible={repeatExit !== null}
+        title="Discard recovery changes?"
+        message="Your changes to injuries and recovery dates won't be saved."
+        cancelLabel="Keep editing"
+        confirmLabel="Discard"
+        onCancel={() => setRepeatExit(null)}
+        onConfirm={() => {
+          setExitApproved(true)
+          repeatExit?.()
         }}
       />
       <Text style={styles.safety}>

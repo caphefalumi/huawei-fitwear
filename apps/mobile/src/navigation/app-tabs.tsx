@@ -72,6 +72,7 @@ function TabButton({
       onLayout={onLayout}
       accessibilityRole="tab"
       accessibilityLabel={tab.label}
+      accessibilityState={{ selected: active }}
       testID={`tab-${tab.name}`}
     >
       <Animated.View style={[styles.tabInner, contentStyle]}>

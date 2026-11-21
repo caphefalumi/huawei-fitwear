@@ -46,10 +46,13 @@ const incompleteSummary = {
   remaining: null,
 }
 
-async function renderHome(summary: unknown) {
+async function renderHome(
+  summary: unknown,
+  weights = [{ id: "1", loggedDate: "2026-11-18", weightKg: 82.5 }],
+) {
   jest.mocked(useHealth).mockReturnValue({
-    weightKg: 72,
-    weightUpdated: true,
+    weights,
+    weightKg: weights.at(-1)?.weightKg ?? null,
     plan: { goal: "Maintain", sessions: 3 },
     error: null,
     loading: false,
@@ -83,7 +86,15 @@ afterEach(() => {
 
 test("home shows the latest logged weight", async () => {
   const screen = await renderHome(readySummary)
-  expect(screen.getByText("Logged Oct 8")).toBeTruthy()
+  expect(screen.getByText("82.5")).toBeTruthy()
+  expect(screen.getByText(/^Logged /)).toBeTruthy()
+  expect(screen.queryByText("Watch connected")).toBeNull()
+})
+
+test("home does not invent a weight when there are no logs", async () => {
+  const screen = await renderHome(readySummary, [])
+  expect(screen.getByText("No weight logged yet.")).toBeTruthy()
+  expect(screen.queryByText("71.5")).toBeNull()
 })
 
 test("home shows the real daily target, consumed and kcal left", async () => {

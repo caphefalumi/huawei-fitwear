@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { act, fireEvent, render } from "@testing-library/react-native"
 import { router, useLocalSearchParams } from "expo-router"
+import { usePreventRemove } from "expo-router/react-navigation"
 
 import { useAuth } from "@/features/auth"
 import { dateKey, useHealth } from "@/features/health"
@@ -17,6 +18,7 @@ jest.mock("expo-router", () => ({
   router: { push: jest.fn(), back: jest.fn(), dismissTo: jest.fn() },
   useLocalSearchParams: jest.fn(),
 }))
+jest.mock("expo-router/react-navigation", () => ({ usePreventRemove: jest.fn(() => jest.fn()) }))
 jest.mock("@/features/auth", () => ({
   ...jest.requireActual("@/features/auth"),
   useAuth: jest.fn(),
@@ -79,6 +81,27 @@ beforeEach(() => {
 })
 
 afterEach(() => jest.useRealTimers())
+
+test("native removal prompts before discarding logged sets", async () => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } })
+  const screen = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await fireEvent.press(await screen.findByText("Done set"))
+  const [blocked, onRemove] = jest.mocked(usePreventRemove).mock.lastCall!
+  expect(blocked).toBe(true)
+  const repeat = jest.fn()
+  await act(async () => onRemove?.({ repeat, data: { action: { type: "GO_BACK" } } }))
+  expect(screen.getByText("Leave workout?")).toBeTruthy()
+  await fireEvent.press(screen.getByText("Keep going"))
+  expect(repeat).not.toHaveBeenCalled()
+  await act(async () => onRemove?.({ repeat, data: { action: { type: "GO_BACK" } } }))
+  await fireEvent.press(screen.getAllByText("Leave").at(-1)!)
+  expect(repeat).toHaveBeenCalledTimes(1)
+})
+
 test("superset members alternate without rest until the round ends", async () => {
   const original = routineOn(planNow(), input)
   const [first, second] = original.exercises
