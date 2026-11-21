@@ -1,10 +1,10 @@
 import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useState } from "react"
-import { StyleSheet, Text, View } from "react-native"
-import Animated, { FadeInUp } from "react-native-reanimated"
+import { AccessibilityInfo, StyleSheet, Text, View } from "react-native"
 
-import { Button, PageHeading, Screen } from "@/components/ui"
+import { FetchErrorState } from "@/components/feedback/fetch-states"
+import { Button, Card, PageHeading, Screen } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
 import { Toggle } from "@/components/ui/toggle"
 import { useAuth } from "@/features/auth"
@@ -24,6 +24,7 @@ import {
   FrequencySheet,
   GoalSheet,
   HeightSheet,
+  NameSheet,
   SessionLengthSheet,
   SexSheet,
   TargetWeightSheet,
@@ -38,35 +39,32 @@ const icons = {
 
 type RowProps = {
   label: string
-  value: string
-  onPress?: () => void
-  loading?: boolean
+  value?: string
+  onPress: () => void
 }
 
-function ProfileRow({ label, value, onPress, loading = false }: RowProps) {
+function ProfileRow({ label, value, onPress }: RowProps) {
   return (
     <Pressable
       style={styles.row}
       onPress={onPress}
-      disabled={!onPress}
-      accessibilityRole={onPress ? "button" : undefined}
-      accessibilityLabel={onPress ? `${label}, ${loading ? "loading" : value}` : undefined}
+      accessibilityLabel={value ? `${label}, ${value}` : label}
     >
       <Text style={styles.rowLabel}>{label}</Text>
-      <View style={styles.rowRight}>
-        {loading ? (
-          <View accessibilityLabel={`${label} loading`} style={styles.skeleton} />
-        ) : (
-          <Text style={styles.rowValue}>{value}</Text>
-        )}
-        <Image source={icons.chevronRight} style={styles.chevron} contentFit="contain" />
-      </View>
+      {value ? <Text style={styles.rowValue}>{value}</Text> : null}
+      <Image
+        accessible={false}
+        source={icons.chevronRight}
+        style={styles.chevron}
+        contentFit="contain"
+      />
     </Pressable>
   )
 }
 
 type OpenSheet =
   | "birthdate"
+  | "name"
   | "height"
   | "weight"
   | "sex"
@@ -80,11 +78,11 @@ type OpenSheet =
   | null
 
 export function ProfileScreen() {
-  const { user, signOut } = useAuth()
+  const { user, signOut, offline } = useAuth()
   const developerMode = useDeveloperMode((state) => state.enabled)
   const developerFeatures = useDeveloperMode((state) => state.features)
   const toggleDeveloperMode = useDeveloperMode((state) => state.toggle)
-  const { weightKg, heightCm, sex, plan, loading, error, refresh } = useHealth()
+  const { weightKg, heightCm, sex, plan, loading, error, refresh, refreshing } = useHealth()
   const injuries = useActiveInjuries()
   const addInjury = useInjuries((state) => state.add)
   const removeInjury = useInjuries((state) => state.remove)
@@ -97,31 +95,28 @@ export function ProfileScreen() {
     injuries.length > 1 ? `${injuries.length} active` : (injuries[0]?.area ?? "None")
   const [openSheet, setOpenSheet] = useState<OpenSheet>(null)
   const [periodSheet, setPeriodSheet] = useState(false)
+  const [savedMessage, setSavedMessage] = useState<string | null>(null)
   const sexLabel = sex ?? "Not set"
-  const weightLabel = weightKg === null ? "Not set" : `${weightKg.toFixed(1)} kg`
+  const missingWeight = loading ? "Loading" : offline ? "Unavailable offline" : "Not set"
+  const weightLabel = weightKg === null ? missingWeight : `${weightKg.toFixed(1)} kg`
   const heightLabel = heightCm === null ? "Not set" : `${heightCm} cm`
   const targetWeightLabel =
     plan.targetWeightKg === null ? "Not set" : `${plan.targetWeightKg.toFixed(1)} kg`
 
   const close = () => setOpenSheet(null)
+  const editorProps = {
+    visible: true,
+    onClose: close,
+    onSaved: () => {
+      setSavedMessage("Profile updated.")
+      void AccessibilityInfo.announceForAccessibility("Profile updated.")
+    },
+  }
 
   return (
     <Screen contentStyle={styles.content}>
-      <PageHeading title="Profile" />
-      {error ? (
-        <View style={styles.errorBanner}>
-          <Text>Could not load your health data.</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Retry loading health data"
-            onPress={() => void refresh()}
-          >
-            <Text>Retry</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      <Animated.View entering={FadeInUp.duration(220)}>
+      <PageHeading title="Profile" subtitle="Health, training, devices, and account settings." />
+      <Card>
         <View style={styles.identity}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
@@ -139,11 +134,28 @@ export function ProfileScreen() {
             <Text style={styles.userHandle}>{user?.email ?? ""}</Text>
           </View>
         </View>
-      </Animated.View>
+        <ProfileRow label="Edit name" onPress={() => setOpenSheet("name")} />
+      </Card>
+      {savedMessage ? (
+        <Text accessibilityLiveRegion="polite" style={styles.saved}>
+          {savedMessage}
+        </Text>
+      ) : null}
 
-      <View>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Profile overview</Text>
+      <View style={styles.section}>
+        <Text accessibilityRole="header" style={styles.sectionTitle}>
+          Health &amp; goals
+        </Text>
+        {error ? (
+          <FetchErrorState
+            title="Could not load your health data."
+            message={error}
+            onRetry={refresh}
+            retrying={refreshing}
+          />
+        ) : null}
+        <Card style={styles.group}>
+          <ProfileRow label="Weight" value={weightLabel} onPress={() => setOpenSheet("weight")} />
           <ProfileRow
             label="Birthdate"
             value={formatBirthdate(user?.birthDate)}
@@ -152,25 +164,35 @@ export function ProfileScreen() {
           <ProfileRow label="Sex / gender" value={sexLabel} onPress={() => setOpenSheet("sex")} />
           <ProfileRow
             label="Height"
-            value={heightLabel}
             onPress={() => setOpenSheet("height")}
-            loading={loading}
+            value={loading && heightCm === null ? "Loading" : heightLabel}
           />
-          <ProfileRow label="Weight" value={weightLabel} onPress={() => setOpenSheet("weight")} />
-        </View>
-      </View>
-
-      <View>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Refine your plan</Text>
           <ProfileRow
-            label="Goal / target"
-            value={plan.goal}
+            label="Daily activity"
+            value={plan.activity || "Not set"}
+            onPress={() => setOpenSheet("activity")}
+          />
+          <ProfileRow
+            label="Goal"
+            value={plan.goal || "Not set"}
             onPress={() => setOpenSheet("goal")}
           />
           <ProfileRow
+            label="Target weight"
+            value={targetWeightLabel}
+            onPress={() => setOpenSheet("target")}
+          />
+        </Card>
+      </View>
+
+      <View style={styles.section}>
+        <Text accessibilityRole="header" style={styles.sectionTitle}>
+          Training &amp; recovery
+        </Text>
+        <Card style={styles.group}>
+          <ProfileRow
             label="Workout frequency"
-            value={`${plan.sessions} sessions/week`}
+            value={plan.sessions === null ? "Not set" : `${plan.sessions} sessions/week`}
             onPress={() => setOpenSheet("frequency")}
           />
           <ProfileRow
@@ -199,106 +221,88 @@ export function ProfileScreen() {
             onPress={() => router.push("/exercise-preferences")}
           />
           <ProfileRow
-            label="Daily activity"
-            value={plan.activity}
-            onPress={() => setOpenSheet("activity")}
-          />
-          <ProfileRow
-            label="Target weight"
-            value={targetWeightLabel}
-            onPress={() => setOpenSheet("target")}
-          />
-          <ProfileRow
             label="Injuries"
             value={injuriesLabel}
             onPress={() => router.push("/injuries")}
           />
-        </View>
-      </View>
-
-      <ExerciseMediaSettings />
-      <DeviceHealthSettings />
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Watch</Text>
-        <ProfileRow
-          label="Connect VoocHealth watch"
-          value="Bluetooth"
-          onPress={() => router.push("/ble-sync")}
-        />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account</Text>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push("/account-data")}
-          style={styles.row}
-        >
-          <Text style={styles.rowLabel}>Account data</Text>
-        </Pressable>
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Developer mode</Text>
-          <Toggle
-            style={{ alignSelf: "center" }}
-            accessibilityLabel="Developer mode"
-            value={developerMode}
-            onValueChange={toggleDeveloperMode}
-          />
-        </View>
-        {developerMode ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push("/developer-options")}
-            style={styles.row}
-          >
-            <Text style={styles.rowLabel}>Developer options</Text>
-          </Pressable>
-        ) : null}
-        {developerMode && developerFeatures.bleTest ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push("/ble-sync")}
-            style={styles.row}
-          >
-            <Text style={styles.rowLabel}>BLE test</Text>
-          </Pressable>
-        ) : null}
-        {developerMode && developerFeatures.testError ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => captureException(new Error("First error"))}
-            style={styles.row}
-          >
-            <Text style={styles.rowLabel}>Send test error</Text>
-          </Pressable>
-        ) : null}
-        <Pressable accessibilityRole="button" onPress={() => void signOut()} style={styles.row}>
-          <Text style={styles.rowLabel}>Sign out</Text>
-        </Pressable>
-      </View>
-      {sex === "Female" ? (
-        <Animated.View entering={FadeInUp.delay(150).duration(220)}>
+        </Card>
+        {sex === "Female" ? (
           <Button
             accessibilityLabel={`Period recovery, ${inPeriod ? "On" : "Off"}`}
             label={inPeriod ? "My period has ended" : "I am in my period"}
-            variant={inPeriod ? "secondary" : "primary"}
+            variant="secondary"
             style={inPeriod ? styles.periodButtonActive : undefined}
             onPress={() => (inPeriod ? removeInjury(PERIOD_AREA) : setPeriodSheet(true))}
           />
-        </Animated.View>
-      ) : null}
+        ) : null}
+        <ExerciseMediaSettings />
+      </View>
 
-      {openSheet === "birthdate" ? <BirthdateSheet visible onClose={close} /> : null}
-      {openSheet === "height" ? <HeightSheet visible onClose={close} /> : null}
-      {openSheet === "weight" ? <WeightSheet visible onClose={close} /> : null}
-      {openSheet === "sex" ? <SexSheet visible onClose={close} /> : null}
-      {openSheet === "goal" ? <GoalSheet visible onClose={close} /> : null}
-      {openSheet === "frequency" ? <FrequencySheet visible onClose={close} /> : null}
-      {openSheet === "activity" ? <ActivitySheet visible onClose={close} /> : null}
-      {openSheet === "target" ? <TargetWeightSheet visible onClose={close} /> : null}
-      {openSheet === "session" ? <SessionLengthSheet visible onClose={close} /> : null}
-      {openSheet === "emphasis" ? <EmphasisSheet visible onClose={close} /> : null}
+      <View style={styles.section}>
+        <Text accessibilityRole="header" style={styles.sectionTitle}>
+          Connected devices
+        </Text>
+        <Card style={styles.group}>
+          <ProfileRow
+            label="VoocHealth watch"
+            value="Manage connection"
+            onPress={() => router.push("/ble-sync")}
+          />
+        </Card>
+        <DeviceHealthSettings />
+      </View>
+
+      <View style={styles.section}>
+        <Text accessibilityRole="header" style={styles.sectionTitle}>
+          Account &amp; privacy
+        </Text>
+        <Card style={styles.group}>
+          <ProfileRow label="Account data" onPress={() => router.push("/account-data")} />
+        </Card>
+        <Button variant="secondary" label="Sign out" onPress={() => void signOut()} />
+      </View>
+
+      <View style={styles.section}>
+        <Text accessibilityRole="header" style={styles.sectionTitle}>
+          Developer settings
+        </Text>
+        <Card style={styles.group}>
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Developer mode</Text>
+            <Toggle
+              accessibilityLabel="Developer mode"
+              value={developerMode}
+              onValueChange={toggleDeveloperMode}
+            />
+          </View>
+          {developerMode ? (
+            <ProfileRow
+              label="Developer options"
+              onPress={() => router.push("/developer-options")}
+            />
+          ) : null}
+          {developerMode && developerFeatures.bleTest ? (
+            <ProfileRow label="BLE test" onPress={() => router.push("/ble-sync")} />
+          ) : null}
+          {developerMode && developerFeatures.testError ? (
+            <ProfileRow
+              label="Send test error"
+              onPress={() => captureException(new Error("First error"))}
+            />
+          ) : null}
+        </Card>
+      </View>
+
+      {openSheet === "birthdate" ? <BirthdateSheet {...editorProps} /> : null}
+      {openSheet === "height" ? <HeightSheet {...editorProps} /> : null}
+      {openSheet === "weight" ? <WeightSheet {...editorProps} /> : null}
+      {openSheet === "sex" ? <SexSheet {...editorProps} /> : null}
+      {openSheet === "goal" ? <GoalSheet {...editorProps} /> : null}
+      {openSheet === "frequency" ? <FrequencySheet {...editorProps} /> : null}
+      {openSheet === "activity" ? <ActivitySheet {...editorProps} /> : null}
+      {openSheet === "target" ? <TargetWeightSheet {...editorProps} /> : null}
+      {openSheet === "session" ? <SessionLengthSheet {...editorProps} /> : null}
+      {openSheet === "emphasis" ? <EmphasisSheet {...editorProps} /> : null}
       {periodSheet ? (
         <PeriodSheet
           visible
@@ -309,7 +313,8 @@ export function ProfileScreen() {
           }}
         />
       ) : null}
-      {openSheet === "experience" ? <ExperienceSheet visible onClose={close} /> : null}
+      {openSheet === "experience" ? <ExperienceSheet {...editorProps} /> : null}
+      {openSheet === "name" ? <NameSheet {...editorProps} /> : null}
     </Screen>
   )
 }
@@ -349,28 +354,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: C.textMuted,
   },
-  errorBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  skeleton: {
-    width: 56,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: C.border,
-  },
+  group: { paddingVertical: 0, gap: 0 },
+  saved: { color: C.textMuted, fontSize: 14 },
   section: {
-    gap: 0,
+    gap: 8,
   },
   sectionTitle: {
     fontSize: 17,
     fontWeight: "600",
     color: C.text,
-    paddingBottom: 8,
+    marginBottom: 2,
   },
   row: {
-    height: 50,
+    minHeight: 52,
+    paddingVertical: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -379,19 +376,17 @@ const styles = StyleSheet.create({
     borderBottomColor: C.border,
   },
   rowLabel: {
-    fontSize: 13,
-    fontWeight: "600",
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "500",
     color: C.text,
-  },
-  rowRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
   },
   rowValue: {
+    flexShrink: 1,
+    maxWidth: "46%",
+    textAlign: "right",
     fontSize: 14,
-    fontWeight: "600",
-    color: C.text,
+    color: C.textMuted,
   },
   chevron: {
     width: 16,
