@@ -1,10 +1,9 @@
-import { asc, eq, like } from "drizzle-orm"
+import { asc, eq, or, sql } from "drizzle-orm"
 import { status } from "elysia"
 
 import vietnameseFoods from "../../../data/vietnamese-usda.json"
 import { getDb, foods as foodsTable, type Food } from "../../db"
 import { scalePer100 } from "../../lib/nutrition"
-import { getAiSearch } from "../../worker/bindings"
 import type { FoodSearchQuery } from "./index"
 
 const DEFAULT_LIMIT = 25
@@ -25,108 +24,36 @@ function withVietnameseName(food: Food): Food {
   return name ? { ...food, name } : food
 }
 
-function catalog(): AiSearchInstance {
-  const namespace = getAiSearch()
-  if (!namespace) throw new Error("AI_SEARCH namespace binding is required")
-  return namespace.get("vooc")
-}
-
-function parseCatalogFood(text: string, key: string): Food {
-  const value: unknown = JSON.parse(text)
-  if (!value || typeof value !== "object") throw new Error(`Invalid food catalog item: ${key}`)
-  const food = value as Record<string, unknown>
-  if (
-    typeof food.id !== "string" ||
-    key !== `${food.id}.txt` ||
-    !/^usda-fdc-\d+$/.test(food.id) ||
-    typeof food.name !== "string" ||
-    typeof food.servingUnit !== "string" ||
-    typeof food.glyph !== "string" ||
-    !["caloriesPer100", "proteinPer100G", "carbsPer100G", "fatPer100G"].every((field) => {
-      const amount = food[field]
-      return typeof amount === "number" && Number.isFinite(amount) && amount >= 0
-    })
-  )
-    throw new Error(`Invalid food catalog item: ${key}`)
-  return food as Food
-}
-
-async function catalogFoodById(foodId: string): Promise<Food | undefined> {
-  const instance = catalog()
-  const key = `${foodId}.txt`
-  const { result } = await instance.items.list({ key, source: "builtin" })
-  const item = result.find((entry) => entry.key === key)
-  if (!item) return undefined
-  const file = await instance.items.get(item.id).download()
-  if (file.size > 1024 * 1024) throw new Error(`Food catalog item too large: ${key}`)
-  return parseCatalogFood(await new Response(file.body).text(), key)
-}
-
 export abstract class Foods {
   static async search(query: FoodSearchQuery, d1?: D1Database) {
-    const db = getDb(d1)
     const term = query.q?.trim()
-
-    const rows = term
-      ? await db
-          .select()
-          .from(foodsTable)
-          .where(like(foodsTable.name, `%${term}%`))
-          .orderBy(asc(foodsTable.name))
-          .limit(query.limit ?? DEFAULT_LIMIT)
-          .all()
-      : await db
-          .select()
-          .from(foodsTable)
-          .orderBy(asc(foodsTable.name))
-          .limit(query.limit ?? DEFAULT_LIMIT)
-          .all()
-
-    if (!term) return { foods: rows, count: rows.length }
-
-    const result = await catalog().search({
-      query: term,
-      ai_search_options: {
-        retrieval: { max_num_results: 50, return_on_failure: false },
-        query_rewrite: { enabled: false },
-      },
-    })
-    const foods = new Map(rows.map((food) => [food.id, food]))
-    for (const chunk of result.chunks) {
-      if (!/^usda-fdc-\d+\.txt$/.test(chunk.item.key)) continue
-      const food = parseCatalogFood(chunk.text, chunk.item.key)
-      if (!foods.has(food.id)) foods.set(food.id, food)
-    }
-    const normalizedTerm = normalizeFoodSearch(term)
-    if (normalizedTerm) {
-      const matchingIds = vietnameseSearch
-        .filter(
-          (food) => !foods.has(food.id) && food.names.some((name) => name.includes(normalizedTerm)),
-        )
-        .sort((a, b) => a.name.localeCompare(b.name, "vi") || a.id.localeCompare(b.id))
-        .slice(0, query.limit ?? DEFAULT_LIMIT)
-        .map((food) => food.id)
-      const matchingFoods = await Promise.allSettled(matchingIds.map(catalogFoodById))
-      let lookupError: unknown
-      for (const result of matchingFoods) {
-        if (result.status === "rejected") lookupError ??= result.reason
-        else if (result.value && !foods.has(result.value.id))
-          foods.set(result.value.id, result.value)
-      }
-      if (lookupError && foods.size === 0) throw lookupError
-    }
-    const combined = [...foods.values()]
-      .map(withVietnameseName)
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .slice(0, query.limit ?? DEFAULT_LIMIT)
-    return { foods: combined, count: combined.length }
+    const normalizedTerm = term ? normalizeFoodSearch(term) : ""
+    const matchingIds = normalizedTerm
+      ? vietnameseSearch
+          .filter((food) => food.names.some((name) => name.includes(normalizedTerm)))
+          .map((food) => food.id)
+      : []
+    // Bind the ID list as one parameter even for broad queries.
+    const curatedMatch = matchingIds.length
+      ? sql`${foodsTable.id} IN (SELECT value FROM json_each(${JSON.stringify(matchingIds)}))`
+      : undefined
+    const rows = await getDb(d1)
+      .select()
+      .from(foodsTable)
+      .where(
+        term
+          ? or(sql`instr(lower(${foodsTable.name}), lower(${term})) > 0`, curatedMatch)
+          : undefined,
+      )
+      .orderBy(...(curatedMatch ? [sql`${curatedMatch} DESC`] : []), asc(foodsTable.name))
+      .limit(query.limit ?? DEFAULT_LIMIT)
+      .all()
+    return { foods: rows.map(withVietnameseName), count: rows.length }
   }
 
   static async byId(foodId: string, d1?: D1Database) {
     const db = getDb(d1)
-    const food =
-      (await db.select().from(foodsTable).where(eq(foodsTable.id, foodId)).get()) ??
-      (/^usda-fdc-\d+$/.test(foodId) ? await catalogFoodById(foodId) : undefined)
+    const food = await db.select().from(foodsTable).where(eq(foodsTable.id, foodId)).get()
     if (!food) {
       throw status(404, { success: false, message: "Food not found" })
     }
