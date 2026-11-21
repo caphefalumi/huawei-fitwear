@@ -285,7 +285,9 @@ test("airplane-mode cold start restores successful reads immediately, then valid
   expect(result.current.user?.email).toBeUndefined()
   expect(result.current.offline).toBe(true)
   expect(client.getQueryData(weightKey)).toEqual(weights)
-  expect(client.getQueryData(mealKey)).toMatchObject([{ id: "meal-a", imageUrl: null }])
+  expect(client.getQueryData(mealKey)).toMatchObject([
+    { id: "meal-a", imageUrl: null, photoUnavailableOffline: true },
+  ])
   expect(client.getQueryData(workoutKey)).toMatchObject({
     pages: [{ count: 1, sessions: [{ id: "workout-a" }] }],
     pageParams: [0],

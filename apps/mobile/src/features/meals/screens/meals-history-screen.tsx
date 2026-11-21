@@ -1,7 +1,7 @@
 import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useMemo, useState } from "react"
-import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
+import { FlatList, ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/ui/pressable"
@@ -30,6 +30,8 @@ export function MealsHistoryScreen() {
   const [query, setQuery] = useState("")
   const [sort, setSort] = useState<SortKey>("newest")
   const [descending, setDescending] = useState(true)
+  const dateDirection = descending ? "newest first" : "oldest first"
+  const metricDirection = descending ? "highest first" : "lowest first"
 
   const items = useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -47,15 +49,8 @@ export function MealsHistoryScreen() {
     }
   }
 
-  return (
-    <ScrollView
-      style={styles.screen}
-      keyboardShouldPersistTaps="handled"
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
-      ]}
-    >
+  const header = (
+    <View style={styles.header}>
       <View style={styles.heading}>
         <Text style={styles.title}>Meals</Text>
         <Text style={styles.subtitle}>Your logged meals</Text>
@@ -85,6 +80,12 @@ export function MealsHistoryScreen() {
             <Pressable
               key={option.key}
               style={[styles.sortChip, active && styles.sortChipActive]}
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={
+                active
+                  ? `${option.label}, ${sort === "newest" ? dateDirection : metricDirection}`
+                  : `Sort by ${option.label}`
+              }
               onPress={() => handleSort(option.key)}
             >
               <Text style={[styles.sortLabel, active && styles.sortLabelActive]}>
@@ -95,46 +96,68 @@ export function MealsHistoryScreen() {
           )
         })}
       </ScrollView>
+    </View>
+  )
 
-      {historyState === "offline" ? (
-        <Text style={styles.empty}>
-          No meal history is saved on this device. Reconnect to load it.
-        </Text>
-      ) : historyState === "loading" ? (
-        <Text style={styles.empty}>Loading meals…</Text>
-      ) : historyState === "error" ? (
-        <Text style={styles.empty}>Could not load meal history.</Text>
-      ) : items.length === 0 ? (
-        <Text style={styles.empty}>
-          {query.trim() ? `No meals match “${query.trim()}”.` : "No meals logged yet."}
-        </Text>
-      ) : (
-        items.map((item) => (
-          <View key={item.id} style={styles.card}>
-            <MealPhoto mealId={item.id} imageUrl={item.imageUrl} style={styles.photo} compact />
-            <Pressable
-              style={styles.details}
-              accessibilityRole="button"
-              onPress={() => router.push(`/meal?log=${item.id}`)}
-            >
-              <View style={styles.copy}>
-                <Text style={styles.name} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <Text style={styles.date}>
-                  {item.date}
-                  {sort === "newest" ? ` · ${item.time}` : ""}
-                  {sort !== "newest" && sort !== "kcal"
-                    ? ` · ${metricOf(item, sort)} g ${sort}`
-                    : ""}
-                </Text>
-              </View>
-              <Text style={styles.kcal}>{item.kcal} kcal</Text>
-            </Pressable>
-          </View>
-        ))
+  return (
+    <FlatList
+      data={items}
+      keyExtractor={(item) => item.id}
+      initialNumToRender={8}
+      maxToRenderPerBatch={8}
+      windowSize={3}
+      style={styles.screen}
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: 12 + insets.top, paddingBottom: 26 + insets.bottom },
+      ]}
+      ListHeaderComponent={header}
+      ListEmptyComponent={
+        historyState === "offline" ? (
+          <Text style={styles.empty}>
+            No meal history is saved on this device. Reconnect to load it.
+          </Text>
+        ) : historyState === "loading" ? (
+          <Text style={styles.empty}>Loading meals…</Text>
+        ) : historyState === "error" ? (
+          <Text style={styles.empty}>Could not load meal history.</Text>
+        ) : (
+          <Text style={styles.empty}>
+            {query.trim() ? `No meals match “${query.trim()}”.` : "No meals logged yet."}
+          </Text>
+        )
+      }
+      renderItem={({ item }) => (
+        <View style={styles.card}>
+          <MealPhoto
+            mealId={item.id}
+            mealName={item.name}
+            imageUrl={item.imageUrl}
+            photoUnavailableOffline={item.photoUnavailableOffline}
+            style={styles.photo}
+            compact
+          />
+          <Pressable
+            style={styles.details}
+            accessibilityRole="button"
+            onPress={() => router.push(`/meal?log=${item.id}`)}
+          >
+            <View style={styles.copy}>
+              <Text style={styles.name} numberOfLines={1}>
+                {item.name}
+              </Text>
+              <Text style={styles.date}>
+                {item.date}
+                {sort === "newest" ? ` · ${item.time}` : ""}
+                {sort !== "newest" && sort !== "kcal" ? ` · ${metricOf(item, sort)} g ${sort}` : ""}
+              </Text>
+            </View>
+            <Text style={styles.kcal}>{item.kcal} kcal</Text>
+          </Pressable>
+        </View>
       )}
-    </ScrollView>
+    />
   )
 }
 
@@ -145,6 +168,9 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 24,
+    gap: 14,
+  },
+  header: {
     gap: 14,
   },
   heading: {

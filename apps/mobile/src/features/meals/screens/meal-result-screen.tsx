@@ -139,7 +139,13 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
             onRetry={meals.refresh}
           />
         ) : null}
-        <MealPhoto mealId={log?.id} imageUrl={photo} style={styles.photo} />
+        <MealPhoto
+          mealId={log?.id}
+          mealName={mealName}
+          imageUrl={photo}
+          photoUnavailableOffline={log?.photoUnavailableOffline}
+          style={styles.photo}
+        />
         <SegmentedChoice
           label="Meal type"
           options={(["breakfast", "lunch", "dinner", "snack"] as MealType[]).map((type) => ({

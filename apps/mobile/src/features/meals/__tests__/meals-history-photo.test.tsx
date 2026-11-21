@@ -44,6 +44,16 @@ test("history shows each saved meal photo and identifies meals without photos", 
         time: "18:00",
         macros: {},
       },
+      {
+        id: "three",
+        name: "Breakfast",
+        imageUrl: null,
+        photoUnavailableOffline: true,
+        kcal: 150,
+        date: "Today",
+        time: "08:00",
+        macros: {},
+      },
     ],
   } as never)
   jest.mocked(fetchMealPhoto).mockResolvedValue("data:image/jpeg;base64,cGhvdG8=")
@@ -60,13 +70,25 @@ test("history shows each saved meal photo and identifies meals without photos", 
   expect(fetchMealPhoto).toHaveBeenCalledWith("one", expect.anything())
   expect(screen.getByLabelText("Meal without a photo")).toBeTruthy()
 
-  expect(screen.getAllByRole("button", { name: "View meal photo full screen" })).toHaveLength(1)
-  await fireEvent.press(screen.getByRole("button", { name: "View meal photo full screen" }))
+  expect(screen.getByText("Photo unavailable offline")).toBeTruthy()
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Newest, newest first", selected: true }),
+  )
+  expect(screen.getByRole("button", { name: "Newest, oldest first", selected: true })).toBeTruthy()
+  expect(screen.getAllByRole("button", { name: /^View photo of/ })).toHaveLength(1)
+  await fireEvent.press(screen.getByRole("button", { name: "View photo of Lunch full screen" }))
   expect(screen.getByLabelText("Full-screen meal photo")).toHaveProp("contentFit", "contain")
   expect(screen.getByLabelText("Full-screen meal photo").props.source).toEqual(
     screen.getByLabelText("Logged meal photo").props.source,
   )
   expect(router.push).not.toHaveBeenCalled()
+  await fireEvent(screen.getByLabelText("Full-screen meal photo"), "error", {
+    nativeEvent: { error: "decode failed" },
+  })
+  expect(screen.getByText("Could not display this photo.")).toBeTruthy()
+  expect(screen.getByLabelText("Logged meal photo")).toBeTruthy()
+  await fireEvent.press(screen.getByRole("button", { name: "Retry full-screen meal photo" }))
+  expect(screen.getByLabelText("Full-screen meal photo")).toBeTruthy()
   await fireEvent.press(screen.getByRole("button", { name: "Close" }))
   expect(screen.queryByLabelText("Full-screen meal photo")).toBeNull()
   await fireEvent.press(screen.getByText("Lunch"))
@@ -75,6 +97,6 @@ test("history shows each saved meal photo and identifies meals without photos", 
   await screen.unmount()
   const reopened = await render(<MealsHistoryScreen />, { wrapper })
   expect(reopened.getByLabelText("Logged meal photo")).toBeTruthy()
-  expect(fetchMealPhoto).toHaveBeenCalledTimes(1)
+  expect(fetchMealPhoto).toHaveBeenCalledTimes(2)
   await reopened.unmount()
 })

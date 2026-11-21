@@ -69,13 +69,17 @@ async function downloadLoop(url: string, directory: Directory, file: File, signa
   return file.uri
 }
 
-export async function loadExerciseLoop(id: string) {
+export async function loadExerciseLoop(id: string, refresh = false) {
   const url = `${origin.replace(/\/$/, "")}/exercise-loops/${version}/${id}.gif`
   if (Platform.OS === "web") return url
 
   const directory = cacheDirectory()
   const file = new File(directory, `${version}-${id}.gif`)
-  if (file.exists) return file.uri
+  if (file.exists) {
+    if (!refresh) return file.uri
+    file.delete()
+    notifyCacheChanged()
+  }
 
   const current = pending.get(id)
   if (current) return current.result

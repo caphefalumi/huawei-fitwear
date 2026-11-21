@@ -144,7 +144,10 @@ test("shows the bundled technique still if the GIF is unavailable", async () => 
   const screen = await render(<ExerciseGuideScreen />)
 
   expect(screen.getByLabelText("Bench press demonstration")).toHaveProp("source", 25)
-  expect(screen.getByText("Animation unavailable")).toBeTruthy()
+  await fireEvent.press(screen.getByRole("button", { name: "Retry Bench press animation" }))
+  expect(screen.getByLabelText("Bench press demonstration")).toHaveProp("source", {
+    uri: "file:///cache/v1-0025.gif",
+  })
 })
 
 test("edits one load, follows the level for the rest, and resets to default with undo", async () => {

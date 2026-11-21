@@ -69,6 +69,7 @@ function project(key: QueryKey, accountId: string, data: unknown): unknown {
       targetDate: meal.targetDate,
       loggedAt: meal.loggedAt,
       imageUrl: null,
+      photoUnavailableOffline: Boolean(meal.imageUrl || meal.photoUnavailableOffline),
       kcal: meal.kcal,
       macros: { protein: meal.macros.protein, carbs: meal.macros.carbs, fat: meal.macros.fat },
       items: meal.items.map(({ id, name, detail, kcal, macros, glyph }) => ({

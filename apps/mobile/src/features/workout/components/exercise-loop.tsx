@@ -1,3 +1,4 @@
+import { onlineManager } from "@tanstack/react-query"
 import { Image } from "expo-image"
 import { useIsFocused } from "expo-router/react-navigation"
 import { useEffect, useRef, useState } from "react"
@@ -18,6 +19,8 @@ export function ExerciseLoop({
   const focused = useIsFocused()
   const [wantsPlayback, setWantsPlayback] = useState<boolean>()
   const [animationUri, setAnimationUri] = useState<string | null>()
+  const [attempt, setAttempt] = useState(0)
+  const refreshFile = useRef(false)
   const image = useRef<Image>(null)
   const playing = focused && wantsPlayback === true
   const web = Platform.OS === "web"
@@ -46,7 +49,9 @@ export function ExerciseLoop({
       return
     }
     let active = true
-    void loadExerciseLoop(id).then(
+    const download = refreshFile.current ? loadExerciseLoop(id, true) : loadExerciseLoop(id)
+    refreshFile.current = false
+    void download.then(
       (uri) => {
         if (active) setAnimationUri(uri)
       },
@@ -57,7 +62,17 @@ export function ExerciseLoop({
     return () => {
       active = false
     }
-  }, [focused, id])
+  }, [focused, id, attempt])
+
+  useEffect(() => {
+    if (!focused || animationUri !== null) return
+    return onlineManager.subscribe((online) => {
+      if (online) {
+        setAnimationUri(undefined)
+        setAttempt((value) => value + 1)
+      }
+    })
+  }, [focused, animationUri])
 
   useEffect(() => {
     if (!web) {
@@ -79,7 +94,16 @@ export function ExerciseLoop({
         loading="eager"
         cachePolicy={web ? undefined : "none"}
         source={animation ?? poster}
-        onError={animation ? () => setAnimationUri(null) : undefined}
+        placeholder={animation ? poster : undefined}
+        placeholderContentFit="contain"
+        onError={
+          animation
+            ? () => {
+                refreshFile.current = true
+                setAnimationUri(null)
+              }
+            : undefined
+        }
         style={StyleSheet.absoluteFill}
       />
       {animationUri && wantsPlayback !== undefined ? (
@@ -91,8 +115,21 @@ export function ExerciseLoop({
           <Text style={styles.controlLabel}>{action}</Text>
         </Pressable>
       ) : animationUri === null ? (
+        <Pressable
+          style={styles.control}
+          accessibilityLabel={`Retry ${title} animation`}
+          onPress={() => {
+            setAnimationUri(undefined)
+            setAttempt((value) => value + 1)
+          }}
+        >
+          <Text style={styles.controlLabel}>Animation unavailable · Retry</Text>
+        </Pressable>
+      ) : animationUri === undefined && focused ? (
         <View style={styles.control}>
-          <Text style={styles.controlLabel}>Animation unavailable</Text>
+          <Text accessibilityLiveRegion="polite" style={styles.controlLabel}>
+            Loading animation…
+          </Text>
         </View>
       ) : null}
     </View>
