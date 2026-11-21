@@ -1,6 +1,8 @@
 import { File, Paths } from "expo-file-system"
 import { Platform } from "react-native"
 
+import type { RoutineExercise } from "../utils/routines"
+
 export type SessionDraft = {
   /** The user who owns this draft. */
   userId: string
@@ -14,6 +16,12 @@ export type SessionDraft = {
   weights: number[]
   /** Logged sets per exercise, same shape as the in-session `logged` state. */
   logged: ({ reps: number; weightKg: number } | undefined)[][]
+  /** In-progress rep/seconds counter for the current set. */
+  reps?: number
+  /** Exercise indices the user skipped. */
+  skipped?: number[]
+  /** Routine snapshot, so a draft left on another day can still be resumed. */
+  exercises?: RoutineExercise[]
   /** unix ms the session was started. */
   startedAt: number
 }
@@ -43,10 +51,18 @@ export function readSessionDraft(userId: string): SessionDraft | null {
       typeof (data as SessionDraft).position !== "number" ||
       !Array.isArray((data as SessionDraft).weights) ||
       !Array.isArray((data as SessionDraft).logged) ||
+      ((data as SessionDraft).reps !== undefined &&
+        typeof (data as SessionDraft).reps !== "number") ||
+      ((data as SessionDraft).skipped !== undefined &&
+        !Array.isArray((data as SessionDraft).skipped)) ||
+      ((data as SessionDraft).exercises !== undefined &&
+        !Array.isArray((data as SessionDraft).exercises)) ||
       typeof (data as SessionDraft).startedAt !== "number"
     )
       return null
-    return data as SessionDraft
+    const draft = data as SessionDraft
+    // JSON stores empty slots as null; the session treats undefined as "not logged".
+    return { ...draft, logged: draft.logged.map((sets) => sets.map((set) => set ?? undefined)) }
   } catch {
     return null
   }

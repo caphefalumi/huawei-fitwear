@@ -299,6 +299,70 @@ test("prompts to resume a draft left on a previous day", async () => {
   queryClient.clear()
 })
 
+test("restores the in-progress set after an exit", async () => {
+  const routine = routineOn(planNow(), input)
+  const first = routine.exercises[0]!
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const screen = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await screen.findByRole("header", { name: first.name })
+  await fireEvent.press(screen.getByLabelText("More reps"))
+  await fireEvent.press(screen.getByText("Done set"))
+  // Whatever the last autosave wrote is what a relaunch would read back.
+  const saved = jest.mocked(writeSessionDraft).mock.calls.at(-1)![0]
+  await screen.unmount()
+
+  jest.mocked(readSessionDraft).mockReturnValue(saved)
+  const relaunched = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await relaunched.findByText("Resume previous session?")
+  await fireEvent.press(relaunched.getByText("Continue"))
+  expect(relaunched.getByText(new RegExp(`^Set 2 of ${first.sets}`))).toBeTruthy()
+  expect(relaunched.getByLabelText(`${first.reps + 1} reps`)).toBeTruthy()
+  await relaunched.unmount()
+  queryClient.clear()
+})
+
+test("offers a draft from another routine and restores its exercises", async () => {
+  const routine = routineOn(planNow(), input)
+  const snapshot = { ...routine.exercises[0]!, name: "Snapshot Squat" }
+  jest.mocked(readSessionDraft).mockReturnValue({
+    userId: "user-1",
+    date: dateKey(shift(planNow(), -1)),
+    routineName: "Leg Day",
+    position: 1,
+    weights: [60],
+    logged: [Array.from({ length: snapshot.sets }, () => undefined)],
+    reps: 9,
+    skipped: [],
+    exercises: [snapshot],
+    startedAt: Date.now() - 86_400_000,
+  })
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const screen = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await screen.findByText(/You left "Leg Day"/)
+  await fireEvent.press(screen.getByText("Continue"))
+  expect(screen.getByRole("header", { name: "Snapshot Squat" })).toBeTruthy()
+  expect(screen.getByText(new RegExp(`^Set 2 of ${snapshot.sets}`))).toBeTruthy()
+  expect(jest.mocked(writeSessionDraft).mock.calls.at(-1)![0]).toMatchObject({
+    routineName: "Leg Day",
+    position: 1,
+    reps: 9,
+  })
+  await screen.unmount()
+  queryClient.clear()
+})
+
 test("prompts to resume when a matching draft exists", async () => {
   const routine = routineOn(planNow(), input)
   jest.mocked(readSessionDraft).mockReturnValue({
