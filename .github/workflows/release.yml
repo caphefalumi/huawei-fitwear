@@ -45,24 +45,6 @@ jobs:
             done < <(find assets/exercise-loops -type f -name '*.gif' -print0)
           fi
 
-  usda-catalog:
-    name: Index USDA food catalog
-    needs: ci
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-    environment: production
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-      - name: Upload USDA foods to AI Search built-in storage
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_AI_SEARCH_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: bun apps/backend/scripts/upload-usda-catalog.ts
-
   deploy:
     name: Migrate and deploy backend
     needs: ci
@@ -99,6 +81,13 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: bun run db:migrate:remote
+
+      - name: Seed USDA catalog in D1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: apps/backend
+        run: bunx wrangler d1 execute fitwear-d1 --remote --file scripts/usda_food_catalog.sql
 
       - name: Deploy Cloudflare Worker
         env:
