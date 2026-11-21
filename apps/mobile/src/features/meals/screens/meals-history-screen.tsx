@@ -50,7 +50,7 @@ export function MealsHistoryScreen() {
   }
 
   const header = (
-    <View style={styles.content}>
+    <View style={styles.header}>
       <View style={styles.heading}>
         <Text style={styles.title}>Meals</Text>
         <Text style={styles.subtitle}>Your logged meals</Text>
@@ -168,6 +168,9 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 24,
+    gap: 14,
+  },
+  header: {
     gap: 14,
   },
   heading: {
