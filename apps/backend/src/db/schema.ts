@@ -156,7 +156,7 @@ export const foods = sqliteTable("foods", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => generateId()),
-  name: text("name").notNull().unique(),
+  name: text("name").notNull(),
   servingUnit: text("servingUnit").notNull().default("g"),
   glyph: text("glyph").notNull().default("carrot"),
   caloriesPer100: real("caloriesPer100").notNull(),
