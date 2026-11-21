@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Alert, StyleSheet, Text, TextInput, View } from "react-native"
+import { Alert, Platform, StyleSheet, Text, TextInput, View } from "react-native"
 
 import { RadioList } from "@/components/ui/radio-list"
 import { Sheet, SheetActions, SheetField } from "@/components/ui/sheet"
@@ -26,9 +26,14 @@ const GOAL_OPTIONS = Object.values(GOALS)
 const SEX_OPTIONS: readonly Sex[] = ["Male", "Female", "Rather not say"]
 const SESSION_VALUES = [1, 2, 3, 4, 5, 6]
 const HEIGHT_VALUES = Array.from({ length: 221 }, (_, index) => index + 80)
-type SheetProps = { visible: boolean; onClose: () => void; onDismiss?: () => void }
+type SheetProps = {
+  visible: boolean
+  onClose: () => void
+  onDismiss?: () => void
+  onSaved?: () => void
+}
 
-function useSave(onClose: () => void) {
+function useSave(onClose: () => void, onSaved?: () => void, dirty = false) {
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const active = useRef(true)
@@ -46,7 +51,10 @@ function useSave(onClose: () => void) {
     setError(null)
     try {
       await mutation()
-      if (active.current) onClose()
+      if (active.current) {
+        onSaved?.()
+        onClose()
+      }
     } catch (cause) {
       captureException(cause)
       if (active.current) setError(apiErrorMessage(cause, "your profile", "save"))
@@ -60,7 +68,20 @@ function useSave(onClose: () => void) {
     pending,
     save,
     close: () => {
-      if (!busy.current) onClose()
+      if (busy.current) return
+      if (!dirty) {
+        onClose()
+        return
+      }
+      const message = "Your changes to this setting won't be saved."
+      if (Platform.OS === "web") {
+        if (globalThis.confirm(message)) onClose()
+        return
+      }
+      Alert.alert("Discard changes?", message, [
+        { text: "Keep editing", style: "cancel" },
+        { text: "Discard", style: "destructive", onPress: onClose },
+      ])
     },
   }
 }
@@ -101,12 +122,44 @@ function NumberField({
   )
 }
 
-export function BirthdateSheet({ visible, onClose, onDismiss }: SheetProps) {
+export function NameSheet({ visible, onClose, onSaved }: SheetProps) {
+  const { user, updateUser } = useAuth()
+  const current = user?.name?.trim() ?? ""
+  const [draft, setDraft] = useState(current)
+  const name = draft.trim()
+  const action = useSave(onClose, onSaved, name !== current)
+  return (
+    <Sheet visible={visible} title="Edit name" onClose={action.close}>
+      <SheetField label="Name">
+        <TextInput
+          accessibilityLabel="Name"
+          autoComplete="name"
+          editable={!action.pending}
+          onChangeText={setDraft}
+          style={styles.input}
+          value={draft}
+        />
+      </SheetField>
+      {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
+      <SheetActions
+        primaryLabel="Save"
+        primaryDisabled={action.pending || !name || name === current}
+        busy={action.pending}
+        secondaryLabel="Cancel"
+        secondaryDisabled={action.pending}
+        onPrimary={() => void action.save(() => updateUser({ name }))}
+        onSecondary={action.close}
+      />
+    </Sheet>
+  )
+}
+
+export function BirthdateSheet({ visible, onClose, onDismiss, onSaved }: SheetProps) {
   const { user, updateUser } = useAuth()
   const saved = user?.birthDate ?? null
   const [draft, setDraft] = useState(() => birthdateParts(saved))
-  const action = useSave(onClose)
   const iso = birthdateToIso(draft)
+  const action = useSave(onClose, onSaved, iso !== birthdateToIso(birthdateParts(saved)))
   const validation = validateBirthDate(iso)
   useEffect(() => {
     if (visible) setDraft(birthdateParts(saved))
@@ -132,10 +185,10 @@ export function BirthdateSheet({ visible, onClose, onDismiss }: SheetProps) {
   )
 }
 
-export function HeightSheet({ visible, onClose, onDismiss }: SheetProps) {
+export function HeightSheet({ visible, onClose, onDismiss, onSaved }: SheetProps) {
   const { heightCm, saveHeight } = useHealth()
   const [draft, setDraft] = useState(heightCm ?? 170)
-  const action = useSave(onClose)
+  const action = useSave(onClose, onSaved, draft !== (heightCm ?? 170))
   return (
     <Sheet visible={visible} title="Height" onClose={action.close} onDismiss={onDismiss}>
       <View style={styles.heightPicker}>
@@ -165,10 +218,10 @@ export function HeightSheet({ visible, onClose, onDismiss }: SheetProps) {
   )
 }
 
-export function WeightSheet({ visible, onClose, onDismiss }: SheetProps) {
+export function WeightSheet({ visible, onClose, onDismiss, onSaved }: SheetProps) {
   const { weightKg, weights, saveWeight } = useHealth()
   const [draft, setDraft] = useState(weightKg?.toFixed(1) ?? "")
-  const action = useSave(onClose)
+  const action = useSave(onClose, onSaved, draft !== (weightKg?.toFixed(1) ?? ""))
   return (
     <Sheet visible={visible} title="Update weight" onClose={action.close} onDismiss={onDismiss}>
       <Text style={styles.body}>Log your weight to keep your nutrition guidance current.</Text>
@@ -201,11 +254,11 @@ export function WeightSheet({ visible, onClose, onDismiss }: SheetProps) {
   )
 }
 
-export function SexSheet({ visible, onClose, onDismiss }: SheetProps) {
+export function SexSheet({ visible, onClose, onDismiss, onSaved }: SheetProps) {
   const { sex, saveSex } = useHealth()
   const inPeriod = useInjuries((state) => state.injuries.some((i) => i.area === PERIOD_AREA))
   const removeInjury = useInjuries((state) => state.remove)
-  const action = useSave(onClose)
+  const action = useSave(onClose, onSaved)
   const changeSex = (next: Sex) => {
     void action.save(async () => {
       await saveSex(next)
@@ -237,9 +290,9 @@ export function SexSheet({ visible, onClose, onDismiss }: SheetProps) {
   )
 }
 
-export function GoalSheet({ visible, onClose, onDismiss }: SheetProps) {
+export function GoalSheet({ visible, onClose, onDismiss, onSaved }: SheetProps) {
   const { plan, savePlan } = useHealth()
-  const action = useSave(onClose)
+  const action = useSave(onClose, onSaved)
   return (
     <Sheet visible={visible} title="Goal / target" onClose={action.close} onDismiss={onDismiss}>
       <RadioList
@@ -254,9 +307,9 @@ export function GoalSheet({ visible, onClose, onDismiss }: SheetProps) {
   )
 }
 
-export function ActivitySheet({ visible, onClose, onDismiss }: SheetProps) {
+export function ActivitySheet({ visible, onClose, onDismiss, onSaved }: SheetProps) {
   const { plan, savePlan } = useHealth()
-  const action = useSave(onClose)
+  const action = useSave(onClose, onSaved)
   return (
     <Sheet visible={visible} title="Daily activity" onClose={action.close} onDismiss={onDismiss}>
       <RadioList
@@ -271,12 +324,11 @@ export function ActivitySheet({ visible, onClose, onDismiss }: SheetProps) {
   )
 }
 
-export function FrequencySheet({ visible, onClose, onDismiss }: SheetProps) {
+export function FrequencySheet({ visible, onClose, onDismiss, onSaved }: SheetProps) {
   const { plan, savePlan } = useHealth()
-  const [draft, setDraft] = useState(
-    Math.min(plan.sessions ?? SESSION_VALUES[0], SESSION_VALUES.length),
-  )
-  const action = useSave(onClose)
+  const current = Math.min(plan.sessions ?? SESSION_VALUES[0], SESSION_VALUES.length)
+  const [draft, setDraft] = useState(current)
+  const action = useSave(onClose, onSaved, draft !== current)
   return (
     <Sheet visible={visible} title="Workout frequency" onClose={action.close} onDismiss={onDismiss}>
       <WheelPicker
@@ -302,10 +354,10 @@ export function FrequencySheet({ visible, onClose, onDismiss }: SheetProps) {
   )
 }
 
-export function SessionLengthSheet({ visible, onClose, onDismiss }: SheetProps) {
+export function SessionLengthSheet({ visible, onClose, onDismiss, onSaved }: SheetProps) {
   const { minutes, setMinutes } = usePlanPreferences()
   const [draft, setDraft] = useState(minutes)
-  const action = useSave(onClose)
+  const action = useSave(onClose, onSaved, draft !== minutes)
   return (
     <Sheet visible={visible} title="Session length" onClose={action.close} onDismiss={onDismiss}>
       <WheelPicker
@@ -330,7 +382,7 @@ export function SessionLengthSheet({ visible, onClose, onDismiss }: SheetProps) 
   )
 }
 
-export function EmphasisSheet({ visible, onClose, onDismiss }: SheetProps) {
+export function EmphasisSheet({ visible, onClose, onDismiss, onSaved }: SheetProps) {
   const { sex } = useHealth()
   const emphasis = usePlanPreferences((state) => emphasisFor(state.emphasis, sex))
   const setEmphasis = usePlanPreferences((state) => state.setEmphasis)
@@ -341,6 +393,7 @@ export function EmphasisSheet({ visible, onClose, onDismiss }: SheetProps) {
         value={emphasis}
         onChange={(next) => {
           setEmphasis(next)
+          onSaved?.()
           onClose()
         }}
       />
@@ -354,7 +407,7 @@ export function EmphasisSheet({ visible, onClose, onDismiss }: SheetProps) {
   )
 }
 
-export function ExperienceSheet({ visible, onClose, onDismiss }: SheetProps) {
+export function ExperienceSheet({ visible, onClose, onDismiss, onSaved }: SheetProps) {
   const experience = usePlanPreferences((state) => state.experience)
   const setExperience = usePlanPreferences((state) => state.setExperience)
   return (
@@ -364,6 +417,7 @@ export function ExperienceSheet({ visible, onClose, onDismiss }: SheetProps) {
         value={experience}
         onChange={(next) => {
           setExperience(next)
+          onSaved?.()
           onClose()
         }}
       />
@@ -372,10 +426,10 @@ export function ExperienceSheet({ visible, onClose, onDismiss }: SheetProps) {
   )
 }
 
-export function TargetWeightSheet({ visible, onClose, onDismiss }: SheetProps) {
+export function TargetWeightSheet({ visible, onClose, onDismiss, onSaved }: SheetProps) {
   const { plan, savePlan } = useHealth()
   const [draft, setDraft] = useState(plan.targetWeightKg?.toFixed(1) ?? "")
-  const action = useSave(onClose)
+  const action = useSave(onClose, onSaved, draft !== (plan.targetWeightKg?.toFixed(1) ?? ""))
   return (
     <Sheet visible={visible} title="Target weight" onClose={action.close} onDismiss={onDismiss}>
       <SheetField label="Target weight">

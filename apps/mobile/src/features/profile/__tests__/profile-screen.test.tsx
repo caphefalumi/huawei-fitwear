@@ -26,6 +26,7 @@ jest.mock("react-native-keyboard-controller", () => {
   return { KeyboardAvoidingView: View }
 })
 jest.mock("@/features/profile/components/sheets", () => ({
+  ...jest.requireActual("@/features/profile/components/sheets"),
   ActivitySheet: () => null,
   BirthdateSheet: () => {
     const { Text } = require("react-native")
@@ -55,6 +56,7 @@ const mockUseAuth = jest.mocked(useAuth)
 const mockUseHealth = jest.mocked(useHealth)
 const refresh = jest.fn()
 const signOut = jest.fn()
+const updateUser = jest.fn()
 const health = {
   weightKg: 68,
   heightCm: 175,
@@ -77,15 +79,17 @@ beforeEach(() => {
   mockUseAuth.mockReturnValue({
     user: { name: "Member", email: "member@example.com", birthDate: null },
     signOut,
+    updateUser,
   } as never)
   mockUseHealth.mockReturnValue(health as never)
 })
 
-test("keeps identity visible and shows health skeletons while loading", async () => {
-  mockUseHealth.mockReturnValue({ ...health, loading: true, error: null } as never)
+test("keeps identity visible and distinguishes loading from an unset weight", async () => {
+  mockUseHealth.mockReturnValue({ ...health, weightKg: null, loading: true, error: null } as never)
   const screen = await render(<ProfileScreen />)
   expect(screen.getByRole("header", { name: "Profile" })).toBeTruthy()
-  expect(screen.getByRole("button", { name: "Height, loading" })).toBeTruthy()
+  expect(screen.getByRole("button", { name: "Weight, Loading" })).toBeTruthy()
+  expect(screen.getByRole("button", { name: "Height, 175 cm" })).toBeTruthy()
   expect(screen.getByText("Member")).toBeTruthy()
 })
 
@@ -94,7 +98,7 @@ test("keeps identity visible and retries after a health load error", async () =>
   const screen = await render(<ProfileScreen />)
   expect(screen.getByText("Could not load your health data.")).toBeTruthy()
   expect(screen.getByText("Member")).toBeTruthy()
-  await fireEvent.press(screen.getByRole("button", { name: "Retry loading health data" }))
+  await fireEvent.press(screen.getByRole("button", { name: "Try again" }))
   expect(refresh).toHaveBeenCalledTimes(1)
 })
 
@@ -125,6 +129,34 @@ test("opens exercise preferences and injuries from the plan section", async () =
   await fireEvent.press(screen.getByRole("button", { name: "Injuries, None" }))
   expect(router.push).toHaveBeenNthCalledWith(1, "/exercise-preferences")
   expect(router.push).toHaveBeenNthCalledWith(2, "/injuries")
+})
+
+test("groups settings and opens watch management without claiming a connection", async () => {
+  const screen = await render(<ProfileScreen />)
+  for (const name of [
+    "Health & goals",
+    "Training & recovery",
+    "Connected devices",
+    "Account & privacy",
+  ]) {
+    expect(screen.getByRole("header", { name })).toBeTruthy()
+  }
+  expect(screen.queryByRole("button", { name: "Developer options" })).toBeNull()
+  await fireEvent.press(screen.getByRole("button", { name: "VoocHealth watch, Manage connection" }))
+  expect(router.push).toHaveBeenCalledWith("/ble-sync")
+})
+
+test("a failed name edit keeps the draft and can be saved on retry", async () => {
+  updateUser.mockRejectedValueOnce(new Error("Offline")).mockResolvedValueOnce(undefined)
+  const screen = await render(<ProfileScreen />)
+  await fireEvent.press(screen.getByRole("button", { name: "Edit name" }))
+  await fireEvent.changeText(screen.getByLabelText("Name"), "New name")
+  await fireEvent.press(screen.getByRole("button", { name: "Save" }))
+  expect(await screen.findByRole("alert")).toBeTruthy()
+  expect(screen.getByLabelText("Name").props.value).toBe("New name")
+  await fireEvent.press(screen.getByRole("button", { name: "Save" }))
+  expect(await screen.findByText("Profile updated.")).toBeTruthy()
+  expect(updateUser).toHaveBeenNthCalledWith(2, { name: "New name" })
 })
 
 test("shows actual exercise cache usage and updates to zero on clear", async () => {
