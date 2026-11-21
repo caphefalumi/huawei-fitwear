@@ -1,5 +1,6 @@
 import { act, fireEvent, render } from "@testing-library/react-native"
 import { router } from "expo-router"
+import { usePreventRemove } from "expo-router/react-navigation"
 
 import { dateKey, useHealth } from "@/features/health"
 import { useInjuries } from "@/features/recovery"
@@ -12,6 +13,7 @@ jest.mock("@/features/health", () => ({
   useHealth: jest.fn(),
 }))
 jest.mock("expo-router", () => ({ router: { push: jest.fn(), back: jest.fn() } }))
+jest.mock("expo-router/react-navigation", () => ({ usePreventRemove: jest.fn(() => jest.fn()) }))
 jest.mock("react-native-gesture-handler/ReanimatedSwipeable", () => ({
   __esModule: true,
   default: ({ children }: { children: React.ReactNode }) => children,
@@ -77,6 +79,14 @@ test("adds a moderate knee injury and saves only after a change", async () => {
     screen.getByText(/^Knee exercises are removed from your plan until .*, then 3 → 2 sets/),
   ).toBeTruthy()
   expect(screen.getByLabelText(/^Exclude, Until/)).toBeTruthy()
+
+  const [blocked, onRemove] = jest.mocked(usePreventRemove).mock.lastCall!
+  expect(blocked).toBe(true)
+  const repeat = jest.fn()
+  await act(async () => onRemove?.({ repeat, data: { action: { type: "GO_BACK" } } }))
+  expect(screen.getByText("Discard recovery changes?")).toBeTruthy()
+  await fireEvent.press(screen.getByText("Keep editing"))
+  expect(repeat).not.toHaveBeenCalled()
 
   await fireEvent.press(screen.getByRole("button", { name: "Save" }))
   expect(useInjuries.getState().injuries).toEqual([

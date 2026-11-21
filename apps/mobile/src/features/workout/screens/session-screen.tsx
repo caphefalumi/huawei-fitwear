@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import * as Haptics from "expo-haptics"
 import { router, useLocalSearchParams } from "expo-router"
+import { usePreventRemove } from "expo-router/react-navigation"
 import { useEffect, useRef, useState } from "react"
 import { StyleSheet, Text, View } from "react-native"
 
@@ -130,7 +131,8 @@ function ActiveSession({ input }: { input: PlanInput }) {
   const [restEndsAt, setRestEndsAt] = useState(0)
   const [finishedAt, setFinishedAt] = useState<number | null>(null)
   const [keepReps, setKeepReps] = useState(true)
-  const [leaving, setLeaving] = useState(false)
+  const [repeatExit, setRepeatExit] = useState<(() => void) | null>(null)
+  const [exitApproved, setExitApproved] = useState(false)
   const [saveId] = useState(() => Crypto.randomUUID())
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -229,6 +231,9 @@ function ActiveSession({ input }: { input: PlanInput }) {
     }))
     .filter(({ sets }) => sets.length)
   const totalSets = done.reduce((sum, { sets }) => sum + sets.length, 0)
+  const disableExitGuard = usePreventRemove(!exitApproved && totalSets > 0, ({ repeat }) => {
+    if (!saving) setRepeatExit(() => repeat)
+  })
   const sum = (unit: RoutineExercise["unit"]) =>
     done
       .filter(({ item }) => item.unit === unit)
@@ -304,6 +309,8 @@ function ActiveSession({ input }: { input: PlanInput }) {
         duration_seconds: Math.round(((finishedAt ?? Date.now()) - startedAt) / 1000),
       })
     }
+    setExitApproved(true)
+    disableExitGuard()
     router.dismissTo("/workout")
   }
 
@@ -343,6 +350,21 @@ function ActiveSession({ input }: { input: PlanInput }) {
         <PageHeading title="Rest day" subtitle="Nothing to train today." />
       </Screen>
     )
+
+  const exitDialog = (
+    <ConfirmDialog
+      visible={repeatExit !== null}
+      title="Leave workout?"
+      message="Sets you logged in this workout won't be saved."
+      cancelLabel="Keep going"
+      confirmLabel="Leave"
+      onCancel={() => setRepeatExit(null)}
+      onConfirm={() => {
+        setExitApproved(true)
+        repeatExit?.()
+      }}
+    />
+  )
 
   if (phase === "summary") {
     const holds = sum("seconds")
@@ -425,6 +447,7 @@ function ActiveSession({ input }: { input: PlanInput }) {
           onPress={() => void close()}
           busy={saving}
         />
+        {exitDialog}
       </Screen>
     )
   }
@@ -436,7 +459,7 @@ function ActiveSession({ input }: { input: PlanInput }) {
       <Screen contentStyle={styles.content}>
         <BackHeader
           label="Leave"
-          onPress={() => setLeaving(true)}
+          onPress={() => router.back()}
           actionLabel="Finish"
           onAction={finish}
         />
@@ -574,19 +597,7 @@ function ActiveSession({ input }: { input: PlanInput }) {
           </>
         )}
       </Screen>
-
-      <ConfirmDialog
-        visible={leaving}
-        title="Leave workout?"
-        message="Sets you logged in this workout won't be saved."
-        cancelLabel="Keep going"
-        confirmLabel="Leave"
-        onCancel={() => setLeaving(false)}
-        onConfirm={() => {
-          setLeaving(false)
-          router.back()
-        }}
-      />
+      {exitDialog}
     </View>
   )
 }
