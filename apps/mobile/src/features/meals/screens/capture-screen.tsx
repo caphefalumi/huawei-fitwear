@@ -3,7 +3,7 @@ import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useIsFocused } from "expo-router/react-navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Keyboard, Platform, StyleSheet, Text, TextInput, View } from "react-native"
+import { Platform, StyleSheet, Text, TextInput, View } from "react-native"
 import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
@@ -43,8 +43,6 @@ export function MealCaptureScreen() {
   const focused = useIsFocused()
   const { tutorialSeen, dismissTutorial, setAnalysis, setDraftPhoto, items } = useMeals()
   const [description, setDescription] = useState("")
-  const [typingBarcode, setTypingBarcode] = useState(false)
-  const [typedBarcode, setTypedBarcode] = useState("")
   const [image, setImage] = useState<(PickedImage & { portionVolumeMl?: number }) | null>(null)
   const lidarAvailable = useMealLidarAvailable()
   const [lidarFailed, setLidarFailed] = useState(false)
@@ -80,8 +78,8 @@ export function MealCaptureScreen() {
   const uploadedPhoto = useRef<{ image: PickedImage; photoId: string } | null>(null)
   const [cameraFailed, setCameraFailed] = useState(false)
   const camera = useMealCamera({
-    active: focused && !image && !cameraFailed && !useLidar && !typingBarcode,
-    scan: focused && tutorialSeen && !image && !barcodeOpen && !cameraFailed && !typingBarcode,
+    active: focused && !image && !cameraFailed && !useLidar,
+    scan: focused && tutorialSeen && !image && !barcodeOpen && !cameraFailed,
     onBarcode: scanBarcode,
     onError: (cause) => {
       captureException(cause)
@@ -129,7 +127,6 @@ export function MealCaptureScreen() {
       image ||
       lidarCapture ||
       barcodeOpen ||
-      typingBarcode ||
       pickingPhoto.current ||
       barcodeRequest.current
     )
@@ -178,16 +175,6 @@ export function MealCaptureScreen() {
     if (!barcodeOpen || barcodePreview?.kind !== "error") return
     barcodeRequest.current?.abort()
     void lookupBarcode(barcodePreview.code)
-  }
-
-  function submitTypedBarcode() {
-    const code = lookupCode(typedBarcode.trim(), false)
-    if (!code || barcodeRequest.current) return
-    Keyboard.dismiss()
-    setTypingBarcode(false)
-    setTypedBarcode("")
-    scannedCodes.current.add(code)
-    void lookupBarcode(code)
   }
 
   function openBarcodeItem(useLabelPhoto: boolean) {
@@ -341,37 +328,7 @@ export function MealCaptureScreen() {
           </View>
 
           <View style={styles.previewWrap}>
-            {typingBarcode ? (
-              <View style={styles.bottom}>
-                <TextInput
-                  accessibilityLabel="Barcode number"
-                  value={typedBarcode}
-                  autoFocus
-                  onChangeText={setTypedBarcode}
-                  placeholder="Enter the digits under the barcode"
-                  placeholderTextColor={C.textMuted}
-                  keyboardType="number-pad"
-                  maxLength={14}
-                  onSubmitEditing={submitTypedBarcode}
-                  style={styles.description}
-                />
-                <Button
-                  label="Look up barcode"
-                  disabled={!lookupCode(typedBarcode.trim(), false)}
-                  onPress={submitTypedBarcode}
-                  style={styles.compactButton}
-                />
-                <Button
-                  variant="secondary"
-                  label="Cancel barcode entry"
-                  onPress={() => {
-                    Keyboard.dismiss()
-                    setTypingBarcode(false)
-                  }}
-                  style={styles.compactButton}
-                />
-              </View>
-            ) : image ? (
+            {image ? (
               <>
                 <Image
                   accessible
@@ -432,7 +389,7 @@ export function MealCaptureScreen() {
                     <MealLidarCamera
                       style={StyleSheet.absoluteFill}
                       capture={lidarCapture}
-                      scan={tutorialSeen && !barcodeOpen && !lidarCapture && !typingBarcode}
+                      scan={tutorialSeen && !barcodeOpen && !lidarCapture}
                       onBarcode={scanBarcode}
                       onCapture={receiveLidarPhoto}
                       onUnavailable={disableLidar}
@@ -470,7 +427,7 @@ export function MealCaptureScreen() {
             )}
           </View>
 
-          <View style={typingBarcode ? styles.hidden : styles.bottom}>
+          <View style={styles.bottom}>
             {error ? (
               <Text accessibilityRole="alert" numberOfLines={2} style={styles.error}>
                 {error} Manual entry remains available.
@@ -513,16 +470,6 @@ export function MealCaptureScreen() {
               maxLength={120}
               returnKeyType="done"
               style={styles.description}
-            />
-            <Button
-              variant="secondary"
-              label="Type barcode"
-              disabled={busy}
-              onPress={() => {
-                dismissBarcode()
-                setTypingBarcode(true)
-              }}
-              style={styles.compactButton}
             />
             <Text numberOfLines={2} style={styles.footnote}>
               Only when you tap Analyze, your selected photo and description are sent to the
@@ -608,7 +555,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: C.textMuted,
   },
-  hidden: { display: "none" },
   previewWrap: {
     flex: 1,
     minHeight: 200,

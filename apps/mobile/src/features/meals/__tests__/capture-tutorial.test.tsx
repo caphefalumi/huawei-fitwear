@@ -198,9 +198,8 @@ test("a known gallery barcode with no nutrition shows the product and opens labe
   })
 })
 
-test("typing a barcode uses catalog lookup without a camera and preserves numeric zero", async () => {
+test("scanning a barcode preserves numeric zero in product review", async () => {
   mockMeals(true)
-  mockCameraGranted = false
   jest.mocked(apiRequest).mockResolvedValueOnce({
     food: null,
     product: {
@@ -211,10 +210,12 @@ test("typing a barcode uses catalog lookup without a camera and preserves numeri
     },
   })
   const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
-  await fireEvent.press(screen.getByText("Type barcode"))
-  expect(screen.getByLabelText("Look up barcode").props.accessibilityState.disabled).toBe(true)
-  await fireEvent.changeText(screen.getByLabelText("Barcode number"), "1000000000001")
-  await fireEvent.press(screen.getByText("Look up barcode"))
+  await fireEvent(
+    screen.getByTestId("meal-capture-camera"),
+    "barcodeScanned",
+    "1000000000001",
+    false,
+  )
   expect(await screen.findByText("Example Brand")).toBeTruthy()
   expect(apiRequest).toHaveBeenCalledWith("/foods/barcode/1000000000001", expect.any(Object))
   await fireEvent.press(screen.getByText("Enter nutrition manually"))
@@ -229,6 +230,17 @@ test("typing a barcode uses catalog lookup without a camera and preserves numeri
       fat: "0",
     },
   })
+})
+
+test("without camera permission, Capture offers photo-library scanning and manual meal entry, not typed barcodes", async () => {
+  mockMeals(true)
+  mockCameraGranted = false
+  const screen = await render(<MealCaptureScreen />, { wrapper: createQueryWrapper() })
+
+  expect(screen.getByLabelText("Choose from library")).toBeTruthy()
+  expect(screen.queryByRole("button", { name: /type barcode|enter barcode/i })).toBeNull()
+  await fireEvent.press(screen.getByRole("button", { name: "Enter meal manually" }))
+  expect(router.push).toHaveBeenCalledWith("/meal")
 })
 
 test("retaking a photo ignores a barcode that finishes decoding late", async () => {
