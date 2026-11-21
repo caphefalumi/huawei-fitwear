@@ -110,24 +110,28 @@ export function MealsHistoryScreen() {
         </Text>
       ) : (
         items.map((item) => (
-          <Pressable
-            key={item.id}
-            style={styles.card}
-            onPress={() => router.push(`/meal?log=${item.id}`)}
-          >
+          <View key={item.id} style={styles.card}>
             <MealPhoto mealId={item.id} imageUrl={item.imageUrl} style={styles.photo} compact />
-            <View style={styles.copy}>
-              <Text style={styles.name} numberOfLines={1}>
-                {item.name}
-              </Text>
-              <Text style={styles.date}>
-                {item.date}
-                {sort === "newest" ? ` · ${item.time}` : ""}
-                {sort !== "newest" && sort !== "kcal" ? ` · ${metricOf(item, sort)} g ${sort}` : ""}
-              </Text>
-            </View>
-            <Text style={styles.kcal}>{item.kcal} kcal</Text>
-          </Pressable>
+            <Pressable
+              style={styles.details}
+              accessibilityRole="button"
+              onPress={() => router.push(`/meal?log=${item.id}`)}
+            >
+              <View style={styles.copy}>
+                <Text style={styles.name} numberOfLines={1}>
+                  {item.name}
+                </Text>
+                <Text style={styles.date}>
+                  {item.date}
+                  {sort === "newest" ? ` · ${item.time}` : ""}
+                  {sort !== "newest" && sort !== "kcal"
+                    ? ` · ${metricOf(item, sort)} g ${sort}`
+                    : ""}
+                </Text>
+              </View>
+              <Text style={styles.kcal}>{item.kcal} kcal</Text>
+            </Pressable>
+          </View>
         ))
       )}
     </ScrollView>
@@ -224,10 +228,19 @@ const styles = StyleSheet.create({
     borderColor: C.border,
     backgroundColor: C.surface,
   },
+  details: {
+    flex: 1,
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
   photo: {
     width: 64,
     height: 64,
     borderRadius: 12,
+    borderCurve: "continuous",
+    overflow: "hidden",
     backgroundColor: C.card,
   },
   copy: {
