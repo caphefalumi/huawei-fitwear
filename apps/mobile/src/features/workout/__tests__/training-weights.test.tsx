@@ -81,6 +81,17 @@ test("lists a group's exercises without prescriptions and opens a guide", async 
   expect(router.push).toHaveBeenCalledWith("/exercise-guide?name=hip-thrust")
 })
 
+test.each(["chest", "back", "shoulders", "arms", "legs", "core"])(
+  "%s exercise rows show bundled demonstration thumbnails",
+  async (group) => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ group })
+    const screen = await render(<GroupPlanScreen />)
+    const rows = screen.getAllByRole("button").filter((row) => row.props.accessibilityHint)
+    expect(screen.getAllByTestId(/^exercise-preview-/)).toHaveLength(rows.length)
+    expect(loadExerciseLoop).not.toHaveBeenCalled()
+  },
+)
+
 test("guide shows the main muscle first, the rest on Show all, and links weight to Profile", async () => {
   jest.mocked(useLocalSearchParams).mockReturnValue({ name: "bench-press" })
   const screen = await render(<ExerciseGuideScreen />)
