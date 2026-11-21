@@ -258,9 +258,11 @@ export function SexSheet({ visible, onClose, onDismiss, onSaved }: SheetProps) {
   const { sex, saveSex } = useHealth()
   const inPeriod = useInjuries((state) => state.injuries.some((i) => i.area === PERIOD_AREA))
   const removeInjury = useInjuries((state) => state.remove)
+  const [attempted, setAttempted] = useState<Sex>()
   const action = useSave(onClose, onSaved)
   const changeSex = (next: Sex) => {
     void action.save(async () => {
+      setAttempted(next)
       await saveSex(next)
       if (next !== "Female") removeInjury(PERIOD_AREA)
     })
@@ -269,7 +271,8 @@ export function SexSheet({ visible, onClose, onDismiss, onSaved }: SheetProps) {
     <Sheet visible={visible} title="Sex" onClose={action.close} onDismiss={onDismiss}>
       <RadioList
         options={SEX_OPTIONS}
-        value={sex ?? ("" as Sex)}
+        value={attempted ?? sex ?? ("" as Sex)}
+        disabled={action.pending}
         onChange={(next) => {
           if (next !== "Female" && inPeriod) {
             Alert.alert(
@@ -285,6 +288,7 @@ export function SexSheet({ visible, onClose, onDismiss, onSaved }: SheetProps) {
           changeSex(next)
         }}
       />
+      {action.pending ? <Text accessibilityLiveRegion="polite">Saving…</Text> : null}
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
     </Sheet>
   )
@@ -292,16 +296,22 @@ export function SexSheet({ visible, onClose, onDismiss, onSaved }: SheetProps) {
 
 export function GoalSheet({ visible, onClose, onDismiss, onSaved }: SheetProps) {
   const { plan, savePlan } = useHealth()
+  const [attempted, setAttempted] = useState<(typeof GOAL_OPTIONS)[number]>()
   const action = useSave(onClose, onSaved)
   return (
     <Sheet visible={visible} title="Goal / target" onClose={action.close} onDismiss={onDismiss}>
       <RadioList
         options={GOAL_OPTIONS}
-        value={plan.goal as (typeof GOAL_OPTIONS)[number]}
+        value={attempted ?? (plan.goal as (typeof GOAL_OPTIONS)[number])}
+        disabled={action.pending}
         onChange={(goal) => {
-          void action.save(() => savePlan({ ...plan, goal }))
+          void action.save(() => {
+            setAttempted(goal)
+            return savePlan({ ...plan, goal })
+          })
         }}
       />
+      {action.pending ? <Text accessibilityLiveRegion="polite">Saving…</Text> : null}
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
     </Sheet>
   )
@@ -309,16 +319,22 @@ export function GoalSheet({ visible, onClose, onDismiss, onSaved }: SheetProps) 
 
 export function ActivitySheet({ visible, onClose, onDismiss, onSaved }: SheetProps) {
   const { plan, savePlan } = useHealth()
+  const [attempted, setAttempted] = useState<(typeof ACTIVITY_OPTIONS)[number]>()
   const action = useSave(onClose, onSaved)
   return (
     <Sheet visible={visible} title="Daily activity" onClose={action.close} onDismiss={onDismiss}>
       <RadioList
         options={ACTIVITY_OPTIONS}
-        value={plan.activity as (typeof ACTIVITY_OPTIONS)[number]}
+        value={attempted ?? (plan.activity as (typeof ACTIVITY_OPTIONS)[number])}
+        disabled={action.pending}
         onChange={(activity) => {
-          void action.save(() => savePlan({ ...plan, activity }))
+          void action.save(() => {
+            setAttempted(activity)
+            return savePlan({ ...plan, activity })
+          })
         }}
       />
+      {action.pending ? <Text accessibilityLiveRegion="polite">Saving…</Text> : null}
       {action.error ? <Text accessibilityRole="alert">{action.error}</Text> : null}
     </Sheet>
   )

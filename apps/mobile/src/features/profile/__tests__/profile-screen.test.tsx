@@ -35,7 +35,6 @@ jest.mock("@/features/profile/components/sheets", () => ({
   EmphasisSheet: () => null,
   ExperienceSheet: () => null,
   FrequencySheet: () => null,
-  GoalSheet: () => null,
   HeightSheet: () => null,
   SessionLengthSheet: () => null,
   SexSheet: () => null,
@@ -157,6 +156,22 @@ test("a failed name edit keeps the draft and can be saved on retry", async () =>
   await fireEvent.press(screen.getByRole("button", { name: "Save" }))
   expect(await screen.findByText("Profile updated.")).toBeTruthy()
   expect(updateUser).toHaveBeenNthCalledWith(2, { name: "New name" })
+})
+
+test("locks goal options during save and retains the failed choice for retry", async () => {
+  const pending = Promise.withResolvers<void>()
+  const savePlan = jest.fn().mockReturnValueOnce(pending.promise).mockResolvedValueOnce(undefined)
+  mockUseHealth.mockReturnValue({ ...health, savePlan } as never)
+  const screen = await render(<ProfileScreen />)
+  await fireEvent.press(screen.getByRole("button", { name: "Goal, Build muscle" }))
+  await fireEvent.press(screen.getByRole("radio", { name: "Lose fat" }))
+  await fireEvent.press(screen.getByRole("radio", { name: "Maintain", disabled: true }))
+  expect(savePlan).toHaveBeenCalledTimes(1)
+  await act(async () => pending.reject(new Error("Offline")))
+  expect(await screen.findByRole("alert")).toBeTruthy()
+  await fireEvent.press(screen.getByRole("radio", { name: "Lose fat", checked: true }))
+  expect(await screen.findByText("Profile updated.")).toBeTruthy()
+  expect(savePlan).toHaveBeenNthCalledWith(2, { ...health.plan, goal: "Lose fat" })
 })
 
 test("shows actual exercise cache usage and updates to zero on clear", async () => {

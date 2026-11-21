@@ -7,10 +7,16 @@ type RadioListProps<T extends string> = {
   options: readonly T[]
   value: T
   onChange: (next: T) => void
+  disabled?: boolean
 }
 
 /** Label on the left, radio on the right; tapping a row selects it. */
-export function RadioList<T extends string>({ options, value, onChange }: RadioListProps<T>) {
+export function RadioList<T extends string>({
+  options,
+  value,
+  onChange,
+  disabled,
+}: RadioListProps<T>) {
   return (
     <View>
       {options.map((option, index) => {
@@ -21,6 +27,7 @@ export function RadioList<T extends string>({ options, value, onChange }: RadioL
             accessibilityRole="radio"
             accessibilityLabel={option}
             accessibilityState={{ checked: active }}
+            disabled={disabled}
             style={[styles.row, index < options.length - 1 && styles.rowDivider]}
             onPress={() => onChange(option)}
           >
