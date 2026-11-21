@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { Image, type ImageProps } from "expo-image"
 import { useEffect, useState } from "react"
 import { Modal, StyleSheet, Text, View } from "react-native"
+import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { SafeAreaView } from "react-native-safe-area-context"
 
 import { Pressable } from "@/components/ui/pressable"
@@ -12,14 +13,19 @@ import { Palette as C } from "@/theme"
 import { fetchMealPhoto } from "../api/meals-api"
 import { mealsQueryKeys } from "../hooks/meals-hooks"
 import { icons } from "./meals-ui"
+import { ZoomableMealPhoto } from "./zoomable-meal-photo"
 
 export function MealPhoto({
   mealId,
+  mealName,
+  photoUnavailableOffline,
   imageUrl,
   style,
   compact = false,
 }: {
   mealId?: string
+  mealName: string
+  photoUnavailableOffline?: boolean
   imageUrl: string | null
   style: ImageProps["style"]
   compact?: boolean
@@ -36,10 +42,19 @@ export function MealPhoto({
   })
   const [imageError, setImageError] = useState<string | null>(null)
   const [viewerOpen, setViewerOpen] = useState(false)
+  const [viewerError, setViewerError] = useState(false)
   useEffect(() => setImageError(null), [imageUrl])
   const error =
     imageError ?? (photoQuery.error ? apiErrorMessage(photoQuery.error, "your meal photo") : null)
   const uri = remotePhoto ? photoQuery.data : imageUrl
+  if ((!imageUrl && photoUnavailableOffline) || (!uri && photoQuery.isPaused))
+    return (
+      <View style={[style, styles.photoStatus]}>
+        <Text style={{ color: C.textMuted, textAlign: "center", fontSize: compact ? 10 : 12 }}>
+          Photo unavailable offline
+        </Text>
+      </View>
+    )
   if (!imageUrl)
     return compact ? (
       <Image
@@ -71,14 +86,6 @@ export function MealPhoto({
         </Pressable>
       </View>
     )
-  if (!uri && photoQuery.isPaused)
-    return (
-      <View style={[style, styles.photoStatus]}>
-        <Text style={{ color: C.textMuted, textAlign: "center", fontSize: compact ? 10 : 12 }}>
-          Photo unavailable offline
-        </Text>
-      </View>
-    )
   if (photoQuery.isLoading)
     return (
       <View
@@ -94,8 +101,11 @@ export function MealPhoto({
       <Pressable
         style={[style, styles.thumbnail]}
         accessibilityRole="button"
-        accessibilityLabel="View meal photo full screen"
-        onPress={() => setViewerOpen(true)}
+        accessibilityLabel={`View photo of ${mealName} full screen`}
+        onPress={() => {
+          setViewerError(false)
+          setViewerOpen(true)
+        }}
       >
         <Image
           source={{ uri }}
@@ -108,22 +118,31 @@ export function MealPhoto({
       </Pressable>
       {viewerOpen ? (
         <Modal presentationStyle="fullScreen" onRequestClose={() => setViewerOpen(false)}>
-          <SafeAreaView style={styles.viewer} accessibilityViewIsModal>
-            <Pressable onPress={() => setViewerOpen(false)} style={styles.close}>
-              <Text style={styles.closeLabel}>Close</Text>
-            </Pressable>
-            <Image
-              source={{ uri }}
-              style={styles.fullPhoto}
-              contentFit="contain"
-              cachePolicy="none"
-              accessibilityLabel="Full-screen meal photo"
-              onError={() => {
-                setViewerOpen(false)
-                setImageError("This meal photo could not be displayed. Please try again.")
-              }}
-            />
-          </SafeAreaView>
+          <GestureHandlerRootView style={styles.fullPhoto}>
+            <SafeAreaView style={styles.viewer} accessibilityViewIsModal>
+              <Pressable onPress={() => setViewerOpen(false)} style={styles.close}>
+                <Text style={styles.closeLabel}>Close</Text>
+              </Pressable>
+              {viewerError ? (
+                <View style={[styles.fullPhoto, styles.photoStatus]}>
+                  <Text accessibilityRole="alert" style={styles.closeLabel}>
+                    Could not display this photo.
+                  </Text>
+                  <Pressable
+                    accessibilityLabel="Retry full-screen meal photo"
+                    onPress={() => {
+                      setViewerError(false)
+                      if (remotePhoto) void photoQuery.refetch()
+                    }}
+                  >
+                    <Text style={styles.closeLabel}>Retry</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <ZoomableMealPhoto key={uri} uri={uri} onError={() => setViewerError(true)} />
+              )}
+            </SafeAreaView>
+          </GestureHandlerRootView>
         </Modal>
       ) : null}
       {photoQuery.error && uri ? (

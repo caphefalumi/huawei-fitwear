@@ -59,6 +59,7 @@ export type MealLog = {
   loggedAt: string
   mealType: MealType
   imageUrl: string | null
+  photoUnavailableOffline?: boolean
   items: MealItem[]
   kcal: number
   macros: Macros
