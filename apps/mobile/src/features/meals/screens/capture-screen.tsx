@@ -346,24 +346,7 @@ export function MealCaptureScreen() {
               </View>
             ) : (
               <View style={styles.preview}>
-<<<<<<< HEAD
                 {camera.preview}
-=======
-                {useLidar && MealLidarCamera ? (
-                  focused ? (
-                    <MealLidarCamera
-                      style={StyleSheet.absoluteFill}
-                      capture={lidarCapture}
-                      scan={tutorialSeen && !barcodeOpen && !lidarCapture}
-                      onBarcode={scanBarcode}
-                      onCapture={receiveLidarPhoto}
-                      onUnavailable={disableLidar}
-                    />
-                  ) : null
-                ) : (
-                  camera.preview
-                )}
->>>>>>> f72b4a3 (fix(mobile): allow basic functionality in Expo Go)
                 <View pointerEvents="none" style={styles.guide}>
                   <View style={[styles.guideCorner, styles.guideTL]} />
                   <View style={[styles.guideCorner, styles.guideTR]} />
