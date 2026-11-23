@@ -4,6 +4,8 @@ React Native application built with **Expo** and **Expo Router**, serving as the
 
 The native launch screen and startup overlay use the shared VoocHealth logo and the app's cream background. Rebuild the native app after changing the splash configuration; Metro reload does not update the OS launch screen.
 
+Run `bun run start:go` from `apps/mobile` and scan the QR code with Expo Go for SDK 58. Watch Bluetooth, Apple Health, and Health Connect show availability notices in Expo Go; use a development build for those integrations. Meal photo capture and live barcode scanning use Expo Camera.
+
 ## Cloudflare API integration
 
 The API defaults to `https://fitwear.tm-project.id.vn`. To use a local backend, copy `.env.example` to `.env.local` in this directory and set `EXPO_PUBLIC_API_URL=http://<computer-LAN-IP>:8787`, then restart Metro. The value must be an absolute HTTP(S) URL without credentials, a query, or a fragment. Use `127.0.0.1` for web and your computer's LAN IP for a physical phone. Only public configuration belongs in `EXPO_PUBLIC_*`; never put API secrets there.
