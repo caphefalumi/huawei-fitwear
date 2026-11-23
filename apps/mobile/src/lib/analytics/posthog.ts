@@ -1,11 +1,13 @@
 import PostHog from "posthog-react-native"
+import { Platform } from "react-native"
 
 const projectToken = process.env.EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN
 const host = process.env.EXPO_PUBLIC_POSTHOG_HOST
 
-export const isPostHogConfigured = Boolean(projectToken && host)
+// Web is for UI testing, and the native client's storage is unavailable there.
+export const isPostHogConfigured = Platform.OS !== "web" && Boolean(projectToken && host)
 
-if (__DEV__ && !isPostHogConfigured && (projectToken || host)) {
+if (Platform.OS !== "web" && __DEV__ && !isPostHogConfigured && (projectToken || host)) {
   const missingVariable = projectToken
     ? "EXPO_PUBLIC_POSTHOG_HOST"
     : "EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN"
