@@ -4,7 +4,7 @@
     "slug": "huawei-fitwear",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "../../assets/voochealth-logo.png",
+    "icon": "./assets/images/voochealth-logo.png",
     "scheme": "mobile",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -20,7 +20,7 @@
       "package": "com.fitwear.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
-        "foregroundImage": "../../assets/voochealth-logo.png"
+        "foregroundImage": "./assets/images/voochealth-logo.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -61,7 +61,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#FAF9F6",
-          "image": "../../assets/voochealth-logo.png",
+          "image": "./assets/images/voochealth-logo.png",
           "imageWidth": 128
         }
       ],

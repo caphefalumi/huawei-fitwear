@@ -36,7 +36,7 @@ export function AnimatedSplashOverlay() {
   })
 
   const image = (
-    <Image style={styles.splashImage} source={require("../../../../assets/voochealth-logo.png")} />
+    <Image style={styles.splashImage} source={require("../../assets/images/voochealth-logo.png")} />
   )
 
   return animate ? (
