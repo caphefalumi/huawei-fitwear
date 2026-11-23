@@ -1,7 +1,8 @@
-import { File, Paths } from "expo-file-system"
-import { Platform } from "react-native"
+import { Q } from "@nozbe/watermelondb"
 
 import type { RoutineExercise } from "../utils/routines"
+import { database } from "./database"
+import type { SessionDraftModel } from "./session-draft.model"
 
 export type SessionDraft = {
   /** The user who owns this draft. */
@@ -26,21 +27,14 @@ export type SessionDraft = {
   startedAt: number
 }
 
-const storageKey = (userId: string) => `session-draft-${encodeURIComponent(userId)}.json`
+const drafts = () => database.get<SessionDraftModel>("session_drafts")
 
 /** Read the current draft for a user, or null if none exists / it's invalid. */
-export function readSessionDraft(userId: string): SessionDraft | null {
+export async function readSessionDraft(userId: string): Promise<SessionDraft | null> {
   try {
-    const key = storageKey(userId)
-    const text =
-      Platform.OS === "web"
-        ? globalThis.localStorage?.getItem(key)
-        : (() => {
-            const file = new File(Paths.document, key)
-            return file.exists ? file.textSync() : null
-          })()
-    if (!text) return null
-    const data: unknown = JSON.parse(text)
+    const [record] = await drafts().query(Q.where("user_id", userId)).fetch()
+    if (!record) return null
+    const data: unknown = JSON.parse(record.payload)
     if (
       !data ||
       typeof data !== "object" ||
@@ -68,39 +62,35 @@ export function readSessionDraft(userId: string): SessionDraft | null {
   }
 }
 
-/** Persist an in-progress session draft. */
-export function writeSessionDraft(draft: SessionDraft): void {
+/** Persist an in-progress session draft, replacing that user's previous one. */
+export async function writeSessionDraft(draft: SessionDraft): Promise<void> {
   try {
-    const key = storageKey(draft.userId)
-    const data = JSON.stringify(draft)
-    if (Platform.OS === "web") {
-      globalThis.localStorage?.setItem(key, data)
-    } else {
-      const saved = new File(Paths.document, key)
-      const temporary = new File(Paths.document, `${key}.part`)
-      try {
-        temporary.create({ overwrite: true })
-        temporary.writeSync(data)
-        temporary.moveSync(saved, { overwrite: true })
-      } finally {
-        if (temporary.uri !== saved.uri && temporary.exists) temporary.delete()
+    const payload = JSON.stringify(draft)
+    await database.write(async () => {
+      const [existing] = await drafts().query(Q.where("user_id", draft.userId)).fetch()
+      if (existing) {
+        await existing.update((record) => {
+          record.payload = payload
+        })
+      } else {
+        await drafts().create((record) => {
+          record.userId = draft.userId
+          record.payload = payload
+        })
       }
-    }
+    })
   } catch {
     // Non-fatal: session continues without persistence.
   }
 }
 
 /** Remove the draft (called when the session completes or the user starts fresh). */
-export function clearSessionDraft(userId: string): void {
+export async function clearSessionDraft(userId: string): Promise<void> {
   try {
-    const key = storageKey(userId)
-    if (Platform.OS === "web") {
-      globalThis.localStorage?.removeItem(key)
-    } else {
-      const file = new File(Paths.document, key)
-      if (file.exists) file.delete()
-    }
+    await database.write(async () => {
+      const records = await drafts().query(Q.where("user_id", userId)).fetch()
+      for (const record of records) await record.destroyPermanently()
+    })
   } catch {
     // Best-effort.
   }

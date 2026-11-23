@@ -89,6 +89,18 @@ export function SessionScreen() {
   const input = usePlanInput()
   const { user } = useAuth()
   const { routineOwner, routineStorageError, loadRoutines } = usePlanPreferences()
+  // The draft lives in the database, so it is read asynchronously before the session starts.
+  const [loadedDraft, setLoadedDraft] = useState<{ userId: string; draft: SessionDraft | null }>()
+  useEffect(() => {
+    if (!user?.id) return
+    let cancelled = false
+    void readSessionDraft(user.id).then((draft) => {
+      if (!cancelled) setLoadedDraft({ userId: user.id, draft })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
   if (!user || routineOwner !== user.id || routineStorageError) {
     return (
       <Screen>
@@ -102,11 +114,25 @@ export function SessionScreen() {
       </Screen>
     )
   }
-  return <ActiveSession input={input} />
+  if (loadedDraft?.userId !== user.id) {
+    return (
+      <Screen>
+        <BackHeader label="Back" onPress={() => router.back()} />
+        <PageHeading title="Preparing workout" />
+      </Screen>
+    )
+  }
+  return <ActiveSession input={input} initialDraft={loadedDraft.draft} />
 }
 
 /** Guided workout: one set at a time, a rest timer between sets, then a summary. */
-function ActiveSession({ input }: { input: PlanInput }) {
+function ActiveSession({
+  input,
+  initialDraft,
+}: {
+  input: PlanInput
+  initialDraft: SessionDraft | null
+}) {
   const { date: param } = useLocalSearchParams<{ date?: string }>()
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -125,8 +151,7 @@ function ActiveSession({ input }: { input: PlanInput }) {
 
   // --- Draft / resume ---
   const dateKey_ = param ?? dateKey(planToday)
-  // Read once at mount; don't re-read on every render.
-  const [existingDraft] = useState(() => (user?.id ? readSessionDraft(user.id) : null))
+  const existingDraft = initialDraft
   // A draft of this routine, including one left on an earlier day, resumes in place.
   const hasDraft = existingDraft !== null && existingDraft.routineName === routine.name
   // A draft of another routine is offered too: its exercise snapshot is restored on resume.
@@ -178,14 +203,14 @@ function ActiveSession({ input }: { input: PlanInput }) {
 
   /** Discard the persisted draft (session completed or user chose to start fresh). */
   const discardDraft = () => {
-    if (user?.id) clearSessionDraft(user.id)
+    if (user?.id) void clearSessionDraft(user.id)
   }
 
   // Autosave after every change, so a hardware back, app kill or crash still leaves a resumable draft.
   // Wait while the resume prompt is open, otherwise this routine would overwrite the draft being offered.
   useEffect(() => {
     if (!user?.id || resumePrompt) return
-    writeSessionDraft({
+    void writeSessionDraft({
       userId: user.id,
       date: dateKey_,
       routineName: routine.name,

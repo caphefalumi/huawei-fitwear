@@ -1,3 +1,5 @@
+import { database } from "@/features/workout/store/database"
+import { SessionDraftModel } from "@/features/workout/store/session-draft.model"
 import {
   clearSessionDraft,
   readSessionDraft,
@@ -5,34 +7,23 @@ import {
   type SessionDraft,
 } from "@/features/workout/store/session-draft.store"
 
-// In-memory stand-in for the native file API, so the store's real read/write path runs under Jest.
-const mockFiles = new Map<string, string>()
-
-jest.mock("expo-file-system", () => {
-  class File {
-    uri: string
-    constructor(directory: { uri: string } | string, name?: string) {
-      this.uri = `${typeof directory === "string" ? directory : directory.uri}/${name ?? ""}`
-    }
-    get exists() {
-      return mockFiles.has(this.uri)
-    }
-    textSync() {
-      return mockFiles.get(this.uri)!
-    }
-    create() {}
-    writeSync(data: string) {
-      mockFiles.set(this.uri, data)
-    }
-    moveSync(target: File) {
-      mockFiles.set(target.uri, mockFiles.get(this.uri)!)
-      mockFiles.delete(this.uri)
-    }
-    delete() {
-      mockFiles.delete(this.uri)
-    }
+// The native adapter needs a dev build, so the same database runs on the in-memory Loki adapter.
+jest.mock("@nozbe/watermelondb/adapters/sqlite", () => {
+  const LokiJSAdapter = jest.requireActual("@nozbe/watermelondb/adapters/lokijs").default
+  return {
+    __esModule: true,
+    default: class extends LokiJSAdapter {
+      constructor(options: object) {
+        // The Loki adapter autosaves on an interval; stop it so Jest can exit.
+        super({
+          ...options,
+          useWebWorker: false,
+          useIncrementalIndexedDB: true,
+          extraLokiOptions: { autosave: false, verbose: false },
+        })
+      }
+    },
   }
-  return { Paths: { document: { uri: "/docs" } }, File }
 })
 
 const draft: SessionDraft = {
@@ -58,43 +49,56 @@ const draft: SessionDraft = {
   startedAt: 1_700_000_000_000,
 }
 
-beforeEach(() => mockFiles.clear())
+const storeRaw = (payload: string) =>
+  database.write(() =>
+    database.get<SessionDraftModel>("session_drafts").create((record) => {
+      record.userId = "user-1"
+      record.payload = payload
+    }),
+  )
 
-test("round-trips every field, including the in-progress set", () => {
-  writeSessionDraft(draft)
-  expect(readSessionDraft("user-1")).toEqual(draft)
+beforeEach(async () => {
+  await database.write(() => database.unsafeResetDatabase())
 })
 
-test("overwrites the previous draft instead of appending", () => {
-  writeSessionDraft(draft)
-  writeSessionDraft({ ...draft, position: 4, reps: 7 })
-  expect(readSessionDraft("user-1")).toMatchObject({ position: 4, reps: 7 })
+test("round-trips every field, including the in-progress set", async () => {
+  await writeSessionDraft(draft)
+  expect(await readSessionDraft("user-1")).toEqual(draft)
 })
 
-test("keeps drafts separate per user", () => {
-  writeSessionDraft(draft)
-  expect(readSessionDraft("user-2")).toBeNull()
+test("overwrites the previous draft instead of appending", async () => {
+  await writeSessionDraft(draft)
+  await writeSessionDraft({ ...draft, position: 4, reps: 7 })
+  expect(await readSessionDraft("user-1")).toMatchObject({ position: 4, reps: 7 })
+  expect(await database.get("session_drafts").query().fetchCount()).toBe(1)
 })
 
-test("returns null for corrupt or incomplete data", () => {
-  mockFiles.set("/docs/session-draft-user-1.json", "{not json")
-  expect(readSessionDraft("user-1")).toBeNull()
-
-  writeSessionDraft({ ...draft, position: "3" } as never)
-  expect(readSessionDraft("user-1")).toBeNull()
-
-  writeSessionDraft({ ...draft, skipped: "1" } as never)
-  expect(readSessionDraft("user-1")).toBeNull()
+test("keeps drafts separate per user", async () => {
+  await writeSessionDraft(draft)
+  expect(await readSessionDraft("user-2")).toBeNull()
 })
 
-test("reads drafts written before the set progress fields existed", () => {
+test("returns null for corrupt or incomplete data", async () => {
+  await storeRaw("{not json")
+  expect(await readSessionDraft("user-1")).toBeNull()
+})
+
+test("rejects a draft with the wrong field types", async () => {
+  await writeSessionDraft({ ...draft, position: "3" } as never)
+  expect(await readSessionDraft("user-1")).toBeNull()
+
+  await writeSessionDraft({ ...draft, skipped: "1" } as never)
+  expect(await readSessionDraft("user-1")).toBeNull()
+})
+
+test("reads drafts written before the set progress fields existed", async () => {
   const { reps: _reps, skipped: _skipped, exercises: _exercises, ...legacy } = draft
-  writeSessionDraft(legacy)
-  expect(readSessionDraft("user-1")).toEqual(legacy)
+  await writeSessionDraft(legacy)
+  expect(await readSessionDraft("user-1")).toEqual(legacy)
 })
 
-test("clear removes the draft", () => {
-  writeSessionDraft(draft)
-  clearSessionDraft("user-1")
-  expect(readSessionDraft("user-1")).toBeNull()
+test("clear removes the draft", async () => {
+  await writeSessionDraft(draft)
+  await clearSessionDraft("user-1")
+  expect(await readSessionDraft("user-1")).toBeNull()
 })

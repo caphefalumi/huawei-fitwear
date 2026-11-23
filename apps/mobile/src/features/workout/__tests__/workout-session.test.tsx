@@ -41,9 +41,9 @@ jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }))
 jest.mock("@/features/workout/store/session-draft.store", () => ({
-  readSessionDraft: jest.fn().mockReturnValue(null),
-  writeSessionDraft: jest.fn(),
-  clearSessionDraft: jest.fn(),
+  readSessionDraft: jest.fn().mockResolvedValue(null),
+  writeSessionDraft: jest.fn().mockResolvedValue(undefined),
+  clearSessionDraft: jest.fn().mockResolvedValue(undefined),
 }))
 
 const input: PlanInput = {
@@ -89,7 +89,7 @@ beforeEach(() => {
   useDemoClock.setState({ offsetDays: (8 - new Date().getDay()) % 7 })
   jest.mocked(useLocalSearchParams).mockReturnValue({ date: dateKey(planNow()) })
   // No saved draft by default.
-  jest.mocked(readSessionDraft).mockReturnValue(null)
+  jest.mocked(readSessionDraft).mockResolvedValue(null)
 })
 
 afterEach(() => jest.useRealTimers())
@@ -277,7 +277,7 @@ test("autosaves progress after each set without leaving", async () => {
 
 test("prompts to resume a draft left on a previous day", async () => {
   const routine = routineOn(planNow(), input)
-  jest.mocked(readSessionDraft).mockReturnValue({
+  jest.mocked(readSessionDraft).mockResolvedValue({
     userId: "user-1",
     date: dateKey(shift(planNow(), -14)),
     routineName: routine.name,
@@ -315,7 +315,7 @@ test("restores the in-progress set after an exit", async () => {
   const saved = jest.mocked(writeSessionDraft).mock.calls.at(-1)![0]
   await screen.unmount()
 
-  jest.mocked(readSessionDraft).mockReturnValue(saved)
+  jest.mocked(readSessionDraft).mockResolvedValue(saved)
   const relaunched = await render(
     <QueryClientProvider client={queryClient}>
       <SessionScreen />
@@ -332,7 +332,7 @@ test("restores the in-progress set after an exit", async () => {
 test("offers a draft from another routine and restores its exercises", async () => {
   const routine = routineOn(planNow(), input)
   const snapshot = { ...routine.exercises[0]!, name: "Snapshot Squat" }
-  jest.mocked(readSessionDraft).mockReturnValue({
+  jest.mocked(readSessionDraft).mockResolvedValue({
     userId: "user-1",
     date: dateKey(shift(planNow(), -1)),
     routineName: "Leg Day",
@@ -365,7 +365,7 @@ test("offers a draft from another routine and restores its exercises", async () 
 
 test("prompts to resume when a matching draft exists", async () => {
   const routine = routineOn(planNow(), input)
-  jest.mocked(readSessionDraft).mockReturnValue({
+  jest.mocked(readSessionDraft).mockResolvedValue({
     userId: "user-1",
     date: dateKey(planNow()),
     routineName: routine.name,
@@ -389,7 +389,7 @@ test("prompts to resume when a matching draft exists", async () => {
 
 test("continues from draft position on resume", async () => {
   const routine = routineOn(planNow(), input)
-  jest.mocked(readSessionDraft).mockReturnValue({
+  jest.mocked(readSessionDraft).mockResolvedValue({
     userId: "user-1",
     date: dateKey(planNow()),
     routineName: routine.name,
@@ -415,7 +415,7 @@ test("continues from draft position on resume", async () => {
 
 test("starts fresh and clears draft when user chooses start fresh", async () => {
   const routine = routineOn(planNow(), input)
-  jest.mocked(readSessionDraft).mockReturnValue({
+  jest.mocked(readSessionDraft).mockResolvedValue({
     userId: "user-1",
     date: dateKey(planNow()),
     routineName: routine.name,

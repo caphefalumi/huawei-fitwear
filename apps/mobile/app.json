@@ -69,6 +69,7 @@
         }
       ],
       "./plugins/withBluetoothPermissions",
+      "./plugins/withWatermelondb",
       "./plugins/withAndroidCmake"
     ],
     "experiments": {
