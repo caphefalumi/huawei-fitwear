@@ -1,9 +1,11 @@
 name: Mobile Build
 
 on:
+  schedule:
+    - cron: "0 1 * * *"
+      timezone: Asia/Ho_Chi_Minh
   workflow_dispatch:
-  # Manual dispatch is the normal entry point. This branch also runs on push
-  # so the release-mode fix can be verified before it merges.
+  # Keep the temporary release-build branch trigger for pre-merge verification.
   push:
     branches:
       - feat/build-mobile
