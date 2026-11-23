@@ -1,3 +1,4 @@
+import { isRunningInExpoGo } from "expo"
 import { router } from "expo-router"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Pressable, ScrollView, StyleSheet, TextInput, useColorScheme, View } from "react-native"
@@ -104,6 +105,7 @@ export function BleSyncScreen() {
   const theme = useTheme()
   const colorScheme = useColorScheme()
   const isDark = colorScheme === "dark"
+  const expoGo = isRunningInExpoGo()
   const {
     mode,
     deviceName,
@@ -250,7 +252,9 @@ export function BleSyncScreen() {
               Watch Bluetooth
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              Start BLE IMU Sync in the VoocHealth app on your HarmonyOS watch.
+              {expoGo
+                ? "Watch Bluetooth needs a development build. You can still use the rest of VoocHealth."
+                : "Start BLE IMU Sync in the VoocHealth app on your HarmonyOS watch."}
             </ThemedText>
           </View>
 
@@ -278,7 +282,7 @@ export function BleSyncScreen() {
 
             {/* Connection Actions */}
             <View style={styles.buttonRow}>
-              {!isConnected && (
+              {!isConnected && !expoGo && (
                 <>
                   <Pressable
                     style={({ pressed }) => [
