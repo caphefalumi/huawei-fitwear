@@ -15,6 +15,7 @@ const datePattern = /^\d{4}-\d{2}-\d{2}$/
 type Owner = { accountId: string; sessionId: string }
 type Entry = { key: QueryKey; at: number; data: unknown }
 type Snapshot = Owner & { entries: Entry[] }
+let cacheGeneration = 0
 
 function mealTotals({ caloriesKcal, proteinG, carbsG, fatG }: NutritionSummary["consumed"]) {
   return { caloriesKcal, proteinG, carbsG, fatG }
@@ -134,6 +135,7 @@ function file(part = false) {
 
 export function clearOfflineCache() {
   if (Platform.OS === "web") return
+  cacheGeneration++
   let failed = false
   for (const part of [false, true]) {
     try {
@@ -182,8 +184,14 @@ export function openOfflineCache(client: QueryClient, owner: Owner) {
   }
 
   let pending: ReturnType<typeof setTimeout> | undefined
+  let generation = cacheGeneration
   const flush = () => {
     pending = undefined
+    if (generation !== cacheGeneration) {
+      entries.clear()
+      generation = cacheGeneration
+      return
+    }
     const now = Date.now()
     const kept = [...entries.values()]
       .filter((entry) => fresh(entry.at, now))
@@ -213,6 +221,10 @@ export function openOfflineCache(client: QueryClient, owner: Owner) {
   }
   const unsubscribe = client.getQueryCache().subscribe((event) => {
     if (event.type !== "updated" || event.action.type !== "success" || event.action.manual) return
+    if (generation !== cacheGeneration) {
+      entries.clear()
+      generation = cacheGeneration
+    }
     const {
       queryKey: key,
       state: { dataUpdatedAt: at },

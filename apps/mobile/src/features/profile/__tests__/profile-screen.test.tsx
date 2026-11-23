@@ -11,6 +11,8 @@ import {
   exerciseLoopCacheBytes,
   subscribeToExerciseLoopCache,
 } from "@/features/workout/utils/exercise-loop-cache"
+import { clearOfflineCache } from "@/lib/query/offline-cache"
+import { clearMealPhotoCache, mealPhotoCacheBytes } from "@/lib/storage/meal-photo-cache"
 
 jest.mock("@/features/auth/hooks/auth-hooks", () => ({ useAuth: jest.fn() }))
 jest.mock("@/lib/api/client", () => ({
@@ -46,6 +48,12 @@ jest.mock("@/features/workout/utils/exercise-loop-cache", () => ({
   clearExerciseLoopCache: jest.fn(),
   exerciseLoopCacheBytes: jest.fn(() => 0),
   subscribeToExerciseLoopCache: jest.fn(() => () => {}),
+}))
+jest.mock("@/lib/query/offline-cache", () => ({ clearOfflineCache: jest.fn() }))
+jest.mock("@/lib/storage/meal-photo-cache", () => ({
+  clearMealPhotoCache: jest.fn().mockResolvedValue(undefined),
+  mealPhotoCacheBytes: jest.fn(() => 0),
+  subscribeToMealPhotoCache: jest.fn(() => () => {}),
 }))
 jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
@@ -174,9 +182,10 @@ test("locks goal options during save and retains the failed choice for retry", a
   expect(savePlan).toHaveBeenNthCalledWith(2, { ...health.plan, goal: "Lose fat" })
 })
 
-test("shows actual exercise cache usage and updates to zero on clear", async () => {
+test("shows combined media usage and clears all managed cache files", async () => {
   let onCacheChanged: (() => void) | undefined
   jest.mocked(exerciseLoopCacheBytes).mockReturnValue(260_000)
+  jest.mocked(mealPhotoCacheBytes).mockReturnValue(140_000)
   jest.mocked(subscribeToExerciseLoopCache).mockImplementationOnce((listener) => {
     onCacheChanged = listener
     return () => {
@@ -185,13 +194,16 @@ test("shows actual exercise cache usage and updates to zero on clear", async () 
   })
   jest.mocked(clearExerciseLoopCache).mockImplementationOnce(() => {
     jest.mocked(exerciseLoopCacheBytes).mockReturnValue(0)
+    jest.mocked(mealPhotoCacheBytes).mockReturnValue(0)
     onCacheChanged?.()
   })
   const screen = await render(<ProfileScreen />)
-  expect(screen.getByText("0.26 MB cached")).toBeTruthy()
-  await fireEvent.press(screen.getByRole("button", { name: "Clear exercise cache" }))
+  expect(screen.getByText("0.40 MB of media cached")).toBeTruthy()
+  await fireEvent.press(screen.getByRole("button", { name: "Clear cache" }))
+  expect(await screen.findByText("0.00 MB of media cached")).toBeTruthy()
+  expect(clearMealPhotoCache).toHaveBeenCalledTimes(1)
   expect(clearExerciseLoopCache).toHaveBeenCalledTimes(1)
-  expect(screen.getByText("0.00 MB cached")).toBeTruthy()
+  expect(clearOfflineCache).toHaveBeenCalledTimes(1)
 })
 
 test("shows unset height and restores account actions", async () => {

@@ -89,10 +89,15 @@ test("history shows each saved meal photo and identifies meals without photos", 
   expect(screen.getByLabelText("Logged meal photo")).toBeTruthy()
   await fireEvent.press(screen.getByRole("button", { name: "Retry full-screen meal photo" }))
   expect(screen.getByLabelText("Full-screen meal photo")).toBeTruthy()
+  expect(fetchMealPhoto).toHaveBeenCalledTimes(2)
   await fireEvent.press(screen.getByRole("button", { name: "Close" }))
   expect(screen.queryByLabelText("Full-screen meal photo")).toBeNull()
   await fireEvent.press(screen.getByText("Lunch"))
   expect(router.push).toHaveBeenCalledWith("/meal?log=one")
+
+  // Even an older cached photo should reopen without another network request.
+  const later = Date.now() + 31 * 60_000
+  jest.spyOn(Date, "now").mockReturnValue(later)
 
   await screen.unmount()
   const reopened = await render(<MealsHistoryScreen />, { wrapper })

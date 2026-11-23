@@ -32,6 +32,10 @@ The native meal camera uses `expo-camera` for live scanning and photo capture. i
 
 Remote data uses TanStack Query. Each feature owns domain/user-scoped query keys and colocated query functions; writes run as mutations and invalidate only affected data. Meal deletion/type changes and workout deletion update cached lists optimistically and roll back on failure. API requests use Axios with a 12-second timeout, typed status/network failures, and exponential-backoff retries with jitter for retryable queries. Native connectivity feeds TanStack Query and a persistent offline banner. Data screens keep cached content during refresh failures, expose retry and pull-to-refresh, and announce accessible error panels; delayed skeletons distinguish loading from empty states. Zustand holds client-owned meal drafts/preferences and auth operation status; API responses stay in TanStack Query, and credentials stay in secure/local storage.
 
+Unfinished workouts are saved per account in Expo SQLite on Android and iOS. Reopen the workout to continue or start fresh. Drafts do not sync across devices. Rebuild existing native development clients to pick up `expo-sqlite`. Web is for UI testing only; workout drafts there are kept in memory.
+
+On native, the most recent meal photos downloaded by the app are cached per account and reused after restart, unless evicted by the OS. **Profile → Clear cache** removes cached photos, exercise animations, and offline copies without deleting saved workouts or drafts. Cached meal photos are also removed on sign-out.
+
 Forgot-password requests return the same message whether an account exists or not. The app collects a four-digit email code (valid for 10 minutes), exchanges a valid code for a short-lived reset token, and submits that token with the new password. Reset tokens expire after 10 minutes and are single-use. The OTP screen shows the server-provided exponential resend cooldown; new passwords require at least 8 characters and the screen exposes a show/hide toggle.
 
 ## Sentry privacy and EAS builds

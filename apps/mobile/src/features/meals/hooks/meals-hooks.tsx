@@ -13,6 +13,7 @@ import { AppState } from "react-native"
 import { useAuth } from "@/features/auth"
 import { apiErrorMessage } from "@/lib/api/client"
 import { refetchAllThrowing } from "@/lib/query/retry"
+import { removeCachedMealPhoto } from "@/lib/storage/meal-photo-cache"
 
 import {
   fetchMeals,
@@ -297,7 +298,9 @@ export function MealsProvider({ children }: { children: ReactNode }) {
     ])
     if (deletingMeal && mealId) {
       queryClient.removeQueries({ queryKey: mealsQueryKeys.detail(userId, mealId) })
+      await queryClient.cancelQueries({ queryKey: mealsQueryKeys.photo(userId, mealId) })
       queryClient.removeQueries({ queryKey: mealsQueryKeys.photo(userId, mealId) })
+      await removeCachedMealPhoto(userId, mealId).catch(() => undefined)
     }
   }
   const writeMutation = useMutation({

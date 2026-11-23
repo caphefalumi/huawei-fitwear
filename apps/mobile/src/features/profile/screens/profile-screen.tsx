@@ -15,7 +15,7 @@ import { emphasisFor, useLoads, usePlanPreferences } from "@/features/workout"
 import { captureException } from "@/lib/analytics/posthog"
 import { Palette as C } from "@/theme"
 
-import { ExerciseMediaSettings } from "../components/exercise-media-settings"
+import { AppCacheSettings } from "../components/app-cache-settings"
 import {
   ActivitySheet,
   BirthdateSheet,
@@ -235,8 +235,9 @@ export function ProfileScreen() {
             onPress={() => (inPeriod ? removeInjury(PERIOD_AREA) : setPeriodSheet(true))}
           />
         ) : null}
-        <ExerciseMediaSettings />
       </View>
+
+      <AppCacheSettings />
 
       <View style={styles.section}>
         <Text accessibilityRole="header" style={styles.sectionTitle}>
