@@ -1,8 +1,7 @@
-import { Q } from "@nozbe/watermelondb"
+import { captureException } from "@/lib/analytics/posthog"
 
 import type { RoutineExercise } from "../utils/routines"
-import { database } from "./database"
-import type { SessionDraftModel } from "./session-draft.model"
+import { clearDraftPayload, readDraftPayload, writeDraftPayload } from "./database"
 
 export type SessionDraft = {
   /** The user who owns this draft. */
@@ -25,24 +24,33 @@ export type SessionDraft = {
   exercises?: RoutineExercise[]
   /** unix ms the session was started. */
   startedAt: number
+  /** Stable ID for retries of the completed-workout request. */
+  saveId?: string
+  /** Set when the draft has reached the summary but has not been saved. */
+  finishedAt?: number
 }
-
-const drafts = () => database.get<SessionDraftModel>("session_drafts")
 
 /** Read the current draft for a user, or null if none exists / it's invalid. */
 export async function readSessionDraft(userId: string): Promise<SessionDraft | null> {
+  let payload: string | null
   try {
-    const [record] = await drafts().query(Q.where("user_id", userId)).fetch()
-    if (!record) return null
-    const data: unknown = JSON.parse(record.payload)
+    payload = await readDraftPayload(userId)
+  } catch {
+    captureException(new Error("Could not read the workout draft."))
+    return null
+  }
+  if (payload === null) return null
+  try {
+    const data: unknown = JSON.parse(payload)
     if (
       !data ||
       typeof data !== "object" ||
       Array.isArray(data) ||
-      typeof (data as SessionDraft).userId !== "string" ||
+      (data as SessionDraft).userId !== userId ||
       typeof (data as SessionDraft).date !== "string" ||
       typeof (data as SessionDraft).routineName !== "string" ||
-      typeof (data as SessionDraft).position !== "number" ||
+      !Number.isSafeInteger((data as SessionDraft).position) ||
+      (data as SessionDraft).position < 0 ||
       !Array.isArray((data as SessionDraft).weights) ||
       !Array.isArray((data as SessionDraft).logged) ||
       ((data as SessionDraft).reps !== undefined &&
@@ -51,7 +59,11 @@ export async function readSessionDraft(userId: string): Promise<SessionDraft | n
         !Array.isArray((data as SessionDraft).skipped)) ||
       ((data as SessionDraft).exercises !== undefined &&
         !Array.isArray((data as SessionDraft).exercises)) ||
-      typeof (data as SessionDraft).startedAt !== "number"
+      !Number.isFinite((data as SessionDraft).startedAt) ||
+      ((data as SessionDraft).finishedAt !== undefined &&
+        !Number.isFinite((data as SessionDraft).finishedAt)) ||
+      ((data as SessionDraft).saveId !== undefined &&
+        typeof (data as SessionDraft).saveId !== "string")
     )
       return null
     const draft = data as SessionDraft
@@ -65,33 +77,17 @@ export async function readSessionDraft(userId: string): Promise<SessionDraft | n
 /** Persist an in-progress session draft, replacing that user's previous one. */
 export async function writeSessionDraft(draft: SessionDraft): Promise<void> {
   try {
-    const payload = JSON.stringify(draft)
-    await database.write(async () => {
-      const [existing] = await drafts().query(Q.where("user_id", draft.userId)).fetch()
-      if (existing) {
-        await existing.update((record) => {
-          record.payload = payload
-        })
-      } else {
-        await drafts().create((record) => {
-          record.userId = draft.userId
-          record.payload = payload
-        })
-      }
-    })
+    await writeDraftPayload(draft.userId, JSON.stringify(draft))
   } catch {
-    // Non-fatal: session continues without persistence.
+    captureException(new Error("Could not save the workout draft."))
   }
 }
 
 /** Remove the draft (called when the session completes or the user starts fresh). */
 export async function clearSessionDraft(userId: string): Promise<void> {
   try {
-    await database.write(async () => {
-      const records = await drafts().query(Q.where("user_id", userId)).fetch()
-      for (const record of records) await record.destroyPermanently()
-    })
+    await clearDraftPayload(userId)
   } catch {
-    // Best-effort.
+    captureException(new Error("Could not clear the workout draft."))
   }
 }

@@ -31,6 +31,7 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "expo-sqlite",
       ["expo-build-properties", { "android": { "minSdkVersion": 26 } }],
       "react-native-health-connect",
       [
@@ -74,7 +75,6 @@
         }
       ],
       "./plugins/withBluetoothPermissions",
-      "./plugins/withWatermelondb",
       "./plugins/withAndroidCmake"
     ],
     "experiments": {

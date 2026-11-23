@@ -1,5 +1,6 @@
-import { database } from "@/features/workout/store/database"
-import { SessionDraftModel } from "@/features/workout/store/session-draft.model"
+import { DatabaseSync } from "node:sqlite"
+
+import { writeDraftPayload } from "@/features/workout/store/database"
 import {
   clearSessionDraft,
   readSessionDraft,
@@ -7,24 +8,23 @@ import {
   type SessionDraft,
 } from "@/features/workout/store/session-draft.store"
 
-// The native adapter needs a dev build, so the same database runs on the in-memory Loki adapter.
-jest.mock("@nozbe/watermelondb/adapters/sqlite", () => {
-  const LokiJSAdapter = jest.requireActual("@nozbe/watermelondb/adapters/lokijs").default
-  return {
-    __esModule: true,
-    default: class extends LokiJSAdapter {
-      constructor(options: object) {
-        // The Loki adapter autosaves on an interval; stop it so Jest can exit.
-        super({
-          ...options,
-          useWebWorker: false,
-          useIncrementalIndexedDB: true,
-          extraLokiOptions: { autosave: false, verbose: false },
-        })
-      }
-    },
-  }
-})
+jest.mock("@/lib/analytics/posthog", () => ({ captureException: jest.fn() }))
+
+// Exercise the production SQL against SQLite, replacing only the Expo native bridge.
+let mockSqlite: DatabaseSync
+jest.mock("expo-sqlite", () => ({
+  openDatabaseAsync: async () => {
+    const { DatabaseSync } = jest.requireActual<typeof import("node:sqlite")>("node:sqlite")
+    mockSqlite = new DatabaseSync(":memory:")
+    return {
+      execAsync: async (sql: string) => mockSqlite.exec(sql),
+      getFirstAsync: async (sql: string, ...params: string[]) =>
+        mockSqlite.prepare(sql).get(...params) ?? null,
+      runAsync: async (sql: string, ...params: string[]) => mockSqlite.prepare(sql).run(...params),
+      closeAsync: async () => mockSqlite.close(),
+    }
+  },
+}))
 
 const draft: SessionDraft = {
   userId: "user-1",
@@ -49,17 +49,8 @@ const draft: SessionDraft = {
   startedAt: 1_700_000_000_000,
 }
 
-const storeRaw = (payload: string) =>
-  database.write(() =>
-    database.get<SessionDraftModel>("session_drafts").create((record) => {
-      record.userId = "user-1"
-      record.payload = payload
-    }),
-  )
-
-beforeEach(async () => {
-  await database.write(() => database.unsafeResetDatabase())
-})
+beforeEach(() => mockSqlite?.exec("DELETE FROM session_drafts"))
+afterAll(() => mockSqlite?.close())
 
 test("round-trips every field, including the in-progress set", async () => {
   await writeSessionDraft(draft)
@@ -70,7 +61,7 @@ test("overwrites the previous draft instead of appending", async () => {
   await writeSessionDraft(draft)
   await writeSessionDraft({ ...draft, position: 4, reps: 7 })
   expect(await readSessionDraft("user-1")).toMatchObject({ position: 4, reps: 7 })
-  expect(await database.get("session_drafts").query().fetchCount()).toBe(1)
+  expect(mockSqlite.prepare("SELECT user_id FROM session_drafts").all()).toHaveLength(1)
 })
 
 test("keeps drafts separate per user", async () => {
@@ -79,7 +70,7 @@ test("keeps drafts separate per user", async () => {
 })
 
 test("returns null for corrupt or incomplete data", async () => {
-  await storeRaw("{not json")
+  await writeDraftPayload("user-1", "{not json")
   expect(await readSessionDraft("user-1")).toBeNull()
 })
 
@@ -101,4 +92,12 @@ test("clear removes the draft", async () => {
   await writeSessionDraft(draft)
   await clearSessionDraft("user-1")
   expect(await readSessionDraft("user-1")).toBeNull()
+})
+
+test("a discard cannot be overtaken by a previously queued autosave", async () => {
+  const save = writeSessionDraft(draft)
+  const discard = clearSessionDraft(draft.userId)
+  const read = readSessionDraft(draft.userId)
+  await Promise.all([save, discard])
+  expect(await read).toBeNull()
 })

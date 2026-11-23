@@ -438,7 +438,7 @@ test("starts fresh and clears draft when user chooses start fresh", async () => 
   queryClient.clear()
 })
 
-test("clears draft when workout is saved and completed", async () => {
+test("resumes an unsaved summary with the same save ID, then clears the draft", async () => {
   jest.useFakeTimers()
   const routine = routineOn(planNow(), input)
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -455,10 +455,33 @@ test("clears draft when workout is saved and completed", async () => {
     else await fireEvent.press(screen.getByText("Done set"))
   }
   expect(screen.getByText("Great work!")).toBeTruthy()
-  await act(async () => {
-    await fireEvent.press(screen.getByText("Save workout"))
-  })
-  expect(clearSessionDraft).toHaveBeenCalledWith("user-1")
+  const saved = jest.mocked(writeSessionDraft).mock.calls.at(-1)![0]
+  expect(saved.finishedAt).toEqual(expect.any(Number))
   await screen.unmount()
+  jest.mocked(readSessionDraft).mockResolvedValue({
+    ...saved,
+    saveId: "fca91001-2157-4413-b07a-89c8a1e89813",
+  })
+  const relaunched = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await relaunched.findByText("Resume previous session?")
+  await fireEvent.press(relaunched.getByText("Continue"))
+  expect(relaunched.getByText("Great work!")).toBeTruthy()
+  await act(async () => {
+    await fireEvent.press(relaunched.getByText("Save workout"))
+  })
+  expect(writeWorkout).toHaveBeenCalledWith(
+    expect.objectContaining({
+      body: expect.objectContaining({
+        id: "fca91001-2157-4413-b07a-89c8a1e89813",
+        completedAt: new Date(saved.finishedAt!).toISOString(),
+      }),
+    }),
+  )
+  expect(clearSessionDraft).toHaveBeenCalledWith("user-1")
+  await relaunched.unmount()
   queryClient.clear()
 })

@@ -1,15 +1,14 @@
-import { Database } from "@nozbe/watermelondb"
-import LokiJSAdapter from "@nozbe/watermelondb/adapters/lokijs"
+// Web is used for UI testing only. Drafts last until the page reloads.
+const drafts = new Map<string, string>()
 
-import { SessionDraftModel } from "./session-draft.model"
-import { sessionDraftSchema } from "./session-draft.schema"
+export async function readDraftPayload(userId: string) {
+  return drafts.get(userId) ?? null
+}
 
-// IndexedDB when available; WatermelonDB falls back to in-memory otherwise.
-export const database = new Database({
-  adapter: new LokiJSAdapter({
-    schema: sessionDraftSchema,
-    useWebWorker: false,
-    useIncrementalIndexedDB: true,
-  }),
-  modelClasses: [SessionDraftModel],
-})
+export async function writeDraftPayload(userId: string, payload: string) {
+  drafts.set(userId, payload)
+}
+
+export async function clearDraftPayload(userId: string) {
+  drafts.delete(userId)
+}
