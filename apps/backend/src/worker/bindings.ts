@@ -5,7 +5,6 @@ import type { EmailMessage } from "../modules/email/queue"
 export type WorkerBindings = Partial<
   Pick<Env, "DB" | "fitwear_kv" | "AI" | "MEAL_IMAGES" | "EMAIL_QUEUE">
 > & {
-  AI_SEARCH?: AiSearchNamespace
   RESEND_API_KEY?: string
   RESEND_FROM?: string
   RESEND_WELCOME_TEMPLATE_ID?: string
@@ -42,9 +41,6 @@ export function getEmailQueue(): Queue<EmailMessage> | undefined {
 
 export function getAi(): Ai | undefined {
   return requestBindings.getStore()?.AI
-}
-export function getAiSearch(): AiSearchNamespace | undefined {
-  return requestBindings.getStore()?.AI_SEARCH
 }
 
 export function getMealImages(): R2Bucket | undefined {

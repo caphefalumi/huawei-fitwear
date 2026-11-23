@@ -1,3 +1,4 @@
+import { isRunningInExpoGo } from "expo"
 import { useState } from "react"
 import { Platform, StyleSheet, Text, View } from "react-native"
 
@@ -13,6 +14,13 @@ export function DeviceHealthSettings() {
   const [message, setMessage] = useState<string | null>(null)
   if (Platform.OS !== "ios" && Platform.OS !== "android") return null
   const provider = Platform.OS === "ios" ? "Apple Health" : "Health Connect"
+  if (isRunningInExpoGo()) {
+    return (
+      <Text style={styles.description}>
+        {provider} needs a development build. You can still log workouts and weight in VoocHealth.
+      </Text>
+    )
+  }
 
   async function run(action: () => Promise<string>) {
     setBusy(true)

@@ -4,18 +4,15 @@
     "slug": "huawei-fitwear",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "../../assets/voochealth-logo.png",
+    "icon": "./assets/images/voochealth-logo.png",
     "scheme": "mobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "infoPlist": {
-        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to photograph meals and scan packaged-food barcodes."
-      },
       "bundleIdentifier": "com.fitwear.mobile"
     },
     "android": {
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"],
       "permissions": [
-        "android.permission.CAMERA",
         "android.permission.health.READ_WEIGHT",
         "android.permission.health.READ_HEART_RATE",
         "android.permission.health.WRITE_EXERCISE"
@@ -23,7 +20,7 @@
       "package": "com.fitwear.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
-        "foregroundImage": "../../assets/voochealth-logo.png"
+        "foregroundImage": "./assets/images/voochealth-logo.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -45,6 +42,14 @@
         }
       ],
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to photograph meals and scan packaged-food barcodes.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Allow $(PRODUCT_NAME) to choose meal photos for nutrition analysis.",
@@ -55,9 +60,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#FAF9F6",
+          "image": "./assets/images/voochealth-logo.png",
+          "imageWidth": 128
         }
       ],
       [

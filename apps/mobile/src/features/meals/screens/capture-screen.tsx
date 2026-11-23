@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query"
 import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useIsFocused } from "expo-router/react-navigation"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Platform, StyleSheet, Text, TextInput, View } from "react-native"
 import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -20,7 +20,6 @@ import { BarcodeResultSheet, type BarcodeResult } from "../components/barcode-re
 import { icons } from "../components/meals-ui"
 import { useMeals } from "../hooks/meals-hooks"
 import { useMealCamera } from "./meal-camera"
-import { MealLidarCamera, useMealLidarAvailable } from "./meal-lidar-camera"
 import { scanMealPhoto } from "./scan-meal-photo"
 
 const TUTORIAL_STEPS = [
@@ -43,24 +42,14 @@ export function MealCaptureScreen() {
   const focused = useIsFocused()
   const { tutorialSeen, dismissTutorial, setAnalysis, setDraftPhoto, items } = useMeals()
   const [description, setDescription] = useState("")
-  const [image, setImage] = useState<(PickedImage & { portionVolumeMl?: number }) | null>(null)
-  const lidarAvailable = useMealLidarAvailable()
-  const [lidarFailed, setLidarFailed] = useState(false)
-  const [lidarCapture, setLidarCapture] = useState(0)
-  const useLidar = lidarAvailable && !lidarFailed
+  const [image, setImage] = useState<PickedImage | null>(null)
   const [barcodePreview, setBarcodePreview] = useState<BarcodeResult | null>(null)
   const [barcodeOpen, setBarcodeOpen] = useState(false)
   const barcodeRequest = useRef<AbortController | null>(null)
   const scannedCodes = useRef(new Set<string>())
   const pickingPhoto = useRef(false)
   const analyzeMutation = useMutation({
-    mutationFn: async ({
-      image,
-      description,
-    }: {
-      image: PickedImage & { portionVolumeMl?: number }
-      description?: string
-    }) => {
+    mutationFn: async ({ image, description }: { image: PickedImage; description?: string }) => {
       const photoId =
         uploadedPhoto.current?.image === image
           ? uploadedPhoto.current.photoId
@@ -68,7 +57,7 @@ export function MealCaptureScreen() {
       uploadedPhoto.current = { image, photoId }
       return {
         photoId,
-        items: await analyzeMeal({ photoId, description, portionVolumeMl: image.portionVolumeMl }),
+        items: await analyzeMeal({ photoId, description }),
       }
     },
   })
@@ -78,7 +67,7 @@ export function MealCaptureScreen() {
   const uploadedPhoto = useRef<{ image: PickedImage; photoId: string } | null>(null)
   const [cameraFailed, setCameraFailed] = useState(false)
   const camera = useMealCamera({
-    active: focused && !image && !cameraFailed && !useLidar,
+    active: focused && !image && !cameraFailed,
     scan: focused && tutorialSeen && !image && !barcodeOpen && !cameraFailed,
     onBarcode: scanBarcode,
     onError: (cause) => {
@@ -101,7 +90,6 @@ export function MealCaptureScreen() {
 
   useEffect(() => {
     if (!focused) setBarcodeOpen(false)
-    if (!focused) setLidarCapture(0)
     return () => {
       barcodeRequest.current?.abort()
       barcodeRequest.current = null
@@ -125,7 +113,6 @@ export function MealCaptureScreen() {
       !focused ||
       !tutorialSeen ||
       image ||
-      lidarCapture ||
       barcodeOpen ||
       pickingPhoto.current ||
       barcodeRequest.current
@@ -194,29 +181,8 @@ export function MealCaptureScreen() {
     router.push({ pathname: "/review-item", params })
   }
 
-  const disableLidar = useCallback(() => {
-    setLidarFailed(true)
-    setLidarCapture(0)
-    setError("Depth camera unavailable. Take a regular photo to continue.")
-  }, [])
-
-  const receiveLidarPhoto = useCallback(
-    async (uri: string, portionVolumeMl?: number) => {
-      try {
-        const prepared = await prepareMealImage(uri)
-        if (active.current) setImage({ ...prepared, portionVolumeMl })
-      } catch (cause) {
-        captureException(cause)
-        if (active.current) disableLidar()
-      } finally {
-        if (active.current) setLidarCapture(0)
-      }
-    },
-    [disableLidar],
-  )
-
   async function selectLibrary() {
-    if (busy || lidarCapture || pickingPhoto.current) return
+    if (busy || pickingPhoto.current) return
     pickingPhoto.current = true
     dismissBarcode()
     setError(null)
@@ -239,13 +205,9 @@ export function MealCaptureScreen() {
     }
   }
   async function takePhoto() {
-    if (busy || lidarCapture || pickingPhoto.current) return
+    if (busy || pickingPhoto.current) return
     dismissBarcode()
     setError(null)
-    if (useLidar) {
-      setLidarCapture(1)
-      return
-    }
     pickingPhoto.current = true
     try {
       const uri = await camera.takePhoto()
@@ -384,20 +346,7 @@ export function MealCaptureScreen() {
               </View>
             ) : (
               <View style={styles.preview}>
-                {useLidar ? (
-                  focused ? (
-                    <MealLidarCamera
-                      style={StyleSheet.absoluteFill}
-                      capture={lidarCapture}
-                      scan={tutorialSeen && !barcodeOpen && !lidarCapture}
-                      onBarcode={scanBarcode}
-                      onCapture={receiveLidarPhoto}
-                      onUnavailable={disableLidar}
-                    />
-                  ) : null
-                ) : (
-                  camera.preview
-                )}
+                {camera.preview}
                 <View pointerEvents="none" style={styles.guide}>
                   <View style={[styles.guideCorner, styles.guideTL]} />
                   <View style={[styles.guideCorner, styles.guideTR]} />

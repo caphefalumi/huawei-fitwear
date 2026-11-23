@@ -1,27 +1,23 @@
-import { loadImage } from "react-native-nitro-image"
-import { createBarcodeScanner } from "react-native-vision-camera-barcode-scanner"
+import { scanFromURLAsync } from "expo-camera"
+import { Platform } from "react-native"
 
-import { FOOD_BARCODE_FORMATS } from "../screens/food-barcode-formats"
 import { scanMealPhoto } from "../screens/scan-meal-photo.native"
 
-jest.mock("react-native-nitro-image", () => ({ loadImage: jest.fn() }))
-jest.mock("react-native-vision-camera-barcode-scanner", () => ({ createBarcodeScanner: jest.fn() }))
+jest.mock("expo-camera", () => ({ scanFromURLAsync: jest.fn() }))
 
-test("gallery scanning recognizes UPC-E without enabling it on the shared live scanner", async () => {
-  const disposeImage = jest.fn()
-  const disposeScanner = jest.fn()
-  jest.mocked(loadImage).mockResolvedValueOnce({ dispose: disposeImage } as never)
-  jest.mocked(createBarcodeScanner).mockReturnValueOnce({
-    scanCodesInImageAsync: async () => [{ rawValue: "04252614", format: "upc-e" }],
-    dispose: disposeScanner,
-  } as never)
+afterEach(() => jest.restoreAllMocks())
+
+test("recognizes a UPC-E barcode in an Android gallery photo", async () => {
+  jest.replaceProperty(Platform, "OS", "android")
+  jest.mocked(scanFromURLAsync).mockResolvedValueOnce([
+    {
+      data: "04252614",
+      type: "upc_e",
+      cornerPoints: [],
+      bounds: { origin: { x: 0, y: 0 }, size: { width: 0, height: 0 } },
+    },
+  ])
 
   const result = await scanMealPhoto("file://packaged-food.jpg", new AbortController().signal)
-  expect(FOOD_BARCODE_FORMATS).not.toContain("upc-e")
-  expect(createBarcodeScanner).toHaveBeenCalledWith({
-    barcodeFormats: [...FOOD_BARCODE_FORMATS, "upc-e"],
-  })
   expect(result).toEqual({ value: "04252614", compressedUpc: true })
-  expect(disposeScanner).toHaveBeenCalledTimes(1)
-  expect(disposeImage).toHaveBeenCalledTimes(1)
 })

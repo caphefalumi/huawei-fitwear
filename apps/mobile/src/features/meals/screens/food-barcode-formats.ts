@@ -1,3 +1,3 @@
-import type { TargetBarcodeFormat } from "react-native-vision-camera-barcode-scanner"
+import type { BarcodeType } from "expo-camera"
 
-export const FOOD_BARCODE_FORMATS: TargetBarcodeFormat[] = ["ean-13", "upc-a", "ean-8"]
+export const FOOD_BARCODE_FORMATS: BarcodeType[] = ["ean13", "upc_a", "ean8", "upc_e"]
