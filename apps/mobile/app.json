@@ -8,14 +8,11 @@
     "scheme": "mobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "infoPlist": {
-        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to photograph meals and scan packaged-food barcodes."
-      },
       "bundleIdentifier": "com.fitwear.mobile"
     },
     "android": {
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"],
       "permissions": [
-        "android.permission.CAMERA",
         "android.permission.health.READ_WEIGHT",
         "android.permission.health.READ_HEART_RATE",
         "android.permission.health.WRITE_EXERCISE"
@@ -42,6 +39,14 @@
           "NSHealthShareUsageDescription": "Read your weight and heart rate when you request them.",
           "NSHealthUpdateUsageDescription": "Save completed workouts you choose to share.",
           "background": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to photograph meals and scan packaged-food barcodes.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
         }
       ],
       [

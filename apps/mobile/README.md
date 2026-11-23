@@ -20,13 +20,11 @@ Tap a logged meal photo in Meals history or meal details to open the viewer. Pin
 
 Technique Guide keeps the bundled exercise still visible while its animation loads. If playback fails, tap **Retry** or reconnect to try again.
 
-On iOS and Android, center a packaged-food barcode in the meal camera or choose a photo that shows the full barcode. Photo detection runs on the device; only the barcode is sent to look up nutrition in Open Food Facts. Tap **Review product** to prefill an editable 100 g or 100 mL portion. If nutrition is missing, use the package label; if lookup fails, try again. Dismissing the sheet leaves the photo available for optional analysis.
+On iOS and Android, center a packaged-food barcode in the meal camera. On Android you can also choose a photo showing the full barcode. Detection runs on the device; only the barcode is sent to look up nutrition in Open Food Facts. Tap **Review product** to prefill an editable 100 g or 100 mL portion. If nutrition is missing, use the package label; if lookup fails, try again. Dismissing the sheet leaves the photo available for optional analysis.
 
-Capture accepts scanned barcodes from the camera or a library photo, not typed barcode numbers. **Enter meal manually** remains available for logging food without a scan.
+**Enter meal manually** remains available for logging food without a scan.
 
-The native meal camera uses VisionCamera, with AVFoundation for live iOS scanning and ML Kit for live Android and still-photo scanning. Rebuild the native development client after camera dependency changes. Web uses the browser photo picker and does not scan barcodes.
-
-On supported iPhones, the meal camera can also estimate the volume of one centered food on a flat plate from synchronized rear LiDAR depth. Only the approximate milliliters are sent when analyzing the meal photo; raw depth is not uploaded. If depth is unavailable, analysis uses the photo alone. The ruler is optional.
+The native meal camera uses `expo-camera` for live scanning and photo capture. iOS gallery photos still work for meal analysis, but Expo Camera cannot read retail barcodes from still photos on iOS. Photo analysis no longer uses LiDAR depth. Rebuild the native development client after camera dependency changes. Web uses the browser photo picker and does not scan barcodes.
 
 Remote data uses TanStack Query. Each feature owns domain/user-scoped query keys and colocated query functions; writes run as mutations and invalidate only affected data. Meal deletion/type changes and workout deletion update cached lists optimistically and roll back on failure. API requests use Axios with a 12-second timeout, typed status/network failures, and exponential-backoff retries with jitter for retryable queries. Native connectivity feeds TanStack Query and a persistent offline banner. Data screens keep cached content during refresh failures, expose retry and pull-to-refresh, and announce accessible error panels; delayed skeletons distinguish loading from empty states. Zustand holds client-owned meal drafts/preferences and auth operation status; API responses stay in TanStack Query, and credentials stay in secure/local storage.
 
