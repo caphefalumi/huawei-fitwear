@@ -220,6 +220,8 @@ Production API: https://fitwear-backend.dangduytoan13l.workers.dev
 
 Bindings in `wrangler.json`: `DB` (D1), `fitwear_kv` (rate limits), `MEAL_IMAGES` (private R2 bucket `fitwear-meal-images`), `AI` (Workers AI), and `EMAIL_QUEUE` (`fitwear-email`). The image-analysis route uses `@cf/google/gemma-4-26b-a4b-it`; input and output are bounded and validated. Estimates are reviewed/edited before logging, never treated as measurements.
 
+Meal food search (`GET /foods`) queries the D1 catalog directly. The release workflow seeds the USDA catalog into D1; no external search index or search token is required.
+
 Auth and meal-analysis rate limits run in route middleware after request validation. Meal analysis checks the authenticated user's quota before calling Workers AI; password reset checks both the IP limit and the email resend policy before requesting delivery.
 
 The mobile client uploads a binary WebP (up to 6 MB) to `POST /meals/photos`. The resulting private UUIDv7 `photoId` can be sent to `POST /meals/analyze` and `POST /meals` without re-uploading. Drafts expire after 24 hours and an hourly Worker trigger removes expired objects. Saved photos remain under the meal's storage key. Older clients can still submit base64 WebP during rollout; existing saved JPEG and PNG photos remain readable.

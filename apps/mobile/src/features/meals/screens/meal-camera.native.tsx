@@ -1,40 +1,38 @@
-import {
-  Camera,
-  CommonResolutions,
-  useCameraDevice,
-  useCameraPermission,
-  usePhotoOutput,
-} from "react-native-vision-camera"
+import { CameraView, useCameraPermissions } from "expo-camera"
+import { useRef, useState } from "react"
 
+import { FOOD_BARCODE_FORMATS } from "./food-barcode-formats"
 import type { MealCameraOptions } from "./meal-camera"
-import { useMealBarcodeOutput } from "./use-meal-barcode-output"
 
 export function useMealCamera({ active, scan, onBarcode, onError, style }: MealCameraOptions) {
-  const { hasPermission, requestPermission } = useCameraPermission()
-  const device = useCameraDevice("back")
-  const photo = usePhotoOutput({
-    containerFormat: "jpeg",
-    targetResolution: CommonResolutions.HD_4_3,
-  })
-  const scanner = useMealBarcodeOutput(active && scan, onBarcode)
+  const [permission, requestPermission] = useCameraPermissions()
+  const camera = useRef<CameraView>(null)
+  const [readyCamera, setReadyCamera] = useState<CameraView | null>(null)
 
   return {
-    cameraGranted: hasPermission,
-    cameraAvailable: device != null,
+    cameraGranted: permission?.granted ?? false,
+    cameraAvailable: true,
     requestPermission,
     preview:
-      hasPermission && device ? (
-        <Camera
-          device={device}
-          isActive={active}
+      active && permission?.granted ? (
+        <CameraView
+          ref={camera}
+          facing="back"
           style={style}
-          outputs={[photo, scanner]}
-          onError={onError}
+          onCameraReady={() => setReadyCamera(camera.current)}
+          onMountError={({ message }) => onError(new Error(message))}
+          barcodeScannerSettings={{ barcodeTypes: FOOD_BARCODE_FORMATS }}
+          onBarcodeScanned={
+            scan ? ({ data, type }) => onBarcode(data, type === "upc_e") : undefined
+          }
         />
       ) : null,
     async takePhoto() {
-      const { filePath } = await photo.capturePhotoToFile({}, {})
-      return `file://${filePath}`
+      if (!camera.current || camera.current !== readyCamera) {
+        throw new Error("Camera is starting. Try again.")
+      }
+      const picture = await camera.current.takePictureAsync()
+      return picture?.uri ?? null
     },
   }
 }
