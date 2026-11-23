@@ -24,6 +24,7 @@ import {
 } from "@/lib/api/client"
 import { clearOfflineCache, openOfflineCache } from "@/lib/query/offline-cache"
 import { sessionStorage } from "@/lib/storage"
+import { clearMealPhotoCache } from "@/lib/storage/meal-photo-cache"
 
 import {
   getSession,
@@ -185,6 +186,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         sessionStorage.clearToken(),
         clearOfflineIdentity(),
         Promise.resolve().then(clearOfflineCache),
+        clearMealPhotoCache(),
       ])
       if (results.some((result) => result.status === "rejected")) {
         throw new Error("Could not remove all saved account data.")
@@ -237,6 +239,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         await Promise.allSettled([
           clearOfflineIdentity(),
           Promise.resolve().then(clearOfflineCache),
+          clearMealPhotoCache(),
         ])
       })
 

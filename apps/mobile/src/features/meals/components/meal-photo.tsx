@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { Pressable } from "@/components/ui/pressable"
 import { useAuth } from "@/features/auth"
 import { apiErrorMessage } from "@/lib/api/client"
+import { loadCachedMealPhoto, removeCachedMealPhoto } from "@/lib/storage/meal-photo-cache"
 import { Palette as C } from "@/theme"
 
 import { fetchMealPhoto } from "../api/meals-api"
@@ -31,13 +32,22 @@ export function MealPhoto({
   compact?: boolean
 }) {
   const { user } = useAuth()
-  const remotePhoto = Boolean(mealId && imageUrl?.startsWith("/meals/"))
+  const remotePhoto = Boolean(
+    mealId && (photoUnavailableOffline || imageUrl?.startsWith("/meals/")),
+  )
   const photoQuery = useQuery({
     queryKey: mealsQueryKeys.photo(user?.id ?? "signed-out", mealId ?? "missing"),
     enabled: Boolean(remotePhoto && user?.id),
-    queryFn: ({ signal }) => fetchMealPhoto(mealId!, signal),
-    // Reuse authenticated photo data without writing private images to disk.
-    staleTime: 30 * 60_000,
+    queryFn: ({ signal }) =>
+      loadCachedMealPhoto(
+        user!.id,
+        mealId!,
+        () => (imageUrl ? fetchMealPhoto(mealId!, signal) : Promise.resolve(null)),
+        signal,
+      ),
+    networkMode: "offlineFirst",
+    // Saved photos cannot be replaced. Keep successful reads fresh until eviction.
+    staleTime: (query) => (query.state.data ? Infinity : 0),
     gcTime: 30 * 60_000,
   })
   const [imageError, setImageError] = useState<string | null>(null)
@@ -47,7 +57,12 @@ export function MealPhoto({
   const error =
     imageError ?? (photoQuery.error ? apiErrorMessage(photoQuery.error, "your meal photo") : null)
   const uri = remotePhoto ? photoQuery.data : imageUrl
-  if ((!imageUrl && photoUnavailableOffline) || (!uri && photoQuery.isPaused))
+  const retryRemote = async () => {
+    if (!remotePhoto || !user || !mealId) return
+    await removeCachedMealPhoto(user.id, mealId).catch(() => undefined)
+    await photoQuery.refetch()
+  }
+  if (!uri && (photoQuery.isPaused || photoUnavailableOffline))
     return (
       <View style={[style, styles.photoStatus]}>
         <Text style={{ color: C.textMuted, textAlign: "center", fontSize: compact ? 10 : 12 }}>
@@ -55,7 +70,7 @@ export function MealPhoto({
         </Text>
       </View>
     )
-  if (!imageUrl)
+  if (!imageUrl && !remotePhoto)
     return compact ? (
       <Image
         source={icons.utensils}
@@ -78,7 +93,7 @@ export function MealPhoto({
           accessibilityLabel="Retry meal photo"
           onPress={() => {
             setImageError(null)
-            if (remotePhoto) void photoQuery.refetch()
+            void retryRemote()
           }}
           style={{ padding: 8 }}
         >
@@ -132,7 +147,7 @@ export function MealPhoto({
                     accessibilityLabel="Retry full-screen meal photo"
                     onPress={() => {
                       setViewerError(false)
-                      if (remotePhoto) void photoQuery.refetch()
+                      void retryRemote()
                     }}
                   >
                     <Text style={styles.closeLabel}>Retry</Text>

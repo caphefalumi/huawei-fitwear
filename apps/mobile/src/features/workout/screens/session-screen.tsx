@@ -20,6 +20,12 @@ import { Palette as C } from "@/theme"
 import { writeWorkout } from "../api/workout-api"
 import { workoutQueryKeys } from "../hooks/workout-hooks"
 import { usePlanInput, usePlanPreferences } from "../store/plan-preferences.store"
+import {
+  clearSessionDraft,
+  readSessionDraft,
+  writeSessionDraft,
+  type SessionDraft,
+} from "../store/session-draft.store"
 import { formatLoad, loadStep, loadUnit, useLoads } from "../store/training-weights.store"
 import { useWorkoutLog } from "../store/workout-log.store"
 import { findExercise } from "../utils/catalog"
@@ -46,6 +52,26 @@ const target = (exercise: RoutineExercise) => exercise.prescription.split("x")[1
 const average = (values: number[]) =>
   Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
 
+/** Flatten exercises into set-by-set order, alternating superset members within a round. */
+function sessionSlots(exercises: RoutineExercise[]) {
+  const slots: { index: number; set: number }[] = []
+  for (let index = 0; index < exercises.length;) {
+    const first = exercises[index]!
+    let end = index + 1
+    if (first.superset) {
+      while (end < exercises.length && exercises[end]!.superset === first.superset) end++
+    }
+    const rounds = Math.max(...exercises.slice(index, end).map((entry) => entry.sets))
+    for (let set = 0; set < rounds; set++) {
+      for (let member = index; member < end; member++) {
+        if (set < exercises[member]!.sets) slots.push({ index: member, set })
+      }
+    }
+    index = end
+  }
+  return slots
+}
+
 type Phase = "set" | "rest" | "summary"
 
 type LoggedSet = { reps: number; weightKg: number }
@@ -63,6 +89,18 @@ export function SessionScreen() {
   const input = usePlanInput()
   const { user } = useAuth()
   const { routineOwner, routineStorageError, loadRoutines } = usePlanPreferences()
+  // The draft lives in the database, so it is read asynchronously before the session starts.
+  const [loadedDraft, setLoadedDraft] = useState<{ userId: string; draft: SessionDraft | null }>()
+  useEffect(() => {
+    if (!user?.id) return
+    let cancelled = false
+    void readSessionDraft(user.id).then((draft) => {
+      if (!cancelled) setLoadedDraft({ userId: user.id, draft })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
   if (!user || routineOwner !== user.id || routineStorageError) {
     return (
       <Screen>
@@ -76,72 +114,151 @@ export function SessionScreen() {
       </Screen>
     )
   }
-  return <ActiveSession input={input} />
+  if (loadedDraft?.userId !== user.id) {
+    return (
+      <Screen>
+        <BackHeader label="Back" onPress={() => router.back()} />
+        <PageHeading title="Preparing workout" />
+      </Screen>
+    )
+  }
+  return <ActiveSession key={user.id} input={input} initialDraft={loadedDraft.draft} />
 }
 
 /** Guided workout: one set at a time, a rest timer between sets, then a summary. */
-function ActiveSession({ input }: { input: PlanInput }) {
+function ActiveSession({
+  input,
+  initialDraft,
+}: {
+  input: PlanInput
+  initialDraft: SessionDraft | null
+}) {
   const { date: param } = useLocalSearchParams<{ date?: string }>()
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const planToday = usePlanNow()
   // Freeze the routine at the start so plan changes mid-workout don't reshuffle it.
-  const [routine] = useState(() => routineOn(fromDateKey(param) ?? planToday, input))
+  const [routine, setRoutine] = useState(() => routineOn(fromDateKey(param) ?? planToday, input))
   const progression = useQuery({
     queryKey: [...workoutQueryKeys.all(user?.id ?? "signed-out"), "progression"],
     queryFn: ({ signal }) =>
       apiRequest<{ exercises: ExerciseProgression[] }>("/workouts/progression", { signal }),
     enabled: Boolean(user?.id),
   })
-  const slots: { index: number; set: number }[] = []
-  for (let index = 0; index < routine.exercises.length;) {
-    const first = routine.exercises[index]!
-    let end = index + 1
-    if (first.superset) {
-      while (end < routine.exercises.length && routine.exercises[end]!.superset === first.superset)
-        end++
-    }
-    const rounds = Math.max(...routine.exercises.slice(index, end).map((entry) => entry.sets))
-    for (let set = 0; set < rounds; set++) {
-      for (let member = index; member < end; member++) {
-        if (set < routine.exercises[member]!.sets) slots.push({ index: member, set })
-      }
-    }
-    index = end
-  }
+  const slots = sessionSlots(routine.exercises)
   const saveRepTargets = usePlanPreferences((state) => state.saveRepTargets)
   const addFinished = useWorkoutLog((state) => state.add)
+
+  // --- Draft / resume ---
+  const [sessionDate, setSessionDate] = useState(() => param ?? dateKey(planToday))
+  const existingDraft = initialDraft
+  // A draft of this routine, including one left on an earlier day, resumes in place.
+  const hasDraft = existingDraft !== null && existingDraft.routineName === routine.name
+  // A draft of another routine is offered too: its exercise snapshot is restored on resume.
+  const canResume = existingDraft !== null && (hasDraft || Boolean(existingDraft.exercises?.length))
+  const [resumePrompt, setResumePrompt] = useState(canResume)
 
   const [phase, setPhase] = useState<Phase>("set")
   const [position, setPosition] = useState(0)
   const [skipped, setSkipped] = useState<number[]>([])
   const { loadFor } = useLoads()
-  const [weights, setWeights] = useState(() =>
-    routine.exercises.map((item) => {
+  const initialWeights = (exercises: RoutineExercise[]) =>
+    exercises.map((item) => {
       const catalog = findExercise(item.key)
       return catalog ? (loadFor(catalog)?.kg ?? 0) : 0
-    }),
-  )
-  const [logged, setLogged] = useState<(LoggedSet | undefined)[][]>(() =>
-    routine.exercises.map((exercise) => Array.from({ length: exercise.sets }, () => undefined)),
-  )
-  const [draft, setDraft] = useState(routine.exercises[0]?.reps ?? 0)
-  const [startedAt] = useState(() => Date.now())
+    })
+  const emptySets = (exercises: RoutineExercise[]): (LoggedSet | undefined)[][] =>
+    exercises.map((item) => Array.from({ length: item.sets }, () => undefined))
+  const [weights, setWeights] = useState(() => initialWeights(routine.exercises))
+  const [logged, setLogged] = useState(() => emptySets(routine.exercises))
+  const [draft, setDraft] = useState(() => routine.exercises[0]?.reps ?? 0)
+  const [startedAt, setStartedAt] = useState(Date.now)
   const [now, setNow] = useState(startedAt)
   const [restEndsAt, setRestEndsAt] = useState(0)
   const [finishedAt, setFinishedAt] = useState<number | null>(null)
   const [keepReps, setKeepReps] = useState(true)
   const [repeatExit, setRepeatExit] = useState<(() => void) | null>(null)
   const [exitApproved, setExitApproved] = useState(false)
-  const [saveId] = useState(() => Crypto.randomUUID())
+  const [saveId, setSaveId] = useState(() => Crypto.randomUUID())
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const appliedProgression = useRef(false)
   const [skipProgression, setSkipProgression] = useState(false)
 
+  /** Discard the persisted draft (session completed or user chose to start fresh). */
+  const discardDraft = () => {
+    if (user?.id) void clearSessionDraft(user.id)
+  }
+
+  // Autosave after every change, so a hardware back, app kill or crash still leaves a resumable draft.
+  // Wait while the resume prompt is open, otherwise this routine would overwrite the draft being offered.
+  useEffect(() => {
+    if (!user?.id || resumePrompt || !slots.length) return
+    void writeSessionDraft({
+      userId: user.id,
+      date: sessionDate,
+      routineName: routine.name,
+      position,
+      weights,
+      logged: logged as SessionDraft["logged"],
+      reps: draft,
+      skipped,
+      exercises: routine.exercises,
+      startedAt,
+      saveId,
+      finishedAt: finishedAt ?? undefined,
+    })
+  }, [
+    user?.id,
+    resumePrompt,
+    sessionDate,
+    routine.name,
+    routine.exercises,
+    position,
+    weights,
+    logged,
+    draft,
+    skipped,
+    startedAt,
+    saveId,
+    finishedAt,
+    slots.length,
+  ])
+
+  const continueDraft = () => {
+    if (!existingDraft) return
+    const saved = existingDraft
+    const exercises = saved.exercises?.length ? saved.exercises : routine.exercises
+    const restoredSlots = sessionSlots(exercises)
+    const restoredPosition = Math.max(0, Math.min(saved.position, restoredSlots.length - 1))
+    setRoutine((current) => ({ ...current, name: saved.routineName, exercises }))
+    setPosition(restoredPosition)
+    setWeights(
+      saved.weights.length === exercises.length ? saved.weights : initialWeights(exercises),
+    )
+    setLogged(
+      exercises.map((item, index) =>
+        Array.from({ length: item.sets }, (_, set) => saved.logged[index]?.[set]),
+      ),
+    )
+    setDraft(saved.reps ?? exercises[restoredSlots[restoredPosition]?.index ?? 0]?.reps ?? 0)
+    setSkipped(saved.skipped ?? [])
+    setStartedAt(saved.startedAt)
+    setSessionDate(saved.date)
+    setNow(Date.now())
+    if (saved.saveId) setSaveId(saved.saveId)
+    if (saved.finishedAt !== undefined) {
+      setFinishedAt(saved.finishedAt)
+      setPhase("summary")
+    }
+    appliedProgression.current = true
+    setSkipProgression(true)
+    setResumePrompt(false)
+  }
+
   useEffect(() => {
     const records = progression.data?.exercises
-    if (!records || appliedProgression.current) return
+    if (!records || appliedProgression.current || resumePrompt) return
     appliedProgression.current = true
     setWeights((current) =>
       routine.exercises.map((item, index) => {
@@ -152,7 +269,7 @@ function ActiveSession({ input }: { input: PlanInput }) {
           : (current[index] ?? 0)
       }),
     )
-  }, [progression.data, routine])
+  }, [progression.data, routine, resumePrompt])
 
   useEffect(() => {
     if (phase === "summary") return
@@ -289,6 +406,7 @@ function ActiveSession({ input }: { input: PlanInput }) {
         setSaving(false)
         return
       }
+      await clearSessionDraft(user.id)
       setSaving(false)
     }
     if (keepReps && changed.length)
@@ -311,8 +429,29 @@ function ActiveSession({ input }: { input: PlanInput }) {
     }
     setExitApproved(true)
     disableExitGuard()
+    if (!totalSets && user?.id) await clearSessionDraft(user.id)
     router.dismissTo("/workout")
   }
+
+  if (resumePrompt && existingDraft)
+    return (
+      <Screen>
+        <BackHeader label="Back" onPress={() => router.back()} />
+        <PageHeading title="Preparing workout" />
+        <ConfirmDialog
+          visible
+          title="Resume previous session?"
+          message={`You left "${existingDraft.routineName}" without finishing. Continue where you left off, or start fresh.`}
+          cancelLabel="Start fresh"
+          confirmLabel="Continue"
+          onCancel={() => {
+            discardDraft()
+            setResumePrompt(false)
+          }}
+          onConfirm={continueDraft}
+        />
+      </Screen>
+    )
 
   if (!skipProgression && !progression.data) {
     return (
@@ -355,7 +494,7 @@ function ActiveSession({ input }: { input: PlanInput }) {
     <ConfirmDialog
       visible={repeatExit !== null}
       title="Leave workout?"
-      message="Sets you logged in this workout won't be saved."
+      message="Your progress is saved, so you can resume this workout next time."
       cancelLabel="Keep going"
       confirmLabel="Leave"
       onCancel={() => setRepeatExit(null)}

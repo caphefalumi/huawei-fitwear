@@ -10,6 +10,11 @@ import { usePlanPreferences, useTrainingWeights } from "@/features/workout"
 import { writeWorkout } from "@/features/workout/api/workout-api"
 import { RoutineScreen } from "@/features/workout/screens/routine-screen"
 import { SessionScreen } from "@/features/workout/screens/session-screen"
+import {
+  clearSessionDraft,
+  readSessionDraft,
+  writeSessionDraft,
+} from "@/features/workout/store/session-draft.store"
 import { useWorkoutLog } from "@/features/workout/store/workout-log.store"
 import { repTargetKey, routineOn, type PlanInput } from "@/features/workout/utils/routines"
 import { planNow, useDemoClock } from "@/lib/time/demo-clock"
@@ -34,6 +39,11 @@ jest.mock("@/features/health", () => ({
 }))
 jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+}))
+jest.mock("@/features/workout/store/session-draft.store", () => ({
+  readSessionDraft: jest.fn().mockResolvedValue(null),
+  writeSessionDraft: jest.fn().mockResolvedValue(undefined),
+  clearSessionDraft: jest.fn().mockResolvedValue(undefined),
 }))
 
 const input: PlanInput = {
@@ -78,6 +88,8 @@ beforeEach(() => {
   // The coming Monday: Full Body on Monday, Wednesday and Friday.
   useDemoClock.setState({ offsetDays: (8 - new Date().getDay()) % 7 })
   jest.mocked(useLocalSearchParams).mockReturnValue({ date: dateKey(planNow()) })
+  // No saved draft by default.
+  jest.mocked(readSessionDraft).mockResolvedValue(null)
 })
 
 afterEach(() => jest.useRealTimers())
@@ -237,4 +249,239 @@ test("runs set by set with rest, then sums up and keeps the new reps", async () 
     { date: dateKey(planNow()), routine: routine.name },
   ])
   expect(router.dismissTo).toHaveBeenCalledWith("/workout")
+})
+
+test("autosaves progress after each set without leaving", async () => {
+  const routine = routineOn(planNow(), input)
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const screen = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await screen.findByRole("header", { name: routine.exercises[0]!.name })
+  expect(writeSessionDraft).toHaveBeenLastCalledWith(expect.objectContaining({ position: 0 }))
+
+  await fireEvent.press(screen.getByText("Done set"))
+  expect(writeSessionDraft).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      position: 1,
+      logged: expect.arrayContaining([
+        expect.arrayContaining([expect.objectContaining({ reps: expect.any(Number) })]),
+      ]),
+    }),
+  )
+  await screen.unmount()
+  queryClient.clear()
+})
+
+test("prompts to resume a draft left on a previous day", async () => {
+  const routine = routineOn(planNow(), input)
+  jest.mocked(readSessionDraft).mockResolvedValue({
+    userId: "user-1",
+    date: dateKey(shift(planNow(), -14)),
+    routineName: routine.name,
+    position: 1,
+    weights: routine.exercises.map(() => 50),
+    logged: routine.exercises.map((ex) => Array.from({ length: ex.sets }, () => undefined)),
+    startedAt: Date.now() - 86_400_000,
+  })
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const screen = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await screen.findByText("Resume previous session?")
+  await fireEvent.press(screen.getByText("Continue"))
+  expect(screen.getByText(new RegExp(`^Set 2 of ${routine.exercises[0]!.sets}`))).toBeTruthy()
+  await screen.unmount()
+  queryClient.clear()
+})
+
+test("restores the in-progress set after an exit", async () => {
+  const routine = routineOn(planNow(), input)
+  const first = routine.exercises[0]!
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const screen = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await screen.findByRole("header", { name: first.name })
+  await fireEvent.press(screen.getByLabelText("More reps"))
+  await fireEvent.press(screen.getByText("Done set"))
+  // Whatever the last autosave wrote is what a relaunch would read back.
+  const saved = jest.mocked(writeSessionDraft).mock.calls.at(-1)![0]
+  await screen.unmount()
+
+  jest.mocked(readSessionDraft).mockResolvedValue(saved)
+  const relaunched = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await relaunched.findByText("Resume previous session?")
+  await fireEvent.press(relaunched.getByText("Continue"))
+  expect(relaunched.getByText(new RegExp(`^Set 2 of ${first.sets}`))).toBeTruthy()
+  expect(relaunched.getByLabelText(`${first.reps + 1} reps`)).toBeTruthy()
+  await relaunched.unmount()
+  queryClient.clear()
+})
+
+test("offers a draft from another routine and restores its exercises", async () => {
+  const routine = routineOn(planNow(), input)
+  const snapshot = { ...routine.exercises[0]!, name: "Snapshot Squat" }
+  jest.mocked(readSessionDraft).mockResolvedValue({
+    userId: "user-1",
+    date: dateKey(shift(planNow(), -1)),
+    routineName: "Leg Day",
+    position: 1,
+    weights: [60],
+    logged: [Array.from({ length: snapshot.sets }, () => undefined)],
+    reps: 9,
+    skipped: [],
+    exercises: [snapshot],
+    startedAt: Date.now() - 86_400_000,
+  })
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const screen = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await screen.findByText(/You left "Leg Day"/)
+  await fireEvent.press(screen.getByText("Continue"))
+  expect(screen.getByRole("header", { name: "Snapshot Squat" })).toBeTruthy()
+  expect(screen.getByText(new RegExp(`^Set 2 of ${snapshot.sets}`))).toBeTruthy()
+  expect(jest.mocked(writeSessionDraft).mock.calls.at(-1)![0]).toMatchObject({
+    routineName: "Leg Day",
+    position: 1,
+    reps: 9,
+  })
+  await screen.unmount()
+  queryClient.clear()
+})
+
+test("prompts to resume when a matching draft exists", async () => {
+  const routine = routineOn(planNow(), input)
+  jest.mocked(readSessionDraft).mockResolvedValue({
+    userId: "user-1",
+    date: dateKey(planNow()),
+    routineName: routine.name,
+    position: 1,
+    weights: routine.exercises.map(() => 50),
+    logged: routine.exercises.map((ex) => Array.from({ length: ex.sets }, () => undefined)),
+    startedAt: Date.now() - 60_000,
+  })
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const screen = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await screen.findByText("Resume previous session?")
+  expect(screen.getByText("Continue")).toBeTruthy()
+  expect(screen.getByText("Start fresh")).toBeTruthy()
+  await screen.unmount()
+  queryClient.clear()
+})
+
+test("continues from draft position on resume", async () => {
+  const routine = routineOn(planNow(), input)
+  jest.mocked(readSessionDraft).mockResolvedValue({
+    userId: "user-1",
+    date: dateKey(planNow()),
+    routineName: routine.name,
+    position: 1,
+    weights: routine.exercises.map(() => 50),
+    logged: routine.exercises.map((ex) => Array.from({ length: ex.sets }, () => undefined)),
+    startedAt: Date.now() - 60_000,
+  })
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const screen = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await screen.findByText("Resume previous session?")
+  await fireEvent.press(screen.getByText("Continue"))
+  // After dismissing the prompt, the session is running (not reset to position 0)
+  expect(screen.queryByText("Resume previous session?")).toBeNull()
+  expect(clearSessionDraft).not.toHaveBeenCalled()
+  await screen.unmount()
+  queryClient.clear()
+})
+
+test("starts fresh and clears draft when user chooses start fresh", async () => {
+  const routine = routineOn(planNow(), input)
+  jest.mocked(readSessionDraft).mockResolvedValue({
+    userId: "user-1",
+    date: dateKey(planNow()),
+    routineName: routine.name,
+    position: 1,
+    weights: routine.exercises.map(() => 50),
+    logged: routine.exercises.map((ex) => Array.from({ length: ex.sets }, () => undefined)),
+    startedAt: Date.now() - 60_000,
+  })
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const screen = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await screen.findByText("Resume previous session?")
+  await fireEvent.press(screen.getByText("Start fresh"))
+  expect(clearSessionDraft).toHaveBeenCalledWith("user-1")
+  expect(screen.queryByText("Resume previous session?")).toBeNull()
+  await screen.unmount()
+  queryClient.clear()
+})
+
+test("resumes an unsaved summary with the same save ID, then clears the draft", async () => {
+  jest.useFakeTimers()
+  const routine = routineOn(planNow(), input)
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const screen = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await screen.findByRole("header", { name: routine.exercises[0]!.name })
+
+  // Complete all sets quickly
+  for (let guard = 0; guard < 40 && !screen.queryByText("Great work!"); guard++) {
+    if (screen.queryByText("Skip rest")) await fireEvent.press(screen.getByText("Skip rest"))
+    else await fireEvent.press(screen.getByText("Done set"))
+  }
+  expect(screen.getByText("Great work!")).toBeTruthy()
+  const saved = jest.mocked(writeSessionDraft).mock.calls.at(-1)![0]
+  expect(saved.finishedAt).toEqual(expect.any(Number))
+  await screen.unmount()
+  jest.mocked(readSessionDraft).mockResolvedValue({
+    ...saved,
+    saveId: "fca91001-2157-4413-b07a-89c8a1e89813",
+  })
+  const relaunched = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await relaunched.findByText("Resume previous session?")
+  await fireEvent.press(relaunched.getByText("Continue"))
+  expect(relaunched.getByText("Great work!")).toBeTruthy()
+  await act(async () => {
+    await fireEvent.press(relaunched.getByText("Save workout"))
+  })
+  expect(writeWorkout).toHaveBeenCalledWith(
+    expect.objectContaining({
+      body: expect.objectContaining({
+        id: "fca91001-2157-4413-b07a-89c8a1e89813",
+        completedAt: new Date(saved.finishedAt!).toISOString(),
+      }),
+    }),
+  )
+  expect(clearSessionDraft).toHaveBeenCalledWith("user-1")
+  await relaunched.unmount()
+  queryClient.clear()
 })

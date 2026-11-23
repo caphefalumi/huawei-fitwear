@@ -41,6 +41,21 @@ jest.mock("expo-file-system", () => {
   return {
     disk,
     Paths: { cache: "private-cache" },
+    Directory: class {
+      uri: string
+      constructor(directory: string, name: string) {
+        this.uri = `${directory}/${name}`
+      }
+      get exists() {
+        return [...disk.files.keys()].some((key) => key.startsWith(`${this.uri}/`))
+      }
+      delete() {
+        if (disk.failDeletion) throw new Error("Cache directory unavailable")
+        for (const key of disk.files.keys()) {
+          if (key.startsWith(`${this.uri}/`)) disk.files.delete(key)
+        }
+      }
+    },
     File: class {
       uri: string
       constructor(directory: string, name: string) {
@@ -520,12 +535,16 @@ test("deleteAccount deletes user on server and clears local private state", asyn
     await result.current.signIn("member@example.com", "correct")
   })
   expect(result.current.user?.id).toBe(user.id)
+  const photo = `private-cache/fitwear-meal-photos-v1/${user.id}+meal`
+  const { disk } = jest.requireMock("expo-file-system")
+  disk.files.set(photo, "cached photo")
   request.mockResolvedValueOnce(json(200, { success: true }))
   await act(async () => {
     await result.current.deleteAccount()
   })
   expect(result.current.user).toBeNull()
   expect(saved.clearToken).toHaveBeenCalled()
+  expect(disk.files.has(photo)).toBe(false)
 })
 
 test("failed account deletion keeps the signed-in user and local session", async () => {
