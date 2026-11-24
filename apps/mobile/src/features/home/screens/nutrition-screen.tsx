@@ -2,7 +2,8 @@ import { router } from "expo-router"
 import { StyleSheet, Text, View } from "react-native"
 
 import { BackHeader, Card, PageHeading, Screen } from "@/components/ui"
-import { useMeals } from "@/features/meals"
+import { Pressable } from "@/components/ui/pressable"
+import { localDate, MealHistoryCard, useMeals } from "@/features/meals"
 import { usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
 
@@ -12,7 +13,11 @@ import { MacroBar } from "../components/ui"
 import { nutritionView } from "../utils/nutrition-view"
 
 export function NutritionScreen() {
-  const { summary, error } = useMeals()
+  const { summary, error, history } = useMeals()
+  const todayKey = summary?.targetDate ?? localDate()
+  const todaysMeals = history
+    .filter((meal) => meal.targetDate === todayKey)
+    .sort((a, b) => Date.parse(a.loggedAt) - Date.parse(b.loggedAt))
   const nutrition = nutritionView(summary)
   const dateLine = usePlanNow().toLocaleDateString("en-US", {
     weekday: "long",
@@ -108,6 +113,28 @@ export function NutritionScreen() {
         <Text style={styles.noteBody}>{error ?? "Loading nutrition..."}</Text>
       )}
 
+      <View style={styles.meals}>
+        <Text accessibilityRole="header" style={styles.cardTitle}>
+          Today&apos;s meals
+        </Text>
+        {todaysMeals.length ? (
+          todaysMeals.map((meal) => (
+            <MealHistoryCard
+              key={meal.id}
+              meal={meal}
+              onPress={() => router.push(`/meal?log=${meal.id}`)}
+            />
+          ))
+        ) : (
+          <Card style={styles.emptyMeals}>
+            <Text style={styles.noteBody}>No meals logged today.</Text>
+            <Pressable accessibilityRole="button" onPress={() => router.push("/capture")}>
+              <Text style={styles.link}>Capture a meal</Text>
+            </Pressable>
+          </Card>
+        )}
+      </View>
+
       <View style={styles.note}>
         <Text style={styles.noteTitle}>About these numbers</Text>
         <Text style={styles.noteBody}>
@@ -154,6 +181,17 @@ const styles = StyleSheet.create({
   },
   note: {
     gap: 4,
+  },
+  meals: {
+    gap: 8,
+  },
+  emptyMeals: {
+    gap: 8,
+  },
+  link: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: C.accent,
   },
   noteTitle: {
     fontSize: 12,

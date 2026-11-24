@@ -3,6 +3,7 @@ import type { QueryClient } from "@tanstack/react-query"
 import { act, renderHook, waitFor } from "@testing-library/react-native"
 import { act as reactAct } from "react"
 
+import { TOAST_DURATION_MS, useToastStore } from "@/components/feedback/toast"
 import {
   MealsProvider,
   useMeals,
@@ -24,6 +25,10 @@ let mockUserId = "member-a"
 jest.mock("@/lib/api/client", () => ({
   ...jest.requireActual("@/lib/api/client"),
   apiRequest: jest.fn(),
+}))
+// The photo cache needs the native file system; these tests cover meal data, not photos.
+jest.mock("@/lib/storage/meal-photo-cache", () => ({
+  removeCachedMealPhoto: jest.fn(async () => undefined),
 }))
 jest.mock("@/features/auth/hooks/auth-hooks", () => ({
   useAuth: () => ({ user: { id: mockUserId, updatedAt: "2026-11-01T00:00:00Z" } }),
@@ -194,9 +199,11 @@ test("draft CRUD is local until awaited logging persists the complete meal", asy
         ? summary
         : { meals: [savedMeal] },
   )
+  let logged: Awaited<ReturnType<typeof result.current.logMeal>> | undefined
   await act(async () => {
-    await result.current.logMeal()
+    logged = await result.current.logMeal()
   })
+  expect(logged).toEqual(expect.objectContaining({ id: "meal-a", mealType: "lunch" }))
   expect(request).toHaveBeenCalledWith(
     "/meals",
     expect.objectContaining({
@@ -335,6 +342,106 @@ test("failed history deletion leaves the saved meal available", async () => {
   await waitFor(() =>
     expect(result.current.actionError).toBe("Could not save your change. Try again."),
   )
+})
+
+test("undoable deletion hides the meal at once and only deletes after the Undo window", async () => {
+  request.mockImplementation(async (path) =>
+    path.startsWith("/meals/summary") ? summary : { meals: [savedMeal] },
+  )
+  const { result } = await renderHook(() => useMeals(), {
+    wrapper: createQueryWrapper(MealsProvider),
+  })
+  await waitFor(() => expect(result.current.history).toHaveLength(1))
+  jest.useFakeTimers()
+  try {
+    await act(async () => result.current.deleteLogWithUndo("meal-a"))
+    expect(result.current.history).toEqual([])
+    expect(useToastStore.getState().toast?.message).toBe("Meal deleted")
+
+    // Undo restores the meal without contacting the server.
+    await act(async () => useToastStore.getState().toast?.onAction?.())
+    expect(result.current.history.map((meal) => meal.id)).toEqual(["meal-a"])
+    await act(async () => jest.advanceTimersByTime(TOAST_DURATION_MS))
+    expect(request).not.toHaveBeenCalledWith("/meals/meal-a", expect.anything())
+
+    await act(async () => result.current.deleteLogWithUndo("meal-a"))
+    request.mockImplementation(async (path, options) =>
+      options?.method === "DELETE"
+        ? { success: true }
+        : path.startsWith("/meals/summary")
+          ? summary
+          : { meals: [] },
+    )
+    await act(async () => jest.advanceTimersByTime(TOAST_DURATION_MS))
+  } finally {
+    jest.useRealTimers()
+  }
+  await waitFor(() =>
+    expect(request).toHaveBeenCalledWith(
+      "/meals/meal-a",
+      expect.objectContaining({ method: "DELETE" }),
+    ),
+  )
+  await waitFor(() => expect(result.current.history).toEqual([]))
+  expect(result.current.actionError).toBeNull()
+})
+
+test("a failed undoable deletion brings the meal back", async () => {
+  request.mockImplementation(async (path, options) =>
+    options?.method === "DELETE"
+      ? Promise.reject(new Error("Delete unavailable"))
+      : path.startsWith("/meals/summary")
+        ? summary
+        : { meals: [savedMeal] },
+  )
+  const { result } = await renderHook(() => useMeals(), {
+    wrapper: createQueryWrapper(MealsProvider),
+  })
+  await waitFor(() => expect(result.current.history).toHaveLength(1))
+  jest.useFakeTimers()
+  try {
+    await act(async () => result.current.deleteLogWithUndo("meal-a"))
+    expect(result.current.history).toEqual([])
+    await act(async () => jest.advanceTimersByTime(TOAST_DURATION_MS))
+  } finally {
+    jest.useRealTimers()
+  }
+  await waitFor(() => expect(result.current.history.map((meal) => meal.id)).toEqual(["meal-a"]))
+  expect(useToastStore.getState().toast?.message).toBe(
+    "Could not delete the meal. It is back in your list.",
+  )
+  // A background failure must not appear as a save error on the open meal screen.
+  expect(result.current.actionError).toBeNull()
+})
+
+test("moving a meal saves its new time with the device's local day", async () => {
+  request.mockImplementation(async (path, options) =>
+    options?.method === "PATCH"
+      ? savedMeal
+      : path.startsWith("/meals/summary")
+        ? summary
+        : { meals: [savedMeal] },
+  )
+  const { result } = await renderHook(() => useMeals(), {
+    wrapper: createQueryWrapper(MealsProvider),
+  })
+  await waitFor(() => expect(result.current.history).toHaveLength(1))
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  yesterday.setHours(7, 30, 0, 0)
+  await act(async () => {
+    await result.current.updateMealTime("meal-a", yesterday)
+  })
+  expect(request).toHaveBeenCalledWith(
+    "/meals/meal-a",
+    expect.objectContaining({
+      method: "PATCH",
+      body: { loggedAt: yesterday.toISOString(), targetDate: localDate(yesterday) },
+    }),
+  )
+  await expect(
+    result.current.updateMealTime("meal-a", new Date(Date.now() + 60 * 60_000)),
+  ).rejects.toThrow("Choose a time that is not in the future.")
 })
 
 test("food search maps backend catalogue units and nutrients", async () => {

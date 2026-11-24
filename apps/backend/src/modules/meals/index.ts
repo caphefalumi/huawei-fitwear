@@ -45,6 +45,8 @@ const createBody = t.Object({
 })
 const updateBody = t.Object({
   mealType: t.Optional(mealType),
+  targetDate: t.Optional(dateKey),
+  loggedAt: t.Optional(t.String({ format: "date-time" })),
   imageUrl: t.Optional(t.String()),
   aiConfidenceOverall: t.Optional(t.Number({ minimum: 0, maximum: 1 })),
 })
@@ -118,7 +120,11 @@ export const meals = new Elysia({
   .patch("/:mealId", ({ user, params, body }) => Meals.update(user.id, params.mealId, body), {
     auth: true,
     body: "meals.updateBody",
-    detail: { summary: "Update meal log metadata" },
+    detail: {
+      summary: "Update meal log metadata",
+      description:
+        "Moving a meal sets loggedAt and the client's local targetDate together. loggedAt cannot be in the future.",
+    },
   })
   .delete("/:mealId", ({ user, params }) => Meals.remove(user.id, params.mealId), {
     auth: true,

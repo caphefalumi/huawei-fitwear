@@ -290,6 +290,56 @@ describe("Persistent feature APIs", () => {
     expect(page.count).toBe(exercises.length)
   })
 
+  it("moves a meal to another time and day", async () => {
+    const own = await account()
+    const other = await account("other-move@fitwear.dev")
+    const meal = await (
+      await request("/meals", own.session.token, "POST", {
+        mealType: "breakfast",
+        targetDate: "2026-01-10",
+        loggedAt: "2026-01-10T08:00:00.000Z",
+        items: [foodItem],
+      })
+    ).json()
+    const path = `/meals/${meal.id}`
+
+    expect(
+      (await request(path, other.session.token, "PATCH", { loggedAt: "2026-01-09T07:30:00.000Z" }))
+        .status,
+    ).toBe(404)
+    const future = new Date(Date.now() + 60 * 60_000).toISOString()
+    expect((await request(path, own.session.token, "PATCH", { loggedAt: future })).status).toBe(400)
+    expect(
+      (
+        await request(path, own.session.token, "PATCH", {
+          loggedAt: "2026-01-09T07:30:00.000Z",
+          targetDate: "2026-01-05",
+        })
+      ).status,
+    ).toBe(400)
+
+    const moved = await (
+      await request(path, own.session.token, "PATCH", {
+        loggedAt: "2026-01-09T07:30:00.000Z",
+        targetDate: "2026-01-09",
+      })
+    ).json()
+    expect(moved.targetDate).toBe("2026-01-09")
+    expect(new Date(moved.loggedAt).toISOString()).toBe("2026-01-09T07:30:00.000Z")
+    const summary = (date: string) =>
+      request(`/meals/summary?date=${date}`, own.session.token).then((response) => response.json())
+    expect((await summary("2026-01-10")).mealCount).toBe(0)
+    expect((await summary("2026-01-09")).mealCount).toBe(1)
+
+    // A local day one ahead of UTC is accepted for the same instant.
+    const local = await request(path, own.session.token, "PATCH", {
+      loggedAt: "2026-01-09T20:00:00.000Z",
+      targetDate: "2026-01-10",
+    })
+    expect(local.status).toBe(200)
+    expect((await local.json()).targetDate).toBe("2026-01-10")
+  })
+
   it("persists meal correction, isolates items and deletes the last item", async () => {
     const own = await account()
     const other = await account("other@fitwear.dev")

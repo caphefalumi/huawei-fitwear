@@ -23,6 +23,7 @@ export function MealPhoto({
   imageUrl,
   style,
   compact = false,
+  interactive = true,
 }: {
   mealId?: string
   mealName: string
@@ -30,6 +31,8 @@ export function MealPhoto({
   imageUrl: string | null
   style: ImageProps["style"]
   compact?: boolean
+  /** When false the photo is decorative, so the surrounding row owns the tap. */
+  interactive?: boolean
 }) {
   const { user } = useAuth()
   const remotePhoto = Boolean(
@@ -111,6 +114,19 @@ export function MealPhoto({
       </View>
     )
   if (!uri) return null
+  if (!interactive)
+    return (
+      <View style={[style, styles.thumbnail]}>
+        <Image
+          source={{ uri }}
+          style={{ width: "100%", height: "100%" }}
+          contentFit="cover"
+          cachePolicy="none"
+          accessibilityLabel="Logged meal photo"
+          onError={() => setImageError("This meal photo could not be displayed. Please try again.")}
+        />
+      </View>
+    )
   return (
     <View>
       <Pressable

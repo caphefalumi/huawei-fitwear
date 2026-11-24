@@ -10,6 +10,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller"
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon"
 import { NetworkStatusBanner } from "@/components/feedback/network-status"
+import { ToastHost } from "@/components/feedback/toast"
 import { APP_ROUTES, AuthProvider, useAuth } from "@/features/auth"
 import { HealthProvider } from "@/features/health"
 import { MealsProvider } from "@/features/meals"
@@ -83,6 +84,7 @@ function RootNavigator() {
           <Stack.Screen name="(workout)/workout-history/[id]" />
           <Stack.Screen name="(details)/injuries" />
           <Stack.Screen name="(details)/meal" />
+          <Stack.Screen name="(details)/meals-history" />
           <Stack.Screen name="(modals)/add-item" />
           <Stack.Screen name="(modals)/review-item" />
           <Stack.Screen name="(modals)/replace-food" />
@@ -92,6 +94,7 @@ function RootNavigator() {
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
       </Stack>
+      <ToastHost />
     </>
   )
   return user ? <AccountProviders key={user.id}>{navigation}</AccountProviders> : navigation
