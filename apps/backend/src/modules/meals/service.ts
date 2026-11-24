@@ -2,7 +2,7 @@ import { and, desc, eq, inArray, sql } from "drizzle-orm"
 import { status } from "elysia"
 
 import { getDb, mealItems as mealItemsTable, mealLogs as mealLogsTable } from "../../db"
-import { isDateKey, toDateKey } from "../../lib/date"
+import { isDateKey, shiftDateKey, toDateKey } from "../../lib/date"
 import { generateId } from "../../lib/id"
 import { sumNutrition, type NutritionTotals } from "../../lib/nutrition"
 import { Targets } from "../targets/service"
@@ -16,6 +16,8 @@ import type {
 import { attachDraftMealPhoto, deleteMealImage, saveMealImage } from "./photo-storage"
 
 const DEFAULT_LIMIT = 20
+// Allow for small clock differences between the device and the server.
+const FUTURE_TOLERANCE_MS = 5 * 60_000
 
 export type MealItemRecord = typeof mealItemsTable.$inferSelect
 export type MealLogRecord = typeof mealLogsTable.$inferSelect
@@ -178,10 +180,34 @@ export abstract class Meals {
 
   static async update(userId: string, mealId: string, body: MealUpdateBody, d1?: D1Database) {
     const db = getDb(d1)
-    await Meals.byId(userId, mealId, d1)
+    const existing = await Meals.byId(userId, mealId, d1)
 
-    if (Object.keys(body).length)
-      await db.update(mealLogsTable).set(body).where(eq(mealLogsTable.id, mealId)).run()
+    const { loggedAt: loggedAtInput, ...fields } = body
+    const changes: Partial<MealLogRecord> = { ...fields }
+    if (loggedAtInput !== undefined) {
+      const loggedAt = new Date(loggedAtInput)
+      if (Number.isNaN(loggedAt.getTime()))
+        throw status(400, { success: false, message: "loggedAt must be a valid ISO timestamp" })
+      if (loggedAt.getTime() > Date.now() + FUTURE_TOLERANCE_MS)
+        throw status(400, { success: false, message: "loggedAt cannot be in the future" })
+      changes.loggedAt = loggedAt
+      changes.targetDate = body.targetDate ?? toDateKey(loggedAt)
+    }
+    if (changes.targetDate !== undefined) {
+      if (!isDateKey(changes.targetDate))
+        throw status(400, { success: false, message: "targetDate must be a valid calendar date" })
+      // targetDate is the client's local day, so it may differ from the UTC day by one.
+      const reference = toDateKey(changes.loggedAt ?? existing.loggedAt)
+      if (
+        changes.targetDate !== reference &&
+        changes.targetDate !== shiftDateKey(reference, -1) &&
+        changes.targetDate !== shiftDateKey(reference, 1)
+      )
+        throw status(400, { success: false, message: "targetDate must match loggedAt" })
+    }
+
+    if (Object.keys(changes).length)
+      await db.update(mealLogsTable).set(changes).where(eq(mealLogsTable.id, mealId)).run()
 
     return Meals.byId(userId, mealId, d1)
   }

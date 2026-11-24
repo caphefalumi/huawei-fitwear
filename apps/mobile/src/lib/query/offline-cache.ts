@@ -69,6 +69,7 @@ function project(key: QueryKey, accountId: string, data: unknown): unknown {
       time: meal.time,
       targetDate: meal.targetDate,
       loggedAt: meal.loggedAt,
+      mealType: meal.mealType,
       imageUrl: null,
       photoUnavailableOffline: Boolean(meal.imageUrl || meal.photoUnavailableOffline),
       kcal: meal.kcal,

@@ -5,11 +5,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react"
 import { AppState } from "react-native"
 
+import { hideToast, showToast, TOAST_DURATION_MS } from "@/components/feedback/toast"
 import { useAuth } from "@/features/auth"
 import { apiErrorMessage } from "@/lib/api/client"
 import { refetchAllThrowing } from "@/lib/query/retry"
@@ -147,15 +149,20 @@ export function fromApiItem(item: ApiMealItem, index = 0): MealItem {
     aiConfidence: item.aiConfidence ?? undefined,
   }
 }
+const formatLoggedAt = (loggedAt: string) => {
+  const date = new Date(loggedAt)
+  return {
+    date: date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }),
+    time: date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
+  }
+}
 export function fromApiMeal(meal: ApiMeal): MealLog {
   const items = meal.items.map(fromApiItem)
   const { kcal, ...macros } = sumItems(items)
-  const date = new Date(meal.loggedAt)
   return {
     ...meal,
     name: mealTypeLabel(meal.mealType),
-    date: date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }),
-    time: date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
+    ...formatLoggedAt(meal.loggedAt),
     items,
     kcal,
     macros,
@@ -208,9 +215,14 @@ type MealsContextValue = {
   updateItem: (id: string, item: MealItem, mealId?: string) => Promise<void>
   removeItem: (id: string, mealId?: string) => Promise<void>
   deleteMeal: () => void
-  logMeal: () => Promise<void>
+  /** Saves the draft and returns the logged meal. */
+  logMeal: () => Promise<MealLog>
   deleteLog: (id: string) => Promise<void>
+  /** Hides the meal at once and deletes it after the Undo window closes. */
+  deleteLogWithUndo: (id: string) => void
   updateMealType: (id: string, type: MealType) => Promise<void>
+  /** Moves a logged meal to another time; its day follows the device's local date. */
+  updateMealTime: (id: string, loggedAt: Date) => Promise<void>
 }
 type WriteMutationInput = {
   path: string
@@ -268,7 +280,17 @@ export function MealsProvider({ children }: { children: ReactNode }) {
     enabled: Boolean(userId),
     queryFn: ({ signal }) => fetchMealSummary(summaryDate, signal),
   })
-  const history = historyQuery.data ?? []
+  const [pendingDeletes, setPendingDeletes] = useState<ReadonlySet<string>>(() => new Set())
+  const deleteTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
+  useEffect(() => {
+    const timers = deleteTimers.current
+    return () => timers.forEach(clearTimeout)
+  }, [])
+  const loadedHistory = historyQuery.data
+  const history = useMemo(
+    () => (loadedHistory ?? []).filter((meal) => !pendingDeletes.has(meal.id)),
+    [loadedHistory, pendingDeletes],
+  )
   const historyState =
     historyQuery.data !== undefined
       ? "ready"
@@ -321,11 +343,29 @@ export function MealsProvider({ children }: { children: ReactNode }) {
         )
       }
       if (previous && match && method === "PATCH" && body && typeof body === "object") {
-        const { mealType: nextType } = body as { mealType?: MealType }
-        if (nextType) {
+        const {
+          mealType: nextType,
+          loggedAt,
+          targetDate,
+        } = body as {
+          mealType?: MealType
+          loggedAt?: string
+          targetDate?: string
+        }
+        if (nextType || (loggedAt && targetDate)) {
           queryClient.setQueryData(
             key,
-            previous.map((meal) => (meal.id === match[1] ? { ...meal, mealType: nextType } : meal)),
+            previous.map((meal) =>
+              meal.id !== match[1]
+                ? meal
+                : {
+                    ...meal,
+                    ...(nextType ? { mealType: nextType, name: mealTypeLabel(nextType) } : {}),
+                    ...(loggedAt && targetDate
+                      ? { loggedAt, targetDate, ...formatLoggedAt(loggedAt) }
+                      : {}),
+                  },
+            ),
           )
         }
       }
@@ -419,7 +459,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
   const deleteMeal = () => {
     clearDraft()
   }
-  const logMeal = async () => {
+  const logMeal = async (): Promise<MealLog> => {
     if (!items.length) throw new Error("Add at least one item before logging.")
     items.forEach(validateItem)
     let photoId = draftImageData?.photoId
@@ -427,7 +467,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
       photoId = await uploadMealPhoto(draftImage)
       setDraftPhoto(draftImage, { photoId })
     }
-    await runWrite<ApiMeal>(
+    const saved = await runWrite<ApiMeal>(
       "/meals",
       "POST",
       {
@@ -440,9 +480,55 @@ export function MealsProvider({ children }: { children: ReactNode }) {
       },
       deleteMeal,
     )
+    return fromApiMeal(saved)
   }
   const deleteLog = async (id: string) => {
     await runWrite(`/meals/${id}`, "DELETE")
+  }
+  const setPending = (id: string, pending: boolean) =>
+    setPendingDeletes((previous) => {
+      const next = new Set(previous)
+      if (pending) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  const deleteLogWithUndo = (id: string) => {
+    if (deleteTimers.current.has(id)) return
+    setPending(id, true)
+    const toastId = showToast({
+      message: "Meal deleted",
+      actionLabel: "Undo",
+      onAction: () => {
+        clearTimeout(deleteTimers.current.get(id))
+        deleteTimers.current.delete(id)
+        setPending(id, false)
+      },
+    })
+    deleteTimers.current.set(
+      id,
+      setTimeout(() => {
+        deleteTimers.current.delete(id)
+        hideToast(toastId)
+        // Bypass the shared write mutation so a background failure does not show as a
+        // save error on whichever meal screen is open. Keep the meal hidden until the
+        // refetch after a successful delete removes it.
+        const input = { path: `/meals/${id}`, method: "DELETE" }
+        writeMeal(input)
+          .then((result) => invalidateMeals(result, input))
+          .catch(() =>
+            showToast({ message: "Could not delete the meal. It is back in your list." }),
+          )
+          .finally(() => setPending(id, false))
+      }, TOAST_DURATION_MS),
+    )
+  }
+  const updateMealTime = async (id: string, loggedAt: Date) => {
+    if (Number.isNaN(loggedAt.getTime()) || loggedAt.getTime() > Date.now())
+      throw new Error("Choose a time that is not in the future.")
+    await runWrite<ApiMeal>(`/meals/${id}`, "PATCH", {
+      loggedAt: loggedAt.toISOString(),
+      targetDate: localDate(loggedAt),
+    })
   }
   const updateMealType = async (id: string, type: MealType) => {
     await runWrite(`/meals/${id}`, "PATCH", { mealType: type })
@@ -485,7 +571,9 @@ export function MealsProvider({ children }: { children: ReactNode }) {
         deleteMeal,
         logMeal,
         deleteLog,
+        deleteLogWithUndo,
         updateMealType,
+        updateMealTime,
       }}
     >
       {children}
@@ -496,6 +584,19 @@ export function useMeals(): MealsContextValue {
   const value = useContext(MealsContext)
   if (!value) throw new Error("useMeals must be used inside MealsProvider")
   return value
+}
+
+/** Totals and targets for any day. Shares the cache with the provider's summary for today. */
+export function useDaySummary(date: string) {
+  const { user } = useAuth()
+  const query = useQuery({
+    queryKey: user
+      ? mealsQueryKeys.summary(user.id, date)
+      : ["meals", "signed-out", "summary", date],
+    enabled: Boolean(user?.id),
+    queryFn: ({ signal }) => fetchMealSummary(date, signal),
+  })
+  return query.data ?? null
 }
 
 export function useFoodSearch(query: string, browse = false) {

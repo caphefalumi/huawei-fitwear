@@ -94,6 +94,7 @@ export function ValueInput({
     <View style={styles.inputRow}>
       <TextInput
         accessibilityLabel={unit ? `${label}, ${unit}` : label}
+        testID={`input-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}

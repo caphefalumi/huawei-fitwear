@@ -10,6 +10,7 @@ export {
   rescaleItem,
   splitDetail,
   sumItems,
+  useDaySummary,
   useFoodSearch,
   useMeals,
 } from "./hooks/meals-hooks"
@@ -26,6 +27,7 @@ export type {
   NutritionSummary,
   ProfileField,
 } from "./hooks/meals-hooks"
+export { MealHistoryCard } from "./components/meal-history-card"
 export { MealPhoto } from "./components/meal-photo"
 export {
   Box,

@@ -6,6 +6,7 @@ import { StyleSheet, Text, View, type ViewStyle } from "react-native"
 
 import { BackHeader, Button, PageHeading, Screen } from "@/components/ui"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { MonthCalendar } from "@/components/ui/month-calendar"
 import { Pressable } from "@/components/ui/pressable"
 import { Sheet, SheetActions } from "@/components/ui/sheet"
 import { Toggle } from "@/components/ui/toggle"
@@ -66,7 +67,6 @@ const SEVERITY_OPTIONS = [
   CUSTOM_OPTION,
 ]
 const PENCIL = require("@/assets/images/recovery/pencil.svg")
-const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"]
 const DOT = 20
 
 /** Period recovery rests instead of excluding single exercises. */
@@ -80,17 +80,6 @@ const phaseDays = (injury: Injury, phase: Phase) =>
   phase === "exclude" ? injury.excludeDays : injury.lightDays
 const phaseStart = (injury: Injury, phase: Phase) =>
   phase === "exclude" ? injury.startDate : addDays(injury.startDate, injury.excludeDays)
-
-/** Monday-first grid of the month containing `month`, padded with nulls. */
-function monthGrid(month: Date) {
-  const first = new Date(month.getFullYear(), month.getMonth(), 1, 12)
-  const days = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
-  const cells: (string | null)[] = Array.from({ length: (first.getDay() + 6) % 7 }, () => null)
-  for (let day = 1; day <= days; day += 1)
-    cells.push(dateKey(new Date(month.getFullYear(), month.getMonth(), day, 12)))
-  while (cells.length % 7) cells.push(null)
-  return cells
-}
 
 /** Picks when recovery started, or when one phase ends, skips it, or keeps it for good. */
 function PhaseSheet({
@@ -189,60 +178,15 @@ function PhaseSheet({
       )}
 
       {skip || permanent ? null : (
-        <View style={styles.calendar}>
-          <View style={styles.monthRow}>
-            <Pressable
-              hitSlop={10}
-              accessibilityLabel="Previous month"
-              onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1, 12))}
-            >
-              <Text style={styles.monthArrow}>‹</Text>
-            </Pressable>
-            <Text style={styles.monthTitle}>
-              {month.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-            </Text>
-            <Pressable
-              hitSlop={10}
-              accessibilityLabel="Next month"
-              onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1, 12))}
-            >
-              <Text style={styles.monthArrow}>›</Text>
-            </Pressable>
-          </View>
-          <View style={styles.grid}>
-            {WEEKDAYS.map((day, index) => (
-              <Text key={`${day}${index}`} style={[styles.cell, styles.weekday]}>
-                {day}
-              </Text>
-            ))}
-            {monthGrid(month).map((key, index) => {
-              if (!key) return <View key={`pad${index}`} style={styles.cell} />
-              const disabled = isDisabled(key)
-              const selected = key === picked
-              const inRange = !editingStart && key >= start && key < picked
-              return (
-                <Pressable
-                  key={key}
-                  disabled={disabled}
-                  style={[styles.cell, inRange && styles.cellRange, selected && styles.cellPicked]}
-                  accessibilityState={{ selected, disabled }}
-                  accessibilityLabel={shortDate(key)}
-                  onPress={() => setPicked(key)}
-                >
-                  <Text
-                    style={[
-                      styles.cellText,
-                      disabled && styles.cellDisabled,
-                      selected && styles.cellTextPicked,
-                    ]}
-                  >
-                    {toDate(key).getDate()}
-                  </Text>
-                </Pressable>
-              )
-            })}
-          </View>
-        </View>
+        <MonthCalendar
+          month={month}
+          onMonthChange={setMonth}
+          selected={picked}
+          onSelect={setPicked}
+          isDisabled={isDisabled}
+          inRange={(key) => !editingStart && key >= start && key < picked}
+          dayLabel={shortDate}
+        />
       )}
 
       <Text style={styles.confirm}>{confirm}</Text>
@@ -797,59 +741,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: C.text,
-  },
-  calendar: {
-    gap: 8,
-  },
-  monthRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  monthArrow: {
-    fontSize: 24,
-    paddingHorizontal: 8,
-    color: C.accent,
-  },
-  monthTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: C.text,
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  cell: {
-    width: `${100 / 7}%`,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    textAlign: "center",
-    textAlignVertical: "center",
-  },
-  weekday: {
-    fontSize: 11,
-    color: C.textMuted,
-    lineHeight: 40,
-  },
-  cellRange: {
-    backgroundColor: C.accentTint,
-  },
-  cellPicked: {
-    backgroundColor: C.accent,
-    borderRadius: 20,
-  },
-  cellText: {
-    fontSize: 14,
-    color: C.text,
-  },
-  cellDisabled: {
-    color: C.border,
-  },
-  cellTextPicked: {
-    color: C.onAccent,
-    fontWeight: "700",
   },
   confirm: {
     fontSize: 13,

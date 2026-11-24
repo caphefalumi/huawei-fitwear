@@ -1,10 +1,13 @@
+import { Image } from "expo-image"
 import { router } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { FetchErrorState } from "@/components/feedback/fetch-states"
+import { showToast } from "@/components/feedback/toast"
 import { BackHeader, Button, SectionHeading } from "@/components/ui"
+import { Pressable } from "@/components/ui/pressable"
 import { captureException, posthog } from "@/lib/analytics/posthog"
 import { apiErrorMessage } from "@/lib/api/client"
 import { Palette as C } from "@/theme"
@@ -12,7 +15,8 @@ import { Palette as C } from "@/theme"
 import { MealPhoto } from "../components/meal-photo"
 import { MealRow } from "../components/meal-row"
 import { MealAmountSheet, MealOptionsSheet } from "../components/meal-sheets"
-import { SegmentedChoice } from "../components/meals-ui"
+import { MealTimeSheet } from "../components/meal-time-sheet"
+import { SegmentedChoice, icons } from "../components/meals-ui"
 import {
   mealTypeLabel,
   rescaleItem,
@@ -22,6 +26,7 @@ import {
   type MealLog,
   type MealType,
 } from "../hooks/meals-hooks"
+import { mealTitle } from "../utils/meal-journal"
 
 export function MealResultScreen({ log }: { log?: MealLog }) {
   const insets = useSafeAreaInsets()
@@ -35,6 +40,9 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
   const [amountDraft, setAmountDraft] = useState("")
   const [actionError, setActionError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [timeOpen, setTimeOpen] = useState(false)
+  const [timeError, setTimeError] = useState<string | null>(null)
+  const [timePending, setTimePending] = useState(false)
   const active = useRef(true)
   useEffect(() => {
     active.current = true
@@ -78,6 +86,23 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
   }
 
   const logQuery = log ? `&log=${log.id}` : ""
+  const itemCount = `${items.length} ${items.length === 1 ? "item" : "items"}`
+
+  async function saveTime(next: Date) {
+    if (!log || timePending) return
+    setTimePending(true)
+    setTimeError(null)
+    try {
+      await meals.updateMealTime(log.id, next)
+      posthog?.capture("meal_time_updated")
+      if (active.current) setTimeOpen(false)
+    } catch (cause) {
+      captureException(cause)
+      if (active.current) setTimeError(apiErrorMessage(cause, "the meal time", "save"))
+    } finally {
+      if (active.current) setTimePending(false)
+    }
+  }
 
   return (
     <>
@@ -110,8 +135,32 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           <Text accessibilityRole="header" style={styles.title}>
             {mealName}
           </Text>
+          {log ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Meal time, ${log.date} at ${log.time}`}
+              accessibilityHint="Changes the day and time of this meal"
+              onPress={() => {
+                setTimeError(null)
+                setTimeOpen(true)
+              }}
+              style={styles.timeRow}
+              hitSlop={8}
+            >
+              <Text style={styles.timeLabel}>
+                {log.date} at {log.time}
+              </Text>
+              <Image
+                accessible={false}
+                source={icons.pencil}
+                style={styles.timeIcon}
+                contentFit="contain"
+                tintColor={C.accent}
+              />
+            </Pressable>
+          ) : null}
           <Text style={styles.subtitle}>
-            {log ? `${log.date} · ${log.time}` : new Date().toLocaleString()} · {items.length} items
+            {log ? itemCount : `${new Date().toLocaleString()} - ${itemCount}`}
           </Text>
         </View>
 
@@ -222,20 +271,42 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
             disabled={items.length === 0 || pending || meals.busy}
             busy={pending || meals.busy}
             onPress={() => {
+              let saved: MealLog | undefined
               void perform(
                 async () => {
-                  await logMeal()
+                  saved = await logMeal()
                   posthog?.capture("meal_logged", {
                     meal_type: meals.mealType,
                     item_count: items.length,
                   })
                 },
-                () => router.replace("/home"),
+                () => {
+                  router.replace("/home")
+                  if (saved) {
+                    const id = saved.id
+                    showToast({
+                      message: `Saved ${mealTitle(saved)}`,
+                      actionLabel: "View",
+                      onAction: () => router.push(`/meal?log=${id}`),
+                    })
+                  }
+                },
               )
             }}
           />
         )}
       </ScrollView>
+
+      {log ? (
+        <MealTimeSheet
+          visible={timeOpen}
+          value={new Date(log.loggedAt)}
+          pending={timePending}
+          error={timeError}
+          onClose={() => setTimeOpen(false)}
+          onSave={(next) => void saveTime(next)}
+        />
+      ) : null}
 
       <MealOptionsSheet
         item={optionsFor}
@@ -291,6 +362,21 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "400",
     color: C.text,
+  },
+  timeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+  },
+  timeLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: C.accent,
+  },
+  timeIcon: {
+    width: 14,
+    height: 14,
   },
   subtitle: {
     fontSize: 13,
