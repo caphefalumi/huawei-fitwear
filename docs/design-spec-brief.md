@@ -91,14 +91,16 @@ The organising idea is **"one calm dashboard for eating and training"**: warm, p
 |---|---|
 | Screen title | `Today`, `Nutrition`, `Progress`, `Meals`, `Workout plan`, `Profile` |
 | Eyebrow above title | `My plan` |
-| Subtitle | `Your logged meals`, `Capture food or drinks.`, `fat loss & muscle maintenance` |
+| Subtitle | `Tuesday, November 24` (Meals, the selected day), `Capture food or drinks.`, `fat loss & muscle maintenance` |
 | Section heading | `Nutrition`, `Progress`, `Today`, `Upcoming`, `Browse muscle groups`, `Profile overview`, `Refine your plan`, `Account` |
 | Section action | `6 groups`, `Oct 9`, routine name |
 | Primary CTA | `Analyze photo`, `Start workout`, `Save set`, `Sign In` |
 | Secondary CTA | `Enter meal manually`, `Upload from library`, `Create account` |
 | Footnote | `Targets are estimates, not medical advice.` |
 | Destructive confirm | `Cancel and delete workout`, `Delete account`, `Delete item` |
-| Empty state | `No meals match “…” .`, `No matching foods.`, `No database match` |
+| Empty state | `No meals match “…” .`, `No meals logged on Mon, Nov 17`, `No meals yet`, `No meals logged today`, `No matching foods.`, `No database match` |
+| Toast | `Saved Phở bò` + `View`, `Meal deleted` + `Undo` |
+| Tip banner | `Swipe left on a meal to delete it.` + ✕ |
 
 ---
 
@@ -114,11 +116,12 @@ Root Stack (headerShown: false)
 │   └── sign-up      → Create account
 └── (tabs)  [shown only when signed in]
     ├── home         → Today dashboard
-    ├── meals        → Meal history
+    ├── meals        → Meals journal (one day at a time)
     ├── workout      → Workout plan
     └── profile      → Profile
     ├── capture      → Capture meal (pushed from center FAB or Meals)
     ├── meal         → Meal result / meal detail
+    ├── meals-history → Meals history (month calendar)
     ├── add-item     → Database search or manual entry
     ├── review-item  → Confirm item nutrients
     ├── replace-food → Pick a replacement food
@@ -152,15 +155,26 @@ Auth guard is declarative: signed-out users are redirected to `login`; signed-in
 | Push with no back (modal-like full screen) | Session |
 | Bottom sheet over current screen | All editors (height, weight, sex, goal, frequency, activity, target weight, recovery), meal options, item edit, tutorial |
 | Inline success banner | Home after weight save |
+| Toast (snackbar, 5 s, one at a time) | Saved meal with `View`, deleted meal with `Undo`; hosted once at the root, above the tab bar |
+| Dismissible tip banner, remembered on the device | Meals swipe tip |
 | Native alert | Period-recovery opt-in, destructive confirms |
 
 ### Journey maps (canonical paths)
 
 **Meal logging**
-`Home/Meals → (+) Capture → [photo + optional description] → Analyze → Meal result → Add item / Review item / Replace item → Save → Meals history → Meal detail`
+`Home/Meals → (+) Capture → [photo + optional description] → Analyze → Meal result → Add item / Review item / Replace item → Log Meal → Home + toast `Saved {food}` → View → Meal detail`
 
 **Manual meal**
 `Capture → Enter meal manually → Meal result (empty) → Add item → Search database or manual entry → Review item → saved`
+
+**Review a past day**
+`Meals → pick a day in the week strip` or `Meals → Meals history › → pick a day in the calendar → Meals (that day)`; `‹ Today` returns to today. Search ignores the selected day and looks across all history.
+
+**Fix when a meal was eaten**
+`Meal detail → date and time row → Meal time sheet (Today / Yesterday chips, day + hour + minute wheels) → Save → the meal moves to that day`
+
+**Delete a meal**
+`Meals → swipe a card left → Delete → toast Meal deleted + Undo (5 s) → deleted on the server when the toast closes`
 
 **Workout**
 `Workout tab → Today's routine / muscle group → Chest plan or Group plan → Exercise guide → Start workout → Live session (sets sheet) → Finish workout → summary`
@@ -221,9 +235,9 @@ paddingBottom = 26 + insets.bottom
 ### Lists and rows
 
 - Profile rows: height **50**, 1px bottom border, label 13/600, value 14/600 + chevron 16, gap 12.
-- Meal history rows: photo 56–64 square/rounded, name 14/600 one line, meta 11 muted, kcal right-aligned 13/600.
+- Meal cards (journal, search, Nutrition): min height 92, padding 14, gap 14, radius 18, 1px `border`; photo 64 square radius 14; title 15/600 up to two lines (the one or two largest foods, then `+N more`); meta 12 muted `12:20 - Lunch`; kcal right 17/600 with a `kcal` unit line (11 muted). No macro line on the card.
 - Exercise rows: name 12 `text` left, prescription 12 muted right.
-- Week strip: seven equal tiles height 58, radius 14, day 10 muted / date 14/600; active tile = accent fill with white text.
+- Week strip: seven equal tiles height 58 (Workout) or 72 (Meals, with a third line for the day's kcal), radius 14, day 10 muted / date 14/600; active tile = accent fill with white text.
 
 ### Sheets (bottom overlays)
 
@@ -237,7 +251,7 @@ paddingBottom = 26 + insets.bottom
 ### Empty / loading / error / offline
 
 - **Loading:** skeleton rectangles (`border` fill, radius 7) for field values; `ActivityIndicator` inside primary buttons (`busy`).
-- **Empty:** a single muted sentence; no illustration in meal history.
+- **Empty:** a single muted sentence. The empty Meals journal is the exception: a 64 `accentTint` circle with a utensils icon, `No meals yet`, one muted line, primary `Capture a meal` and secondary `Add food manually`. An empty day (history exists) is a dashed 18-radius box with a title and one muted line, plus `Capture a meal` only for today.
 - **Error:** inline alert text (`accessibilityRole="alert"`) in meal flows; on Profile a one-line banner "Couldn't load your health data." + "Retry".
 - **Offline:** a global `NetworkStatusBanner` is mounted above the navigator on every screen.
 
@@ -362,6 +376,10 @@ Weights used: 400, 500, 600, 700. Letter-spacing only on uppercase footnotes (0.
 | `HintRow` | `components/hint-row.tsx` | icon + muted hint line |
 | `RecoveryStages` | `features/recovery/recovery-stages.tsx` | three-stage rest/light/return timeline |
 | `NutritionRing` | `features/home/ring.tsx` | dual-arc calorie ring |
+| `MonthCalendar` | `components/ui/month-calendar.tsx` | Monday-first month grid with ‹ › arrows; 44 high cells, 36 round day; optional dot under logged days, ring on today, filled accent on the picked day, range tint, disabled days; shared by Injuries and Meals history |
+| `MealHistoryCard` | `features/meals/components/meal-history-card.tsx` | see §6 lists; whole card is one button; swipe left 88 reveals `Delete` (mounted only during a swipe); reduced-motion aware |
+| `MealTimeSheet` | `features/meals/components/meal-time-sheet.tsx` | Sheet `Meal time`: `Today` and `Yesterday` chips, wheels for day (last 30 days), hour, minute; future times unavailable; `Save` / `Cancel` |
+| `Toast` / `ToastHost` | `components/feedback/toast.tsx` | dark `text` bar, radius 14, padding 16/14, message 13 white + 13/700 action in `accentSoft`; sits 72 above the tab bar; auto-hides after 5 s; announced to screen readers |
 | `WeightChart` | `features/home/weight-chart.tsx` | 7-point sparkline, no axes |
 | `AppTabs` | `components/app-tabs.tsx` | custom tab bar, see §5 |
 | `AuthField` | `features/auth/components/auth-field.tsx` | Material-style outlined field with icon + trailing action |
@@ -386,7 +404,9 @@ All animation is purposeful and short. Reduced motion is respected in sheets, lo
 | FAB ripple | 450ms | scale 1→1.8, opacity 0.45→0 |
 | Sheet enter | 220ms ease-out cubic | fade + translateY 24→0 |
 | Sheet exit | 160ms ease-in quad | |
-| Screen section entrance | `FadeInUp` 220–250ms, delays 50/60/100/120/150ms | Home, Profile, Plans, Meal history first 4 rows |
+| Screen section entrance | `FadeInUp` 220–250ms, delays 50/60/100/120/150ms | Home, Profile, Plans |
+| Meal card swipe | 160ms timing, 88 travel | settles open past 44 |
+| Toast | shown 5 s | replaced by the next toast |
 | Macro bar fill | 500ms timing | width interpolation |
 | Calorie count-up | 600ms ease-out cubic | rAF loop |
 | Nutrition ring sweep | 900ms | on focus |
@@ -408,11 +428,12 @@ All animation is purposeful and short. Reduced motion is respected in sheets, lo
 | State | `accessibilityState={{ busy, disabled }}`; period toggle announces "On/Off" |
 | Live regions | `accessibilityLiveRegion` on async status text |
 | Modal semantics | Sheets set `accessibilityViewIsModal` and support `onAccessibilityEscape`; scrim is hidden from AT |
-| Labels | Icon-only controls always have explicit labels ("Capture meal", "Clear food search", "Back to Meals", "Close {title}") |
+| Labels | Icon-only controls always have explicit labels ("Capture meal", "Clear food search", "Back to Meals", "Close {title}", "Show macro breakdown", "Dismiss tip", "Delete {meal}") |
+| Gestures | Swipe-to-delete is also a `delete` accessibility action on the card; each week-strip day and calendar day is labelled with the full date and kcal or `no meals` |
 | Dynamic type | Login listens to font scale and reflows; most other screens use fixed sizes — a gap to address |
 | Contrast | Body on ivory and white-on-oxblood pass; **disabled primary buttons (white on #EFEBE5) do not** — flag |
 | Reduced motion | Honoured in sheets, login, meal swipe rows, wheel picker |
-| Colour alone | Active states also change scale/weight/position; sort chips add ↑/↓ arrows |
+| Colour alone | Active states also change scale/weight/position; the macro legend names each colour in text |
 | Screen reader order | Visual order is logical; cards that navigate are single pressables with descriptive labels |
 
 ---
@@ -471,7 +492,8 @@ Legend: **Purpose · Structure · Actions · States · Copy**
 
 - **Purpose:** full nutrition breakdown for the day.
 - **Structure:** back header; title `Nutrition`; hero ring (remaining/consumed); `Target weight reached` card (only after the target weight is reached); `Remaining today`, `Consumed`, `Daily target` stat blocks; `Macronutrients` section with Protein/Carbs/Fat bars and gram values; `About these numbers` explainer card.
-- **Actions:** back; likely tap-through to meals.
+- **Today's meals:** after the cards above, a `Today's meals` heading (14/600) followed by the day's meal cards in eating order (tap opens the meal, no swipe), or a card `No meals logged today.` with a `Capture a meal` link.
+- **Actions:** back; open a meal.
 - **States:** no meals logged (zeros, ring empty), partial, target met/exceeded (ring full, remaining clamped at 0), incomplete profile (`Complete profile` block with the list of missing fields and a `Logged today` card with energy, protein, carbs and fat; no ring, target or remaining), loading or error (one muted line).
 - **Copy:** "Nutrition targets use your latest profile information.", "About these numbers".
 
@@ -483,13 +505,29 @@ Legend: **Purpose · Structure · Actions · States · Copy**
 - **States:** no data (prompt "Log your weight to keep your nutrition guidance current."), single point, trend.
 - **Copy:** "Personal-scale estimates, not a diagnosis.", "Weight", "Goal 70.0 kg · Updated Oct 7".
 
-### 11.7 Meals — history (`/(tabs)/meals`)
+### 11.7 Meals journal (`/(tabs)/meals`)
 
-- **Purpose:** find and reopen any logged meal.
-- **Structure:** title `Meals` (28/400) + subtitle `Your logged meals`; search field (icon + "Search meals" + clear); horizontal sort chips: `Newest`, `kcal`, `Protein`, `Carbs`, `Fat` — active chip filled, with ↓/↑ direction; list of meal cards.
-- **Meal card:** photo 56–64 rounded, name 14/600 one line, meta 11 muted (`Thursday, Oct 8 · 12:30`, or `… · 32 g protein` when sorting by macro), kcal right 13/600. Tap → `/meal?log={id}`.
-- **States:** empty history, no search matches (`No meals match “…” .`), sorted ascending/descending.
-- **Motion:** first four rows `FadeInUp` staggered 50ms.
+- **Purpose:** see what you ate on a given day, find any logged meal, and reach older days.
+- **Structure (top to bottom):**
+  - Title `Meals` (28/400) + subtitle with the selected day (`Tuesday, November 24`).
+  - Search field (`Search foods`, clear button). While searching, everything below the field is replaced by results grouped by day.
+  - Links row: `‹ Today` on the left (only when another day is selected) and `Meals history ›` on the right (accent 13/600).
+  - **Week strip:** Monday to Sunday of the selected week, seven tiles of height 72, radius 14, gap 6: weekday 10 muted, date 14/600, kcal 9/600 accent (`1.2k` compact, `-` when nothing is logged). Today has an accent border, the selected day is filled accent with white text, days without meals use the `background` fill with a `border`. **Every tile is tappable.**
+  - **Day summary card** (surface, radius 18, padding 16): day title (`Today`, `Yesterday`, `Mon, Nov 23`) with a 20px round `i` info button, and `1,080 / 2,100 kcal` on the right (13/600 muted; just `1,080 kcal` when there is no target for that day). Below, an 8px bar: its filled part is the share of the day's target, split into Protein, Carbs and Fat segments by energy share (`accent`, `accentSoft`, `textMuted`). Tapping `i` expands a legend under the bar, one row per macro with a colour dot: `107/150g Protein`, `Carbs`, `Fat` (consumed / profile target); without targets it shows grams only.
+  - **Tip banner** (`accentTint`, radius 14, padding 14/10): `Swipe left on a meal to delete it.` + ✕. Dismissing it hides it for good on this device.
+  - Meal cards for the day in eating order (see §6 lists), gap 10.
+- **Meal card actions:** tap opens `/meal?log={id}`; swipe left reveals `Delete`; the Delete action is not in the layout until a swipe starts, so a tap never shows it.
+- **Deleting:** the meal disappears at once and `Meal deleted` + `Undo` shows for 5 s. Undo restores it without a request; otherwise it is deleted on the server. If that fails the meal returns with `Could not delete the meal. It is back in your list.`
+- **Search:** matches food names and meal type, ignoring case and accents (`pho` finds `Phở bò`), across all days. Results are grouped under day headings with `N meals`, with no totals.
+- **States:** loading (`Loading meals…`), offline with nothing cached, error, **no meals yet** (first-run empty state, see §6), **empty day** (`No meals logged on Mon, Nov 17` with a hint; on a past day it says to log a meal and change its time, on today it adds `Capture a meal`), no search matches (`No meals match “…” .`).
+- **Selected day** is kept in memory while the app runs and resets to today when the app restarts.
+
+### 11.7a Meals history (`/meals-history`)
+
+- **Purpose:** reach any past day.
+- **Structure:** back header `‹ Meals`; title `Meals history` + subtitle `Pick a day to see what you ate.`; a card with the `MonthCalendar` (‹ month › arrows, `Next month` disabled on the current month, days after today disabled, a dot under each logged day, ring on today, the selected day filled) and a legend `Days with logged meals`; a stats card with `N days logged` and `average kcal per logged day` for the visible month (`-` when none).
+- **Actions:** pick a day, which returns to the Meals tab on that day; change month; back.
+- **States:** loading, offline with nothing cached, error (one muted line in place of the stats).
 
 ### 11.8 Capture meal (`/capture`)
 
@@ -512,8 +550,8 @@ Legend: **Purpose · Structure · Actions · States · Copy**
 ### 11.9 Meal result / meal detail (`/meal`)
 
 - **Purpose:** review the recognized meal, adjust items, see totals, save or update a log.
-- **Structure:** back header; photo (when present) with "Loaded"/"Loading photo…" states; title (meal name or `Meal`); date/time; total kcal hero; macro summary (protein/carbs/fat); **item list** where each row shows name, portion, kcal, macros and supports swipe actions (edit / delete); option sheets per item; `Add item` action; meal-type selector (breakfast/lunch/dinner/snack); primary save/update; `Edit nutrition` path.
-- **Actions:** add item, edit item, delete item, change amount, replace food, change meal type, save.
+- **Structure:** back header; photo (when present) with "Loaded"/"Loading photo…" states; title (meal name or `Meal`); for a saved meal a tappable date and time row (`Nov 24, 2026 at 12:20` + pencil, accent 13/600) that opens the `Meal time` sheet, then the item count (for a draft, the current time and the count); total kcal hero; macro summary (protein/carbs/fat); **item list** where each row shows name, portion, kcal, macros and supports swipe actions (edit / delete); option sheets per item; `Add item` action; meal-type selector (breakfast/lunch/dinner/snack); primary save/update; `Edit nutrition` path.
+- **Actions:** add item, edit item, delete item, change amount, replace food, change meal type, change the meal's day and time (saved meals only; future times are blocked and the meal moves to the chosen day), save. After `Log Meal` the app returns to Home and shows the toast `Saved {foods}` with `View`.
 - **States:** AI draft vs. saved log; dirty/unsaved; empty (no items); saving; error; "CURRENT ITEM · NOT REPLACED YET" while replacing.
 - **Copy:** "Review the name, portion, calories and macros", "Estimated total", "This item · estimated", "Your meal stays unchanged until you confirm.", "Remove this food from the meal", "Change amount", "New amount", "Previous amount".
 
