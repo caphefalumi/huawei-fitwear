@@ -267,8 +267,10 @@ export class WorkoutSession {
     this.records = saved.records;
     this.askingStillTraining = false;
     // Too long gone to still be asking "Still training?": end at the last activity.
-    if (this.status === WorkoutStatus.ACTIVE &&
-      now - this.lastActivityAt >= IDLE_PROMPT_MS + IDLE_ANSWER_MS) {
+    if (
+      this.status === WorkoutStatus.ACTIVE &&
+      now - this.lastActivityAt >= IDLE_PROMPT_MS + IDLE_ANSWER_MS
+    ) {
       this.finish(WorkoutStatus.ENDED_EARLY, this.lastActivityAt);
     }
     return true;
@@ -306,8 +308,7 @@ export class WorkoutSession {
   }
 
   private isCounting(): boolean {
-    return this.status === WorkoutStatus.ACTIVE && !this.paused &&
-      this.phase === WorkoutPhase.SET;
+    return this.status === WorkoutStatus.ACTIVE && !this.paused && this.phase === WorkoutPhase.SET;
   }
 
   private activate(now: number): void {

@@ -27,22 +27,26 @@ export struct SetView {
 
   build() {
     Column({ space: 6 }) {
-      Text(`${this.session.exercise.name} · Set ${this.session.setIndex + 1}/${this.session.exercise.sets}`)
+      Text(
+        `${this.session.exercise.name} · Set ${this.session.setIndex + 1}/${this.session.exercise.sets}`,
+      )
         .width('72%')
         .fontSize(Type.SMALL)
         .fontColor(Palette.MUTED)
         .textAlign(TextAlign.Center)
-        .maxLines(2);
+        .maxLines(2)
       Row({ space: 10 }) {
-        this.stepButton('−', -1);
+        this.stepButton('−', -1)
         Text() {
-          Span(`${this.session.reps}`).fontSize(Type.BIG).fontWeight(FontWeight.Bold);
-          Span(`/${this.session.exercise.reps}`).fontSize(Type.TITLE);
+          Span(`${this.session.reps}`)
+            .fontSize(Type.BIG)
+            .fontWeight(FontWeight.Bold)
+          Span(`/${this.session.exercise.reps}`).fontSize(Type.TITLE)
         }
         .fontColor(Palette.TEXT)
         .constraintSize({ minWidth: 72 })
-        .textAlign(TextAlign.Center);
-        this.stepButton('+', 1);
+        .textAlign(TextAlign.Center)
+        this.stepButton('+', 1)
       }
       PillButton({
         label: 'Done set',
@@ -52,15 +56,15 @@ export struct SetView {
           vibrate(HAPTIC_SIGNAL_MS);
           this.session.doneSet(Date.now());
         },
-      });
+      })
       Text('View form')
         .fontSize(Type.SMALL)
         .fontColor(Palette.TEXT)
         .decoration({ type: TextDecorationType.Underline, color: Palette.MUTED })
         .padding({ left: 12, right: 12, top: 4, bottom: 4 })
         .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-        .onClick(() => this.onViewForm());
-      SwipeHint();
+        .onClick(() => this.onViewForm())
+      SwipeHint()
     }
     .width('100%')
     .height('100%')
@@ -94,7 +98,7 @@ export struct RestView {
         .fontColor(Palette.MUTED)
         .textAlign(TextAlign.Center)
         .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis });
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
       Stack() {
         Progress({
           value: Math.min(this.session.restLeftMs / 1000, this.session.exercise.restSeconds),
@@ -105,14 +109,21 @@ export struct RestView {
           .height(100)
           .color(Palette.ACCENT)
           .backgroundColor(Palette.TRACK)
-          .style({ strokeWidth: 7 });
-        Text(this.countdown()).fontSize(30).fontWeight(FontWeight.Bold).fontColor(Palette.TEXT);
+          .style({ strokeWidth: 7 })
+        Text(this.countdown())
+          .fontSize(30)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(Palette.TEXT)
       }
       Row({ space: 8 }) {
-        PillButton({ label: 'Skip', pillWidth: 68, onTap: () => this.session.skipRest(Date.now()) });
-        PillButton({ label: '+15 s', pillWidth: 68, onTap: () => this.session.extendRest(Date.now()) });
+        PillButton({ label: 'Skip', pillWidth: 68, onTap: () => this.session.skipRest(Date.now()) })
+        PillButton({
+          label: '+15 s',
+          pillWidth: 68,
+          onTap: () => this.session.extendRest(Date.now()),
+        })
       }
-      SwipeHint();
+      SwipeHint()
     }
     .width('100%')
     .height('100%')
@@ -134,11 +145,16 @@ export struct ControlsView {
       SwipeHint({
         up: true,
         label: `Paused · ${this.session.plan.group} ${this.session.exercisesDone}/${this.session.plan.exercises.length}`,
-      });
-      PillButton({ label: 'Continue', primary: true, pillWidth: 130, onTap: () => this.onContinue() });
+      })
+      PillButton({
+        label: 'Continue',
+        primary: true,
+        pillWidth: 130,
+        onTap: () => this.onContinue(),
+      })
       Row({ space: 6 }) {
-        PillButton({ label: 'New cycle', pillWidth: 88, onTap: () => this.onNewCycle() });
-        PillButton({ label: 'Skip', pillWidth: 64, onTap: () => this.onSkipExercise() });
+        PillButton({ label: 'New cycle', pillWidth: 88, onTap: () => this.onNewCycle() })
+        PillButton({ label: 'Skip', pillWidth: 64, onTap: () => this.onSkipExercise() })
       }
       Text('End workout')
         .fontSize(12)
@@ -146,7 +162,7 @@ export struct ControlsView {
         .decoration({ type: TextDecorationType.Underline, color: Palette.MUTED })
         .padding({ left: 12, right: 12, top: 6, bottom: 6 })
         .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-        .onClick(() => this.onEnd());
+        .onClick(() => this.onEnd())
     }
     .width('100%')
     .height('100%')
@@ -165,13 +181,21 @@ export struct ConfirmView {
 
   build() {
     Column({ space: 10 }) {
-      Text(this.title).fontSize(Type.TITLE).fontWeight(FontWeight.Bold).fontColor(Palette.TEXT);
+      Text(this.title)
+        .fontSize(Type.TITLE)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(Palette.TEXT)
       Text(this.message)
         .fontSize(Type.SMALL)
         .fontColor(Palette.MUTED)
-        .textAlign(TextAlign.Center);
-      PillButton({ label: this.keepLabel, primary: true, pillWidth: 130, onTap: () => this.onKeep() });
-      PillButton({ label: 'End', onTap: () => this.onEnd() });
+        .textAlign(TextAlign.Center)
+      PillButton({
+        label: this.keepLabel,
+        primary: true,
+        pillWidth: 130,
+        onTap: () => this.onKeep(),
+      })
+      PillButton({ label: 'End', onTap: () => this.onEnd() })
     }
     .width('100%')
     .height('100%')
@@ -189,33 +213,40 @@ export struct SummaryView {
   @Builder
   stat(value: number, label: string) {
     Column() {
-      Text(`${value}`).fontSize(26).fontWeight(FontWeight.Bold).fontColor(Palette.TEXT);
-      Text(label).fontSize(12).fontColor(Palette.MUTED);
-    }
+      Text(`${value}`)
+        .fontSize(26)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(Palette.TEXT)
+      Text(label)
+        .fontSize(12)
+        .fontColor(Palette.MUTED)
+    };
   }
 
   build() {
     Column({ space: 10 }) {
-      Text(this.session.status === WorkoutStatus.ENDED_EARLY
-        ? `Ended early · ${this.session.exercisesDone}/${this.session.plan.exercises.length} exercises`
-        : 'Workout done')
+      Text(
+        this.session.status === WorkoutStatus.ENDED_EARLY
+          ? `Ended early · ${this.session.exercisesDone}/${this.session.plan.exercises.length} exercises`
+          : 'Workout done',
+      )
         .width('72%')
         .fontSize(15)
         .fontWeight(FontWeight.Bold)
         .fontColor(Palette.TEXT)
-        .textAlign(TextAlign.Center);
+        .textAlign(TextAlign.Center)
       Row({ space: 18 }) {
-        this.stat(this.session.records.length, 'sets');
-        this.stat(this.session.totalReps, 'reps');
-        this.stat(Math.round(this.session.activeMs / 60000), 'min');
+        this.stat(this.session.records.length, 'sets')
+        this.stat(this.session.totalReps, 'reps')
+        this.stat(Math.round(this.session.activeMs / 60000), 'min')
       }
       // Phone sync is not implemented yet, so promise nothing about it.
       Text('Saved on this watch')
         .width('72%')
         .fontSize(12)
         .fontColor(Palette.MUTED)
-        .textAlign(TextAlign.Center);
-      PillButton({ label: 'Done', primary: true, onTap: () => this.onDone() });
+        .textAlign(TextAlign.Center)
+      PillButton({ label: 'Done', primary: true, onTap: () => this.onDone() })
       if (this.session.status === WorkoutStatus.ENDED_EARLY) {
         Text('Continue')
           .fontSize(Type.SMALL)

@@ -53,20 +53,22 @@ export struct FormGuideView {
         .fontColor(Palette.MUTED)
         .textAlign(TextAlign.Center)
         .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis });
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
       Stack({ alignContent: Alignment.TopStart }) {
-        this.stroke(6, 34, 70, 34); // bench
-        this.stroke(16, 34, 16, 44);
-        this.stroke(60, 34, 60, 44);
-        Circle({ width: 15, height: 15 }).fill(Palette.TEXT).position({ x: 16.5, y: 31.5 });
-        this.stroke(22, 28, 50, 28); // body
-        this.stroke(50, 28, 64, 40);
-        this.stroke(30, 28, 30, this.raised ? 10 : 21); // arm
-        this.stroke(22, this.raised ? 10 : 21, 38, this.raised ? 10 : 21); // bar
+        this.stroke(6, 34, 70, 34) // bench
+        this.stroke(16, 34, 16, 44)
+        this.stroke(60, 34, 60, 44)
+        Circle({ width: 15, height: 15 })
+          .fill(Palette.TEXT)
+          .position({ x: 16.5, y: 31.5 })
+        this.stroke(22, 28, 50, 28) // body
+        this.stroke(50, 28, 64, 40)
+        this.stroke(30, 28, 30, this.raised ? 10 : 21) // arm
+        this.stroke(22, this.raised ? 10 : 21, 38, this.raised ? 10 : 21) // bar
       }
       .width(114)
-      .height(69);
-      PillButton({ label: 'Back', onTap: () => this.onBack() });
+      .height(69)
+      PillButton({ label: 'Back', onTap: () => this.onBack() })
     }
     .width('100%')
     .height('100%')

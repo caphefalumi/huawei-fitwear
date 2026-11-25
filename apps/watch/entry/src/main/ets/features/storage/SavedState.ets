@@ -18,8 +18,12 @@ export function dayKey(now: number): string {
   return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
 }
 
-export function encodeState(session: WorkoutSession, day: FoodDay, summaryDismissed: boolean,
-  now: number): string {
+export function encodeState(
+  session: WorkoutSession,
+  day: FoodDay,
+  summaryDismissed: boolean,
+  now: number,
+): string {
   const state: SavedState = {
     version: VERSION,
     day: dayKey(now),
@@ -35,8 +39,12 @@ export function encodeState(session: WorkoutSession, day: FoodDay, summaryDismis
  * Food logs and finished workouts expire at midnight; a workout in progress does not.
  * Damaged or outdated data is ignored.
  */
-export function restoreState(json: string, session: WorkoutSession, day: FoodDay,
-  now: number): boolean {
+export function restoreState(
+  json: string,
+  session: WorkoutSession,
+  day: FoodDay,
+  now: number,
+): boolean {
   try {
     const state = JSON.parse(json) as SavedState;
     if (state.version !== VERSION) {

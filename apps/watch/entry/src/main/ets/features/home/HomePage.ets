@@ -55,8 +55,12 @@ struct HomePage {
     this.store.open(this.getUIContext().getHostContext() as common.UIAbilityContext);
     this.consented = this.store.hasConsent();
     if (this.consented) {
-      this.summaryDismissed =
-        restoreState(this.store.loadState(), this.session, this.day, Date.now());
+      this.summaryDismissed = restoreState(
+        this.store.loadState(),
+        this.session,
+        this.day,
+        Date.now(),
+      );
     }
     this.startTicker();
   }
@@ -214,8 +218,13 @@ struct HomePage {
 
     if (this.session.status === WorkoutStatus.ACTIVE) {
       // In a workout the crown only edits reps; the swipe alone opens controls.
-      if (!this.showingForm && !this.confirmingEnd && !this.session.askingStillTraining &&
-        this.workoutPage === SET_PAGE && this.session.phase === WorkoutPhase.SET) {
+      if (
+        !this.showingForm &&
+        !this.confirmingEnd &&
+        !this.session.askingStillTraining &&
+        this.workoutPage === SET_PAGE &&
+        this.session.phase === WorkoutPhase.SET
+      ) {
         adjustReps(this.session, step);
       }
       return;
@@ -278,8 +287,7 @@ struct HomePage {
           }
         }
         .width('100%')
-        .height('100%');
-
+        .height('100%')
         ControlsView({
           session: this.session,
           onContinue: () => this.continueWorkout(),
@@ -294,7 +302,7 @@ struct HomePage {
           onEnd: () => {
             this.confirmingEnd = true;
           },
-        });
+        })
       }
       .index(this.workoutPage)
       .vertical(true)
@@ -316,7 +324,7 @@ struct HomePage {
   @Builder
   home() {
     Swiper(this.homePager) {
-      QuickLogView({ day: this.day });
+      QuickLogView({ day: this.day })
       ClockView({
         now: this.now,
         day: this.day,
@@ -326,7 +334,7 @@ struct HomePage {
             this.getUIContext().getRouter().pushUrl({ url: 'pages/Index' });
           }
         },
-      });
+      })
       Column() {
         if (this.session.status === WorkoutStatus.IDLE) {
           StartView({
@@ -339,9 +347,8 @@ struct HomePage {
         }
       }
       .width('100%')
-      .height('100%');
-
-      PrivacyView({ onClear: () => this.clearData() });
+      .height('100%')
+      PrivacyView({ onClear: () => this.clearData() })
     }
     .index(this.homePage)
     .vertical(true)
