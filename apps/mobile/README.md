@@ -16,7 +16,7 @@ Login errors are classified by HTTP status and API error code, not server messag
 
 Sign-in/sign-up and password-reset mutations use `networkMode: "always"` so an offline submission reaches the request's connection error or timeout and releases the form, rather than remaining paused and replaying silently when connectivity returns.
 
-Saved-session startup validation also uses `networkMode: "always"` with no retries: offline startup releases the splash and shows the restoration error on sign-in instead of waiting indefinitely. A saved token alone never unlocks private routes. Connection failures retain the token so a later online restart can validate it; rejected/expired credentials still clear it.
+Saved-session startup validation also uses `networkMode: "always"` with no retries: offline startup releases the splash instead of waiting indefinitely. A session the server validated earlier on this device opens in offline mode with its cached data until it expires; otherwise sign-in shows the restoration error. A saved token alone never unlocks private routes. Connection failures retain the token so a later online restart can validate it; rejected/expired credentials still clear it.
 
 Meals, portions, daily nutrition, profile preferences, weights, recovery schedules and workout sessions/sets use the API. Empty accounts show empty states, not seeded personal data. Camera/library images are sent to Workers AI only after tapping **Analyze photo**; review estimates before logging. Logged images are stored privately in R2 and read through authenticated requests. Manual food/label entry works independently of inference.
 

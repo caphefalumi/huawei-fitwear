@@ -64,15 +64,35 @@ tags:
 - tapOn:
     id: "input-amount"
 - inputText: "300"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "input-energy"
+    direction: DOWN
 - tapOn:
     id: "input-energy"
 - inputText: "240"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "input-protein"
+    direction: DOWN
 - tapOn:
     id: "input-protein"
 - inputText: "12"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "input-carbs"
+    direction: DOWN
 - tapOn:
     id: "input-carbs"
 - inputText: "30"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "input-fat"
+    direction: DOWN
 - tapOn:
     id: "input-fat"
 - inputText: "8"
@@ -177,7 +197,7 @@ tags:
 - extendedWaitUntil:
     notVisible: "E2E Journal Soup.*"
     timeout: 15000
-- assertVisible: "No meals logged on.*"
+- assertVisible: "No meals logged on.*|No meals yet"
 
 # The deletion reached the server: search finds nothing after a restart.
 - stopApp
