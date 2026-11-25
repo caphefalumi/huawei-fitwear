@@ -48,13 +48,34 @@ linter and `.github/arkts-lint.json`; Huawei's `code-linter.json5` is not used i
    - Start a Wearable Emulator in **Tools > Device Manager**, or plug in a Huawei smartwatch with USB/Wi-Fi debugging enabled.
    - Click the green **Run** button or press `Shift + F10`.
 
+## Watch UI
+
+The app opens on `features/home/HomePage.ets`, which covers wireframe screens
+W1a–W1e and W2–W4. Plan, food and favorite values come from
+`features/common/SampleData.ets` until the phone sends them. Reps are entered with
+−/+ or the crown (no IMU counting yet), and nothing is synced.
+
+Below the start screen is a **Privacy** page that clears saved data. First launch
+shows a notice, and nothing is saved until the user agrees. The workout in progress
+and today's food logs survive an app restart (`features/storage/`); system backup
+is off.
+
 ### Bluetooth demo
 
-On the watch, open **BLE Sync Demo**, grant Bluetooth access, and tap **Start Stream**.
+In a **debug** build, long-press the time to open the demo list, open **BLE Sync Demo**, grant Bluetooth access, and tap **Start Stream**.
 In a mobile development build with Bluetooth enabled, open **BLE Sync** and connect
 to the watch. The phone requests a 185-byte ATT MTU; smaller negotiated MTUs can
 prevent IMU packets from fitting in a notification. The watch stops advertising
 after two minutes without a connection; restart the stream to advertise again.
+
+## Release Build
+
+`hvigorw assembleHap -p buildMode=release` obfuscates top-level names, strips
+`console` logs and hides the demo pages. Before publishing:
+
+- Replace the debug signing config with an AppGallery Connect release profile.
+- Replace `features/common/SampleData.ets` with data synced from the phone.
+- Test crown, vibration, back gesture and battery use on a physical watch.
 
 ## Wearable Design Considerations
 

@@ -493,7 +493,7 @@ export class BleGattServerService {
         hilog.warn(
           DOMAIN,
           TAG,
-          'Watchdog expired: unauthenticated connection from %{public}s',
+          'Watchdog expired: unauthenticated connection from %{private}s',
           this.connectedDeviceId,
         );
         this.listener.onStatus('Errant conn dropped');

@@ -40,6 +40,12 @@ struct ImuPage {
     this.imuService.stop();
   }
 
+  /** Release the sensors as soon as the page is not on screen. */
+  onPageHide(): void {
+    this.imuService.stop();
+    this.running = this.imuService.isRunning();
+  }
+
   build() {
     Scroll() {
       Column({ space: 8 }) {
