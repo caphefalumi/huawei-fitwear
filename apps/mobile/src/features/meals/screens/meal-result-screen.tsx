@@ -14,13 +14,12 @@ import { Palette as C } from "@/theme"
 
 import { MealPhoto } from "../components/meal-photo"
 import { MealRow } from "../components/meal-row"
-import { MealAmountSheet, MealOptionsSheet } from "../components/meal-sheets"
+import { MealItemSheet, type MealItemEdit } from "../components/meal-sheets"
 import { MealTimeSheet } from "../components/meal-time-sheet"
 import { SegmentedChoice, icons } from "../components/meals-ui"
 import {
   mealTypeLabel,
   rescaleItem,
-  splitDetail,
   useMeals,
   type MealItem,
   type MealLog,
@@ -32,12 +31,11 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
   const insets = useSafeAreaInsets()
   const meals = useMeals()
   const { removeItem, updateItem, deleteMeal, logMeal, deleteLog } = meals
-  const mealName = log?.name ?? meals.mealName
   const items = log?.items ?? meals.items
+  // Named like its card in the journal: the largest foods, not the meal type.
+  const mealName = mealTitle({ items, mealType: log?.mealType ?? meals.mealType })
   const totals = log ? { kcal: log.kcal, ...log.macros } : meals.totals
-  const [optionsFor, setOptionsFor] = useState<MealItem | null>(null)
-  const [amountFor, setAmountFor] = useState<MealItem | null>(null)
-  const [amountDraft, setAmountDraft] = useState("")
+  const [editing, setEditing] = useState<MealItem | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [timeOpen, setTimeOpen] = useState(false)
@@ -66,23 +64,25 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
     }
   }
 
-  function openAmount(item: MealItem) {
-    setOptionsFor(null)
-    setAmountDraft(String(splitDetail(item.detail).amount))
-    setAmountFor(item)
-  }
-
-  function saveAmount() {
-    if (!amountFor) return
-    const next = Number(amountDraft)
-    if (!Number.isFinite(next) || next <= 0) {
+  function saveItem(item: MealItem, edit: MealItemEdit) {
+    const name = edit.name.trim()
+    if (!name) {
+      setActionError("Enter a name for this item.")
+      return
+    }
+    if (!Number.isFinite(edit.amount) || edit.amount <= 0) {
       setActionError("Enter a positive portion.")
       return
     }
     void perform(
-      () => updateItem(amountFor.id, rescaleItem(amountFor, next), log?.id),
-      () => setAmountFor(null),
+      () => updateItem(item.id, { ...rescaleItem(item, edit.amount), name }, log?.id),
+      () => setEditing(null),
     )
+  }
+
+  function openEditor(item: MealItem) {
+    setActionError(null)
+    setEditing(item)
   }
 
   const logQuery = log ? `&log=${log.id}` : ""
@@ -164,7 +164,7 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
           </Text>
         </View>
 
-        {actionError && !meals.actionError ? (
+        {actionError && !meals.actionError && !editing ? (
           <Text accessibilityRole="alert" style={styles.footnote}>
             {actionError}
           </Text>
@@ -248,8 +248,8 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
                 key={item.id}
                 item={item}
                 last={index === items.length - 1}
-                onPress={() => setOptionsFor(item)}
-                onEdit={() => setOptionsFor(item)}
+                onPress={() => openEditor(item)}
+                onEdit={() => openEditor(item)}
                 onDelete={() => {
                   void perform(
                     () => removeItem(item.id, log?.id),
@@ -308,38 +308,29 @@ export function MealResultScreen({ log }: { log?: MealLog }) {
         />
       ) : null}
 
-      <MealOptionsSheet
-        item={optionsFor}
+      <MealItemSheet
+        item={editing}
         actionError={actionError}
-        onClose={() => setOptionsFor(null)}
+        pending={pending}
+        onClose={() => setEditing(null)}
+        onSave={saveItem}
         onEditNutrition={(item) => {
-          setOptionsFor(null)
+          setEditing(null)
           router.push(`/review-item?id=${item.id}${logQuery}`)
         }}
         onSearchFood={(item) => {
-          setOptionsFor(null)
+          setEditing(null)
           router.push(`/replace-food?id=${item.id}${logQuery}`)
         }}
-        onChangeAmount={openAmount}
         onDelete={(item) => {
           void perform(
             () => removeItem(item.id, log?.id),
             () => {
-              setOptionsFor(null)
+              setEditing(null)
               if (log && items.length === 1) router.back()
             },
           )
         }}
-      />
-
-      <MealAmountSheet
-        item={amountFor}
-        draft={amountDraft}
-        actionError={actionError}
-        pending={pending}
-        onDraftChange={setAmountDraft}
-        onSave={saveAmount}
-        onClose={() => setAmountFor(null)}
       />
     </>
   )
