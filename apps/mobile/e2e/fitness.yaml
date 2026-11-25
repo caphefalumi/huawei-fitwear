@@ -56,7 +56,7 @@ tags:
 - tapOn:
     id: "tab-meals"
 - extendedWaitUntil:
-    visible: "No meals yet|No meals logged today"
+    visible: "Meals history ›"
     timeout: 20000
 - tapOn:
     text: "Capture meal"
