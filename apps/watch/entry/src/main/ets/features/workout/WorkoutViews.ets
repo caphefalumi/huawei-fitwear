@@ -103,7 +103,7 @@ export struct RestView {
           .width(100)
           .height(100)
           .color(Palette.ACCENT)
-          .backgroundColor(Palette.SURFACE)
+          .backgroundColor(Palette.TRACK)
           .style({ strokeWidth: 7 });
         Text(this.countdown()).fontSize(30).fontWeight(FontWeight.Bold).fontColor(Palette.TEXT);
       }

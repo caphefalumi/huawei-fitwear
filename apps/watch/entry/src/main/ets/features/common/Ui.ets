@@ -1,11 +1,12 @@
-/** Shared watch colors, type sizes and the pill button. */
+/** Same values as the mobile app: apps/mobile/src/theme/tokens.ts. */
 export class Palette {
-  static readonly BACKGROUND: string = '#000000';
-  static readonly TEXT: string = '#FFFFFF';
-  static readonly MUTED: string = '#A7B0BE';
-  static readonly SURFACE: string = '#2A313C';
-  static readonly ACCENT: string = '#F29A9A';
-  static readonly ON_ACCENT: string = '#2A0606';
+  static readonly BACKGROUND: string = '#FAF9F6';
+  static readonly SURFACE: string = '#EFEBE5';
+  static readonly TRACK: string = '#D6D0C9';
+  static readonly TEXT: string = '#252321';
+  static readonly MUTED: string = '#68625C';
+  static readonly ACCENT: string = '#9D2332';
+  static readonly ON_ACCENT: string = '#FFFFFF';
 }
 
 export class Type {

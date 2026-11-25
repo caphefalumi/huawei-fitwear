@@ -30,8 +30,8 @@ export struct ClockView {
       Text(label).width(34).fontSize(12).fontColor(Palette.MUTED);
       Progress({ value: Math.min(eaten, target), total: target, type: ProgressType.Linear })
         .width(52)
-        .color(Palette.TEXT)
-        .backgroundColor(Palette.SURFACE)
+        .color(Palette.ACCENT)
+        .backgroundColor(Palette.TRACK)
         .style({ strokeWidth: 6 });
     }
   }
@@ -59,7 +59,7 @@ export struct ClockView {
             .width(70)
             .height(70)
             .color(Palette.ACCENT)
-            .backgroundColor(Palette.SURFACE)
+            .backgroundColor(Palette.TRACK)
             .style({ strokeWidth: 7 });
           Column() {
             Text(`${Math.abs(this.day.kcalTarget - this.day.kcalEaten)}`)

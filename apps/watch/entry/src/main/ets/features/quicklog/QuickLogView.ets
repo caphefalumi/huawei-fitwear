@@ -57,7 +57,7 @@ export struct QuickLogView {
           Text(`${food.kcal}`).fontSize(30).fontWeight(FontWeight.Bold).fontColor(Palette.TEXT);
           Text('kcal').fontSize(Type.SMALL).fontColor(Palette.MUTED);
         }
-        Divider().vertical(true).height(48).color(Palette.SURFACE);
+        Divider().vertical(true).height(48).color(Palette.TRACK);
         Column() {
           this.macroRow('Pro', food.macros.protein);
           this.macroRow('Carb', food.macros.carbs);
@@ -118,7 +118,7 @@ export struct QuickLogView {
           Row({ space: 5 }) {
             ForEach(this.day.favorites, (food: Food, index: number) => {
               Circle({ width: 6, height: 6 })
-                .fill(index === this.favoriteIndex ? Palette.TEXT : Palette.SURFACE);
+                .fill(index === this.favoriteIndex ? Palette.ACCENT : Palette.TRACK);
             }, (food: Food) => food.name);
           }
           .margin({ bottom: 10 });
