@@ -15,6 +15,9 @@ export class Type {
   static readonly BIG: number = 46;
 }
 
+/** Smallest comfortable touch target on a moving wrist. */
+export const MIN_TARGET: number = 48;
+
 @ComponentV2
 export struct PillButton {
   @Require @Param label: string;
@@ -31,6 +34,8 @@ export struct PillButton {
       .fontWeight(FontWeight.Medium)
       .fontColor(this.primary ? Palette.ON_ACCENT : Palette.TEXT)
       .backgroundColor(this.primary ? Palette.ACCENT : Palette.SURFACE)
+      // The touch area is taller than the drawn pill.
+      .responseRegion({ x: 0, y: this.primary ? -3 : -6, width: '100%', height: MIN_TARGET })
       .onClick(() => this.onTap());
   }
 }

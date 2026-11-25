@@ -9,18 +9,28 @@ const FRAME_MS: number = 700;
 @ComponentV2
 export struct FormGuideView {
   @Require @Param exerciseName: string;
+  /** False while the screen is hidden, which stops the animation timer. */
+  @Param active: boolean = true;
   @Event onBack: () => void = () => {};
   @Local raised: boolean = true;
   private frameTimer: number = -1;
 
   aboutToAppear(): void {
-    this.frameTimer = setInterval(() => {
-      this.raised = !this.raised;
-    }, FRAME_MS);
+    this.animate();
   }
 
   aboutToDisappear(): void {
     clearInterval(this.frameTimer);
+  }
+
+  @Monitor('active')
+  animate(): void {
+    clearInterval(this.frameTimer);
+    if (this.active) {
+      this.frameTimer = setInterval(() => {
+        this.raised = !this.raised;
+      }, FRAME_MS);
+    }
   }
 
   @Builder

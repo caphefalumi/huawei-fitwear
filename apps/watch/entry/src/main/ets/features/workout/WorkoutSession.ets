@@ -43,6 +43,25 @@ export enum TickEvent {
   AUTO_ENDED,
 }
 
+/** Everything needed to rebuild a session after the app process is killed. */
+export interface SessionSnapshot {
+  planKey: string;
+  status: WorkoutStatus;
+  phase: WorkoutPhase;
+  paused: boolean;
+  cycle: number;
+  exerciseIndex: number;
+  setIndex: number;
+  reps: number;
+  restLeftMs: number;
+  restEndsAt: number;
+  activeMs: number;
+  runningSince: number;
+  lastActivityAt: number;
+  exercisesDone: number;
+  records: SetRecord[];
+}
+
 @ObservedV2
 export class WorkoutSession {
   readonly plan: WorkoutPlan;
@@ -198,6 +217,63 @@ export class WorkoutSession {
     this.lastActivityAt = now;
   }
 
+  snapshot(): SessionSnapshot {
+    return {
+      planKey: this.planKey(),
+      status: this.status,
+      phase: this.phase,
+      paused: this.paused,
+      cycle: this.cycle,
+      exerciseIndex: this.exerciseIndex,
+      setIndex: this.setIndex,
+      reps: this.reps,
+      // A running rest is described by its end time, so the snapshot stays still between taps.
+      restLeftMs: this.paused ? this.restLeftMs : 0,
+      restEndsAt: this.restEndsAt,
+      activeMs: this.activeMs,
+      runningSince: this.runningSince,
+      lastActivityAt: this.lastActivityAt,
+      exercisesDone: this.exercisesDone,
+      records: this.records,
+    };
+  }
+
+  /** Returns false, changing nothing, if the snapshot does not fit the current plan. */
+  restore(saved: SessionSnapshot, now: number): boolean {
+    if (saved.planKey !== this.planKey() || !Array.isArray(saved.records)) {
+      return false;
+    }
+    const exercise = this.plan.exercises[saved.exerciseIndex];
+    if (!exercise || !(saved.setIndex >= 0 && saved.setIndex < exercise.sets)) {
+      return false;
+    }
+    this.status = saved.status;
+    this.phase = saved.phase;
+    this.paused = saved.paused;
+    this.cycle = saved.cycle;
+    this.exerciseIndex = saved.exerciseIndex;
+    this.setIndex = saved.setIndex;
+    this.reps = saved.reps;
+    this.restEndsAt = saved.restEndsAt;
+    if (saved.phase !== WorkoutPhase.REST) {
+      this.restLeftMs = 0;
+    } else {
+      this.restLeftMs = saved.paused ? saved.restLeftMs : Math.max(0, saved.restEndsAt - now);
+    }
+    this.activeMs = saved.activeMs;
+    this.runningSince = saved.runningSince;
+    this.lastActivityAt = saved.lastActivityAt;
+    this.exercisesDone = saved.exercisesDone;
+    this.records = saved.records;
+    this.askingStillTraining = false;
+    // Too long gone to still be asking "Still training?": end at the last activity.
+    if (this.status === WorkoutStatus.ACTIVE &&
+      now - this.lastActivityAt >= IDLE_PROMPT_MS + IDLE_ANSWER_MS) {
+      this.finish(WorkoutStatus.ENDED_EARLY, this.lastActivityAt);
+    }
+    return true;
+  }
+
   tick(now: number): TickEvent {
     if (this.status !== WorkoutStatus.ACTIVE) {
       return TickEvent.NONE;
@@ -223,6 +299,10 @@ export class WorkoutSession {
       }
     }
     return TickEvent.NONE;
+  }
+
+  private planKey(): string {
+    return JSON.stringify(this.plan.exercises);
   }
 
   private isCounting(): boolean {

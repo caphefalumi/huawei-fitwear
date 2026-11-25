@@ -1,9 +1,14 @@
+import { common } from '@kit.AbilityKit';
+import BuildProfile from 'BuildProfile';
 import { SAMPLE_DAY, SAMPLE_FAVORITES, SAMPLE_PLAN } from '../common/SampleData';
 import { HAPTIC_ALERT_MS, HAPTIC_SIGNAL_MS, HAPTIC_TICK_MS, vibrate } from '../common/Haptics';
 import { Palette } from '../common/Ui';
+import { PrivacyView } from '../privacy/PrivacyView';
 import { FoodDay } from '../quicklog/FoodDay';
 import { QuickLogView } from '../quicklog/QuickLogView';
 import { FormGuideView } from '../workout/FormGuideView';
+import { dayKey, encodeState, restoreState } from '../storage/SavedState';
+import { WatchStore } from '../storage/WatchStore';
 import { StartView } from '../workout/StartView';
 import { TickEvent, WorkoutPhase, WorkoutSession, WorkoutStatus } from '../workout/WorkoutSession';
 import {
@@ -18,6 +23,7 @@ import { ClockView } from './ClockView';
 
 const QUICK_LOG_PAGE: number = 0;
 const CLOCK_PAGE: number = 1;
+const PRIVACY_PAGE: number = 3;
 const SET_PAGE: number = 0;
 const CONTROLS_PAGE: number = 1;
 /** Crown rotation per detent. Direction and size need tuning on a real watch. */
@@ -28,10 +34,13 @@ const TICK_MS: number = 500;
 @Entry
 @ComponentV2
 struct HomePage {
-  private readonly session: WorkoutSession = new WorkoutSession(SAMPLE_PLAN);
-  private readonly day: FoodDay = new FoodDay(SAMPLE_DAY, SAMPLE_FAVORITES);
+  private readonly store: WatchStore = new WatchStore();
   private readonly homePager: SwiperController = new SwiperController();
   private readonly workoutPager: SwiperController = new SwiperController();
+  @Local session: WorkoutSession = new WorkoutSession(SAMPLE_PLAN);
+  @Local day: FoodDay = new FoodDay(SAMPLE_DAY, SAMPLE_FAVORITES);
+  @Local consented: boolean = false;
+  @Local visible: boolean = true;
   @Local now: number = Date.now();
   @Local homePage: number = CLOCK_PAGE;
   @Local workoutPage: number = SET_PAGE;
@@ -40,21 +49,76 @@ struct HomePage {
   @Local summaryDismissed: boolean = false;
   private ticker: number = -1;
   private crownDegrees: number = 0;
+  private today: string = dayKey(Date.now());
 
   aboutToAppear(): void {
-    this.ticker = setInterval(() => this.tick(), TICK_MS);
+    this.store.open(this.getUIContext().getHostContext() as common.UIAbilityContext);
+    this.consented = this.store.hasConsent();
+    if (this.consented) {
+      this.summaryDismissed =
+        restoreState(this.store.loadState(), this.session, this.day, Date.now());
+    }
+    this.startTicker();
   }
 
   aboutToDisappear(): void {
-    clearInterval(this.ticker);
+    this.stopTicker();
   }
 
   onPageShow(): void {
+    this.visible = true;
+    this.startTicker();
     this.tick();
+  }
+
+  onPageHide(): void {
+    this.visible = false;
+    this.save();
+    // A workout keeps ticking so the end of a rest can still vibrate.
+    if (this.session.status !== WorkoutStatus.ACTIVE) {
+      this.stopTicker();
+    }
+  }
+
+  private startTicker(): void {
+    if (this.ticker === -1) {
+      this.ticker = setInterval(() => this.tick(), TICK_MS);
+    }
+  }
+
+  private stopTicker(): void {
+    clearInterval(this.ticker);
+    this.ticker = -1;
+  }
+
+  private save(): void {
+    this.store.saveState(encodeState(this.session, this.day, this.summaryDismissed, Date.now()));
+  }
+
+  private clearData(): void {
+    this.store.clear();
+    this.session = new WorkoutSession(SAMPLE_PLAN);
+    this.day = new FoodDay(SAMPLE_DAY, SAMPLE_FAVORITES);
+    this.summaryDismissed = false;
+    this.homePage = CLOCK_PAGE;
+    this.consented = false;
+  }
+
+  /** At midnight yesterday's food logs and finished workout go away. */
+  private startNewDay(today: string): void {
+    this.today = today;
+    this.day = new FoodDay(SAMPLE_DAY, SAMPLE_FAVORITES);
+    if (this.session.status !== WorkoutStatus.ACTIVE) {
+      this.session = new WorkoutSession(SAMPLE_PLAN);
+      this.summaryDismissed = false;
+    }
   }
 
   /** Back (including a left-to-right swipe) steps out of a layer instead of closing the app. */
   onBackPress(): boolean {
+    if (!this.consented) {
+      return false;
+    }
     if (this.session.status === WorkoutStatus.ACTIVE) {
       if (this.session.askingStillTraining) {
         this.session.stillTraining(Date.now());
@@ -77,11 +141,20 @@ struct HomePage {
 
   private tick(): void {
     this.now = Date.now();
+    const today = dayKey(this.now);
+    if (today !== this.today) {
+      this.startNewDay(today);
+    }
     const event = this.session.tick(this.now);
     if (event === TickEvent.REST_OVER) {
       vibrate(HAPTIC_SIGNAL_MS);
     } else if (event === TickEvent.STILL_TRAINING || event === TickEvent.AUTO_ENDED) {
       vibrate(HAPTIC_ALERT_MS);
+    }
+    // One place to save: any change is on disk within a tick.
+    this.save();
+    if (!this.visible && this.session.status !== WorkoutStatus.ACTIVE) {
+      this.stopTicker();
     }
   }
 
@@ -125,6 +198,9 @@ struct HomePage {
 
   private onCrown(event: CrownEvent): void {
     event.stopPropagation();
+    if (!this.consented) {
+      return;
+    }
     if (event.action === CrownAction.END) {
       this.crownDegrees = 0;
       return;
@@ -148,7 +224,7 @@ struct HomePage {
       return;
     }
     const page = this.homePage + step;
-    if (page >= QUICK_LOG_PAGE && page <= CLOCK_PAGE + 1) {
+    if (page >= QUICK_LOG_PAGE && page <= PRIVACY_PAGE) {
       this.homePager.changeIndex(page, true);
       vibrate(HAPTIC_TICK_MS);
     }
@@ -189,6 +265,7 @@ struct HomePage {
     } else if (this.showingForm) {
       FormGuideView({
         exerciseName: this.session.exercise.name,
+        active: this.visible,
         onBack: () => this.closeForm(),
       });
     } else {
@@ -244,7 +321,10 @@ struct HomePage {
         now: this.now,
         day: this.day,
         onOpenDemos: () => {
-          this.getUIContext().getRouter().pushUrl({ url: 'pages/Index' });
+          // The BLE and IMU demos are developer tools: unreachable in release builds.
+          if (BuildProfile.DEBUG) {
+            this.getUIContext().getRouter().pushUrl({ url: 'pages/Index' });
+          }
         },
       });
       Column() {
@@ -260,6 +340,8 @@ struct HomePage {
       }
       .width('100%')
       .height('100%');
+
+      PrivacyView({ onClear: () => this.clearData() });
     }
     .index(this.homePage)
     .vertical(true)
@@ -274,7 +356,15 @@ struct HomePage {
 
   build() {
     Column() {
-      if (this.session.status === WorkoutStatus.ACTIVE) {
+      if (!this.consented) {
+        PrivacyView({
+          firstRun: true,
+          onAgree: () => {
+            this.store.giveConsent();
+            this.consented = true;
+          },
+        });
+      } else if (this.session.status === WorkoutStatus.ACTIVE) {
         this.workout();
       } else if (this.session.status !== WorkoutStatus.IDLE && !this.summaryDismissed) {
         this.summary();

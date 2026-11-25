@@ -56,8 +56,8 @@ export struct ClockView {
             total: this.day.kcalTarget,
             type: ProgressType.Ring,
           })
-            .width(70)
-            .height(70)
+            .width(78)
+            .height(78)
             .color(Palette.ACCENT)
             .backgroundColor(Palette.TRACK)
             .style({ strokeWidth: 7 });
@@ -67,7 +67,7 @@ export struct ClockView {
               .fontWeight(FontWeight.Bold)
               .fontColor(Palette.TEXT);
             Text(this.day.kcalEaten > this.day.kcalTarget ? 'kcal over' : 'kcal left')
-              .fontSize(9)
+              .fontSize(12)
               .fontColor(Palette.MUTED);
           }
         }

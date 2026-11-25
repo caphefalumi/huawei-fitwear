@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@ohos/hypium';
 import { FoodDay } from '../main/ets/features/quicklog/FoodDay';
+import { encodeState, restoreState } from '../main/ets/features/storage/SavedState';
 import {
   IDLE_ANSWER_MS,
   IDLE_PROMPT_MS,
@@ -18,6 +19,18 @@ const PLAN: WorkoutPlan = {
     { name: 'B', sets: 1, reps: 3, restSeconds: 60 },
   ],
 };
+
+function emptyDay(): FoodDay {
+  return new FoodDay(
+    {
+      kcalTarget: 2000,
+      kcalEaten: 100,
+      target: { protein: 100, carbs: 200, fat: 60 },
+      eaten: { protein: 1, carbs: 2, fat: 3 },
+    },
+    [{ name: 'Rice', kcal: 500, macros: { protein: 10, carbs: 20, fat: 5 } }],
+  );
+}
 
 function started(): WorkoutSession {
   const session = new WorkoutSession(PLAN);
@@ -107,6 +120,57 @@ export default function workoutSessionTest() {
       expect(day.timesLogged(day.favorites[0])).assertEqual(1);
       day.undoLast();
       expect(day.kcalEaten).assertEqual(100);
+    });
+  });
+
+  describe('SavedState', () => {
+    const noon = new Date(2026, 0, 10, 12, 0, 0).getTime();
+    const nextDay = noon + 24 * 60 * 60 * 1000;
+
+    it('restores a workout in progress and today food logs', 0, () => {
+      const session = new WorkoutSession(PLAN);
+      const day = emptyDay();
+      session.start(noon);
+      session.doneSet(noon + 1000);
+      day.log(day.favorites[0]);
+      const saved = encodeState(session, day, false, noon + 1000);
+
+      const restored = new WorkoutSession(PLAN);
+      const restoredDay = emptyDay();
+      restoreState(saved, restored, restoredDay, noon + 11000);
+      expect(restored.status).assertEqual(WorkoutStatus.ACTIVE);
+      expect(restored.records.length).assertEqual(1);
+      expect(restored.restLeftMs).assertEqual(50000);
+      expect(restoredDay.kcalEaten).assertEqual(600);
+    });
+
+    it('ends an abandoned workout and drops yesterday food logs', 0, () => {
+      const session = new WorkoutSession(PLAN);
+      const day = emptyDay();
+      session.start(noon);
+      session.changeReps(1, noon + 5000);
+      day.log(day.favorites[0]);
+      const saved = encodeState(session, day, false, noon + 5000);
+
+      const restored = new WorkoutSession(PLAN);
+      const restoredDay = emptyDay();
+      restoreState(saved, restored, restoredDay, nextDay);
+      expect(restored.status).assertEqual(WorkoutStatus.ENDED_EARLY);
+      expect(restored.activeMs).assertEqual(5000);
+      expect(restoredDay.kcalEaten).assertEqual(100);
+    });
+
+    it('ignores damaged data and a changed plan', 0, () => {
+      const session = new WorkoutSession(PLAN);
+      restoreState('{oops', session, emptyDay(), noon);
+      expect(session.status).assertEqual(WorkoutStatus.IDLE);
+
+      const old = new WorkoutSession(PLAN);
+      old.start(noon);
+      const changed: WorkoutPlan = { group: 'Legs', minutes: 5, exercises: [PLAN.exercises[1]] };
+      const other = new WorkoutSession(changed);
+      restoreState(encodeState(old, emptyDay(), false, noon), other, emptyDay(), noon);
+      expect(other.status).assertEqual(WorkoutStatus.IDLE);
     });
   });
 }

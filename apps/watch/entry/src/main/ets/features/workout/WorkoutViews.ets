@@ -1,5 +1,5 @@
 import { HAPTIC_SIGNAL_MS, HAPTIC_TICK_MS, vibrate } from '../common/Haptics';
-import { Palette, PillButton, SwipeHint, Type } from '../common/Ui';
+import { MIN_TARGET, Palette, PillButton, SwipeHint, Type } from '../common/Ui';
 import { WorkoutPhase, WorkoutSession, WorkoutStatus } from './WorkoutSession';
 
 /** Changes the rep count with haptics; shared by the buttons and the crown. */
@@ -17,8 +17,8 @@ export struct SetView {
   @Builder
   stepButton(label: string, delta: number) {
     Button(label, { type: ButtonType.Circle })
-      .width(40)
-      .height(40)
+      .width(MIN_TARGET)
+      .height(MIN_TARGET)
       .fontSize(22)
       .fontColor(Palette.TEXT)
       .backgroundColor(Palette.SURFACE)
@@ -40,7 +40,7 @@ export struct SetView {
           Span(`/${this.session.exercise.reps}`).fontSize(Type.TITLE);
         }
         .fontColor(Palette.TEXT)
-        .constraintSize({ minWidth: 76 })
+        .constraintSize({ minWidth: 72 })
         .textAlign(TextAlign.Center);
         this.stepButton('+', 1);
       }
@@ -58,6 +58,7 @@ export struct SetView {
         .fontColor(Palette.TEXT)
         .decoration({ type: TextDecorationType.Underline, color: Palette.MUTED })
         .padding({ left: 12, right: 12, top: 4, bottom: 4 })
+        .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
         .onClick(() => this.onViewForm());
       SwipeHint();
     }
@@ -144,6 +145,7 @@ export struct ControlsView {
         .fontColor(Palette.MUTED)
         .decoration({ type: TextDecorationType.Underline, color: Palette.MUTED })
         .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+        .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
         .onClick(() => this.onEnd());
     }
     .width('100%')
@@ -207,8 +209,8 @@ export struct SummaryView {
         this.stat(this.session.totalReps, 'reps');
         this.stat(Math.round(this.session.activeMs / 60000), 'min');
       }
-      // Phone sync is not implemented yet, so never claim "Synced".
-      Text('Will sync when reconnected')
+      // Phone sync is not implemented yet, so promise nothing about it.
+      Text('Saved on this watch')
         .width('72%')
         .fontSize(12)
         .fontColor(Palette.MUTED)
@@ -220,6 +222,7 @@ export struct SummaryView {
           .fontColor(Palette.TEXT)
           .decoration({ type: TextDecorationType.Underline, color: Palette.MUTED })
           .padding({ left: 12, right: 12, top: 2, bottom: 2 })
+          .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
           .onClick(() => this.onContinue());
       }
     }
