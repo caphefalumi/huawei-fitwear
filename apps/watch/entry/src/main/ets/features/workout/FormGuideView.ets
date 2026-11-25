@@ -1,52 +1,36 @@
+import { common } from '@kit.AbilityKit';
+import { loadAnimation, mediaId } from '../media/ExerciseMedia';
 import { Palette, PillButton, Type } from '../common/Ui';
 
-const FRAME_MS: number = 700;
-
-/**
- * W3: two still frames flipped in turn. The figure is a placeholder bench press;
- * per-exercise artwork is not available yet.
- */
+/** W3: the exercise animation from the mobile app. */
 @ComponentV2
 export struct FormGuideView {
+  @Require @Param exerciseKey: string;
   @Require @Param exerciseName: string;
-  /** False while the screen is hidden, which stops the animation timer. */
-  @Param active: boolean = true;
   @Event onBack: () => void = () => {};
-  @Local raised: boolean = true;
-  private frameTimer: number = -1;
+  @Local gifUri: string = '';
 
   aboutToAppear(): void {
-    this.animate();
+    this.load();
   }
 
-  aboutToDisappear(): void {
-    clearInterval(this.frameTimer);
-  }
-
-  @Monitor('active')
-  animate(): void {
-    clearInterval(this.frameTimer);
-    if (this.active) {
-      this.frameTimer = setInterval(() => {
-        this.raised = !this.raised;
-      }, FRAME_MS);
+  @Monitor('exerciseKey')
+  load(): void {
+    this.gifUri = '';
+    const id = mediaId(this.exerciseKey);
+    if (id === '') {
+      return;
     }
-  }
-
-  @Builder
-  stroke(x1: number, y1: number, x2: number, y2: number) {
-    Line()
-      .width(114)
-      .height(69)
-      .startPoint([x1 * 1.5, y1 * 1.5])
-      .endPoint([x2 * 1.5, y2 * 1.5])
-      .stroke(Palette.TEXT)
-      .strokeWidth(3)
-      .strokeLineCap(LineCapStyle.Round);
+    loadAnimation(this.getUIContext().getHostContext() as common.Context, id)
+      .then((uri: string) => {
+        if (id === mediaId(this.exerciseKey)) {
+          this.gifUri = uri;
+        }
+      });
   }
 
   build() {
-    Column({ space: 10 }) {
+    Column({ space: 8 }) {
       Text(this.exerciseName)
         .width('70%')
         .fontSize(Type.SMALL)
@@ -54,18 +38,20 @@ export struct FormGuideView {
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
-      Stack({ alignContent: Alignment.TopStart }) {
-        this.stroke(6, 34, 70, 34); // bench
-        this.stroke(16, 34, 16, 44);
-        this.stroke(60, 34, 60, 44);
-        Circle({ width: 15, height: 15 }).fill(Palette.TEXT).position({ x: 16.5, y: 31.5 });
-        this.stroke(22, 28, 50, 28); // body
-        this.stroke(50, 28, 64, 40);
-        this.stroke(30, 28, 30, this.raised ? 10 : 21); // arm
-        this.stroke(22, this.raised ? 10 : 21, 38, this.raised ? 10 : 21); // bar
+      if (mediaId(this.exerciseKey) === '') {
+        Text('No animation for this exercise')
+          .width('70%')
+          .fontSize(Type.SMALL)
+          .fontColor(Palette.TEXT)
+          .textAlign(TextAlign.Center);
+      } else {
+        Image(this.gifUri !== '' ? this.gifUri :
+          $rawfile(`exercise-loops/${mediaId(this.exerciseKey)}.webp`))
+          .width(124)
+          .height(124)
+          .borderRadius(18)
+          .objectFit(ImageFit.Contain);
       }
-      .width(114)
-      .height(69);
       PillButton({ label: 'Back', onTap: () => this.onBack() });
     }
     .width('100%')

@@ -22,6 +22,7 @@ function formatDate(now: number): string {
 export struct ClockView {
   @Require @Param now: number;
   @Require @Param day: FoodDay;
+  @Param connected: boolean = false;
   @Event onOpenDemos: () => void = () => {};
 
   @Builder
@@ -40,7 +41,13 @@ export struct ClockView {
     Column({ space: 8 }) {
       SwipeHint({ up: true, label: 'Quick log' });
       Column() {
-        Text(formatDate(this.now)).fontSize(Type.SMALL).fontColor(Palette.MUTED);
+        Row({ space: 5 }) {
+          Text(formatDate(this.now)).fontSize(Type.SMALL).fontColor(Palette.MUTED);
+          Circle({ width: 7, height: 7 }).fill(this.connected ? Palette.ACCENT : Palette.TRACK);
+          Text(this.connected ? 'Phone' : 'No phone')
+            .fontSize(12)
+            .fontColor(this.connected ? Palette.TEXT : Palette.MUTED);
+        }
         Text(formatTime(this.now))
           .fontSize(Type.BIG)
           .fontWeight(FontWeight.Bold)

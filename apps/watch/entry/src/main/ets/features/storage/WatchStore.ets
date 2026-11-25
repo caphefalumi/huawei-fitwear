@@ -6,6 +6,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 const STORE_NAME: string = 'watch_state';
 const KEY_CONSENT: string = 'consent';
 const KEY_STATE: string = 'state';
+const KEY_PHONE: string = 'phone';
 const TAG: string = 'WatchStore';
 
 /**
@@ -38,6 +39,20 @@ export class WatchStore {
     this.write(KEY_CONSENT, true);
   }
 
+  /** The phone the wearer allowed to connect; '' when none. */
+  allowedPhone(): string {
+    try {
+      return this.store?.getSync(KEY_PHONE, '') as string ?? '';
+    } catch (err) {
+      this.report('read', err as BusinessError);
+      return '';
+    }
+  }
+
+  allowPhone(phone: string): void {
+    this.write(KEY_PHONE, phone);
+  }
+
   loadState(): string {
     return this.lastState;
   }
@@ -51,7 +66,7 @@ export class WatchStore {
     this.write(KEY_STATE, state);
   }
 
-  /** Removes all saved data and the consent. */
+  /** Removes all saved data, the paired phone and the consent. */
   clear(): void {
     this.lastState = '';
     try {

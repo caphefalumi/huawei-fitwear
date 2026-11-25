@@ -1,19 +1,19 @@
+import { WorkoutPlan } from '../link/SyncProtocol';
 import { DayTotals, Food } from '../quicklog/FoodDay';
-import { WorkoutPlan } from '../workout/WorkoutSession';
 
-/**
- * Placeholder values from the wireframe. The phone does not send these yet;
- * replace this file's exports with synced data when it does.
- */
+/** Shown until the phone sends its plan. */
+export const NO_PLAN: WorkoutPlan = { name: '', minutes: 0, exercises: [] };
+
+/** Lets debug builds be tried without a phone. Release builds start with NO_PLAN. */
 export const SAMPLE_PLAN: WorkoutPlan = {
-  group: 'Chest',
+  name: 'Chest',
   minutes: 40,
   exercises: [
-    { name: 'Chest press', sets: 3, reps: 12, restSeconds: 60 },
-    { name: 'Push-up', sets: 3, reps: 10, restSeconds: 60 },
-    { name: 'Chest fly', sets: 3, reps: 12, restSeconds: 60 },
-    { name: 'Incline press', sets: 3, reps: 10, restSeconds: 90 },
-    { name: 'Cable crossover', sets: 3, reps: 12, restSeconds: 60 },
+    { key: 'machine-chest-press', name: 'Chest press', sets: 3, reps: 12, unit: 'reps', rest: 60, superset: '' },
+    { key: 'push-up', name: 'Push-up', sets: 3, reps: 10, unit: 'reps', rest: 60, superset: '' },
+    { key: 'cable-chest-fly', name: 'Chest fly', sets: 3, reps: 12, unit: 'reps', rest: 60, superset: '' },
+    { key: 'incline-dumbbell-press', name: 'Incline press', sets: 3, reps: 10, unit: 'reps', rest: 90, superset: '' },
+    { key: 'pec-deck', name: 'Pec deck', sets: 3, reps: 12, unit: 'reps', rest: 60, superset: '' },
   ],
 };
 

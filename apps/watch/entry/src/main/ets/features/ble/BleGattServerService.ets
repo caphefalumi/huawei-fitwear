@@ -43,6 +43,13 @@ export interface BleGattServerListener {
   onReceived: (text: string) => void;
 }
 
+export interface BleGattServerOptions {
+  /** Keep the screen lit while advertising or connected. */
+  keepScreenOn: boolean;
+  /** Stop advertising after this long without a connection; 0 never stops. */
+  advTimeoutMs: number;
+}
+
 const textEncoder: util.TextEncoder = new util.TextEncoder();
 const textDecoder: util.TextDecoder = util.TextDecoder.create('utf-8');
 
@@ -64,6 +71,7 @@ function decodeUtf8(buffer: ArrayBuffer): string {
  */
 export class BleGattServerService {
   private listener: BleGattServerListener;
+  private options: BleGattServerOptions;
   private context: common.UIAbilityContext | undefined = undefined;
   private gattServer: ble.GattServer | undefined = undefined;
   private advHandle: number = 0xff;
@@ -85,8 +93,10 @@ export class BleGattServerService {
   /** Errant connection / handshake watchdog timer ID. */
   private handshakeTimer: number = -1;
 
-  constructor(listener: BleGattServerListener) {
+  constructor(listener: BleGattServerListener,
+    options: BleGattServerOptions = { keepScreenOn: true, advTimeoutMs: ADV_TIMEOUT_MS }) {
     this.listener = listener;
+    this.options = options;
     // Initial connection reads 0 until client explicitly subscribes
     const cccView = new Uint8Array(this.cccBuffer);
     cccView[0] = 0;
@@ -182,6 +192,41 @@ export class BleGattServerService {
       this.listener.onStatus(`Send Err: ${e.code}`);
     }
     return clean;
+  }
+
+  /**
+   * Notifies one frame exactly as given. Resolves false if there is no subscribed phone
+   * or the stack rejects it.
+   */
+  sendFrame(frame: string): Promise<boolean> {
+    const server = this.gattServer;
+    const encoded = encodeUtf8(frame);
+    if (!server || this.connectedDeviceId.length === 0 || new Uint8Array(this.cccBuffer)[0] !== 1 ||
+      encoded.byteLength > this.getEffectiveMaxPayload()) {
+      return Promise.resolve(false);
+    }
+    this.outboundBuffer = encoded;
+    const notifyChar: ble.NotifyCharacteristic = {
+      serviceUuid: SERVICE_UUID,
+      characteristicUuid: CHAR_MESSAGE_UUID,
+      characteristicValue: encoded,
+      confirm: false,
+    };
+    return new Promise<boolean>((resolve: (sent: boolean) => void) => {
+      try {
+        server.notifyCharacteristicChanged(this.connectedDeviceId, notifyChar,
+          (err: BusinessError) => {
+            if (err && err.code) {
+              hilog.warn(DOMAIN, TAG, 'notify err: %{public}d', err.code);
+            }
+            resolve(!(err && err.code));
+          });
+      } catch (err) {
+        const e = err as BusinessError;
+        hilog.warn(DOMAIN, TAG, 'notify err: %{public}d', e.code);
+        resolve(false);
+      }
+    });
   }
 
   private setupGattServerAndAdvertise(): void {
@@ -467,6 +512,9 @@ export class BleGattServerService {
 
   private startAdvTimeout(): void {
     this.clearAdvTimeout();
+    if (this.options.advTimeoutMs === 0) {
+      return;
+    }
     this.advTimeoutTimer = setTimeout(() => {
       if (this.serverRunning && this.connectedDeviceId.length === 0) {
         hilog.info(DOMAIN, TAG, 'Adv timed out after 120s without connection');
@@ -474,7 +522,7 @@ export class BleGattServerService {
         this.setKeepScreen(false);
         this.listener.onStatus('Adv Timed Out');
       }
-    }, ADV_TIMEOUT_MS);
+    }, this.options.advTimeoutMs);
   }
 
   private clearAdvTimeout(): void {
@@ -528,7 +576,7 @@ export class BleGattServerService {
   }
 
   private setKeepScreen(on: boolean): void {
-    if (!this.context) {
+    if (!this.context || !this.options.keepScreenOn) {
       return;
     }
     const context = this.context;

@@ -34,15 +34,16 @@ export struct SetView {
         .textAlign(TextAlign.Center)
         .maxLines(2);
       Row({ space: 10 }) {
-        this.stepButton('−', -1);
+        this.stepButton('−', this.session.exercise.unit === 'seconds' ? -5 : -1);
         Text() {
           Span(`${this.session.reps}`).fontSize(Type.BIG).fontWeight(FontWeight.Bold);
-          Span(`/${this.session.exercise.reps}`).fontSize(Type.TITLE);
+          Span(`/${this.session.exercise.reps}${this.session.exercise.unit === 'seconds' ? 's' : ''}`)
+            .fontSize(Type.TITLE);
         }
         .fontColor(Palette.TEXT)
         .constraintSize({ minWidth: 72 })
         .textAlign(TextAlign.Center);
-        this.stepButton('+', 1);
+        this.stepButton('+', this.session.exercise.unit === 'seconds' ? 5 : 1);
       }
       PillButton({
         label: 'Done set',
@@ -73,6 +74,11 @@ export struct SetView {
 export struct RestView {
   @Require @Param session: WorkoutSession;
 
+  /** Rest follows the previous set, which may belong to the previous exercise. */
+  private restTotal(): number {
+    return Math.max(this.session.exercise.rest, Math.ceil(this.session.restLeftMs / 1000), 1);
+  }
+
   private countdown(): string {
     const seconds = Math.ceil(this.session.restLeftMs / 1000);
     const rest = seconds % 60;
@@ -97,8 +103,8 @@ export struct RestView {
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       Stack() {
         Progress({
-          value: Math.min(this.session.restLeftMs / 1000, this.session.exercise.restSeconds),
-          total: this.session.exercise.restSeconds,
+          value: Math.min(this.session.restLeftMs / 1000, this.restTotal()),
+          total: this.restTotal(),
           type: ProgressType.Ring,
         })
           .width(100)
@@ -125,7 +131,6 @@ export struct RestView {
 export struct ControlsView {
   @Require @Param session: WorkoutSession;
   @Event onContinue: () => void = () => {};
-  @Event onNewCycle: () => void = () => {};
   @Event onSkipExercise: () => void = () => {};
   @Event onEnd: () => void = () => {};
 
@@ -133,13 +138,10 @@ export struct ControlsView {
     Column({ space: 10 }) {
       SwipeHint({
         up: true,
-        label: `Paused · ${this.session.plan.group} ${this.session.exercisesDone}/${this.session.plan.exercises.length}`,
+        label: `Paused · ${this.session.plan.name} ${this.session.exercisesDone}/${this.session.plan.exercises.length}`,
       });
       PillButton({ label: 'Continue', primary: true, pillWidth: 130, onTap: () => this.onContinue() });
-      Row({ space: 6 }) {
-        PillButton({ label: 'New cycle', pillWidth: 88, onTap: () => this.onNewCycle() });
-        PillButton({ label: 'Skip', pillWidth: 64, onTap: () => this.onSkipExercise() });
-      }
+      PillButton({ label: 'Skip exercise', pillWidth: 130, onTap: () => this.onSkipExercise() });
       Text('End workout')
         .fontSize(12)
         .fontColor(Palette.MUTED)
@@ -160,6 +162,7 @@ export struct ConfirmView {
   @Require @Param title: string;
   @Require @Param message: string;
   @Require @Param keepLabel: string;
+  @Param endLabel: string = 'End';
   @Event onKeep: () => void = () => {};
   @Event onEnd: () => void = () => {};
 
@@ -171,7 +174,7 @@ export struct ConfirmView {
         .fontColor(Palette.MUTED)
         .textAlign(TextAlign.Center);
       PillButton({ label: this.keepLabel, primary: true, pillWidth: 130, onTap: () => this.onKeep() });
-      PillButton({ label: 'End', onTap: () => this.onEnd() });
+      PillButton({ label: this.endLabel, onTap: () => this.onEnd() });
     }
     .width('100%')
     .height('100%')
@@ -179,10 +182,11 @@ export struct ConfirmView {
   }
 }
 
-/** W4: totals across all cycles. */
+/** W4: totals for the workout. */
 @ComponentV2
 export struct SummaryView {
   @Require @Param session: WorkoutSession;
+  @Param connected: boolean = false;
   @Event onDone: () => void = () => {};
   @Event onContinue: () => void = () => {};
 
@@ -209,8 +213,8 @@ export struct SummaryView {
         this.stat(this.session.totalReps, 'reps');
         this.stat(Math.round(this.session.activeMs / 60000), 'min');
       }
-      // Phone sync is not implemented yet, so promise nothing about it.
-      Text('Saved on this watch')
+      // The phone saves workouts to the account; the watch cannot.
+      Text(this.connected ? 'Save it on your phone' : 'Open phone to save')
         .width('72%')
         .fontSize(12)
         .fontColor(Palette.MUTED)
