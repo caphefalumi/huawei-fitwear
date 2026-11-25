@@ -2,11 +2,11 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "module description"
+      "value": "VoocHealth watch app"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "description"
+      "value": "Workouts and quick food logging"
     },
     {
       "name": "EntryAbility_label",
