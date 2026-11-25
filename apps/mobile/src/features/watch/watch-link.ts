@@ -1,0 +1,152 @@
+/** Keeps one connection to the watch alive and mirrors the store over it. */
+import { BLE_MAX_MESSAGE_BYTES, WatchBleClient, type WatchBleStatus } from "@/features/ble"
+
+import { encodeFrames, FrameAssembler, PROTOCOL_VERSION, type SyncMessage } from "./protocol"
+import { toWirePlan, useWatchStore } from "./store"
+
+const RETRY_MS = 6000
+const HELLO_MS = 3000
+/** Payload of the smallest ATT MTU, accepted by every link. */
+const MIN_PAYLOAD = 20
+
+export class WatchLink {
+  private client: WatchBleClient
+  private assembler = new FrameAssembler()
+  private state: WatchBleStatus = "disconnected"
+  private retry: ReturnType<typeof setTimeout> | null = null
+  private hello: ReturnType<typeof setInterval> | null = null
+  private unsubscribe: (() => void) | null = null
+  private queue: Promise<void> = Promise.resolve()
+  private messageId = 0
+  private sentPlan = ""
+  private stopped = true
+
+  constructor(private readonly phone: string) {
+    this.client = new WatchBleClient({
+      onStatus: (status) => this.onStatus(status),
+      onDeviceName: () => {},
+      onError: (error) => this.onError(error),
+      onMessage: (direction, text) => {
+        if (direction === "watch-to-phone") this.onFrame(text)
+      },
+    })
+  }
+
+  start() {
+    if (!this.stopped) return
+    this.stopped = false
+    this.unsubscribe = useWatchStore.subscribe((state, previous) => {
+      if (state.outbox !== previous.outbox) this.sendSession()
+      else if (state.routine !== previous.routine) this.sendPlan()
+    })
+    useWatchStore.setState({ status: "searching", error: null })
+    void this.client.connect()
+  }
+
+  stop() {
+    if (this.stopped) return
+    this.stopped = true
+    this.clearTimers()
+    this.unsubscribe?.()
+    this.unsubscribe = null
+    void this.client.disconnect()
+    useWatchStore.setState({ status: "off", error: null })
+  }
+
+  destroy() {
+    this.stop()
+    this.client.destroy()
+  }
+
+  private clearTimers() {
+    if (this.retry) clearTimeout(this.retry)
+    if (this.hello) clearInterval(this.hello)
+    this.retry = null
+    this.hello = null
+  }
+
+  private scheduleRetry() {
+    if (this.stopped || this.retry) return
+    this.retry = setTimeout(() => {
+      this.retry = null
+      if (!this.stopped && this.state === "disconnected") void this.client.connect()
+    }, RETRY_MS)
+  }
+
+  private onStatus(status: WatchBleStatus) {
+    this.state = status
+    if (this.stopped) return
+    if (status === "connected") {
+      this.assembler = new FrameAssembler()
+      this.sentPlan = ""
+      const greet = () => this.send({ t: "hello", v: PROTOCOL_VERSION, phone: this.phone })
+      greet()
+      // Repeated until the watch answers, in case it was not yet subscribed.
+      this.hello = setInterval(greet, HELLO_MS)
+      return
+    }
+    useWatchStore.setState({ status: "searching" })
+    if (status === "disconnected") {
+      this.clearTimers()
+      this.scheduleRetry()
+    }
+  }
+
+  private onError(error: string | null) {
+    if (this.stopped || !error || error.startsWith("Warning")) return
+    if (error.startsWith("Scan timed out")) {
+      useWatchStore.setState({ error: "Watch not found. Open VoocHealth on the watch." })
+    } else {
+      useWatchStore.setState({ error })
+    }
+    // Errors before a scan starts do not report a status, so retry from here too.
+    if (this.state === "disconnected" && !/permissions denied|Native BLE/.test(error)) {
+      this.scheduleRetry()
+    }
+  }
+
+  private onFrame(text: string) {
+    const message = this.assembler.push(text)
+    if (!message || this.stopped) return
+    if (message.t === "welcome") {
+      if (this.hello) clearInterval(this.hello)
+      this.hello = null
+      useWatchStore.setState({ status: message.ok ? "connected" : "approval", error: null })
+      if (message.ok) this.sendSession()
+    } else if (message.t === "session" && useWatchStore.getState().status === "connected") {
+      useWatchStore.getState().receive(message.session)
+    }
+  }
+
+  private sendPlan() {
+    const { routine, status } = useWatchStore.getState()
+    if (!routine || status !== "connected") return
+    const plan = toWirePlan(routine)
+    const key = JSON.stringify(plan)
+    if (key === this.sentPlan) return
+    this.sentPlan = key
+    this.send({ t: "plan", plan })
+  }
+
+  /** The plan always goes first, so the watch can show the session it is given. */
+  private sendSession() {
+    this.sendPlan()
+    const { session, status } = useWatchStore.getState()
+    if (session && status === "connected") this.send({ t: "session", session })
+  }
+
+  private send(message: SyncMessage) {
+    const id = ++this.messageId
+    this.queue = this.queue.then(async () => {
+      const payload = Math.min(BLE_MAX_MESSAGE_BYTES, this.client.maxPayload())
+      for (const frame of encodeFrames(message, payload, id)) {
+        if (await this.client.sendFrame(frame)) continue
+        // The watch may not have seen the larger MTU; retry the message in small frames.
+        for (const small of encodeFrames(message, MIN_PAYLOAD, id)) {
+          if (!(await this.client.sendFrame(small))) return
+        }
+        return
+      }
+    })
+  }
+}

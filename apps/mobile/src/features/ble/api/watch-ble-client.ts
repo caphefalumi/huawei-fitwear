@@ -331,6 +331,27 @@ export class WatchBleClient {
     }
   }
 
+  /** Largest write this link takes: the negotiated MTU less the ATT header. */
+  maxPayload(): number {
+    return Math.max(20, (this.connectedDevice?.mtu ?? 23) - 3)
+  }
+
+  /** Writes one protocol frame exactly as given. */
+  async sendFrame(frame: string): Promise<boolean> {
+    if (!this.connectedDevice || this.status !== "connected") return false
+    try {
+      await this.connectedDevice.writeCharacteristicWithResponseForService(
+        FITWEAR_SERVICE_UUID,
+        FITWEAR_CHAR_MESSAGE_UUID,
+        bytesToBase64(encodeUtf8Bytes(frame)),
+      )
+      return true
+    } catch {
+      // The caller retries; a dropped link is reported by onDisconnected.
+      return false
+    }
+  }
+
   destroy(): void {
     this.session++
     this.cleanupSubscriptions({ keepStateListener: false })

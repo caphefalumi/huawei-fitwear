@@ -11,6 +11,7 @@ import { useAuth } from "@/features/auth"
 import { useHealth } from "@/features/health"
 import { DeviceHealthSettings } from "@/features/health/components/device-health-settings"
 import { PERIOD_AREA, PeriodSheet, useActiveInjuries, useInjuries } from "@/features/recovery"
+import { useWatchStatus } from "@/features/watch"
 import { emphasisFor, useLoads, usePlanPreferences } from "@/features/workout"
 import { captureException } from "@/lib/analytics/posthog"
 import { Palette as C } from "@/theme"
@@ -78,6 +79,7 @@ type OpenSheet =
   | null
 
 export function ProfileScreen() {
+  const watch = useWatchStatus()
   const { user, signOut, offline } = useAuth()
   const developerMode = useDeveloperMode((state) => state.enabled)
   const developerFeatures = useDeveloperMode((state) => state.features)
@@ -246,8 +248,8 @@ export function ProfileScreen() {
         <Card style={styles.group}>
           <ProfileRow
             label="VoocHealth watch"
-            value="Manage connection"
-            onPress={() => router.push("/ble-sync")}
+            value={watch.label}
+            onPress={() => router.push("/watch")}
           />
         </Card>
         <DeviceHealthSettings />

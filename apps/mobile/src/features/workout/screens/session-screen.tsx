@@ -3,7 +3,7 @@ import * as Crypto from "expo-crypto"
 import * as Haptics from "expo-haptics"
 import { router, useLocalSearchParams } from "expo-router"
 import { usePreventRemove } from "expo-router/react-navigation"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useEffectEvent, useRef, useState } from "react"
 import { StyleSheet, Text, View } from "react-native"
 
 import { BackHeader, Button, Card, PageHeading, Screen } from "@/components/ui"
@@ -12,6 +12,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Toggle } from "@/components/ui/toggle"
 import { useAuth } from "@/features/auth"
 import { dateKey } from "@/features/health"
+import { useWatchStatus, useWatchStore } from "@/features/watch"
 import { posthog } from "@/lib/analytics/posthog"
 import { apiErrorMessage, apiRequest } from "@/lib/api/client"
 import { planNow, usePlanNow } from "@/lib/time/demo-clock"
@@ -133,12 +134,27 @@ function ActiveSession({
   input: PlanInput
   initialDraft: SessionDraft | null
 }) {
-  const { date: param } = useLocalSearchParams<{ date?: string }>()
+  const { date: param, watch: fromWatch } = useLocalSearchParams<{
+    date?: string
+    watch?: string
+  }>()
   const { user } = useAuth()
+  const watch = useWatchStatus()
   const queryClient = useQueryClient()
   const planToday = usePlanNow()
   // Freeze the routine at the start so plan changes mid-workout don't reshuffle it.
-  const [routine, setRoutine] = useState(() => routineOn(fromDateKey(param) ?? planToday, input))
+  // A workout trained on the watch is continued, not replaced.
+  const [adopted] = useState(() => {
+    const store = useWatchStore.getState()
+    const { session, routine: shared, restEndsAt: restEnd } = store
+    if (!session || session.status === "closed" || !shared) return null
+    if (store.watchSessionId !== session.id) return null
+    const wanted = fromWatch ? shared : routineOn(fromDateKey(param) ?? planToday, input)
+    return session.plan === wanted.name ? { session, routine: shared, restEnd } : null
+  })
+  const [routine, setRoutine] = useState(
+    () => adopted?.routine ?? routineOn(fromDateKey(param) ?? planToday, input),
+  )
   const progression = useQuery({
     queryKey: [...workoutQueryKeys.all(user?.id ?? "signed-out"), "progression"],
     queryFn: ({ signal }) =>
@@ -156,11 +172,13 @@ function ActiveSession({
   const hasDraft = existingDraft !== null && existingDraft.routineName === routine.name
   // A draft of another routine is offered too: its exercise snapshot is restored on resume.
   const canResume = existingDraft !== null && (hasDraft || Boolean(existingDraft.exercises?.length))
-  const [resumePrompt, setResumePrompt] = useState(canResume)
+  const [resumePrompt, setResumePrompt] = useState(canResume && !adopted)
 
-  const [phase, setPhase] = useState<Phase>("set")
-  const [position, setPosition] = useState(0)
-  const [skipped, setSkipped] = useState<number[]>([])
+  const [phase, setPhase] = useState<Phase>(() =>
+    adopted?.session.status === "done" ? "summary" : adopted?.session.rest ? "rest" : "set",
+  )
+  const [position, setPosition] = useState(() => adopted?.session.pos ?? 0)
+  const [skipped, setSkipped] = useState<number[]>(() => adopted?.session.skip ?? [])
   const { loadFor } = useLoads()
   const initialWeights = (exercises: RoutineExercise[]) =>
     exercises.map((item) => {
@@ -169,20 +187,51 @@ function ActiveSession({
     })
   const emptySets = (exercises: RoutineExercise[]): (LoggedSet | undefined)[][] =>
     exercises.map((item) => Array.from({ length: item.sets }, () => undefined))
-  const [weights, setWeights] = useState(() => initialWeights(routine.exercises))
-  const [logged, setLogged] = useState(() => emptySets(routine.exercises))
-  const [draft, setDraft] = useState(() => routine.exercises[0]?.reps ?? 0)
-  const [startedAt, setStartedAt] = useState(Date.now)
-  const [now, setNow] = useState(startedAt)
-  const [restEndsAt, setRestEndsAt] = useState(0)
-  const [finishedAt, setFinishedAt] = useState<number | null>(null)
+  const ownDraft = adopted && initialDraft?.saveId === adopted.session.id ? initialDraft : null
+  const [weights, setWeights] = useState(() =>
+    ownDraft?.weights.length === routine.exercises.length
+      ? ownDraft.weights
+      : initialWeights(routine.exercises),
+  )
+  /** Sets finished on either device; the watch sends reps, weights stay here. */
+  const mergeLog = (
+    current: (LoggedSet | undefined)[][],
+    log: [number, number, number][],
+    loads: number[],
+  ) =>
+    current.map((sets, index) =>
+      sets.map((value, set) => {
+        const entry = log.find((item) => item[0] === index && item[1] === set)
+        if (!entry) return value
+        return { reps: entry[2], weightKg: value?.weightKg ?? loads[index] ?? 0 }
+      }),
+    )
+  const repsAt = (exercises: RoutineExercise[], at: number) =>
+    exercises[sessionSlots(exercises)[at]?.index ?? 0]?.reps ?? 0
+  const [logged, setLogged] = useState(() =>
+    mergeLog(
+      emptySets(routine.exercises).map((sets, index) =>
+        sets.map((_, set) => ownDraft?.logged[index]?.[set]),
+      ),
+      adopted?.session.log ?? [],
+      weights,
+    ),
+  )
+  const [draft, setDraft] = useState(() => repsAt(routine.exercises, adopted?.session.pos ?? 0))
+  const [startedAt, setStartedAt] = useState(() => adopted?.session.at ?? Date.now())
+  const [now, setNow] = useState(Date.now)
+  const [restEndsAt, setRestEndsAt] = useState(() => adopted?.restEnd ?? 0)
+  const [finishedAt, setFinishedAt] = useState<number | null>(() =>
+    adopted?.session.status === "done" ? adopted.session.end || Date.now() : null,
+  )
   const [keepReps, setKeepReps] = useState(true)
   const [repeatExit, setRepeatExit] = useState<(() => void) | null>(null)
   const [exitApproved, setExitApproved] = useState(false)
-  const [saveId, setSaveId] = useState(() => Crypto.randomUUID())
+  // Shared with the watch, so either device's copy saves the same workout once.
+  const [saveId, setSaveId] = useState(() => adopted?.session.id ?? Crypto.randomUUID())
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
-  const appliedProgression = useRef(false)
+  const appliedProgression = useRef(Boolean(ownDraft))
   const [skipProgression, setSkipProgression] = useState(false)
 
   /** Discard the persisted draft (session completed or user chose to start fresh). */
@@ -255,6 +304,85 @@ function ActiveSession({
     setSkipProgression(true)
     setResumePrompt(false)
   }
+
+  // --- Watch sync ---
+  useEffect(() => {
+    useWatchStore.setState({ sessionOpen: true })
+    return () => useWatchStore.setState({ sessionOpen: false })
+  }, [])
+
+  // Apply what the watch did. Declared before publishing so it is never overwritten.
+  const remoteSeq = useWatchStore((state) => state.remoteSeq)
+  const appliedSeq = useRef(useWatchStore.getState().remoteSeq)
+  const applyRemote = useEffectEvent(() => {
+    if (remoteSeq === appliedSeq.current) return
+    appliedSeq.current = remoteSeq
+    const { session, restEndsAt: restEnd } = useWatchStore.getState()
+    if (!session || session.status === "closed" || session.plan !== routine.name) return
+    setResumePrompt(false)
+    setSaveId(session.id)
+    setStartedAt(session.at)
+    if (session.pos !== position || session.id !== saveId) {
+      setDraft(repsAt(routine.exercises, session.pos))
+    }
+    setPosition(session.pos)
+    setSkipped(session.skip)
+    setLogged((current) =>
+      mergeLog(
+        session.id === saveId ? current : emptySets(routine.exercises),
+        session.log,
+        weights,
+      ),
+    )
+    setRestEndsAt(restEnd)
+    setNow(Date.now())
+    if (session.status === "done") {
+      setFinishedAt(session.end || Date.now())
+      setPhase("summary")
+    } else {
+      setFinishedAt(null)
+      setPhase(restEnd > Date.now() ? "rest" : "set")
+    }
+  })
+  useEffect(() => applyRemote(), [remoteSeq])
+
+  // Tell the watch about every change made here.
+  const publishLocal = useEffectEvent(() => {
+    if (resumePrompt || !slots.length || remoteSeq !== appliedSeq.current) return
+    useWatchStore.getState().publish(
+      {
+        id: saveId,
+        plan: routine.name,
+        status: phase === "summary" ? "done" : "active",
+        at: startedAt,
+        end: phase === "summary" ? (finishedAt ?? Date.now()) : 0,
+        pos: position,
+        restEndsAt: phase === "rest" ? restEndsAt : 0,
+        log: logged.flatMap((sets, index) =>
+          sets.flatMap((value, set): [number, number, number][] =>
+            value ? [[index, set, value.reps]] : [],
+          ),
+        ),
+        skip: skipped,
+      },
+      routine,
+    )
+  })
+  useEffect(
+    () => publishLocal(),
+    [
+      resumePrompt,
+      saveId,
+      routine,
+      phase,
+      startedAt,
+      finishedAt,
+      position,
+      restEndsAt,
+      logged,
+      skipped,
+    ],
+  )
 
   useEffect(() => {
     const records = progression.data?.exercises
@@ -427,6 +555,7 @@ function ActiveSession({
         duration_seconds: Math.round(((finishedAt ?? Date.now()) - startedAt) / 1000),
       })
     }
+    useWatchStore.getState().close(saveId)
     setExitApproved(true)
     disableExitGuard()
     if (!totalSets && user?.id) await clearSessionDraft(user.id)
@@ -609,6 +738,7 @@ function ActiveSession({
           </Text>
           <Text style={styles.progressLabel}>{formatClock((now - startedAt) / 1000)}</Text>
         </View>
+        {watch.enabled ? <Text style={styles.progressLabel}>Watch · {watch.label}</Text> : null}
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: `${(position / slots.length) * 100}%` }]} />
         </View>

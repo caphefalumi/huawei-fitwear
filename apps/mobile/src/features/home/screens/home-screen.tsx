@@ -11,6 +11,7 @@ import { useHealth } from "@/features/health"
 import { dateLabel } from "@/features/health/hooks/health-hooks"
 import { useMeals } from "@/features/meals"
 import { injuryEffect, injuryTitle, useActiveInjuries } from "@/features/recovery"
+import { useWatchStatus } from "@/features/watch"
 import { useRoutines } from "@/features/workout"
 import { usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
@@ -67,6 +68,7 @@ export function HomeScreen() {
     previousTargetKcal.current = targetKcal
   }, [targetKcal])
   const today = useRoutines().today
+  const watch = useWatchStatus()
   const { user } = useAuth()
   const dateLine = usePlanNow()
     .toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
@@ -98,8 +100,8 @@ export function HomeScreen() {
             </Text>
           ) : null}
           {injuries.length ? <Text style={styles.focusMuted}>{injuryTitle(injuries)}</Text> : null}
-          <Pressable onPress={() => router.push("/ble-sync")}>
-            <Text style={styles.focusMuted}>Watch sync</Text>
+          <Pressable onPress={() => router.push("/watch")}>
+            <Text style={styles.focusMuted}>Watch · {watch.label}</Text>
           </Pressable>
         </Card>
       </Animated.View>

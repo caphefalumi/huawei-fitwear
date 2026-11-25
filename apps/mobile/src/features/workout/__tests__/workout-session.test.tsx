@@ -6,6 +6,8 @@ import { usePreventRemove } from "expo-router/react-navigation"
 import { useAuth } from "@/features/auth"
 import { dateKey, useHealth } from "@/features/health"
 import { useInjuries } from "@/features/recovery"
+import { useWatchStore } from "@/features/watch"
+import { resetWatchSession } from "@/features/watch/store"
 import { usePlanPreferences, useTrainingWeights } from "@/features/workout"
 import { writeWorkout } from "@/features/workout/api/workout-api"
 import { RoutineScreen } from "@/features/workout/screens/routine-screen"
@@ -85,6 +87,8 @@ beforeEach(() => {
   })
   useTrainingWeights.setState({ level: null, custom: {} })
   useWorkoutLog.setState({ finished: [] })
+  resetWatchSession()
+  useWatchStore.setState({ remoteSeq: 0, outbox: 0 })
   // The coming Monday: Full Body on Monday, Wednesday and Friday.
   useDemoClock.setState({ offsetDays: (8 - new Date().getDay()) % 7 })
   jest.mocked(useLocalSearchParams).mockReturnValue({ date: dateKey(planNow()) })
@@ -483,5 +487,53 @@ test("resumes an unsaved summary with the same save ID, then clears the draft", 
   )
   expect(clearSessionDraft).toHaveBeenCalledWith("user-1")
   await relaunched.unmount()
+  queryClient.clear()
+})
+
+test("continues a workout started on the watch and follows its sets", async () => {
+  const routine = routineOn(planNow(), input)
+  const [first] = routine.exercises
+  const shared = {
+    id: "from-watch",
+    rev: 1,
+    plan: routine.name,
+    status: "active" as const,
+    at: Date.now(),
+    end: 0,
+    pos: 1,
+    rest: 0,
+    log: [[0, 0, 7] as [number, number, number]],
+    skip: [],
+  }
+  useWatchStore.setState({ routine })
+  useWatchStore.getState().receive(shared)
+  jest.mocked(useLocalSearchParams).mockReturnValue({ watch: "1" })
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const screen = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  expect(await screen.findByText(new RegExp(`Set 2 of ${first!.sets}`))).toBeTruthy()
+
+  // The watch finishes the second set and starts resting.
+  await act(async () =>
+    useWatchStore.getState().receive({
+      ...shared,
+      rev: 2,
+      pos: 2,
+      rest: 60_000,
+      log: [...shared.log, [0, 1, 9]],
+    }),
+  )
+  expect(screen.getByText("Skip rest")).toBeTruthy()
+
+  // A change made here goes back with a newer revision and keeps the watch's sets.
+  await fireEvent.press(screen.getByText("Skip rest"))
+  const sent = useWatchStore.getState().session!
+  expect(sent).toMatchObject({ id: "from-watch", pos: 2, rest: 0 })
+  expect(sent.rev).toBeGreaterThan(2)
+  expect(sent.log).toHaveLength(2)
+  await screen.unmount()
   queryClient.clear()
 })

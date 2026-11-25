@@ -149,8 +149,8 @@ test("groups settings and opens watch management without claiming a connection",
     expect(screen.getByRole("header", { name })).toBeTruthy()
   }
   expect(screen.queryByRole("button", { name: "Developer options" })).toBeNull()
-  await fireEvent.press(screen.getByRole("button", { name: "VoocHealth watch, Manage connection" }))
-  expect(router.push).toHaveBeenCalledWith("/ble-sync")
+  await fireEvent.press(screen.getByRole("button", { name: "VoocHealth watch, Not set up" }))
+  expect(router.push).toHaveBeenCalledWith("/watch")
 })
 
 test("a failed name edit keeps the draft and can be saved on retry", async () => {
