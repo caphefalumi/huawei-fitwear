@@ -1,5 +1,6 @@
 {
   "src": [
+    "features/home/HomePage",
     "pages/Index",
     "features/ble/BlePage",
     "features/imu/ImuPage",

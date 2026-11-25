@@ -12,6 +12,9 @@
     "pages": "$profile:main_pages",
     "requestPermissions": [
       {
+        "name": "ohos.permission.VIBRATE"
+      },
+      {
         "name": "ohos.permission.ACCESS_BLUETOOTH",
         "reason": "$string:bluetooth_permission_reason",
         "usedScene": {
