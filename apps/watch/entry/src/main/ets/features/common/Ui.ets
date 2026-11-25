@@ -17,7 +17,6 @@ export class Type {
 
 /** Smallest comfortable touch target on a moving wrist. */
 export const MIN_TARGET: number = 48;
-
 @ComponentV2
 export struct PillButton {
   @Require @Param label: string;
@@ -54,10 +53,10 @@ export struct SwipeHint {
         .commands(this.up ? 'M2 10 L12 2 L22 10' : 'M2 2 L12 10 L22 2')
         .fillOpacity(0)
         .stroke(Palette.MUTED)
-        .strokeWidth(1.5);
+        .strokeWidth(1.5)
       if (this.label !== '') {
         Text(this.label).fontSize(Type.SMALL).fontColor(Palette.MUTED);
       }
-    }
+    };
   }
 }

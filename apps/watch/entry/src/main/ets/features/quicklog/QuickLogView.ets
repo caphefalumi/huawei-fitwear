@@ -35,15 +35,22 @@ export struct QuickLogView {
   @Builder
   macroRow(label: string, grams: number) {
     Row() {
-      Text(label).width(36).fontSize(Type.SMALL).fontColor(Palette.MUTED);
-      Text(`${grams} g`).fontSize(Type.SMALL).fontColor(Palette.TEXT);
-    }
+      Text(label)
+        .width(36)
+        .fontSize(Type.SMALL)
+        .fontColor(Palette.MUTED)
+      Text(`${grams} g`)
+        .fontSize(Type.SMALL)
+        .fontColor(Palette.TEXT)
+    };
   }
 
   @Builder
   foodCard(food: Food) {
     Column({ space: 6 }) {
-      Text('Quick log').fontSize(Type.SMALL).fontColor(Palette.MUTED);
+      Text('Quick log')
+        .fontSize(Type.SMALL)
+        .fontColor(Palette.MUTED)
       Text(food.name)
         .width('70%')
         .fontSize(16)
@@ -51,26 +58,33 @@ export struct QuickLogView {
         .fontColor(Palette.TEXT)
         .textAlign(TextAlign.Center)
         .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis });
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
       Row({ space: 12 }) {
         Column() {
-          Text(`${food.kcal}`).fontSize(30).fontWeight(FontWeight.Bold).fontColor(Palette.TEXT);
-          Text('kcal').fontSize(Type.SMALL).fontColor(Palette.MUTED);
+          Text(`${food.kcal}`)
+            .fontSize(30)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(Palette.TEXT)
+          Text('kcal')
+            .fontSize(Type.SMALL)
+            .fontColor(Palette.MUTED)
         }
-        Divider().vertical(true).height(48).color(Palette.TRACK);
+        Divider()
+          .vertical(true)
+          .height(48)
+          .color(Palette.TRACK)
         Column() {
-          this.macroRow('Pro', food.macros.protein);
-          this.macroRow('Carb', food.macros.carbs);
-          this.macroRow('Fat', food.macros.fat);
-        }
-        .alignItems(HorizontalAlign.Start);
+          this.macroRow('Pro', food.macros.protein)
+          this.macroRow('Carb', food.macros.carbs)
+          this.macroRow('Fat', food.macros.fat)
+        }.alignItems(HorizontalAlign.Start)
       }
       if (this.day.timesLogged(food) > 0) {
         Text(`Logged today ×${this.day.timesLogged(food)}`)
           .fontSize(12)
           .fontColor(Palette.ACCENT);
       }
-      PillButton({ label: 'Log', primary: true, onTap: () => this.log(food) });
+      PillButton({ label: 'Log', primary: true, onTap: () => this.log(food) })
     }
     .width('100%')
     .height('100%')
@@ -87,23 +101,30 @@ export struct QuickLogView {
           .textAlign(TextAlign.Center);
       } else if (this.justLogged !== '') {
         Column({ space: 10 }) {
-          Text('✓ Logged').fontSize(Type.TITLE).fontWeight(FontWeight.Bold).fontColor(Palette.TEXT);
+          Text('✓ Logged')
+            .fontSize(Type.TITLE)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(Palette.TEXT)
           Text(this.justLogged)
             .width('70%')
             .fontSize(Type.SMALL)
             .fontColor(Palette.MUTED)
             .textAlign(TextAlign.Center)
             .maxLines(2)
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
-          PillButton({ label: 'Undo', onTap: () => this.undo() });
-        }
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          PillButton({ label: 'Undo', onTap: () => this.undo() })
+        };
       } else {
         Stack({ alignContent: Alignment.Bottom }) {
           // No loop: swiping stops at food 1, so the start of the list is always clear.
           Swiper() {
-            ForEach(this.day.favorites, (food: Food) => {
-              this.foodCard(food);
-            }, (food: Food) => food.name);
+            ForEach(
+              this.day.favorites,
+              (food: Food) => {
+                this.foodCard(food);
+              },
+              (food: Food) => food.name,
+            )
           }
           .index(this.favoriteIndex)
           .loop(false)
@@ -113,15 +134,19 @@ export struct QuickLogView {
             this.favoriteIndex = index;
           })
           .width('100%')
-          .height('100%');
-
+          .height('100%')
           Row({ space: 5 }) {
-            ForEach(this.day.favorites, (food: Food, index: number) => {
-              Circle({ width: 6, height: 6 })
-                .fill(index === this.favoriteIndex ? Palette.ACCENT : Palette.TRACK);
-            }, (food: Food) => food.name);
+            ForEach(
+              this.day.favorites,
+              (food: Food, index: number) => {
+                Circle({ width: 6, height: 6 }).fill(
+                  index === this.favoriteIndex ? Palette.ACCENT : Palette.TRACK,
+                );
+              },
+              (food: Food) => food.name,
+            )
           }
-          .margin({ bottom: 10 });
+          .margin({ bottom: 10 })
         }
         .width('100%')
         .height('100%');

@@ -12,12 +12,7 @@ export default class EntryAbility extends UIAbility {
         .getApplicationContext()
         .setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
     } catch (err) {
-      hilog.error(
-        DOMAIN,
-        TAG,
-        'Failed to set colorMode. Cause: %{public}s',
-        JSON.stringify(err),
-      );
+      hilog.error(DOMAIN, TAG, 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
     }
     hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onCreate');
   }
