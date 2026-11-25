@@ -18,7 +18,7 @@ apps/watch/
 │       │   ├── ets/
 │       │   │   ├── entryability/EntryAbility.ets  # Application lifecycle handlers
 │       │   │   ├── entrybackupability/             # Data backup extension
-│       │   │   └── pages/Index.ets                 # Main wearable UI screen
+│       │   │   └── features/home/HomePage.ets      # Main wearable UI screen
 │       │   ├── module.json5   # Device types (`wearable`), permissions, and abilities
 │       │   └── resources/     # Color definitions, layouts, and graphics
 │       └── ohosTest/          # Automated UI and unit test suites
@@ -51,30 +51,56 @@ linter and `.github/arkts-lint.json`; Huawei's `code-linter.json5` is not used i
 ## Watch UI
 
 The app opens on `features/home/HomePage.ets`, which covers wireframe screens
-W1a–W1e and W2–W4. Plan, food and favorite values come from
-`features/common/SampleData.ets` until the phone sends them. Reps are entered with
-−/+ or the crown (no IMU counting yet), and nothing is synced.
+W1a–W1e and W2–W4. The workout plan comes from the paired phone; debug builds
+start with a sample plan so they can be tried alone. Food and favorite values are
+still samples (`features/common/SampleData.ets`). Reps are entered with −/+ or the
+crown (no IMU counting yet).
 
-Below the start screen is a **Privacy** page that clears saved data. First launch
+## Unfinished workouts
+
+If the wearer closes or leaves the app mid-workout, or ends early and comes back,
+the watch asks **Continue** or **New cycle** (start over, discarding the unfinished
+one). The phone asks the same.
+
+## Phone sync
+
+The watch advertises a private BLE GATT service when the app opens; the phone
+connects from **Watch** in the mobile app, and reconnects by itself after the first
+success. The screen stays on while advertising or connected. Advertising stops after
+two minutes alone: reopen the app or tap **Connect** on the home screen. The first time, the watch asks
+**Pair phone?** and ignores everything else from that phone until you allow it.
+Starting a workout on either device opens it on the other, and finished sets,
+rest, skips and the end stay in step. The phone saves finished workouts.
+
+Messages are defined in `features/link/SyncProtocol.ets`, mirrored by
+`apps/mobile/src/features/watch/protocol.ts`; change both together. Limits:
+
+- Both apps must be open. There is no background task or background BLE yet.
+- The link is not encrypted at the Bluetooth level; the pairing prompt only stops
+  unknown phones.
+- "New cycle" from the wireframe was removed: the phone has no such concept.
+
+## Exercise animations
+
+The form screen plays the same GIFs as the mobile app, downloaded from
+`exercise-media.tm-project.id.vn` and cached. The posters in
+`resources/rawfile/exercise-loops/` are copies of
+`apps/mobile/assets/exercise-loops/` and show offline. A new exercise needs an
+entry in `features/media/ExerciseMedia.ets`.
+
+Below the start screen is a **Privacy** page that clears saved data and the pairing. First launch
 shows a notice, and nothing is saved until the user agrees. The workout in progress
 and today's food logs survive an app restart (`features/storage/`); system backup
 is off.
 
-### Bluetooth demo
-
-In a **debug** build, long-press the time to open the demo list, open **BLE Sync Demo**, grant Bluetooth access, and tap **Start Stream**.
-In a mobile development build with Bluetooth enabled, open **BLE Sync** and connect
-to the watch. The phone requests a 185-byte ATT MTU; smaller negotiated MTUs can
-prevent IMU packets from fitting in a notification. The watch stops advertising
-after two minutes without a connection; restart the stream to advertise again.
-
 ## Release Build
 
 `hvigorw assembleHap -p buildMode=release` obfuscates top-level names, strips
-`console` logs and hides the demo pages. Before publishing:
+`console` logs and hides the IMU sensor page. Before publishing:
 
 - Replace the debug signing config with an AppGallery Connect release profile.
-- Replace `features/common/SampleData.ets` with data synced from the phone.
+- Replace the sample food data with data synced from the phone.
+- Test phone sync with a physical watch and phone.
 - Test crown, vibration, back gesture and battery use on a physical watch.
 
 ## Wearable Design Considerations

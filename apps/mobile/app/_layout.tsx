@@ -14,6 +14,7 @@ import { ToastHost } from "@/components/feedback/toast"
 import { APP_ROUTES, AuthProvider, useAuth } from "@/features/auth"
 import { HealthProvider } from "@/features/health"
 import { MealsProvider } from "@/features/meals"
+import { WatchBridge } from "@/features/watch"
 import { WorkoutProvider } from "@/features/workout"
 import { posthog } from "@/lib/analytics/posthog"
 import { queryClient } from "@/lib/query/client"
@@ -53,7 +54,10 @@ function AccountProviders({ children }: PropsWithChildren) {
   return (
     <HealthProvider>
       <MealsProvider>
-        <WorkoutProvider>{children}</WorkoutProvider>
+        <WorkoutProvider>
+          <WatchBridge />
+          {children}
+        </WorkoutProvider>
       </MealsProvider>
     </HealthProvider>
   )
@@ -88,7 +92,7 @@ function RootNavigator() {
           <Stack.Screen name="(modals)/add-item" />
           <Stack.Screen name="(modals)/review-item" />
           <Stack.Screen name="(modals)/replace-food" />
-          <Stack.Screen name="(details)/ble-sync" />
+          <Stack.Screen name="(details)/watch" />
         </Stack.Protected>
         <Stack.Protected guard={!user} redirectTo={APP_ROUTES.home}>
           <Stack.Screen name="(auth)" />

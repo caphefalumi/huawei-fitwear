@@ -12,14 +12,14 @@ jest.mock("react-native-safe-area-context", () => ({
 
 beforeEach(() => {
   jest.clearAllMocks()
-  useDeveloperMode.setState({ enabled: false, features: { testError: false, bleTest: false } })
+  useDeveloperMode.setState({ enabled: false, features: { testError: false } })
 })
 
 test("toggles a developer feature and returns to Profile", async () => {
   const screen = await render(<DeveloperOptionsScreen />)
 
-  await fireEvent(screen.getByRole("switch", { name: "BLE test" }), "valueChange", true)
-  expect(useDeveloperMode.getState().features.bleTest).toBe(true)
+  await fireEvent(screen.getByRole("switch", { name: "Send test error" }), "valueChange", true)
+  expect(useDeveloperMode.getState().features.testError).toBe(true)
 
   await fireEvent.press(screen.getByRole("button", { name: "Back to Profile" }))
   expect(router.back).toHaveBeenCalledTimes(1)

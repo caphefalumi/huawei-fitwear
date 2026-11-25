@@ -1,6 +1,11 @@
-import { common } from '@kit.AbilityKit';
+import { abilityAccessCtrl, common } from '@kit.AbilityKit';
+import { BusinessError, power } from '@kit.BasicServicesKit';
+import { util } from '@kit.ArkTS';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import BuildProfile from 'BuildProfile';
-import { SAMPLE_DAY, SAMPLE_FAVORITES, SAMPLE_PLAN } from '../common/SampleData';
+import { NO_PLAN, SAMPLE_DAY, SAMPLE_FAVORITES, SAMPLE_PLAN } from '../common/SampleData';
+import { LinkState, PhoneLink, PhoneLinkHandlers } from '../link/PhoneLink';
+import { mergeSessions, SharedSession, WorkoutPlan } from '../link/SyncProtocol';
 import { HAPTIC_ALERT_MS, HAPTIC_SIGNAL_MS, HAPTIC_TICK_MS, vibrate } from '../common/Haptics';
 import { Palette } from '../common/Ui';
 import { PrivacyView } from '../privacy/PrivacyView';
@@ -30,6 +35,10 @@ const CONTROLS_PAGE: number = 1;
 const CROWN_STEP_DEGREES: number = 30;
 const TICK_MS: number = 500;
 
+function initialPlan(): WorkoutPlan {
+  return BuildProfile.DEBUG ? SAMPLE_PLAN : NO_PLAN;
+}
+
 /** The watch app's single screen: W1 normal and workout states, W2–W4 on top. */
 @Entry
 @ComponentV2
@@ -37,7 +46,12 @@ struct HomePage {
   private readonly store: WatchStore = new WatchStore();
   private readonly homePager: SwiperController = new SwiperController();
   private readonly workoutPager: SwiperController = new SwiperController();
-  @Local session: WorkoutSession = new WorkoutSession(SAMPLE_PLAN);
+  private readonly link: PhoneLink = new PhoneLink();
+  /** The phone's latest plan, held while a different workout is still on screen. */
+  private phonePlan: WorkoutPlan | undefined = undefined;
+  /** Session id and revision the phone already has. */
+  private sentKey: string = '';
+  @Local session: WorkoutSession = new WorkoutSession(initialPlan());
   @Local day: FoodDay = new FoodDay(SAMPLE_DAY, SAMPLE_FAVORITES);
   @Local consented: boolean = false;
   @Local visible: boolean = true;
@@ -47,6 +61,10 @@ struct HomePage {
   @Local showingForm: boolean = false;
   @Local confirmingEnd: boolean = false;
   @Local summaryDismissed: boolean = false;
+  /** Asking whether to continue a workout the wearer walked away from. */
+  @Local interrupted: boolean = false;
+  /** The wearer left the app mid-workout (the screen merely sleeping does not count). */
+  private exited: boolean = false;
   private ticker: number = -1;
   private crownDegrees: number = 0;
   private today: string = dayKey(Date.now());
@@ -55,22 +73,30 @@ struct HomePage {
     this.store.open(this.getUIContext().getHostContext() as common.UIAbilityContext);
     this.consented = this.store.hasConsent();
     if (this.consented) {
-      this.summaryDismissed = restoreState(
-        this.store.loadState(),
-        this.session,
-        this.day,
-        Date.now(),
-      );
+      const restored =
+        restoreState(this.store.loadState(), initialPlan(), this.day, Date.now());
+      this.session = restored.session;
+      this.summaryDismissed = restored.summaryDismissed;
+      this.interrupt();
+      this.startLink();
     }
     this.startTicker();
   }
 
   aboutToDisappear(): void {
     this.stopTicker();
+    this.link.stop();
   }
 
   onPageShow(): void {
     this.visible = true;
+    if (this.consented) {
+      this.startLink();
+    }
+    if (this.exited) {
+      this.exited = false;
+      this.interrupt();
+    }
     this.startTicker();
     this.tick();
   }
@@ -78,9 +104,134 @@ struct HomePage {
   onPageHide(): void {
     this.visible = false;
     this.save();
-    // A workout keeps ticking so the end of a rest can still vibrate.
+    // As in the BLE demo, the connection stays up; only the app closing ends it.
     if (this.session.status !== WorkoutStatus.ACTIVE) {
       this.stopTicker();
+    } else if (power.isActive()) {
+      this.exited = true;
+    }
+  }
+
+  /** Pauses an unfinished workout until the wearer says what to do with it. */
+  private interrupt(): void {
+    if (this.session.status !== WorkoutStatus.ACTIVE) {
+      return;
+    }
+    if (!this.session.hasProgress) {
+      this.session.resume(Date.now());
+      return;
+    }
+    this.session.pause(Date.now());
+    this.showingForm = false;
+    this.confirmingEnd = false;
+    this.interrupted = true;
+  }
+
+  private continueOldCycle(): void {
+    this.interrupted = false;
+    if (this.session.status === WorkoutStatus.ACTIVE) {
+      this.resetWorkoutScreens();
+      this.session.resume(Date.now());
+    } else {
+      this.reopenWorkout();
+    }
+  }
+
+  /** Starts the workout over; the unfinished one is discarded. */
+  private startNewCycle(): void {
+    this.interrupted = false;
+    if (this.phonePlan?.name === this.session.plan.name) {
+      this.session = new WorkoutSession(this.phonePlan);
+    }
+    this.startWorkout();
+    this.publish();
+  }
+
+  /** Asks for Bluetooth the first time, then waits for the phone. */
+  private startLink(): void {
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    abilityAccessCtrl.createAtManager()
+      .requestPermissionsFromUser(context, ['ohos.permission.ACCESS_BLUETOOTH'])
+      .then((result) => {
+        if (result.authResults[0] === 0 && this.visible && this.consented) {
+          this.link.start(context, this.linkHandlers());
+        }
+      })
+      .catch((err: BusinessError) => {
+        hilog.warn(0x0000, 'HomePage', 'Bluetooth permission failed: %{public}d', err.code);
+      });
+  }
+
+  private linkHandlers(): PhoneLinkHandlers {
+    return {
+      allowedPhone: () => this.store.allowedPhone(),
+      allowPhone: (phone: string) => this.store.allowPhone(phone),
+      onReady: () => {
+        this.sentKey = '';
+      },
+      onPlan: (plan: WorkoutPlan) => this.receivePlan(plan),
+      onSession: (session: SharedSession) => this.receiveSession(session),
+    };
+  }
+
+  private receivePlan(plan: WorkoutPlan): void {
+    this.phonePlan = plan;
+    const same = JSON.stringify(plan) === JSON.stringify(this.session.plan);
+    const finished = this.session.status === WorkoutStatus.IDLE ||
+      (this.session.status !== WorkoutStatus.ACTIVE && this.summaryDismissed);
+    if (!same && finished) {
+      this.session = new WorkoutSession(plan);
+      this.summaryDismissed = false;
+    }
+  }
+
+  private receiveSession(remote: SharedSession): void {
+    const now = Date.now();
+    const result = mergeSessions(this.session.shared(now), remote, true);
+    if (result.changed) {
+      const merged = result.session;
+      const wasActive = this.session.status === WorkoutStatus.ACTIVE;
+      let target = this.session;
+      // A new workout always uses the phone's latest version of the plan.
+      if (this.phonePlan?.name === merged.plan &&
+        (merged.id !== target.id || merged.plan !== target.plan.name)) {
+        target = new WorkoutSession(this.phonePlan);
+      }
+      if (!target.applyShared(merged, now)) {
+        return;
+      }
+      this.session = target;
+      // The phone moved the workout on, so there is nothing left to ask.
+      if (this.interrupted) {
+        this.interrupted = false;
+        target.resume(now);
+      }
+      if (!wasActive && target.status === WorkoutStatus.ACTIVE) {
+        this.resetWorkoutScreens();
+        vibrate(HAPTIC_SIGNAL_MS);
+      } else if (wasActive && target.status !== WorkoutStatus.ACTIVE) {
+        this.summaryDismissed = false;
+        this.showingForm = false;
+        this.confirmingEnd = false;
+      }
+      if (!result.reply) {
+        this.sentKey = `${merged.id}:${merged.rev}`;
+      }
+    } else if (result.reply) {
+      this.sentKey = '';
+    }
+  }
+
+  /** Sends the workout whenever it has changed since the phone last saw it. */
+  private publish(): void {
+    const shared = this.session.shared(Date.now());
+    if (!shared || this.link.state !== LinkState.CONNECTED) {
+      return;
+    }
+    const key = `${shared.id}:${shared.rev}`;
+    if (key !== this.sentKey) {
+      this.sentKey = key;
+      this.link.sendSession(shared);
     }
   }
 
@@ -100,12 +251,15 @@ struct HomePage {
   }
 
   private clearData(): void {
+    this.link.stop();
     this.store.clear();
-    this.session = new WorkoutSession(SAMPLE_PLAN);
+    this.phonePlan = undefined;
+    this.session = new WorkoutSession(initialPlan());
     this.day = new FoodDay(SAMPLE_DAY, SAMPLE_FAVORITES);
     this.summaryDismissed = false;
     this.homePage = CLOCK_PAGE;
     this.consented = false;
+    this.interrupted = false;
   }
 
   /** At midnight yesterday's food logs and finished workout go away. */
@@ -113,7 +267,7 @@ struct HomePage {
     this.today = today;
     this.day = new FoodDay(SAMPLE_DAY, SAMPLE_FAVORITES);
     if (this.session.status !== WorkoutStatus.ACTIVE) {
-      this.session = new WorkoutSession(SAMPLE_PLAN);
+      this.session = new WorkoutSession(this.session.plan);
       this.summaryDismissed = false;
     }
   }
@@ -123,8 +277,14 @@ struct HomePage {
     if (!this.consented) {
       return false;
     }
+    if (this.link.state === LinkState.APPROVAL) {
+      this.link.reject();
+      return true;
+    }
     if (this.session.status === WorkoutStatus.ACTIVE) {
-      if (this.session.askingStillTraining) {
+      if (this.interrupted) {
+        this.continueOldCycle();
+      } else if (this.session.askingStillTraining) {
         this.session.stillTraining(Date.now());
       } else if (this.confirmingEnd) {
         this.confirmingEnd = false;
@@ -149,14 +309,16 @@ struct HomePage {
     if (today !== this.today) {
       this.startNewDay(today);
     }
-    const event = this.session.tick(this.now);
+    // An unanswered resume prompt must not count as idling.
+    const event = this.interrupted ? TickEvent.NONE : this.session.tick(this.now);
     if (event === TickEvent.REST_OVER) {
       vibrate(HAPTIC_SIGNAL_MS);
     } else if (event === TickEvent.STILL_TRAINING || event === TickEvent.AUTO_ENDED) {
       vibrate(HAPTIC_ALERT_MS);
     }
-    // One place to save: any change is on disk within a tick.
+    // One place to save and send: any change is on disk and on the phone within a tick.
     this.save();
+    this.publish();
     if (!this.visible && this.session.status !== WorkoutStatus.ACTIVE) {
       this.stopTicker();
     }
@@ -164,13 +326,14 @@ struct HomePage {
 
   private startWorkout(): void {
     this.resetWorkoutScreens();
-    this.session.start(Date.now());
+    this.session.start(Date.now(), util.generateRandomUUID());
     vibrate(HAPTIC_SIGNAL_MS);
   }
 
   private reopenWorkout(): void {
     this.resetWorkoutScreens();
     this.session.reopen(Date.now());
+    this.publish();
   }
 
   private resetWorkoutScreens(): void {
@@ -183,6 +346,9 @@ struct HomePage {
   private dismissSummary(): void {
     this.summaryDismissed = true;
     this.homePage = CLOCK_PAGE;
+    if (this.phonePlan) {
+      this.receivePlan(this.phonePlan);
+    }
   }
 
   private continueWorkout(): void {
@@ -202,7 +368,7 @@ struct HomePage {
 
   private onCrown(event: CrownEvent): void {
     event.stopPropagation();
-    if (!this.consented) {
+    if (!this.consented || this.interrupted) {
       return;
     }
     if (event.action === CrownAction.END) {
@@ -218,13 +384,8 @@ struct HomePage {
 
     if (this.session.status === WorkoutStatus.ACTIVE) {
       // In a workout the crown only edits reps; the swipe alone opens controls.
-      if (
-        !this.showingForm &&
-        !this.confirmingEnd &&
-        !this.session.askingStillTraining &&
-        this.workoutPage === SET_PAGE &&
-        this.session.phase === WorkoutPhase.SET
-      ) {
+      if (!this.showingForm && !this.confirmingEnd && !this.session.askingStillTraining &&
+        this.workoutPage === SET_PAGE && this.session.phase === WorkoutPhase.SET) {
         adjustReps(this.session, step);
       }
       return;
@@ -239,10 +400,18 @@ struct HomePage {
     }
   }
 
+  private phoneLabel(): string {
+    if (this.link.state === LinkState.CONNECTED) {
+      return 'Phone';
+    }
+    return this.link.state === LinkState.OFF ? 'Connect' : 'Searching';
+  }
+
   @Builder
   summary() {
     SummaryView({
       session: this.session,
+      connected: this.link.state === LinkState.CONNECTED,
       onDone: () => this.dismissSummary(),
       onContinue: () => this.reopenWorkout(),
     });
@@ -273,8 +442,8 @@ struct HomePage {
       });
     } else if (this.showingForm) {
       FormGuideView({
+        exerciseKey: this.session.exercise.key,
         exerciseName: this.session.exercise.name,
-        active: this.visible,
         onBack: () => this.closeForm(),
       });
     } else {
@@ -287,14 +456,11 @@ struct HomePage {
           }
         }
         .width('100%')
-        .height('100%')
+        .height('100%');
+
         ControlsView({
           session: this.session,
           onContinue: () => this.continueWorkout(),
-          onNewCycle: () => {
-            this.workoutPage = SET_PAGE;
-            this.session.newCycle(Date.now());
-          },
           onSkipExercise: () => {
             this.workoutPage = SET_PAGE;
             this.session.skipExercise(Date.now());
@@ -302,7 +468,7 @@ struct HomePage {
           onEnd: () => {
             this.confirmingEnd = true;
           },
-        })
+        });
       }
       .index(this.workoutPage)
       .vertical(true)
@@ -324,17 +490,20 @@ struct HomePage {
   @Builder
   home() {
     Swiper(this.homePager) {
-      QuickLogView({ day: this.day })
+      QuickLogView({ day: this.day });
       ClockView({
         now: this.now,
         day: this.day,
+        connected: this.link.state === LinkState.CONNECTED,
+        phoneLabel: this.phoneLabel(),
+        onConnect: () => this.startLink(),
         onOpenDemos: () => {
-          // The BLE and IMU demos are developer tools: unreachable in release builds.
+          // A developer tool: unreachable in release builds.
           if (BuildProfile.DEBUG) {
-            this.getUIContext().getRouter().pushUrl({ url: 'pages/Index' });
+            this.getUIContext().getRouter().pushUrl({ url: 'features/imu/ImuPage' });
           }
         },
-      })
+      });
       Column() {
         if (this.session.status === WorkoutStatus.IDLE) {
           StartView({
@@ -342,13 +511,23 @@ struct HomePage {
             now: this.now,
             onStart: () => this.startWorkout(),
           });
+        } else if (this.session.status === WorkoutStatus.ENDED_EARLY && !this.session.isClosed) {
+          ConfirmView({
+            title: 'Resume workout?',
+            message: `Sets done: ${this.session.records.length}\nNew cycle starts over`,
+            keepLabel: 'Continue',
+            endLabel: 'New cycle',
+            onKeep: () => this.continueOldCycle(),
+            onEnd: () => this.startNewCycle(),
+          });
         } else {
           this.summary();
         }
       }
       .width('100%')
-      .height('100%')
-      PrivacyView({ onClear: () => this.clearData() })
+      .height('100%');
+
+      PrivacyView({ onClear: () => this.clearData() });
     }
     .index(this.homePage)
     .vertical(true)
@@ -370,6 +549,24 @@ struct HomePage {
             this.store.giveConsent();
             this.consented = true;
           },
+        });
+      } else if (this.link.state === LinkState.APPROVAL) {
+        ConfirmView({
+          title: 'Pair phone?',
+          message: 'A phone wants to\nshare workouts',
+          keepLabel: 'Allow',
+          endLabel: 'Not now',
+          onKeep: () => this.link.allow(),
+          onEnd: () => this.link.reject(),
+        });
+      } else if (this.interrupted && this.session.status === WorkoutStatus.ACTIVE) {
+        ConfirmView({
+          title: 'Resume workout?',
+          message: `Sets done: ${this.session.records.length}\nNew cycle starts over`,
+          keepLabel: 'Continue',
+          endLabel: 'New cycle',
+          onKeep: () => this.continueOldCycle(),
+          onEnd: () => this.startNewCycle(),
         });
       } else if (this.session.status === WorkoutStatus.ACTIVE) {
         this.workout();

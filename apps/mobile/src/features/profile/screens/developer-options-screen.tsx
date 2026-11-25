@@ -15,11 +15,6 @@ const FEATURES: { key: DeveloperFeature; label: string; description: string }[] 
     label: "Send test error",
     description: "Captures a test event in PostHog from the Profile screen.",
   },
-  {
-    key: "bleTest",
-    label: "BLE test",
-    description: "Shows the watch Bluetooth test screen from the Profile screen.",
-  },
 ]
 
 export function DeveloperOptionsScreen() {

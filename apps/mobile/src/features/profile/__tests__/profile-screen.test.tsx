@@ -82,7 +82,7 @@ const health = {
 beforeEach(() => {
   jest.clearAllMocks()
   useInjuries.setState({ injuries: [] })
-  useDeveloperMode.setState({ enabled: false, features: { testError: false, bleTest: false } })
+  useDeveloperMode.setState({ enabled: false, features: { testError: false } })
   mockUseAuth.mockReturnValue({
     user: { name: "Member", email: "member@example.com", birthDate: null },
     signOut,
@@ -149,8 +149,8 @@ test("groups settings and opens watch management without claiming a connection",
     expect(screen.getByRole("header", { name })).toBeTruthy()
   }
   expect(screen.queryByRole("button", { name: "Developer options" })).toBeNull()
-  await fireEvent.press(screen.getByRole("button", { name: "VoocHealth watch, Manage connection" }))
-  expect(router.push).toHaveBeenCalledWith("/ble-sync")
+  await fireEvent.press(screen.getByRole("button", { name: "VoocHealth watch, Not set up" }))
+  expect(router.push).toHaveBeenCalledWith("/watch")
 })
 
 test("a failed name edit keeps the draft and can be saved on retry", async () => {
@@ -216,13 +216,10 @@ test("shows unset height and restores account actions", async () => {
   await fireEvent.press(screen.getByRole("button", { name: "Account data" }))
   await fireEvent(screen.getByRole("switch", { name: "Developer mode" }), "valueChange", true)
   await fireEvent.press(screen.getByRole("button", { name: "Developer options" }))
-  await act(async () => useDeveloperMode.getState().toggleFeature("bleTest"))
-  await fireEvent.press(screen.getByRole("button", { name: "BLE test" }))
   await fireEvent.press(screen.getByRole("button", { name: "Sign out" }))
 
   expect(router.push).toHaveBeenNthCalledWith(1, "/account-data")
   expect(router.push).toHaveBeenNthCalledWith(2, "/developer-options")
-  expect(router.push).toHaveBeenNthCalledWith(3, "/ble-sync")
   expect(signOut).toHaveBeenCalledTimes(1)
 })
 

@@ -8,12 +8,6 @@ export {
 } from "./constants"
 export { base64ToBytes, bytesToBase64, decodeUtf8Bytes, encodeUtf8Bytes } from "./utils/codec"
 export {
-  useWatchBle,
-  type BleConnectionMode,
-  type BleSyncMessage,
-  type UseWatchBleOptions,
-} from "./hooks/use-watch-ble"
-export {
   WatchBleClient,
   type BleDirection,
   type WatchBleListener,

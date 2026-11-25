@@ -1,6 +1,6 @@
 import { create } from "zustand"
 
-export type DeveloperFeature = "testError" | "bleTest"
+export type DeveloperFeature = "testError"
 
 type DeveloperModeState = {
   enabled: boolean
@@ -12,7 +12,7 @@ type DeveloperModeState = {
 /** Session-scoped developer mode: resets when the app process restarts. */
 export const useDeveloperMode = create<DeveloperModeState>((set) => ({
   enabled: false,
-  features: { testError: false, bleTest: false },
+  features: { testError: false },
   toggle: () => set((state) => ({ enabled: !state.enabled })),
   toggleFeature: (feature) =>
     set((state) => ({ features: { ...state.features, [feature]: !state.features[feature] } })),

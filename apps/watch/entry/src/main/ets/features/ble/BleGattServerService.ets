@@ -135,53 +135,38 @@ export class BleGattServerService {
   }
 
   /**
-   * Updates the characteristic and notifies the connected phone if subscribed.
-   * Returns the trimmed text on accept, or '' if rejected (empty / too long).
+   * Notifies one frame exactly as given. Resolves false if there is no subscribed phone
+   * or the stack rejects it.
    */
-  sendText(text: string): string {
-    const clean = text.trim();
-    if (clean.length === 0) {
-      return '';
-    }
-    const encoded = encodeUtf8(clean);
-    const maxAllowed = this.getEffectiveMaxPayload();
-    if (encoded.byteLength > maxAllowed) {
-      this.listener.onStatus(`Too long (${encoded.byteLength}/${maxAllowed})`);
-      return '';
+  sendFrame(frame: string): Promise<boolean> {
+    const server = this.gattServer;
+    const encoded = encodeUtf8(frame);
+    if (!server || this.connectedDeviceId.length === 0 || new Uint8Array(this.cccBuffer)[0] !== 1 ||
+      encoded.byteLength > this.getEffectiveMaxPayload()) {
+      return Promise.resolve(false);
     }
     this.outboundBuffer = encoded;
-
-    if (!this.gattServer || this.connectedDeviceId.length === 0) {
-      return clean;
-    }
-
-    // Check CCCD: notify is only sent if client enabled notifications (byte 0 === 1)
-    const cccView = new Uint8Array(this.cccBuffer);
-    if (cccView[0] !== 1) {
-      return clean;
-    }
-
     const notifyChar: ble.NotifyCharacteristic = {
       serviceUuid: SERVICE_UUID,
       characteristicUuid: CHAR_MESSAGE_UUID,
-      characteristicValue: this.outboundBuffer,
+      characteristicValue: encoded,
       confirm: false,
     };
-    try {
-      this.gattServer.notifyCharacteristicChanged(
-        this.connectedDeviceId,
-        notifyChar,
-        (err: BusinessError) => {
-          if (err) {
-            this.listener.onStatus(`Notify Err: ${err.code}`);
-          }
-        },
-      );
-    } catch (err) {
-      const e = err as BusinessError;
-      this.listener.onStatus(`Send Err: ${e.code}`);
-    }
-    return clean;
+    return new Promise<boolean>((resolve: (sent: boolean) => void) => {
+      try {
+        server.notifyCharacteristicChanged(this.connectedDeviceId, notifyChar,
+          (err: BusinessError) => {
+            if (err && err.code) {
+              hilog.warn(DOMAIN, TAG, 'notify err: %{public}d', err.code);
+            }
+            resolve(!(err && err.code));
+          });
+      } catch (err) {
+        const e = err as BusinessError;
+        hilog.warn(DOMAIN, TAG, 'notify err: %{public}d', e.code);
+        resolve(false);
+      }
+    });
   }
 
   private setupGattServerAndAdvertise(): void {

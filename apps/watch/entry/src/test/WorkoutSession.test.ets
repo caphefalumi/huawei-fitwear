@@ -1,4 +1,12 @@
 import { describe, expect, it } from '@ohos/hypium';
+import {
+  encodeFrames,
+  FrameAssembler,
+  mergeSessions,
+  SharedSession,
+  SyncMessage,
+  WorkoutPlan,
+} from '../main/ets/features/link/SyncProtocol';
 import { FoodDay } from '../main/ets/features/quicklog/FoodDay';
 import { encodeState, restoreState } from '../main/ets/features/storage/SavedState';
 import {
@@ -6,19 +14,30 @@ import {
   IDLE_PROMPT_MS,
   TickEvent,
   WorkoutPhase,
-  WorkoutPlan,
   WorkoutSession,
   WorkoutStatus,
 } from '../main/ets/features/workout/WorkoutSession';
 
 const PLAN: WorkoutPlan = {
-  group: 'Chest',
+  name: 'Push',
   minutes: 10,
   exercises: [
-    { name: 'A', sets: 2, reps: 3, restSeconds: 60 },
-    { name: 'B', sets: 1, reps: 3, restSeconds: 60 },
+    { key: 'a', name: 'A', sets: 2, reps: 3, unit: 'reps', rest: 60, superset: '' },
+    { key: 'b', name: 'B', sets: 1, reps: 3, unit: 'reps', rest: 60, superset: '' },
   ],
 };
+
+const SUPERSET: WorkoutPlan = {
+  name: 'Pair',
+  minutes: 5,
+  exercises: [
+    { key: 'a', name: 'A', sets: 2, reps: 3, unit: 'reps', rest: 30, superset: 'p' },
+    { key: 'b', name: 'B', sets: 2, reps: 3, unit: 'reps', rest: 30, superset: 'p' },
+  ],
+};
+
+/** The same frame is asserted by apps/mobile's protocol test. */
+const FIXTURE_FRAME: string = '~7.0.1~{"t":"welcome","v":1,"ok":true}';
 
 function emptyDay(): FoodDay {
   return new FoodDay(
@@ -32,9 +51,9 @@ function emptyDay(): FoodDay {
   );
 }
 
-function started(): WorkoutSession {
-  const session = new WorkoutSession(PLAN);
-  session.start(1000);
+function started(plan: WorkoutPlan = PLAN): WorkoutSession {
+  const session = new WorkoutSession(plan);
+  session.start(1000, 'one');
   return session;
 }
 
@@ -61,7 +80,19 @@ export default function workoutSessionTest() {
       session.doneSet(121000);
       expect(session.status).assertEqual(WorkoutStatus.DONE);
       expect(session.records.length).assertEqual(3);
+      expect(session.exercisesDone).assertEqual(2);
       expect(session.activeMs).assertEqual(120000);
+    });
+
+    it('alternates a superset and rests only after each round', 0, () => {
+      const session = started(SUPERSET);
+      session.doneSet(2000);
+      expect(session.exerciseIndex).assertEqual(1);
+      expect(session.phase).assertEqual(WorkoutPhase.SET);
+      session.doneSet(3000);
+      expect(session.exerciseIndex).assertEqual(0);
+      expect(session.setIndex).assertEqual(1);
+      expect(session.phase).assertEqual(WorkoutPhase.REST);
     });
 
     it('freezes rest and workout time while paused', 0, () => {
@@ -77,11 +108,9 @@ export default function workoutSessionTest() {
       expect(session.activeMs).assertEqual(21000);
     });
 
-    it('keeps finished sets across new cycle, skip and early end', 0, () => {
+    it('keeps finished sets across skip, early end and continue', 0, () => {
       const session = started();
       session.doneSet(2000);
-      session.newCycle(3000);
-      expect(session.cycle).assertEqual(2);
       session.skipExercise(4000);
       expect(session.exerciseIndex).assertEqual(1);
       expect(session.exercisesDone).assertEqual(0);
@@ -100,6 +129,90 @@ export default function workoutSessionTest() {
       expect(session.tick(asked)).assertEqual(TickEvent.STILL_TRAINING);
       expect(session.tick(asked + IDLE_ANSWER_MS)).assertEqual(TickEvent.AUTO_ENDED);
       expect(session.activeMs).assertEqual(4000);
+    });
+  });
+
+  describe('Sync', () => {
+    it('reads the shared fixture and rejects junk', 0, () => {
+      expect(new FrameAssembler().push(FIXTURE_FRAME)?.ok).assertTrue();
+      expect(new FrameAssembler().push('~1.0.1~{"t":"session"}')).assertUndefined();
+      expect(new FrameAssembler().push('VoocHealth Watch Ready')).assertUndefined();
+      expect(new FrameAssembler().push('~1.1.2~tail')).assertUndefined();
+    });
+
+    it('splits a long message into small frames and rebuilds it', 0, () => {
+      const message: SyncMessage = {
+        t: 'plan',
+        plan: {
+          name: 'Đẩy',
+          minutes: 10,
+          exercises: PLAN.exercises,
+        },
+      };
+      const frames = encodeFrames(message, 20, 3);
+      expect(frames.every((frame: string) => frame.length <= 20)).assertTrue();
+      const assembler = new FrameAssembler();
+      let result: SyncMessage | undefined = undefined;
+      frames.forEach((frame: string) => {
+        result = assembler.push(frame);
+      });
+      expect(JSON.stringify(result)).assertEqual(JSON.stringify(message));
+    });
+
+    it('mirrors a workout started and trained on the other device', 0, () => {
+      const phone = started();
+      phone.changeReps(3, 1500);
+      phone.doneSet(2000);
+      const watch = new WorkoutSession(PLAN);
+      const first = mergeSessions(watch.shared(2000), phone.shared(2000) as SharedSession, true);
+      expect(first.changed).assertTrue();
+      expect(first.reply).assertFalse();
+      watch.applyShared(first.session, 12000);
+      expect(watch.status).assertEqual(WorkoutStatus.ACTIVE);
+      expect(watch.records.length).assertEqual(1);
+      expect(watch.phase).assertEqual(WorkoutPhase.REST);
+      expect(watch.restLeftMs).assertEqual(60000);
+    });
+
+    it('never loses a set when both devices changed, and converges', 0, () => {
+      const a = started();
+      const b = new WorkoutSession(PLAN);
+      b.applyShared(a.shared(1000) as SharedSession, 1000);
+      a.doneSet(2000);
+      b.skipExercise(2000);
+      b.doneSet(3000);
+      const merged = mergeSessions(a.shared(4000), b.shared(4000) as SharedSession, false);
+      expect(merged.session.log.length).assertEqual(2);
+      expect(merged.reply).assertTrue();
+      const back = mergeSessions(b.shared(4000), merged.session, true);
+      expect(back.reply).assertFalse();
+    });
+
+    it('keeps the finish time of a workout synced later', 0, () => {
+      const watch = started();
+      watch.doneSet(2000);
+      watch.end(5000);
+      expect(watch.shared(900000)?.end).assertEqual(5000);
+    });
+
+    it('closes a workout the phone saved', 0, () => {
+      const watch = started();
+      const saved = watch.shared(2000) as SharedSession;
+      const closed: SharedSession = {
+        id: saved.id,
+        rev: saved.rev + 1,
+        plan: saved.plan,
+        status: 'closed',
+        at: saved.at,
+        end: 3000,
+        pos: 0,
+        rest: 0,
+        log: [],
+        skip: [],
+      };
+      watch.applyShared(mergeSessions(watch.shared(3000), closed, true).session, 3000);
+      expect(watch.status).assertEqual(WorkoutStatus.IDLE);
+      expect(watch.shared(3000)?.status).assertEqual('closed');
     });
   });
 
@@ -126,51 +239,48 @@ export default function workoutSessionTest() {
   describe('SavedState', () => {
     const noon = new Date(2026, 0, 10, 12, 0, 0).getTime();
     const nextDay = noon + 24 * 60 * 60 * 1000;
+    const none: WorkoutPlan = { name: '', minutes: 0, exercises: [] };
 
-    it('restores a workout in progress and today food logs', 0, () => {
+    it('restores a workout in progress, its plan and today food logs', 0, () => {
       const session = new WorkoutSession(PLAN);
       const day = emptyDay();
-      session.start(noon);
+      session.start(noon, 'one');
       session.doneSet(noon + 1000);
       day.log(day.favorites[0]);
       const saved = encodeState(session, day, false, noon + 1000);
 
-      const restored = new WorkoutSession(PLAN);
       const restoredDay = emptyDay();
-      restoreState(saved, restored, restoredDay, noon + 11000);
+      const restored = restoreState(saved, none, restoredDay, noon + 11000).session;
+      expect(restored.plan.name).assertEqual('Push');
       expect(restored.status).assertEqual(WorkoutStatus.ACTIVE);
       expect(restored.records.length).assertEqual(1);
+      expect(restored.paused).assertTrue();
       expect(restored.restLeftMs).assertEqual(50000);
       expect(restoredDay.kcalEaten).assertEqual(600);
     });
 
-    it('ends an abandoned workout and drops yesterday food logs', 0, () => {
+    it('brings an interrupted workout back paused and drops yesterday food logs', 0, () => {
       const session = new WorkoutSession(PLAN);
       const day = emptyDay();
-      session.start(noon);
+      session.start(noon, 'one');
       session.changeReps(1, noon + 5000);
       day.log(day.favorites[0]);
       const saved = encodeState(session, day, false, noon + 5000);
 
-      const restored = new WorkoutSession(PLAN);
       const restoredDay = emptyDay();
-      restoreState(saved, restored, restoredDay, nextDay);
-      expect(restored.status).assertEqual(WorkoutStatus.ENDED_EARLY);
+      const restored = restoreState(saved, none, restoredDay, nextDay).session;
+      expect(restored.status).assertEqual(WorkoutStatus.ACTIVE);
+      expect(restored.paused).assertTrue();
+      expect(restored.hasProgress).assertTrue();
       expect(restored.activeMs).assertEqual(5000);
+      expect(restored.tick(nextDay + 1000)).assertEqual(TickEvent.NONE);
       expect(restoredDay.kcalEaten).assertEqual(100);
     });
 
-    it('ignores damaged data and a changed plan', 0, () => {
-      const session = new WorkoutSession(PLAN);
-      restoreState('{oops', session, emptyDay(), noon);
-      expect(session.status).assertEqual(WorkoutStatus.IDLE);
-
-      const old = new WorkoutSession(PLAN);
-      old.start(noon);
-      const changed: WorkoutPlan = { group: 'Legs', minutes: 5, exercises: [PLAN.exercises[1]] };
-      const other = new WorkoutSession(changed);
-      restoreState(encodeState(old, emptyDay(), false, noon), other, emptyDay(), noon);
-      expect(other.status).assertEqual(WorkoutStatus.IDLE);
+    it('ignores damaged data', 0, () => {
+      const restored = restoreState('{oops', none, emptyDay(), noon).session;
+      expect(restored.status).assertEqual(WorkoutStatus.IDLE);
+      expect(restored.plan.exercises.length).assertEqual(0);
     });
   });
 }

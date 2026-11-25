@@ -20,7 +20,7 @@ test("grouped routes remain at the root navigator with their original URLs", () 
   const routes = tree.children.map((child) => child.route)
   expect(routes).toEqual(
     expect.arrayContaining([
-      "(details)/ble-sync",
+      "(details)/watch",
       "(details)/injuries",
       "(details)/meal",
       "(details)/nutrition",
