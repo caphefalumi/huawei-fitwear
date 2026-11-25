@@ -82,7 +82,7 @@ const health = {
 beforeEach(() => {
   jest.clearAllMocks()
   useInjuries.setState({ injuries: [] })
-  useDeveloperMode.setState({ enabled: false, features: { testError: false, bleTest: false } })
+  useDeveloperMode.setState({ enabled: false, features: { testError: false } })
   mockUseAuth.mockReturnValue({
     user: { name: "Member", email: "member@example.com", birthDate: null },
     signOut,
@@ -216,13 +216,10 @@ test("shows unset height and restores account actions", async () => {
   await fireEvent.press(screen.getByRole("button", { name: "Account data" }))
   await fireEvent(screen.getByRole("switch", { name: "Developer mode" }), "valueChange", true)
   await fireEvent.press(screen.getByRole("button", { name: "Developer options" }))
-  await act(async () => useDeveloperMode.getState().toggleFeature("bleTest"))
-  await fireEvent.press(screen.getByRole("button", { name: "BLE test" }))
   await fireEvent.press(screen.getByRole("button", { name: "Sign out" }))
 
   expect(router.push).toHaveBeenNthCalledWith(1, "/account-data")
   expect(router.push).toHaveBeenNthCalledWith(2, "/developer-options")
-  expect(router.push).toHaveBeenNthCalledWith(3, "/ble-sync")
   expect(signOut).toHaveBeenCalledTimes(1)
 })
 

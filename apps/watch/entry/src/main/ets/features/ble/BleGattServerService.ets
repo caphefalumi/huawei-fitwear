@@ -43,13 +43,6 @@ export interface BleGattServerListener {
   onReceived: (text: string) => void;
 }
 
-export interface BleGattServerOptions {
-  /** Keep the screen lit while advertising or connected. */
-  keepScreenOn: boolean;
-  /** Stop advertising after this long without a connection; 0 never stops. */
-  advTimeoutMs: number;
-}
-
 const textEncoder: util.TextEncoder = new util.TextEncoder();
 const textDecoder: util.TextDecoder = util.TextDecoder.create('utf-8');
 
@@ -71,7 +64,6 @@ function decodeUtf8(buffer: ArrayBuffer): string {
  */
 export class BleGattServerService {
   private listener: BleGattServerListener;
-  private options: BleGattServerOptions;
   private context: common.UIAbilityContext | undefined = undefined;
   private gattServer: ble.GattServer | undefined = undefined;
   private advHandle: number = 0xff;
@@ -93,10 +85,8 @@ export class BleGattServerService {
   /** Errant connection / handshake watchdog timer ID. */
   private handshakeTimer: number = -1;
 
-  constructor(listener: BleGattServerListener,
-    options: BleGattServerOptions = { keepScreenOn: true, advTimeoutMs: ADV_TIMEOUT_MS }) {
+  constructor(listener: BleGattServerListener) {
     this.listener = listener;
-    this.options = options;
     // Initial connection reads 0 until client explicitly subscribes
     const cccView = new Uint8Array(this.cccBuffer);
     cccView[0] = 0;
@@ -142,56 +132,6 @@ export class BleGattServerService {
     this.clearAllTimers();
     this.releaseResources();
     this.listener.onStatus('BLE Stopped');
-  }
-
-  /**
-   * Updates the characteristic and notifies the connected phone if subscribed.
-   * Returns the trimmed text on accept, or '' if rejected (empty / too long).
-   */
-  sendText(text: string): string {
-    const clean = text.trim();
-    if (clean.length === 0) {
-      return '';
-    }
-    const encoded = encodeUtf8(clean);
-    const maxAllowed = this.getEffectiveMaxPayload();
-    if (encoded.byteLength > maxAllowed) {
-      this.listener.onStatus(`Too long (${encoded.byteLength}/${maxAllowed})`);
-      return '';
-    }
-    this.outboundBuffer = encoded;
-
-    if (!this.gattServer || this.connectedDeviceId.length === 0) {
-      return clean;
-    }
-
-    // Check CCCD: notify is only sent if client enabled notifications (byte 0 === 1)
-    const cccView = new Uint8Array(this.cccBuffer);
-    if (cccView[0] !== 1) {
-      return clean;
-    }
-
-    const notifyChar: ble.NotifyCharacteristic = {
-      serviceUuid: SERVICE_UUID,
-      characteristicUuid: CHAR_MESSAGE_UUID,
-      characteristicValue: this.outboundBuffer,
-      confirm: false,
-    };
-    try {
-      this.gattServer.notifyCharacteristicChanged(
-        this.connectedDeviceId,
-        notifyChar,
-        (err: BusinessError) => {
-          if (err) {
-            this.listener.onStatus(`Notify Err: ${err.code}`);
-          }
-        },
-      );
-    } catch (err) {
-      const e = err as BusinessError;
-      this.listener.onStatus(`Send Err: ${e.code}`);
-    }
-    return clean;
   }
 
   /**
@@ -512,9 +452,6 @@ export class BleGattServerService {
 
   private startAdvTimeout(): void {
     this.clearAdvTimeout();
-    if (this.options.advTimeoutMs === 0) {
-      return;
-    }
     this.advTimeoutTimer = setTimeout(() => {
       if (this.serverRunning && this.connectedDeviceId.length === 0) {
         hilog.info(DOMAIN, TAG, 'Adv timed out after 120s without connection');
@@ -522,7 +459,7 @@ export class BleGattServerService {
         this.setKeepScreen(false);
         this.listener.onStatus('Adv Timed Out');
       }
-    }, this.options.advTimeoutMs);
+    }, ADV_TIMEOUT_MS);
   }
 
   private clearAdvTimeout(): void {
@@ -576,7 +513,7 @@ export class BleGattServerService {
   }
 
   private setKeepScreen(on: boolean): void {
-    if (!this.context || !this.options.keepScreenOn) {
+    if (!this.context) {
       return;
     }
     const context = this.context;

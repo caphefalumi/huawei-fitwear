@@ -46,12 +46,16 @@ export class PhoneLink {
     }
     this.handlers = handlers;
     const listener: BleGattServerListener = {
-      onStatus: (_text: string): void => {},
+      onStatus: (text: string): void => {
+        // The service has given up (as in the demo, after 120 s alone): start() tries again.
+        if (text === 'Adv Timed Out' || text.startsWith('Adv Err') || text.startsWith('BLE Err')) {
+          this.stop();
+        }
+      },
       onConnection: (deviceId: string): void => this.onConnection(deviceId),
       onReceived: (text: string): void => this.onFrame(text),
     };
-    // Unlike the demo: no forced screen-on, and advertise until stopped.
-    this.service = new BleGattServerService(listener, { keepScreenOn: false, advTimeoutMs: 0 });
+    this.service = new BleGattServerService(listener);
     this.state = LinkState.SEARCHING;
     this.service.start(context);
   }

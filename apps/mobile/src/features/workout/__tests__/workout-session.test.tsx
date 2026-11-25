@@ -386,7 +386,7 @@ test("prompts to resume when a matching draft exists", async () => {
   )
   await screen.findByText("Resume previous session?")
   expect(screen.getByText("Continue")).toBeTruthy()
-  expect(screen.getByText("Start fresh")).toBeTruthy()
+  expect(screen.getByText("New cycle")).toBeTruthy()
   await screen.unmount()
   queryClient.clear()
 })
@@ -417,7 +417,7 @@ test("continues from draft position on resume", async () => {
   queryClient.clear()
 })
 
-test("starts fresh and clears draft when user chooses start fresh", async () => {
+test("starts a new cycle and clears the draft", async () => {
   const routine = routineOn(planNow(), input)
   jest.mocked(readSessionDraft).mockResolvedValue({
     userId: "user-1",
@@ -435,7 +435,7 @@ test("starts fresh and clears draft when user chooses start fresh", async () => 
     </QueryClientProvider>,
   )
   await screen.findByText("Resume previous session?")
-  await fireEvent.press(screen.getByText("Start fresh"))
+  await fireEvent.press(screen.getByText("New cycle"))
   expect(clearSessionDraft).toHaveBeenCalledWith("user-1")
   expect(screen.queryByText("Resume previous session?")).toBeNull()
   await screen.unmount()
@@ -534,6 +534,36 @@ test("continues a workout started on the watch and follows its sets", async () =
   expect(sent).toMatchObject({ id: "from-watch", pos: 2, rest: 0 })
   expect(sent.rev).toBeGreaterThan(2)
   expect(sent.log).toHaveLength(2)
+  await screen.unmount()
+  queryClient.clear()
+})
+
+test("offers to continue or restart a cycle trained on the watch", async () => {
+  const routine = routineOn(planNow(), input)
+  useWatchStore.setState({ routine })
+  useWatchStore.getState().receive({
+    id: "from-watch",
+    rev: 1,
+    plan: routine.name,
+    status: "active",
+    at: Date.now(),
+    end: 0,
+    pos: 1,
+    rest: 0,
+    log: [[0, 0, 7]],
+    skip: [],
+  })
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const screen = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await fireEvent.press(await screen.findByText("New cycle"))
+  expect(await screen.findByText(new RegExp(`Set 1 of ${routine.exercises[0]!.sets}`))).toBeTruthy()
+  const sent = useWatchStore.getState().session!
+  expect(sent.id).not.toBe("from-watch")
+  expect(sent).toMatchObject({ status: "active", pos: 0, log: [] })
   await screen.unmount()
   queryClient.clear()
 })

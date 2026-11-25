@@ -23,6 +23,8 @@ export struct ClockView {
   @Require @Param now: number;
   @Require @Param day: FoodDay;
   @Param connected: boolean = false;
+  @Param phoneLabel: string = '';
+  @Event onConnect: () => void = () => {};
   @Event onOpenDemos: () => void = () => {};
 
   @Builder
@@ -44,16 +46,18 @@ export struct ClockView {
         Row({ space: 5 }) {
           Text(formatDate(this.now)).fontSize(Type.SMALL).fontColor(Palette.MUTED);
           Circle({ width: 7, height: 7 }).fill(this.connected ? Palette.ACCENT : Palette.TRACK);
-          Text(this.connected ? 'Phone' : 'No phone')
+          Text(this.phoneLabel)
             .fontSize(12)
             .fontColor(this.connected ? Palette.TEXT : Palette.MUTED);
         }
+        .responseRegion({ x: 0, y: -12, width: '100%', height: 44 })
+        .onClick(() => this.onConnect());
         Text(formatTime(this.now))
           .fontSize(Type.BIG)
           .fontWeight(FontWeight.Bold)
           .fontColor(Palette.TEXT);
       }
-      // Hidden developer entry to the BLE and IMU demo pages.
+      // Hidden developer entry to the IMU sensor page.
       .gesture(LongPressGesture({ duration: 800 }).onAction(() => this.onOpenDemos()));
 
       Row({ space: 10 }) {

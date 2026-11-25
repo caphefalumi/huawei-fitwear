@@ -9,10 +9,12 @@ const ENABLED_KEY = "watch.enabled"
 const PHONE_ID_KEY = "watch.phone-id"
 
 type PairingState = {
-  /** The user asked to use a watch; the app then connects on its own. */
+  /** The user asked to use a watch, now or after an earlier successful connection. */
   enabled: boolean
   load: () => Promise<void>
   setEnabled: (enabled: boolean) => void
+  /** Called once connected, so that later launches connect on their own. */
+  remember: () => void
 }
 
 export const usePairing = create<PairingState>((set) => ({
@@ -27,9 +29,15 @@ export const usePairing = create<PairingState>((set) => ({
   },
   setEnabled: (enabled) => {
     set({ enabled })
+    if (enabled || Platform.OS === "web") return
+    void SecureStore.deleteItemAsync(ENABLED_KEY).catch(() =>
+      captureException(new Error("Could not forget the watch.")),
+    )
+  },
+  remember: () => {
     if (Platform.OS === "web") return
-    void SecureStore.setItemAsync(ENABLED_KEY, enabled ? "1" : "0").catch(() =>
-      captureException(new Error("Could not save the watch setting.")),
+    void SecureStore.setItemAsync(ENABLED_KEY, "1").catch(() =>
+      captureException(new Error("Could not remember the watch.")),
     )
   },
 }))

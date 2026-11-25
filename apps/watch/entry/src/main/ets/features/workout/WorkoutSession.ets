@@ -111,6 +111,16 @@ export class WorkoutSession {
     return total;
   }
 
+  /** Something would be lost by starting over. */
+  get hasProgress(): boolean {
+    return this.position > 0 || this.reps > 0 || this.records.length > 0 || this.skipped.length > 0;
+  }
+
+  /** The phone saved or discarded this workout. */
+  get isClosed(): boolean {
+    return this.closed;
+  }
+
   /** Exercises with every set logged (skipped ones do not count). */
   get exercisesDone(): number {
     return this.plan.exercises.filter((item: PlanExercise, index: number) =>
@@ -386,11 +396,11 @@ export class WorkoutSession {
     this.records = saved.records;
     this.skipped = saved.skipped;
     this.askingStillTraining = false;
-    // Too long gone to still be asking "Still training?": end at the last activity.
-    if (this.status === WorkoutStatus.ACTIVE &&
-      now - this.lastActivityAt >= IDLE_PROMPT_MS + IDLE_ANSWER_MS) {
-      this.rev++;
-      this.finish(WorkoutStatus.ENDED_EARLY, this.lastActivityAt);
+    // The app was closed mid-workout: come back paused, without counting the time away.
+    if (this.status === WorkoutStatus.ACTIVE) {
+      this.stopClock(this.lastActivityAt);
+      this.paused = true;
+      this.lastActivityAt = now;
     }
     return true;
   }

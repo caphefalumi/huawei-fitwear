@@ -254,11 +254,12 @@ export default function workoutSessionTest() {
       expect(restored.plan.name).assertEqual('Push');
       expect(restored.status).assertEqual(WorkoutStatus.ACTIVE);
       expect(restored.records.length).assertEqual(1);
+      expect(restored.paused).assertTrue();
       expect(restored.restLeftMs).assertEqual(50000);
       expect(restoredDay.kcalEaten).assertEqual(600);
     });
 
-    it('ends an abandoned workout and drops yesterday food logs', 0, () => {
+    it('brings an interrupted workout back paused and drops yesterday food logs', 0, () => {
       const session = new WorkoutSession(PLAN);
       const day = emptyDay();
       session.start(noon, 'one');
@@ -268,8 +269,11 @@ export default function workoutSessionTest() {
 
       const restoredDay = emptyDay();
       const restored = restoreState(saved, none, restoredDay, nextDay).session;
-      expect(restored.status).assertEqual(WorkoutStatus.ENDED_EARLY);
+      expect(restored.status).assertEqual(WorkoutStatus.ACTIVE);
+      expect(restored.paused).assertTrue();
+      expect(restored.hasProgress).assertTrue();
       expect(restored.activeMs).assertEqual(5000);
+      expect(restored.tick(nextDay + 1000)).assertEqual(TickEvent.NONE);
       expect(restoredDay.kcalEaten).assertEqual(100);
     });
 

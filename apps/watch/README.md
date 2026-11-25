@@ -18,7 +18,7 @@ apps/watch/
 │       │   ├── ets/
 │       │   │   ├── entryability/EntryAbility.ets  # Application lifecycle handlers
 │       │   │   ├── entrybackupability/             # Data backup extension
-│       │   │   └── pages/Index.ets                 # Main wearable UI screen
+│       │   │   └── features/home/HomePage.ets      # Main wearable UI screen
 │       │   ├── module.json5   # Device types (`wearable`), permissions, and abilities
 │       │   └── resources/     # Color definitions, layouts, and graphics
 │       └── ohosTest/          # Automated UI and unit test suites
@@ -56,10 +56,18 @@ start with a sample plan so they can be tried alone. Food and favorite values ar
 still samples (`features/common/SampleData.ets`). Reps are entered with −/+ or the
 crown (no IMU counting yet).
 
+## Unfinished workouts
+
+If the wearer closes or leaves the app mid-workout, or ends early and comes back,
+the watch asks **Continue** or **New cycle** (start over, discarding the unfinished
+one). The phone asks the same.
+
 ## Phone sync
 
-The watch advertises a private BLE GATT service while the app is open; the phone
-connects from **Watch** in the mobile app. The first time, the watch asks
+The watch advertises a private BLE GATT service when the app opens; the phone
+connects from **Watch** in the mobile app, and reconnects by itself after the first
+success. The screen stays on while advertising or connected. Advertising stops after
+two minutes alone: reopen the app or tap **Connect** on the home screen. The first time, the watch asks
 **Pair phone?** and ignores everything else from that phone until you allow it.
 Starting a workout on either device opens it on the other, and finished sets,
 rest, skips and the end stay in step. The phone saves finished workouts.
@@ -85,18 +93,10 @@ shows a notice, and nothing is saved until the user agrees. The workout in progr
 and today's food logs survive an app restart (`features/storage/`); system backup
 is off.
 
-### Bluetooth demo
-
-In a **debug** build, long-press the time to open the demo list, open **BLE Sync Demo**, grant Bluetooth access, and tap **Start Stream**.
-In a mobile development build with Bluetooth enabled, open **BLE Sync** and connect
-to the watch. The phone requests a 185-byte ATT MTU; smaller negotiated MTUs can
-prevent IMU packets from fitting in a notification. The watch stops advertising
-after two minutes without a connection; restart the stream to advertise again.
-
 ## Release Build
 
 `hvigorw assembleHap -p buildMode=release` obfuscates top-level names, strips
-`console` logs and hides the demo pages. Before publishing:
+`console` logs and hides the IMU sensor page. Before publishing:
 
 - Replace the debug signing config with an AppGallery Connect release profile.
 - Replace the sample food data with data synced from the phone.

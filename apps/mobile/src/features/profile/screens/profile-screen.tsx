@@ -284,9 +284,6 @@ export function ProfileScreen() {
               onPress={() => router.push("/developer-options")}
             />
           ) : null}
-          {developerMode && developerFeatures.bleTest ? (
-            <ProfileRow label="BLE test" onPress={() => router.push("/ble-sync")} />
-          ) : null}
           {developerMode && developerFeatures.testError ? (
             <ProfileRow
               label="Send test error"

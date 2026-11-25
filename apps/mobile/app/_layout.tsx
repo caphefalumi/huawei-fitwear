@@ -92,7 +92,6 @@ function RootNavigator() {
           <Stack.Screen name="(modals)/add-item" />
           <Stack.Screen name="(modals)/review-item" />
           <Stack.Screen name="(modals)/replace-food" />
-          <Stack.Screen name="(details)/ble-sync" />
           <Stack.Screen name="(details)/watch" />
         </Stack.Protected>
         <Stack.Protected guard={!user} redirectTo={APP_ROUTES.home}>

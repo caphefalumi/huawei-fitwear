@@ -1,6 +1,7 @@
 /** Keeps one connection to the watch alive and mirrors the store over it. */
 import { BLE_MAX_MESSAGE_BYTES, WatchBleClient, type WatchBleStatus } from "@/features/ble"
 
+import { usePairing } from "./pairing.store"
 import { encodeFrames, FrameAssembler, PROTOCOL_VERSION, type SyncMessage } from "./protocol"
 import { toWirePlan, useWatchStore } from "./store"
 
@@ -112,7 +113,10 @@ export class WatchLink {
       if (this.hello) clearInterval(this.hello)
       this.hello = null
       useWatchStore.setState({ status: message.ok ? "connected" : "approval", error: null })
-      if (message.ok) this.sendSession()
+      if (message.ok) {
+        usePairing.getState().remember()
+        this.sendSession()
+      }
     } else if (message.t === "session" && useWatchStore.getState().status === "connected") {
       useWatchStore.getState().receive(message.session)
     }

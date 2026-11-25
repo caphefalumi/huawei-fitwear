@@ -172,7 +172,11 @@ function ActiveSession({
   const hasDraft = existingDraft !== null && existingDraft.routineName === routine.name
   // A draft of another routine is offered too: its exercise snapshot is restored on resume.
   const canResume = existingDraft !== null && (hasDraft || Boolean(existingDraft.exercises?.length))
-  const [resumePrompt, setResumePrompt] = useState(canResume && !adopted)
+  // Unfinished sets from either device are offered back, unless the watch just opened this screen.
+  const unfinished =
+    adopted?.session.status === "active" &&
+    (adopted.session.pos > 0 || adopted.session.log.length > 0 || adopted.session.skip.length > 0)
+  const [resumePrompt, setResumePrompt] = useState(!fromWatch && (adopted ? unfinished : canResume))
 
   const [phase, setPhase] = useState<Phase>(() =>
     adopted?.session.status === "done" ? "summary" : adopted?.session.rest ? "rest" : "set",
@@ -384,6 +388,27 @@ function ActiveSession({
     ],
   )
 
+  /** Starts over: the unfinished workout is discarded here and on the watch. */
+  const startNewCycle = () => {
+    const unfinishedId = adopted?.session.id ?? existingDraft?.saveId
+    if (unfinishedId) useWatchStore.getState().close(unfinishedId)
+    discardDraft()
+    if (adopted) {
+      setSaveId(Crypto.randomUUID())
+      setStartedAt(Date.now())
+      setPosition(0)
+      setSkipped([])
+      setLogged(emptySets(routine.exercises))
+      setWeights(initialWeights(routine.exercises))
+      setDraft(routine.exercises[0]?.reps ?? 0)
+      setRestEndsAt(0)
+      setFinishedAt(null)
+      setPhase("set")
+      appliedProgression.current = false
+    }
+    setResumePrompt(false)
+  }
+
   useEffect(() => {
     const records = progression.data?.exercises
     if (!records || appliedProgression.current || resumePrompt) return
@@ -562,7 +587,7 @@ function ActiveSession({
     router.dismissTo("/workout")
   }
 
-  if (resumePrompt && existingDraft)
+  if (resumePrompt)
     return (
       <Screen>
         <BackHeader label="Back" onPress={() => router.back()} />
@@ -570,14 +595,11 @@ function ActiveSession({
         <ConfirmDialog
           visible
           title="Resume previous session?"
-          message={`You left "${existingDraft.routineName}" without finishing. Continue where you left off, or start fresh.`}
-          cancelLabel="Start fresh"
+          message={`You left "${adopted ? routine.name : existingDraft?.routineName}" without finishing. Continue the old cycle, or start a new one.`}
+          cancelLabel="New cycle"
           confirmLabel="Continue"
-          onCancel={() => {
-            discardDraft()
-            setResumePrompt(false)
-          }}
-          onConfirm={continueDraft}
+          onCancel={startNewCycle}
+          onConfirm={adopted ? () => setResumePrompt(false) : continueDraft}
         />
       </Screen>
     )

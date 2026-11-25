@@ -1,4 +1,4 @@
-import { router, usePathname } from "expo-router"
+import { router } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { AppState, Platform } from "react-native"
 
@@ -18,8 +18,6 @@ export function WatchBridge() {
   const [foreground, setForeground] = useState(AppState.currentState !== "background")
   const link = useRef<WatchLink | null>(null)
   const [ready, setReady] = useState(false)
-  // The BLE test screen needs the radio to itself.
-  const testing = usePathname() === "/ble-sync"
   const today = useRoutines().today
 
   useEffect(() => {
@@ -52,9 +50,9 @@ export function WatchBridge() {
   }, [enabled])
 
   useEffect(() => {
-    if (enabled && foreground && !testing) link.current?.start()
+    if (enabled && foreground) link.current?.start()
     else link.current?.stop()
-  }, [enabled, foreground, testing, ready])
+  }, [enabled, foreground, ready])
 
   // Offer today's routine to the watch while no workout is running.
   const routineKey = JSON.stringify(today)

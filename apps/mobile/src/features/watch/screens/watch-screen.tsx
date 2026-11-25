@@ -25,12 +25,13 @@ export function WatchScreen() {
           </Text>
         ) : null}
         <Text style={styles.detail}>
-          Open VoocHealth on your watch and keep it nearby. A workout started on either device
-          appears on both while both apps are open.
+          Open VoocHealth on your watch and keep it nearby. After the first connection the phone
+          connects by itself. A workout started on either device appears on both while both apps are
+          open.
         </Text>
       </Card>
       <Button
-        label={enabled ? "Disconnect watch" : "Connect watch"}
+        label={enabled ? "Forget watch" : "Connect watch"}
         variant={enabled ? "secondary" : undefined}
         onPress={() => setEnabled(!enabled)}
       />

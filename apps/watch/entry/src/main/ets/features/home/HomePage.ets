@@ -1,5 +1,5 @@
 import { abilityAccessCtrl, common } from '@kit.AbilityKit';
-import { BusinessError } from '@kit.BasicServicesKit';
+import { BusinessError, power } from '@kit.BasicServicesKit';
 import { util } from '@kit.ArkTS';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import BuildProfile from 'BuildProfile';
@@ -61,6 +61,10 @@ struct HomePage {
   @Local showingForm: boolean = false;
   @Local confirmingEnd: boolean = false;
   @Local summaryDismissed: boolean = false;
+  /** Asking whether to continue a workout the wearer walked away from. */
+  @Local interrupted: boolean = false;
+  /** The wearer left the app mid-workout (the screen merely sleeping does not count). */
+  private exited: boolean = false;
   private ticker: number = -1;
   private crownDegrees: number = 0;
   private today: string = dayKey(Date.now());
@@ -73,6 +77,7 @@ struct HomePage {
         restoreState(this.store.loadState(), initialPlan(), this.day, Date.now());
       this.session = restored.session;
       this.summaryDismissed = restored.summaryDismissed;
+      this.interrupt();
       this.startLink();
     }
     this.startTicker();
@@ -88,6 +93,10 @@ struct HomePage {
     if (this.consented) {
       this.startLink();
     }
+    if (this.exited) {
+      this.exited = false;
+      this.interrupt();
+    }
     this.startTicker();
     this.tick();
   }
@@ -95,11 +104,47 @@ struct HomePage {
   onPageHide(): void {
     this.visible = false;
     this.save();
-    // A workout keeps ticking so the end of a rest can still vibrate.
+    // As in the BLE demo, the connection stays up; only the app closing ends it.
     if (this.session.status !== WorkoutStatus.ACTIVE) {
       this.stopTicker();
-      this.link.stop();
+    } else if (power.isActive()) {
+      this.exited = true;
     }
+  }
+
+  /** Pauses an unfinished workout until the wearer says what to do with it. */
+  private interrupt(): void {
+    if (this.session.status !== WorkoutStatus.ACTIVE) {
+      return;
+    }
+    if (!this.session.hasProgress) {
+      this.session.resume(Date.now());
+      return;
+    }
+    this.session.pause(Date.now());
+    this.showingForm = false;
+    this.confirmingEnd = false;
+    this.interrupted = true;
+  }
+
+  private continueOldCycle(): void {
+    this.interrupted = false;
+    if (this.session.status === WorkoutStatus.ACTIVE) {
+      this.resetWorkoutScreens();
+      this.session.resume(Date.now());
+    } else {
+      this.reopenWorkout();
+    }
+  }
+
+  /** Starts the workout over; the unfinished one is discarded. */
+  private startNewCycle(): void {
+    this.interrupted = false;
+    if (this.phonePlan?.name === this.session.plan.name) {
+      this.session = new WorkoutSession(this.phonePlan);
+    }
+    this.startWorkout();
+    this.publish();
   }
 
   /** Asks for Bluetooth the first time, then waits for the phone. */
@@ -156,6 +201,11 @@ struct HomePage {
         return;
       }
       this.session = target;
+      // The phone moved the workout on, so there is nothing left to ask.
+      if (this.interrupted) {
+        this.interrupted = false;
+        target.resume(now);
+      }
       if (!wasActive && target.status === WorkoutStatus.ACTIVE) {
         this.resetWorkoutScreens();
         vibrate(HAPTIC_SIGNAL_MS);
@@ -209,6 +259,7 @@ struct HomePage {
     this.summaryDismissed = false;
     this.homePage = CLOCK_PAGE;
     this.consented = false;
+    this.interrupted = false;
   }
 
   /** At midnight yesterday's food logs and finished workout go away. */
@@ -231,7 +282,9 @@ struct HomePage {
       return true;
     }
     if (this.session.status === WorkoutStatus.ACTIVE) {
-      if (this.session.askingStillTraining) {
+      if (this.interrupted) {
+        this.continueOldCycle();
+      } else if (this.session.askingStillTraining) {
         this.session.stillTraining(Date.now());
       } else if (this.confirmingEnd) {
         this.confirmingEnd = false;
@@ -256,7 +309,8 @@ struct HomePage {
     if (today !== this.today) {
       this.startNewDay(today);
     }
-    const event = this.session.tick(this.now);
+    // An unanswered resume prompt must not count as idling.
+    const event = this.interrupted ? TickEvent.NONE : this.session.tick(this.now);
     if (event === TickEvent.REST_OVER) {
       vibrate(HAPTIC_SIGNAL_MS);
     } else if (event === TickEvent.STILL_TRAINING || event === TickEvent.AUTO_ENDED) {
@@ -267,7 +321,6 @@ struct HomePage {
     this.publish();
     if (!this.visible && this.session.status !== WorkoutStatus.ACTIVE) {
       this.stopTicker();
-      this.link.stop();
     }
   }
 
@@ -315,7 +368,7 @@ struct HomePage {
 
   private onCrown(event: CrownEvent): void {
     event.stopPropagation();
-    if (!this.consented) {
+    if (!this.consented || this.interrupted) {
       return;
     }
     if (event.action === CrownAction.END) {
@@ -345,6 +398,13 @@ struct HomePage {
       this.homePager.changeIndex(page, true);
       vibrate(HAPTIC_TICK_MS);
     }
+  }
+
+  private phoneLabel(): string {
+    if (this.link.state === LinkState.CONNECTED) {
+      return 'Phone';
+    }
+    return this.link.state === LinkState.OFF ? 'Connect' : 'Searching';
   }
 
   @Builder
@@ -435,12 +495,12 @@ struct HomePage {
         now: this.now,
         day: this.day,
         connected: this.link.state === LinkState.CONNECTED,
+        phoneLabel: this.phoneLabel(),
+        onConnect: () => this.startLink(),
         onOpenDemos: () => {
-          // The BLE and IMU demos are developer tools: unreachable in release builds.
+          // A developer tool: unreachable in release builds.
           if (BuildProfile.DEBUG) {
-            // The demos run their own GATT server on the same service.
-            this.link.stop();
-            this.getUIContext().getRouter().pushUrl({ url: 'pages/Index' });
+            this.getUIContext().getRouter().pushUrl({ url: 'features/imu/ImuPage' });
           }
         },
       });
@@ -450,6 +510,15 @@ struct HomePage {
             plan: this.session.plan,
             now: this.now,
             onStart: () => this.startWorkout(),
+          });
+        } else if (this.session.status === WorkoutStatus.ENDED_EARLY && !this.session.isClosed) {
+          ConfirmView({
+            title: 'Resume workout?',
+            message: `Sets done: ${this.session.records.length}\nNew cycle starts over`,
+            keepLabel: 'Continue',
+            endLabel: 'New cycle',
+            onKeep: () => this.continueOldCycle(),
+            onEnd: () => this.startNewCycle(),
           });
         } else {
           this.summary();
@@ -489,6 +558,15 @@ struct HomePage {
           endLabel: 'Not now',
           onKeep: () => this.link.allow(),
           onEnd: () => this.link.reject(),
+        });
+      } else if (this.interrupted && this.session.status === WorkoutStatus.ACTIVE) {
+        ConfirmView({
+          title: 'Resume workout?',
+          message: `Sets done: ${this.session.records.length}\nNew cycle starts over`,
+          keepLabel: 'Continue',
+          endLabel: 'New cycle',
+          onKeep: () => this.continueOldCycle(),
+          onEnd: () => this.startNewCycle(),
         });
       } else if (this.session.status === WorkoutStatus.ACTIVE) {
         this.workout();
