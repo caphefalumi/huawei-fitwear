@@ -1,5 +1,6 @@
 import { Image } from "expo-image"
-import { StyleSheet, Text, TextInput, View } from "react-native"
+import { useState } from "react"
+import { StyleSheet, Text, View } from "react-native"
 
 import { Button } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
@@ -7,55 +8,136 @@ import { Sheet } from "@/components/ui/sheet"
 import { Palette as C } from "@/theme"
 
 import { rescaleItem, splitDetail, type MealItem } from "../hooks/meals-hooks"
-import { icons } from "./meals-ui"
+import { Box, Field, ValueInput, icons } from "./meals-ui"
 
-export function MealOptionsSheet({
+export type MealItemEdit = { name: string; amount: number }
+
+/** One sheet for a selected item: edit its name and amount, or jump to a deeper action. */
+export function MealItemSheet({
   item,
   actionError,
+  pending,
   onClose,
+  onSave,
   onEditNutrition,
   onSearchFood,
-  onChangeAmount,
   onDelete,
 }: {
   item: MealItem | null
   actionError: string | null
+  pending: boolean
   onClose: () => void
+  onSave: (item: MealItem, edit: MealItemEdit) => void
   onEditNutrition: (item: MealItem) => void
   onSearchFood: (item: MealItem) => void
-  onChangeAmount: (item: MealItem) => void
   onDelete: (item: MealItem) => void
 }) {
   return (
-    <Sheet visible={item !== null} title={item?.name ?? ""} onClose={onClose}>
+    <Sheet visible={item !== null} title="Edit item" onClose={onClose}>
+      {item ? (
+        <MealItemForm
+          key={item.id}
+          item={item}
+          actionError={actionError}
+          pending={pending}
+          onClose={onClose}
+          onSave={onSave}
+          onEditNutrition={onEditNutrition}
+          onSearchFood={onSearchFood}
+          onDelete={onDelete}
+        />
+      ) : null}
+    </Sheet>
+  )
+}
+
+function MealItemForm({
+  item,
+  actionError,
+  pending,
+  onClose,
+  onSave,
+  onEditNutrition,
+  onSearchFood,
+  onDelete,
+}: {
+  item: MealItem
+  actionError: string | null
+  pending: boolean
+  onClose: () => void
+  onSave: (item: MealItem, edit: MealItemEdit) => void
+  onEditNutrition: (item: MealItem) => void
+  onSearchFood: (item: MealItem) => void
+  onDelete: (item: MealItem) => void
+}) {
+  const portion = splitDetail(item.detail)
+  const unit = portion.unit === "ml" ? "mL" : portion.unit
+  const [name, setName] = useState(item.name)
+  const [amount, setAmount] = useState(String(portion.amount))
+  const parsed = Number(amount)
+  const amountValid = amount.trim() !== "" && Number.isFinite(parsed) && parsed > 0
+  const dirty = name !== item.name || amount.trim() !== String(portion.amount)
+  const estimate = amountValid ? rescaleItem(item, parsed) : item
+
+  return (
+    <>
       {actionError ? (
         <Text accessibilityRole="alert" style={styles.footnote}>
           {actionError}
         </Text>
       ) : null}
-      <Text style={styles.sheetSubtitle}>
-        {item
-          ? `${splitDetail(item.detail).amount} ${splitDetail(item.detail).unit} · selected item`
-          : ""}
-      </Text>
-      <Pressable
-        style={styles.optionRow}
-        onPress={() => {
-          if (item) onEditNutrition(item)
-        }}
-      >
+
+      <Field label="Name">
+        <Box>
+          <ValueInput label="Name" value={name} onChangeText={setName} keyboardType="default" />
+        </Box>
+      </Field>
+
+      <Field label="Amount">
+        <Box>
+          <ValueInput label="Amount" value={amount} onChangeText={setAmount} unit={unit} />
+        </Box>
+      </Field>
+
+      <View style={styles.estimateBox}>
+        <View style={styles.estimateTop}>
+          <Text style={styles.estimateLabel}>This item, estimated</Text>
+          <Text style={styles.estimateValue}>{estimate.kcal} kcal</Text>
+        </View>
+        <View style={styles.estimateMacros}>
+          <Text style={styles.estimateMacro}>Protein {estimate.macros.protein}g</Text>
+          <Text style={styles.estimateMacro}>Carbs {estimate.macros.carbs}g</Text>
+          <Text style={styles.estimateMacro}>Fat {estimate.macros.fat}g</Text>
+        </View>
+      </View>
+
+      <Button
+        label="Save changes"
+        disabled={!dirty || pending}
+        busy={pending}
+        onPress={() => onSave(item, { name, amount: parsed })}
+      />
+
+      <Pressable style={styles.optionRow} onPress={() => onEditNutrition(item)}>
+        <Image
+          accessible={false}
+          source={icons.pencil}
+          style={styles.optionIcon}
+          contentFit="contain"
+        />
         <View style={styles.optionText}>
           <Text style={styles.optionTitle}>Edit nutrition</Text>
-          <Text style={styles.optionNote}>Review the name, portion, calories and macros</Text>
+          <Text style={styles.optionNote}>Correct calories, macros or the unit</Text>
         </View>
+        <Image
+          accessible={false}
+          source={icons.chevronRight}
+          style={styles.optionChevron}
+          contentFit="contain"
+        />
       </Pressable>
 
-      <Pressable
-        style={styles.optionRow}
-        onPress={() => {
-          if (item) onSearchFood(item)
-        }}
-      >
+      <Pressable style={styles.optionRow} onPress={() => onSearchFood(item)}>
         <Image
           accessible={false}
           source={icons.search}
@@ -74,26 +156,7 @@ export function MealOptionsSheet({
         />
       </Pressable>
 
-      <Pressable style={styles.optionRow} onPress={() => item && onChangeAmount(item)}>
-        <Image
-          accessible={false}
-          source={icons.weight}
-          style={styles.optionIcon}
-          contentFit="contain"
-        />
-        <View style={styles.optionText}>
-          <Text style={styles.optionTitle}>Change amount</Text>
-          <Text style={styles.optionNote}>Update the portion weight</Text>
-        </View>
-        <Image
-          accessible={false}
-          source={icons.chevronRight}
-          style={styles.optionChevron}
-          contentFit="contain"
-        />
-      </Pressable>
-
-      <Pressable style={styles.optionRow} onPress={() => item && onDelete(item)}>
+      <Pressable style={styles.optionRow} onPress={() => onDelete(item)}>
         <Image
           accessible={false}
           source={icons.close}
@@ -115,91 +178,13 @@ export function MealOptionsSheet({
       <Pressable style={styles.sheetCancel} onPress={onClose}>
         <Text style={styles.sheetCancelLabel}>Cancel</Text>
       </Pressable>
-    </Sheet>
-  )
-}
-
-export function MealAmountSheet({
-  item,
-  draft,
-  actionError,
-  pending,
-  onDraftChange,
-  onSave,
-  onClose,
-}: {
-  item: MealItem | null
-  draft: string
-  actionError: string | null
-  pending: boolean
-  onDraftChange: (value: string) => void
-  onSave: () => void
-  onClose: () => void
-}) {
-  return (
-    <Sheet visible={item !== null} title="Change amount" onClose={onClose}>
-      {actionError ? (
-        <Text accessibilityRole="alert" style={styles.footnote}>
-          {actionError}
-        </Text>
-      ) : null}
-      <Text style={styles.sheetSubtitle}>
-        {item
-          ? `${item.name}${splitDetail(item.detail).note ? ` · ${splitDetail(item.detail).note}` : ""}`
-          : ""}
-      </Text>
-
-      <View style={styles.previousRow}>
-        <Text style={styles.previousLabel}>Previous amount</Text>
-        <Text style={styles.previousValue}>
-          {item ? `${splitDetail(item.detail).amount} ${splitDetail(item.detail).unit}` : ""}
-        </Text>
-      </View>
-
-      <Text style={styles.fieldLabel}>New amount</Text>
-      <View style={styles.amountBox}>
-        <TextInput
-          accessibilityLabel={`New amount for ${item?.name ?? "item"}, ${item ? splitDetail(item.detail).unit : "g"}`}
-          value={draft}
-          onChangeText={onDraftChange}
-          keyboardType="numeric"
-          style={styles.amountInput}
-        />
-        <Text style={styles.amountUnit}>{item ? splitDetail(item.detail).unit : "g"}</Text>
-      </View>
-
-      {item ? (
-        <View style={styles.estimateBox}>
-          <View style={styles.estimateTop}>
-            <Text style={styles.estimateLabel}>This item · estimated</Text>
-            <Text style={styles.estimateValue}>
-              {rescaleItem(item, Number(draft) || 0).kcal} kcal
-            </Text>
-          </View>
-          <Text style={styles.estimateMacros}>
-            {(() => {
-              const next = rescaleItem(item, Number(draft) || 0)
-              return `Protein ${next.macros.protein}g · Carbs ${next.macros.carbs}g · Fat ${next.macros.fat}g`
-            })()}
-          </Text>
-        </View>
-      ) : null}
-
-      <Button label="Save amount" disabled={pending} busy={pending} onPress={onSave} />
-      <Pressable style={styles.sheetCancel} onPress={onClose}>
-        <Text style={styles.sheetCancelLabel}>Cancel</Text>
-      </Pressable>
-    </Sheet>
+    </>
   )
 }
 
 const styles = StyleSheet.create({
   footnote: {
     fontSize: 11,
-    color: C.textMuted,
-  },
-  sheetSubtitle: {
-    fontSize: 13,
     color: C.textMuted,
   },
   optionRow: {
@@ -245,47 +230,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: C.textMuted,
   },
-  previousRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 8,
-    justifyContent: "space-between",
-  },
-  previousLabel: {
-    fontSize: 12,
-    color: C.textMuted,
-  },
-  previousValue: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: C.text,
-  },
-  fieldLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: C.textMuted,
-  },
-  amountBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: C.surface,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  amountInput: {
-    flex: 1,
-    fontSize: 15,
-    color: C.text,
-  },
-  amountUnit: {
-    fontSize: 13,
-    color: C.textMuted,
-  },
   estimateBox: {
     backgroundColor: C.card,
     borderRadius: 12,
@@ -309,6 +253,11 @@ const styles = StyleSheet.create({
     color: C.text,
   },
   estimateMacros: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  estimateMacro: {
     fontSize: 11,
     color: C.textMuted,
   },
