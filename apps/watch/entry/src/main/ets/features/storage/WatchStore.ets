@@ -42,7 +42,7 @@ export class WatchStore {
   /** The phone the wearer allowed to connect; '' when none. */
   allowedPhone(): string {
     try {
-      return this.store?.getSync(KEY_PHONE, '') as string ?? '';
+      return (this.store?.getSync(KEY_PHONE, '') as string) ?? '';
     } catch (err) {
       this.report('read', err as BusinessError);
       return '';

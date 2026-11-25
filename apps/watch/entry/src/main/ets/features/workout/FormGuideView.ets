@@ -21,12 +21,13 @@ export struct FormGuideView {
     if (id === '') {
       return;
     }
-    loadAnimation(this.getUIContext().getHostContext() as common.Context, id)
-      .then((uri: string) => {
+    loadAnimation(this.getUIContext().getHostContext() as common.Context, id).then(
+      (uri: string) => {
         if (id === mediaId(this.exerciseKey)) {
           this.gifUri = uri;
         }
-      });
+      },
+    );
   }
 
   build() {
@@ -37,7 +38,7 @@ export struct FormGuideView {
         .fontColor(Palette.MUTED)
         .textAlign(TextAlign.Center)
         .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis });
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
       if (mediaId(this.exerciseKey) === '') {
         Text('No animation for this exercise')
           .width('70%')
@@ -45,14 +46,17 @@ export struct FormGuideView {
           .fontColor(Palette.TEXT)
           .textAlign(TextAlign.Center);
       } else {
-        Image(this.gifUri !== '' ? this.gifUri :
-          $rawfile(`exercise-loops/${mediaId(this.exerciseKey)}.webp`))
+        Image(
+          this.gifUri !== ''
+            ? this.gifUri
+            : $rawfile(`exercise-loops/${mediaId(this.exerciseKey)}.webp`),
+        )
           .width(124)
           .height(124)
           .borderRadius(18)
           .objectFit(ImageFit.Contain);
       }
-      PillButton({ label: 'Back', onTap: () => this.onBack() });
+      PillButton({ label: 'Back', onTap: () => this.onBack() })
     }
     .width('100%')
     .height('100%')

@@ -81,8 +81,11 @@ export function sessionSlots(exercises: PlanExercise[]): Slot[] {
   while (index < exercises.length) {
     const first = exercises[index];
     let end = index + 1;
-    while (first.superset !== '' && end < exercises.length &&
-      exercises[end].superset === first.superset) {
+    while (
+      first.superset !== '' &&
+      end < exercises.length &&
+      exercises[end].superset === first.superset
+    ) {
       end++;
     }
     let rounds = 0;
@@ -164,25 +167,50 @@ function isText(value: string, max: number): boolean {
 }
 
 export function isPlan(plan: WorkoutPlan): boolean {
-  return isText(plan.name, 60) && isCount(plan.minutes, 600) && Array.isArray(plan.exercises) &&
+  return (
+    isText(plan.name, 60) &&
+    isCount(plan.minutes, 600) &&
+    Array.isArray(plan.exercises) &&
     plan.exercises.length <= MAX_EXERCISES &&
-    plan.exercises.every((item: PlanExercise) => isText(item.key, 60) && isText(item.name, 60) &&
-      isText(item.superset, 60) && isCount(item.sets, MAX_SETS) && item.sets > 0 &&
-      isCount(item.reps, 1000) && isCount(item.rest, 3600) &&
-      (item.unit === 'reps' || item.unit === 'seconds'));
+    plan.exercises.every(
+      (item: PlanExercise) =>
+        isText(item.key, 60) &&
+        isText(item.name, 60) &&
+        isText(item.superset, 60) &&
+        isCount(item.sets, MAX_SETS) &&
+        item.sets > 0 &&
+        isCount(item.reps, 1000) &&
+        isCount(item.rest, 3600) &&
+        (item.unit === 'reps' || item.unit === 'seconds'),
+    )
+  );
 }
 
 function isSession(session: SharedSession): boolean {
-  return isText(session.id, 64) && session.id !== '' && isCount(session.rev, 1000000) &&
+  return (
+    isText(session.id, 64) &&
+    session.id !== '' &&
+    isCount(session.rev, 1000000) &&
     isText(session.plan, 60) &&
     (session.status === 'active' || session.status === 'done' || session.status === 'closed') &&
-    Number.isFinite(session.at) && Number.isFinite(session.end) && isCount(session.pos, MAX_EXERCISES * MAX_SETS) &&
-    isCount(session.rest, 3600000) && Array.isArray(session.log) &&
+    Number.isFinite(session.at) &&
+    Number.isFinite(session.end) &&
+    isCount(session.pos, MAX_EXERCISES * MAX_SETS) &&
+    isCount(session.rest, 3600000) &&
+    Array.isArray(session.log) &&
     session.log.length <= MAX_EXERCISES * MAX_SETS &&
-    session.log.every((entry: number[]) => Array.isArray(entry) && entry.length === 3 &&
-      isCount(entry[0], MAX_EXERCISES) && isCount(entry[1], MAX_SETS) && isCount(entry[2], 10000)) &&
-    Array.isArray(session.skip) && session.skip.length <= MAX_EXERCISES &&
-    session.skip.every((index: number) => isCount(index, MAX_EXERCISES));
+    session.log.every(
+      (entry: number[]) =>
+        Array.isArray(entry) &&
+        entry.length === 3 &&
+        isCount(entry[0], MAX_EXERCISES) &&
+        isCount(entry[1], MAX_SETS) &&
+        isCount(entry[2], 10000),
+    ) &&
+    Array.isArray(session.skip) &&
+    session.skip.length <= MAX_EXERCISES &&
+    session.skip.every((index: number) => isCount(index, MAX_EXERCISES))
+  );
 }
 
 /** Input from the radio is untrusted: anything malformed is ignored. */
@@ -190,8 +218,11 @@ export function parseMessage(json: string): SyncMessage | undefined {
   try {
     const message = JSON.parse(json) as SyncMessage;
     if (message.t === 'hello') {
-      return message.v === PROTOCOL_VERSION && isText(message.phone as string, 64) &&
-        message.phone !== '' ? message : undefined;
+      return message.v === PROTOCOL_VERSION &&
+        isText(message.phone as string, 64) &&
+        message.phone !== ''
+        ? message
+        : undefined;
     }
     if (message.t === 'welcome') {
       return typeof message.ok === 'boolean' ? message : undefined;
@@ -209,24 +240,41 @@ export function parseMessage(json: string): SyncMessage | undefined {
 }
 
 function sameContent(a: SharedSession, b: SharedSession): boolean {
-  return a.id === b.id && a.rev === b.rev && a.status === b.status && a.pos === b.pos &&
-    a.log.length === b.log.length && a.skip.length === b.skip.length;
+  return (
+    a.id === b.id &&
+    a.rev === b.rev &&
+    a.status === b.status &&
+    a.pos === b.pos &&
+    a.log.length === b.log.length &&
+    a.skip.length === b.skip.length
+  );
 }
 
 /** Finished sets are never lost: the loser's extra sets are added to the winner's. */
 function unionLog(winner: number[][], loser: number[][]): number[][] {
-  const extra = loser.filter((entry: number[]) =>
-  !winner.some((kept: number[]) => kept[0] === entry[0] && kept[1] === entry[1]));
+  const extra = loser.filter(
+    (entry: number[]) =>
+      !winner.some((kept: number[]) => kept[0] === entry[0] && kept[1] === entry[1]),
+  );
   return winner.concat(extra);
 }
 
-export function mergeSessions(local: SharedSession | undefined, remote: SharedSession,
-  remoteWinsTie: boolean): MergeResult {
+export function mergeSessions(
+  local: SharedSession | undefined,
+  remote: SharedSession,
+  remoteWinsTie: boolean,
+): MergeResult {
   if (local === undefined || local.id !== remote.id) {
-    const adopt = local === undefined ? remote.status !== 'closed' :
-      remote.status !== 'closed' && (local.status === 'closed' || remote.at > local.at);
+    const adopt =
+      local === undefined
+        ? remote.status !== 'closed'
+        : remote.status !== 'closed' && (local.status === 'closed' || remote.at > local.at);
     const kept = adopt || local === undefined ? remote : local;
-    const result: MergeResult = { session: kept, changed: adopt, reply: !adopt && local !== undefined };
+    const result: MergeResult = {
+      session: kept,
+      changed: adopt,
+      reply: !adopt && local !== undefined,
+    };
     return result;
   }
   const remoteWins = remote.rev > local.rev || (remote.rev === local.rev && remoteWinsTie);

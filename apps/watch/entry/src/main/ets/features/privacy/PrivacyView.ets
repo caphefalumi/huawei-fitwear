@@ -16,12 +16,12 @@ export struct PrivacyView {
       Text(this.firstRun ? 'Your data' : 'Privacy')
         .fontSize(Type.TITLE)
         .fontWeight(FontWeight.Bold)
-        .fontColor(Palette.TEXT);
+        .fontColor(Palette.TEXT)
       Text('Saved on this watch. Workouts are shared with your paired phone.')
         .width('72%')
         .fontSize(Type.SMALL)
         .fontColor(Palette.MUTED)
-        .textAlign(TextAlign.Center);
+        .textAlign(TextAlign.Center)
       if (this.firstRun) {
         PillButton({ label: 'Agree', primary: true, onTap: () => this.onAgree() });
       } else {

@@ -26,8 +26,12 @@ export function dayKey(now: number): string {
   return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
 }
 
-export function encodeState(session: WorkoutSession, day: FoodDay, summaryDismissed: boolean,
-  now: number): string {
+export function encodeState(
+  session: WorkoutSession,
+  day: FoodDay,
+  summaryDismissed: boolean,
+  now: number,
+): string {
   const state: SavedState = {
     version: VERSION,
     day: dayKey(now),
@@ -44,8 +48,12 @@ export function encodeState(session: WorkoutSession, day: FoodDay, summaryDismis
  * Food logs and finished workouts expire at midnight; the plan and a workout in
  * progress do not. Damaged or outdated data yields a fresh session of `fallback`.
  */
-export function restoreState(json: string, fallback: WorkoutPlan, day: FoodDay,
-  now: number): Restored {
+export function restoreState(
+  json: string,
+  fallback: WorkoutPlan,
+  day: FoodDay,
+  now: number,
+): Restored {
   const fresh: Restored = { session: new WorkoutSession(fallback), summaryDismissed: false };
   try {
     const state = JSON.parse(json) as SavedState;

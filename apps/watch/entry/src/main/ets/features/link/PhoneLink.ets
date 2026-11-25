@@ -143,7 +143,7 @@ export class PhoneLink {
     const frames = encodeFrames(message, service.getEffectiveMaxPayload(), this.messageId);
     this.sending = this.sending.then(async () => {
       for (const frame of frames) {
-        if (!await service.sendFrame(frame)) {
+        if (!(await service.sendFrame(frame))) {
           return;
         }
       }

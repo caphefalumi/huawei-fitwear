@@ -123,9 +123,10 @@ export class WorkoutSession {
 
   /** Exercises with every set logged (skipped ones do not count). */
   get exercisesDone(): number {
-    return this.plan.exercises.filter((item: PlanExercise, index: number) =>
-    this.records.filter((record: SetRecord) => record.exercise === index).length >= item.sets)
-      .length;
+    return this.plan.exercises.filter(
+      (item: PlanExercise, index: number) =>
+        this.records.filter((record: SetRecord) => record.exercise === index).length >= item.sets,
+    ).length;
   }
 
   start(now: number, id: string): void {
@@ -182,7 +183,8 @@ export class WorkoutSession {
     }
     this.moveTo(next);
     const following = this.slots[next];
-    const sameRound = finished.superset !== '' &&
+    const sameRound =
+      finished.superset !== '' &&
       this.plan.exercises[following.exercise].superset === finished.superset &&
       following.set === slot.set;
     if (!sameRound && finished.rest > 0) {
@@ -289,7 +291,9 @@ export class WorkoutSession {
 
   /** Takes over the phone's (already merged) state. Returns false if it does not fit the plan. */
   applyShared(shared: SharedSession, now: number): boolean {
-    const fits = shared.plan === this.plan.name && shared.pos < this.slots.length &&
+    const fits =
+      shared.plan === this.plan.name &&
+      shared.pos < this.slots.length &&
       shared.log.every((entry: number[]) => {
         const item = this.plan.exercises[entry[0]];
         return item !== undefined && entry[1] < item.sets;
@@ -369,9 +373,13 @@ export class WorkoutSession {
 
   /** Returns false, changing nothing, if the snapshot does not fit the current plan. */
   restore(saved: SessionSnapshot, now: number): boolean {
-    if (saved.planKey !== this.planKey() || !Array.isArray(saved.records) ||
-      !Array.isArray(saved.skipped) || !(saved.position >= 0) ||
-      saved.position >= Math.max(1, this.slots.length)) {
+    if (
+      saved.planKey !== this.planKey() ||
+      !Array.isArray(saved.records) ||
+      !Array.isArray(saved.skipped) ||
+      !(saved.position >= 0) ||
+      saved.position >= Math.max(1, this.slots.length)
+    ) {
       return false;
     }
     this.id = saved.id;
@@ -438,8 +446,7 @@ export class WorkoutSession {
   }
 
   private isCounting(): boolean {
-    return this.status === WorkoutStatus.ACTIVE && !this.paused &&
-      this.phase === WorkoutPhase.SET;
+    return this.status === WorkoutStatus.ACTIVE && !this.paused && this.phase === WorkoutPhase.SET;
   }
 
   private activate(now: number): void {

@@ -3,7 +3,18 @@ import { FoodDay } from '../quicklog/FoodDay';
 
 const WEEKDAYS: string[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS: string[] = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 export function formatTime(now: number): string {
@@ -30,36 +41,39 @@ export struct ClockView {
   @Builder
   macroBar(label: string, eaten: number, target: number) {
     Row({ space: 4 }) {
-      Text(label).width(34).fontSize(12).fontColor(Palette.MUTED);
+      Text(label)
+        .width(34)
+        .fontSize(12)
+        .fontColor(Palette.MUTED)
       Progress({ value: Math.min(eaten, target), total: target, type: ProgressType.Linear })
         .width(52)
         .color(Palette.ACCENT)
         .backgroundColor(Palette.TRACK)
-        .style({ strokeWidth: 6 });
-    }
+        .style({ strokeWidth: 6 })
+    };
   }
 
   build() {
     Column({ space: 8 }) {
-      SwipeHint({ up: true, label: 'Quick log' });
+      SwipeHint({ up: true, label: 'Quick log' })
       Column() {
         Row({ space: 5 }) {
-          Text(formatDate(this.now)).fontSize(Type.SMALL).fontColor(Palette.MUTED);
-          Circle({ width: 7, height: 7 }).fill(this.connected ? Palette.ACCENT : Palette.TRACK);
+          Text(formatDate(this.now))
+            .fontSize(Type.SMALL)
+            .fontColor(Palette.MUTED)
+          Circle({ width: 7, height: 7 }).fill(this.connected ? Palette.ACCENT : Palette.TRACK)
           Text(this.phoneLabel)
             .fontSize(12)
-            .fontColor(this.connected ? Palette.TEXT : Palette.MUTED);
+            .fontColor(this.connected ? Palette.TEXT : Palette.MUTED)
         }
         .responseRegion({ x: 0, y: -12, width: '100%', height: 44 })
-        .onClick(() => this.onConnect());
+        .onClick(() => this.onConnect())
         Text(formatTime(this.now))
           .fontSize(Type.BIG)
           .fontWeight(FontWeight.Bold)
-          .fontColor(Palette.TEXT);
-      }
-      // Hidden developer entry to the IMU sensor page.
-      .gesture(LongPressGesture({ duration: 800 }).onAction(() => this.onOpenDemos()));
-
+          .fontColor(Palette.TEXT)
+      }// Hidden developer entry to the IMU sensor page.
+      .gesture(LongPressGesture({ duration: 800 }).onAction(() => this.onOpenDemos()))
       Row({ space: 10 }) {
         Stack() {
           Progress({
@@ -71,24 +85,24 @@ export struct ClockView {
             .height(78)
             .color(Palette.ACCENT)
             .backgroundColor(Palette.TRACK)
-            .style({ strokeWidth: 7 });
+            .style({ strokeWidth: 7 })
           Column() {
             Text(`${Math.abs(this.day.kcalTarget - this.day.kcalEaten)}`)
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
-              .fontColor(Palette.TEXT);
+              .fontColor(Palette.TEXT)
             Text(this.day.kcalEaten > this.day.kcalTarget ? 'kcal over' : 'kcal left')
               .fontSize(12)
-              .fontColor(Palette.MUTED);
+              .fontColor(Palette.MUTED)
           }
         }
         Column({ space: 6 }) {
-          this.macroBar('Pro', this.day.eaten.protein, this.day.target.protein);
-          this.macroBar('Carb', this.day.eaten.carbs, this.day.target.carbs);
-          this.macroBar('Fat', this.day.eaten.fat, this.day.target.fat);
+          this.macroBar('Pro', this.day.eaten.protein, this.day.target.protein)
+          this.macroBar('Carb', this.day.eaten.carbs, this.day.target.carbs)
+          this.macroBar('Fat', this.day.eaten.fat, this.day.target.fat)
         }
       }
-      SwipeHint({ label: 'Workout' });
+      SwipeHint({ label: 'Workout' })
     }
     .width('100%')
     .height('100%')

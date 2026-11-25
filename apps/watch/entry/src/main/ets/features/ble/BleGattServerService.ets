@@ -141,8 +141,12 @@ export class BleGattServerService {
   sendFrame(frame: string): Promise<boolean> {
     const server = this.gattServer;
     const encoded = encodeUtf8(frame);
-    if (!server || this.connectedDeviceId.length === 0 || new Uint8Array(this.cccBuffer)[0] !== 1 ||
-      encoded.byteLength > this.getEffectiveMaxPayload()) {
+    if (
+      !server ||
+      this.connectedDeviceId.length === 0 ||
+      new Uint8Array(this.cccBuffer)[0] !== 1 ||
+      encoded.byteLength > this.getEffectiveMaxPayload()
+    ) {
       return Promise.resolve(false);
     }
     this.outboundBuffer = encoded;
@@ -154,13 +158,16 @@ export class BleGattServerService {
     };
     return new Promise<boolean>((resolve: (sent: boolean) => void) => {
       try {
-        server.notifyCharacteristicChanged(this.connectedDeviceId, notifyChar,
+        server.notifyCharacteristicChanged(
+          this.connectedDeviceId,
+          notifyChar,
           (err: BusinessError) => {
             if (err && err.code) {
               hilog.warn(DOMAIN, TAG, 'notify err: %{public}d', err.code);
             }
             resolve(!(err && err.code));
-          });
+          },
+        );
       } catch (err) {
         const e = err as BusinessError;
         hilog.warn(DOMAIN, TAG, 'notify err: %{public}d', e.code);
