@@ -51,12 +51,12 @@ tags:
 - tapOn:
     id: "tab-profile"
 - extendedWaitUntil:
-    visible: "Profile overview"
+    visible: "Health & goals"
     timeout: 20000
 - tapOn:
     id: "tab-meals"
 - extendedWaitUntil:
-    visible: "No meals match.*"
+    visible: "No meals yet|No meals logged today"
     timeout: 20000
 - tapOn:
     text: "Capture meal"
@@ -94,7 +94,7 @@ tags:
 - assertVisible: "Barcode 8934563138165"
 - tapOn: "Review product"
 - extendedWaitUntil:
-    visible: "Barcode match · review required"
+    visible: "Product match · Open Food Facts"
     timeout: 15000
 - back
 - extendedWaitUntil:
