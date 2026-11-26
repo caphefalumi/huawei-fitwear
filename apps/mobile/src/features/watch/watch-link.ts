@@ -73,6 +73,17 @@ export class WatchLink {
     useWatchStore.setState({ status: "off", error: null })
   }
 
+  /** Stands in for the timers below, which do not run while Android is in the background. */
+  tick() {
+    if (this.stopped) return
+    if (this.state === "disconnected") {
+      this.clearTimers()
+      void this.client.connect()
+    } else if (this.state === "connected" && this.hello) {
+      this.greet()
+    }
+  }
+
   destroy() {
     this.stop()
     this.client.destroy()
@@ -100,10 +111,9 @@ export class WatchLink {
       this.assembler = new FrameAssembler()
       this.sentPlan = ""
       this.sentDay = ""
-      const greet = () => this.send({ t: "hello", v: PROTOCOL_VERSION, phone: this.phone })
-      greet()
+      this.greet()
       // Repeated until the watch answers, in case it was not yet subscribed.
-      this.hello = setInterval(greet, HELLO_MS)
+      this.hello = setInterval(() => this.greet(), HELLO_MS)
       return
     }
     useWatchStore.setState({ status: "searching" })
@@ -111,6 +121,10 @@ export class WatchLink {
       this.clearTimers()
       this.scheduleRetry()
     }
+  }
+
+  private greet() {
+    this.send({ t: "hello", v: PROTOCOL_VERSION, phone: this.phone })
   }
 
   private onError(error: string | null) {

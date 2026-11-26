@@ -160,7 +160,7 @@ apps/mobile/
 │   ├── constants/           # Palettes and compatibility aliases
 │   ├── features/            # Vertical slices (domain UI, API, store, utils)
 │   │   ├── auth/            # Authentication UI, API, session store, types, utils
-│   │   ├── ble/             # Watch BLE integration
+│   │   ├── ble/             # Watch BLE integration (sync rules in features/watch)
 │   │   ├── camera/          # Camera and library image selection
 │   │   ├── health/          # Health and recovery state
 │   │   ├── home/            # Home, nutrition and progress UI

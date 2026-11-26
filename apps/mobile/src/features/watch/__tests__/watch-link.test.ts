@@ -56,6 +56,17 @@ test("remembers the watch only after a connection works, and reconnects after a 
   link.destroy()
 })
 
+test("a tick reconnects at once, for when timers are paused", () => {
+  const link = new WatchLink("phone-1")
+  link.start()
+  mockClient.listener.onStatus("disconnected")
+
+  link.tick()
+
+  expect(mockClient.connect).toHaveBeenCalledTimes(2)
+  link.destroy()
+})
+
 test("connects on its own next launch until the watch is forgotten", async () => {
   jest.mocked(SecureStore.getItemAsync).mockResolvedValueOnce("1")
   await usePairing.getState().load()

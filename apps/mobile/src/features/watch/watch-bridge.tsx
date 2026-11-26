@@ -8,14 +8,16 @@ import { mealsQueryKeys, useMeals } from "@/features/meals"
 import { useRoutines } from "@/features/workout"
 import { captureException } from "@/lib/analytics/posthog"
 
+import { useBackgroundLink } from "./background"
 import { createWatchNutrition } from "./nutrition"
 import { phoneId, usePairing } from "./pairing.store"
 import { resetWatchSession, useWatchStore } from "./store"
 import { WatchLink } from "./watch-link"
 
 /**
- * Mounted once for a signed-in user: connects to the watch whenever the app is in
- * the foreground, and opens the workout screen when the watch starts one.
+ * Mounted once for a signed-in user: connects to the watch while the app is in the
+ * foreground (and keeps the connection in the background where the platform lets it),
+ * and opens the workout screen when the watch starts one.
  */
 export function WatchBridge() {
   const { enabled, load } = usePairing()
@@ -68,10 +70,11 @@ export function WatchBridge() {
     }
   }, [enabled, owner, queryClient])
 
+  const inBackground = useBackgroundLink(enabled, foreground, () => link.current?.tick())
   useEffect(() => {
-    if (enabled && foreground) link.current?.start()
+    if (enabled && (foreground || inBackground)) link.current?.start()
     else link.current?.stop()
-  }, [enabled, foreground, ready])
+  }, [enabled, foreground, inBackground, ready])
 
   // The watch gets new totals and favorites whenever the meals here change.
   useEffect(() => {

@@ -124,11 +124,21 @@ struct HomePage {
     this.visible = false;
     this.save();
     // As in the BLE demo, the connection stays up; only the app closing ends it.
-    if (this.session.status !== WorkoutStatus.ACTIVE) {
-      this.stopTicker();
-    } else if (power.isActive()) {
+    if (this.session.status === WorkoutStatus.ACTIVE && power.isActive()) {
       this.exited = true;
     }
+    if (this.idleInBackground()) {
+      this.stopTicker();
+    }
+  }
+
+  /** Nothing to time and no phone to keep up to date. */
+  private idleInBackground(): boolean {
+    return (
+      !this.visible &&
+      this.session.status !== WorkoutStatus.ACTIVE &&
+      this.link.state === LinkState.OFF
+    );
   }
 
   /** Pauses an unfinished workout until the wearer says what to do with it. */
@@ -229,6 +239,8 @@ struct HomePage {
         return;
       }
       this.session = target;
+      // Training carried on from the phone, so the wearer did not walk away from it.
+      this.exited = false;
       // The phone moved the workout on, so there is nothing left to ask.
       if (this.interrupted) {
         this.interrupted = false;
@@ -368,7 +380,7 @@ struct HomePage {
     this.save();
     this.publish();
     this.publishFood(this.now);
-    if (!this.visible && this.session.status !== WorkoutStatus.ACTIVE) {
+    if (this.idleInBackground()) {
       this.stopTicker();
     }
   }
