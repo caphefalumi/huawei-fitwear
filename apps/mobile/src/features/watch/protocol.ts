@@ -74,7 +74,8 @@ export type WireDay = {
 export type WireFoodLog = { id: string; ref: string; owner: string; at: number }
 
 export type SyncMessage =
-  | { t: "hello"; v: number; phone: string }
+  /** `name` is what the watch calls this phone; older apps leave it out. */
+  | { t: "hello"; v: number; phone: string; name?: string }
   | { t: "welcome"; v: number; ok: boolean }
   | { t: "plan"; plan: WirePlan }
   | { t: "session"; session: SharedSession }

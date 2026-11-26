@@ -5,6 +5,9 @@ export const FITWEAR_CHAR_MESSAGE_UUID = "f17e0002-6b2a-4c8e-9d15-3a7f2e8c4b02"
 /** Scan window before giving up when the watch is not advertising. */
 export const BLE_SCAN_TIMEOUT_MS = 12_000
 
+/** Gives up on a connection attempt that hangs, so scanning can start again. */
+export const BLE_CONNECT_TIMEOUT_MS = 10_000
+
 /** Requested ATT MTU on connect (Android). Effective payload is smaller. */
 export const BLE_REQUESTED_MTU = 185
 

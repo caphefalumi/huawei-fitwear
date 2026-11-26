@@ -100,6 +100,8 @@ export interface SyncMessage {
   t: string;
   v?: number;
   phone?: string;
+  /** With 'hello': what to call the phone. Older phone apps leave it out. */
+  name?: string;
   ok?: boolean;
   plan?: WorkoutPlan;
   session?: SharedSession;

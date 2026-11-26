@@ -12,6 +12,7 @@ const mockClient = {
   connect: jest.fn(async () => {}),
   disconnect: jest.fn(async () => {}),
   destroy: jest.fn(),
+  setForeground: jest.fn(),
   maxPayload: jest.fn(() => 180),
   sendFrame: jest.fn(async () => true),
 }
@@ -74,4 +75,27 @@ test("connects on its own next launch until the watch is forgotten", async () =>
 
   usePairing.getState().setEnabled(false)
   expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith("watch.enabled")
+})
+
+test("reconnects quickly after a drop, and keeps the watch's name until it is forgotten", async () => {
+  usePairing.getState().setEnabled(true)
+  const link = new WatchLink("phone-1", undefined, "Pixel 9")
+  link.start()
+  mockClient.listener.onDeviceName("HUAWEI WATCH 5")
+  mockClient.listener.onStatus("connected")
+  await jest.advanceTimersByTimeAsync(0)
+
+  expect(usePairing.getState().name).toBe("HUAWEI WATCH 5")
+  const sent = (mockClient.sendFrame.mock.calls as unknown as string[][]).flat().join("")
+  expect(sent).toContain('"name":"Pixel 9"')
+
+  mockClient.listener.onDeviceName("None")
+  mockClient.listener.onStatus("disconnected")
+  await jest.advanceTimersByTimeAsync(1000)
+  expect(mockClient.connect).toHaveBeenCalledTimes(2)
+  expect(usePairing.getState().name).toBe("HUAWEI WATCH 5")
+
+  usePairing.getState().setEnabled(false)
+  expect(usePairing.getState().name).toBe("")
+  link.destroy()
 })

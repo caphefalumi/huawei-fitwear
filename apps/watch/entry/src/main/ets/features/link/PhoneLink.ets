@@ -35,6 +35,8 @@ export interface PhoneLinkHandlers {
 @ObservedV2
 export class PhoneLink {
   @Trace state: LinkState = LinkState.OFF;
+  /** The name the current phone gave itself; empty if it gave none. */
+  @Trace phoneName: string = '';
   private handlers: PhoneLinkHandlers | undefined = undefined;
   private service: BleGattServerService | undefined = undefined;
   private readonly background: BackgroundLink = new BackgroundLink();
@@ -76,6 +78,7 @@ export class PhoneLink {
     this.background.stop();
     this.deviceId = '';
     this.pendingPhone = '';
+    this.phoneName = '';
     this.state = LinkState.OFF;
   }
 
@@ -121,6 +124,7 @@ export class PhoneLink {
     this.deviceId = deviceId;
     this.assembler = new FrameAssembler();
     this.pendingPhone = '';
+    this.phoneName = '';
     if (this.service) {
       this.state = LinkState.SEARCHING;
     }
@@ -133,6 +137,7 @@ export class PhoneLink {
     }
     if (message.t === 'hello') {
       const phone = message.phone as string;
+      this.phoneName = typeof message.name === 'string' ? message.name.slice(0, 40) : '';
       if (phone === this.handlers.allowedPhone()) {
         this.accept();
       } else {

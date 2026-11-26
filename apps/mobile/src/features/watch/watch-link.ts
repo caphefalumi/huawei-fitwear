@@ -13,7 +13,9 @@ import {
 import { toWirePlan, useWatchStore } from "./store"
 
 const RETRY_MS = 6000
-const HELLO_MS = 3000
+/** A link that just dropped is usually still within reach. */
+const RECONNECT_MS = 1000
+const HELLO_MS = 1000
 /** Payload of the smallest ATT MTU, accepted by every link. */
 const MIN_PAYLOAD = 20
 
@@ -41,10 +43,14 @@ export class WatchLink {
   constructor(
     private readonly phone: string,
     private readonly nutrition?: WatchNutrition,
+    /** Shown on the watch while it is connected to this phone. */
+    private readonly phoneName?: string,
   ) {
     this.client = new WatchBleClient({
       onStatus: (status) => this.onStatus(status),
-      onDeviceName: () => {},
+      onDeviceName: (name) => {
+        if (name !== "None") usePairing.getState().setName(name)
+      },
       onError: (error) => this.onError(error),
       onMessage: (direction, text) => {
         if (direction === "watch-to-phone") this.onFrame(text)
@@ -73,6 +79,10 @@ export class WatchLink {
     useWatchStore.setState({ status: "off", error: null })
   }
 
+  setForeground(foreground: boolean) {
+    this.client.setForeground(foreground)
+  }
+
   /** Stands in for the timers below, which do not run while Android is in the background. */
   tick() {
     if (this.stopped) return
@@ -96,15 +106,16 @@ export class WatchLink {
     this.hello = null
   }
 
-  private scheduleRetry() {
+  private scheduleRetry(delay = RETRY_MS) {
     if (this.stopped || this.retry) return
     this.retry = setTimeout(() => {
       this.retry = null
       if (!this.stopped && this.state === "disconnected") void this.client.connect()
-    }, RETRY_MS)
+    }, delay)
   }
 
   private onStatus(status: WatchBleStatus) {
+    const dropped = this.state === "connected" && status === "disconnected"
     this.state = status
     if (this.stopped) return
     if (status === "connected") {
@@ -116,15 +127,22 @@ export class WatchLink {
       this.hello = setInterval(() => this.greet(), HELLO_MS)
       return
     }
-    useWatchStore.setState({ status: "searching" })
+    useWatchStore.setState(
+      status === "connecting" ? { status: "connecting", error: null } : { status: "searching" },
+    )
     if (status === "disconnected") {
       this.clearTimers()
-      this.scheduleRetry()
+      this.scheduleRetry(dropped ? RECONNECT_MS : RETRY_MS)
     }
   }
 
   private greet() {
-    this.send({ t: "hello", v: PROTOCOL_VERSION, phone: this.phone })
+    this.send({
+      t: "hello",
+      v: PROTOCOL_VERSION,
+      phone: this.phone,
+      name: this.phoneName?.slice(0, 40),
+    })
   }
 
   private onError(error: string | null) {

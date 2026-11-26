@@ -73,7 +73,7 @@ export function ProfileScreen() {
         <MenuRow
           icon={{ ios: "applewatch", android: "watch", web: "watch" }}
           label="VoocHealth watch"
-          value={watch.label}
+          value={watch.summary}
           onPress={() => router.push("/watch")}
         />
       </MenuGroup>
