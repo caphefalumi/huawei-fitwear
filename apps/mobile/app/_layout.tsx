@@ -13,6 +13,7 @@ import { NetworkStatusBanner } from "@/components/feedback/network-status"
 import { ToastHost } from "@/components/feedback/toast"
 import { APP_ROUTES, AuthProvider, useAuth } from "@/features/auth"
 import { HealthProvider } from "@/features/health"
+import { HealthPrompt } from "@/features/health/components/health-prompt"
 import { MealsProvider } from "@/features/meals"
 import { WatchBridge } from "@/features/watch"
 import { WorkoutProvider } from "@/features/workout"
@@ -56,6 +57,7 @@ function AccountProviders({ children }: PropsWithChildren) {
       <MealsProvider>
         <WorkoutProvider>
           <WatchBridge />
+          <HealthPrompt />
           {children}
         </WorkoutProvider>
       </MealsProvider>
@@ -73,6 +75,10 @@ function RootNavigator() {
         <Stack.Protected guard={!!user} redirectTo={APP_ROUTES.login}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(settings)/account-data" />
+          <Stack.Screen name="(settings)/body-profile" />
+          <Stack.Screen name="(settings)/training" />
+          <Stack.Screen name="(settings)/settings" />
+          <Stack.Screen name="(settings)/third-party-services" />
           <Stack.Screen name="(settings)/developer-options" />
           <Stack.Screen name="(details)/nutrition" />
           <Stack.Screen name="(details)/progress" />

@@ -3,7 +3,10 @@ import { router } from "expo-router"
 
 import { useAuth } from "@/features/auth"
 import { useHealth } from "@/features/health"
+import { BodyProfileScreen } from "@/features/profile/screens/body-profile-screen"
 import { ProfileScreen } from "@/features/profile/screens/profile-screen"
+import { SettingsScreen } from "@/features/profile/screens/settings-screen"
+import { TrainingScreen } from "@/features/profile/screens/training-screen"
 import { useDeveloperMode } from "@/features/profile/store/developer-mode.store"
 import { PERIOD_AREA, useInjuries } from "@/features/recovery"
 import {
@@ -43,6 +46,7 @@ jest.mock("@/features/profile/components/sheets", () => ({
   TargetWeightSheet: () => null,
   WeightSheet: () => null,
 }))
+jest.mock("expo-symbols", () => ({ SymbolView: () => null }))
 jest.mock("expo-router", () => ({ router: { push: jest.fn(), back: jest.fn() } }))
 jest.mock("@/features/workout/utils/exercise-loop-cache", () => ({
   clearExerciseLoopCache: jest.fn(),
@@ -91,26 +95,23 @@ beforeEach(() => {
   mockUseHealth.mockReturnValue(health as never)
 })
 
-test("keeps identity visible and distinguishes loading from an unset weight", async () => {
+test("distinguishes a loading weight from an unset one", async () => {
   mockUseHealth.mockReturnValue({ ...health, weightKg: null, loading: true, error: null } as never)
-  const screen = await render(<ProfileScreen />)
-  expect(screen.getByRole("header", { name: "Profile" })).toBeTruthy()
+  const screen = await render(<BodyProfileScreen />)
   expect(screen.getByRole("button", { name: "Weight, Loading" })).toBeTruthy()
   expect(screen.getByRole("button", { name: "Height, 175 cm" })).toBeTruthy()
-  expect(screen.getByText("Member")).toBeTruthy()
 })
 
-test("keeps identity visible and retries after a health load error", async () => {
+test("retries after a health load error", async () => {
   mockUseHealth.mockReturnValue({ ...health, loading: false, error: "offline" } as never)
-  const screen = await render(<ProfileScreen />)
+  const screen = await render(<BodyProfileScreen />)
   expect(screen.getByText("Could not load your health data.")).toBeTruthy()
-  expect(screen.getByText("Member")).toBeTruthy()
   await fireEvent.press(screen.getByRole("button", { name: "Try again" }))
   expect(refresh).toHaveBeenCalledTimes(1)
 })
 
 test("asks how the user feels before turning on period recovery", async () => {
-  const screen = await render(<ProfileScreen />)
+  const screen = await render(<TrainingScreen />)
   expect(screen.getByRole("button", { name: "Period recovery, Off" })).toBeTruthy()
   await fireEvent.press(screen.getByRole("button", { name: "Period recovery, Off" }))
 
@@ -125,12 +126,12 @@ test("asks how the user feels before turning on period recovery", async () => {
 })
 
 test("shows emphasis and experience, defaulting women to lower body", async () => {
-  const screen = await render(<ProfileScreen />)
+  const screen = await render(<TrainingScreen />)
   expect(screen.getByRole("button", { name: "Emphasis, Lower body" })).toBeTruthy()
   expect(screen.getByRole("button", { name: "Experience, Regular" })).toBeTruthy()
 })
 test("opens exercise preferences and injuries from the plan section", async () => {
-  const screen = await render(<ProfileScreen />)
+  const screen = await render(<TrainingScreen />)
   expect(screen.getByRole("button", { name: "Session length, 45 min" })).toBeTruthy()
   await fireEvent.press(screen.getByRole("button", { name: "Exercise preferences, None" }))
   await fireEvent.press(screen.getByRole("button", { name: "Injuries, None" }))
@@ -138,19 +139,24 @@ test("opens exercise preferences and injuries from the plan section", async () =
   expect(router.push).toHaveBeenNthCalledWith(2, "/injuries")
 })
 
-test("groups settings and opens watch management without claiming a connection", async () => {
+test("groups the menu and opens each destination without claiming a connection", async () => {
   const screen = await render(<ProfileScreen />)
-  for (const name of [
-    "Health & goals",
-    "Training & recovery",
-    "Connected devices",
-    "Account & privacy",
-  ]) {
+  expect(screen.getByText("Member")).toBeTruthy()
+  for (const name of ["Health data", "Devices", "Other"]) {
     expect(screen.getByRole("header", { name })).toBeTruthy()
   }
-  expect(screen.queryByRole("button", { name: "Developer options" })).toBeNull()
-  await fireEvent.press(screen.getByRole("button", { name: "VoocHealth watch, Not set up" }))
-  expect(router.push).toHaveBeenCalledWith("/watch")
+  expect(screen.queryByRole("button", { name: "Clear cache" })).toBeNull()
+  for (const [name, route] of [
+    ["Body & goals", "/body-profile"],
+    ["Training & recovery", "/training"],
+    ["VoocHealth watch, Not set up", "/watch"],
+    ["Settings", "/settings"],
+    ["Account & privacy", "/account-data"],
+    ["Third-party services, Apple Health", "/third-party-services"],
+  ]) {
+    await fireEvent.press(screen.getByRole("button", { name }))
+    expect(router.push).toHaveBeenLastCalledWith(route)
+  }
 })
 
 test("a failed name edit keeps the draft and can be saved on retry", async () => {
@@ -170,7 +176,7 @@ test("locks goal options during save and retains the failed choice for retry", a
   const pending = Promise.withResolvers<void>()
   const savePlan = jest.fn().mockReturnValueOnce(pending.promise).mockResolvedValueOnce(undefined)
   mockUseHealth.mockReturnValue({ ...health, savePlan } as never)
-  const screen = await render(<ProfileScreen />)
+  const screen = await render(<BodyProfileScreen />)
   await fireEvent.press(screen.getByRole("button", { name: "Goal, Build muscle" }))
   await fireEvent.press(screen.getByRole("radio", { name: "Lose fat" }))
   await fireEvent.press(screen.getByRole("radio", { name: "Maintain", disabled: true }))
@@ -197,7 +203,7 @@ test("shows combined media usage and clears all managed cache files", async () =
     jest.mocked(mealPhotoCacheBytes).mockReturnValue(0)
     onCacheChanged?.()
   })
-  const screen = await render(<ProfileScreen />)
+  const screen = await render(<SettingsScreen />)
   expect(screen.getByText("0.40 MB of media cached")).toBeTruthy()
   await fireEvent.press(screen.getByRole("button", { name: "Clear cache" }))
   expect(await screen.findByText("0.00 MB of media cached")).toBeTruthy()
@@ -206,20 +212,20 @@ test("shows combined media usage and clears all managed cache files", async () =
   expect(clearOfflineCache).toHaveBeenCalledTimes(1)
 })
 
-test("shows unset height and restores account actions", async () => {
+test("shows an unset height", async () => {
   mockUseHealth.mockReturnValue({ ...health, heightCm: null } as never)
-  const screen = await render(<ProfileScreen />)
-
+  const screen = await render(<BodyProfileScreen />)
   expect(screen.getByRole("button", { name: "Height, Not set" })).toBeTruthy()
   expect(screen.queryByText("null cm")).toBeNull()
+})
 
-  await fireEvent.press(screen.getByRole("button", { name: "Account data" }))
+test("keeps developer options and sign out in settings", async () => {
+  const screen = await render(<SettingsScreen />)
+  expect(screen.queryByRole("button", { name: "Developer options" })).toBeNull()
   await fireEvent(screen.getByRole("switch", { name: "Developer mode" }), "valueChange", true)
   await fireEvent.press(screen.getByRole("button", { name: "Developer options" }))
   await fireEvent.press(screen.getByRole("button", { name: "Sign out" }))
-
-  expect(router.push).toHaveBeenNthCalledWith(1, "/account-data")
-  expect(router.push).toHaveBeenNthCalledWith(2, "/developer-options")
+  expect(router.push).toHaveBeenCalledWith("/developer-options")
   expect(signOut).toHaveBeenCalledTimes(1)
 })
 
@@ -228,13 +234,13 @@ test("shows the saved birthdate instead of a hard-coded one", async () => {
     user: { name: "Member", email: "member@example.com", birthDate: "1994-04-12" },
     signOut,
   } as never)
-  const screen = await render(<ProfileScreen />)
+  const screen = await render(<BodyProfileScreen />)
   expect(screen.getByRole("button", { name: "Birthdate, 12-04-1994" })).toBeTruthy()
   expect(screen.queryByText("14 Jun 1998")).toBeNull()
 })
 
 test("shows an unset birthdate and opens the editor", async () => {
-  const screen = await render(<ProfileScreen />)
+  const screen = await render(<BodyProfileScreen />)
   expect(screen.queryByText("14 Jun 1998")).toBeNull()
   await fireEvent.press(screen.getByRole("button", { name: "Birthdate, Not set" }))
   expect(screen.getByText("Birthdate sheet")).toBeTruthy()
