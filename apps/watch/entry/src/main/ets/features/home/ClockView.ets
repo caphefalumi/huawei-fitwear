@@ -75,7 +75,7 @@ export struct ClockView {
       }// Hidden developer entry to the IMU sensor page.
       .gesture(LongPressGesture({ duration: 800 }).onAction(() => this.onOpenDemos()))
       if (!this.day.hasData) {
-        this.note('Open the phone app to see today\'s food');
+        this.note("Open the phone app to see today's food");
       } else if (this.day.kcalTarget === 0) {
         this.note(`${this.day.kcalEaten} kcal eaten\nSet your goals on the phone`);
       } else {
