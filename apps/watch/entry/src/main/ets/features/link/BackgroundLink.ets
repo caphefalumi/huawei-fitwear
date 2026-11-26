@@ -33,7 +33,9 @@ export class BackgroundLink {
     try {
       if (this.wanted) {
         const info: wantAgent.WantAgentInfo = {
-          wants: [{ bundleName: context.abilityInfo.bundleName, abilityName: context.abilityInfo.name }],
+          wants: [
+            { bundleName: context.abilityInfo.bundleName, abilityName: context.abilityInfo.name },
+          ],
           actionType: wantAgent.OperationType.START_ABILITY,
           requestCode: 0,
           actionFlags: [wantAgent.WantAgentFlags.UPDATE_PRESENT_FLAG],
