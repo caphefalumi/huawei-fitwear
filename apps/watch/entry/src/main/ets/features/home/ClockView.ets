@@ -64,9 +64,9 @@ export struct ClockView {
             .fontSize(Type.SMALL)
             .fontColor(Palette.MUTED)
           if (this.searching) {
-            LoadingProgress().width(14).height(14).color(Palette.ACCENT)
+            LoadingProgress().width(14).height(14).color(Palette.ACCENT);
           } else {
-            Circle({ width: 7, height: 7 }).fill(this.connected ? Palette.ACCENT : Palette.TRACK)
+            Circle({ width: 7, height: 7 }).fill(this.connected ? Palette.ACCENT : Palette.TRACK);
           }
           Text(this.phoneLabel)
             .constraintSize({ maxWidth: 96 })
