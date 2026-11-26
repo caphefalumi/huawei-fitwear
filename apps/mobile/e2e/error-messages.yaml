@@ -273,11 +273,21 @@ tags:
 - eraseText: 100
 - inputText: ${MAESTRO_TEST_PASSWORD}
 - hideKeyboard
-- tapOn:
-    id: "login-submit"
-- extendedWaitUntil:
-    visible: "Today"
-    timeout: 30000
+# The emulator's network can lag behind airplane mode being switched off, so a
+# first attempt may still report "Can't connect". Submit again if it does.
+- retry:
+    maxRetries: 3
+    commands:
+      - runFlow:
+          when:
+            visible:
+              id: "login-submit"
+          commands:
+            - tapOn:
+                id: "login-submit"
+      - extendedWaitUntil:
+          visible: "Today"
+          timeout: 20000
 
 # A session the server has already validated opens offline, marked as such
 # (offline mode, #173). Reconnecting validates the token again.
