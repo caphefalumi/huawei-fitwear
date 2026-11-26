@@ -52,9 +52,9 @@ linter and `.github/arkts-lint.json`; Huawei's `code-linter.json5` is not used i
 
 The app opens on `features/home/HomePage.ets`, which covers wireframe screens
 W1a–W1e and W2–W4. The workout plan comes from the paired phone; debug builds
-start with a sample plan so they can be tried alone. Food and favorite values are
-still samples (`features/common/SampleData.ets`). Reps are entered with −/+ or the
-crown (no IMU counting yet).
+start with a sample plan and sample food (`features/common/SampleData.ets`) so they
+can be tried alone. Release builds show only what the phone sends. Reps are entered
+with −/+ or the crown (no IMU counting yet).
 
 ## Unfinished workouts
 
@@ -72,13 +72,17 @@ two minutes alone: reopen the app or tap **Connect** on the home screen. The fir
 Starting a workout on either device opens it on the other, and finished sets,
 rest, skips and the end stay in step. The phone saves finished workouts.
 
+The phone also sends today's calories and macros, the targets, and up to five of the
+most frequently logged meals. **Quick log** records one of those meals; once the 5 s
+undo window passes, the watch sends its ID and the phone copies that meal into the
+diary. A log stays on the watch until the phone's totals include it.
+
 Messages are defined in `features/link/SyncProtocol.ets`, mirrored by
 `apps/mobile/src/features/watch/protocol.ts`; change both together. Limits:
 
 - Both apps must be open. There is no background task or background BLE yet.
 - The link is not encrypted at the Bluetooth level; the pairing prompt only stops
   unknown phones.
-- "New cycle" from the wireframe was removed: the phone has no such concept.
 
 ## Exercise animations
 
@@ -90,8 +94,8 @@ entry in `features/media/ExerciseMedia.ets`.
 
 Below the start screen is a **Privacy** page that clears saved data and the pairing. First launch
 shows a notice, and nothing is saved until the user agrees. The workout in progress
-and today's food logs survive an app restart (`features/storage/`); system backup
-is off.
+the phone's nutrition figures and unsent quick logs survive an app restart
+(`features/storage/`); system backup is off.
 
 ## Release Build
 

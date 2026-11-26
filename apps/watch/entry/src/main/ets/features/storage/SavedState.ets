@@ -1,6 +1,6 @@
 /** What the watch keeps between launches. Pure functions, so they can be unit tested. */
-import { isPlan, WorkoutPlan } from '../link/SyncProtocol';
-import { FoodDay } from '../quicklog/FoodDay';
+import { DayInfo, isDay, isPlan, WorkoutPlan } from '../link/SyncProtocol';
+import { FoodDay, PendingLog } from '../quicklog/FoodDay';
 import { SessionSnapshot, WorkoutSession, WorkoutStatus } from '../workout/WorkoutSession';
 
 const VERSION: number = 2;
@@ -9,8 +9,10 @@ interface SavedState {
   version: number;
   day: string;
   summaryDismissed: boolean;
-  /** Names of favorites logged on the watch. */
-  logged: string[];
+  /** The phone's latest nutrition figures. */
+  nutrition?: DayInfo;
+  /** Quick logs the phone has not saved yet. */
+  pending?: PendingLog[];
   /** The plan last sent by the phone. */
   plan: WorkoutPlan;
   session: SessionSnapshot;
@@ -36,7 +38,8 @@ export function encodeState(
     version: VERSION,
     day: dayKey(now),
     summaryDismissed: summaryDismissed,
-    logged: day.logged.map((food) => food.name),
+    nutrition: day.info,
+    pending: day.pending,
     plan: session.plan,
     session: session.snapshot(),
   };
@@ -44,9 +47,9 @@ export function encodeState(
 }
 
 /**
- * Rebuilds the saved plan and session, and re-applies today's food logs to `day`.
- * Food logs and finished workouts expire at midnight; the plan and a workout in
- * progress do not. Damaged or outdated data yields a fresh session of `fallback`.
+ * Rebuilds the saved plan and session, and puts the saved nutrition back into `day`.
+ * A finished workout expires at midnight; the plan, a workout in progress and quick
+ * logs still waiting for the phone do not. Damaged or outdated data yields a fresh session of `fallback`.
  */
 export function restoreState(
   json: string,
@@ -61,13 +64,9 @@ export function restoreState(
       return fresh;
     }
     const today = state.day === dayKey(now);
-    if (today) {
-      state.logged.forEach((name: string) => {
-        const food = day.favorites.find((favorite) => favorite.name === name);
-        if (food) {
-          day.log(food);
-        }
-      });
+    day.pending = state.pending ?? [];
+    if (state.nutrition && isDay(state.nutrition)) {
+      day.apply(state.nutrition);
     }
     const session = new WorkoutSession(state.plan);
     const wanted = today || state.session.status === WorkoutStatus.ACTIVE;

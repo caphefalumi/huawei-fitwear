@@ -2,13 +2,27 @@
 import { BLE_MAX_MESSAGE_BYTES, WatchBleClient, type WatchBleStatus } from "@/features/ble"
 
 import { usePairing } from "./pairing.store"
-import { encodeFrames, FrameAssembler, PROTOCOL_VERSION, type SyncMessage } from "./protocol"
+import {
+  encodeFrames,
+  FrameAssembler,
+  PROTOCOL_VERSION,
+  type SyncMessage,
+  type WireDay,
+  type WireFoodLog,
+} from "./protocol"
 import { toWirePlan, useWatchStore } from "./store"
 
 const RETRY_MS = 6000
 const HELLO_MS = 3000
 /** Payload of the smallest ATT MTU, accepted by every link. */
 const MIN_PAYLOAD = 20
+
+export type WatchNutrition = {
+  /** Today's nutrition, freshly read; null when it cannot be read. */
+  day: () => Promise<WireDay | null>
+  /** Saves the watch's quick logs. Ones that fail stay on the watch and come again. */
+  save: (logs: WireFoodLog[]) => Promise<void>
+}
 
 export class WatchLink {
   private client: WatchBleClient
@@ -20,9 +34,14 @@ export class WatchLink {
   private queue: Promise<void> = Promise.resolve()
   private messageId = 0
   private sentPlan = ""
+  private sentDay = ""
+  private food: Promise<void> = Promise.resolve()
   private stopped = true
 
-  constructor(private readonly phone: string) {
+  constructor(
+    private readonly phone: string,
+    private readonly nutrition?: WatchNutrition,
+  ) {
     this.client = new WatchBleClient({
       onStatus: (status) => this.onStatus(status),
       onDeviceName: () => {},
@@ -80,6 +99,7 @@ export class WatchLink {
     if (status === "connected") {
       this.assembler = new FrameAssembler()
       this.sentPlan = ""
+      this.sentDay = ""
       const greet = () => this.send({ t: "hello", v: PROTOCOL_VERSION, phone: this.phone })
       greet()
       // Repeated until the watch answers, in case it was not yet subscribed.
@@ -116,10 +136,36 @@ export class WatchLink {
       if (message.ok) {
         usePairing.getState().remember()
         this.sendSession()
+        void this.sendDay()
       }
-    } else if (message.t === "session" && useWatchStore.getState().status === "connected") {
+    } else if (useWatchStore.getState().status !== "connected") {
+      return
+    } else if (message.t === "session") {
       useWatchStore.getState().receive(message.session)
+    } else if (message.t === "food") {
+      this.saveFood(message.logs)
     }
+  }
+
+  /** Sends today's nutrition if it differs from what the watch last got. */
+  async sendDay() {
+    if (!this.nutrition || useWatchStore.getState().status !== "connected") return
+    const day = await this.nutrition.day().catch(() => null)
+    if (!day || this.stopped || useWatchStore.getState().status !== "connected") return
+    const key = JSON.stringify(day)
+    if (key === this.sentDay) return
+    this.sentDay = key
+    this.send({ t: "day", day })
+  }
+
+  /** One batch at a time, so a repeated message cannot save a meal twice. */
+  private saveFood(logs: WireFoodLog[]) {
+    this.food = this.food.then(async () => {
+      await this.nutrition?.save(logs).catch(() => undefined)
+      // The watch asked, so answer even if the day is unchanged.
+      this.sentDay = ""
+      await this.sendDay()
+    })
   }
 
   private sendPlan() {

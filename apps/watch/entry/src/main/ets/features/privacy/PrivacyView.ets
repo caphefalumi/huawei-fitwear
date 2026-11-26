@@ -17,7 +17,7 @@ export struct PrivacyView {
         .fontSize(Type.TITLE)
         .fontWeight(FontWeight.Bold)
         .fontColor(Palette.TEXT)
-      Text('Saved on this watch. Workouts are shared with your paired phone.')
+      Text('Saved on this watch. Workouts and meals are shared with your paired phone.')
         .width('72%')
         .fontSize(Type.SMALL)
         .fontColor(Palette.MUTED)
