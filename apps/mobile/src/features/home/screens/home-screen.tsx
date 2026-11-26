@@ -101,7 +101,7 @@ export function HomeScreen() {
           ) : null}
           {injuries.length ? <Text style={styles.focusMuted}>{injuryTitle(injuries)}</Text> : null}
           <Pressable onPress={() => router.push("/watch")}>
-            <Text style={styles.focusMuted}>Watch · {watch.label}</Text>
+            <Text style={styles.focusMuted}>Watch · {watch.summary}</Text>
           </Pressable>
         </Card>
       </Animated.View>

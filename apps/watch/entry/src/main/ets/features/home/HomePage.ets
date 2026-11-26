@@ -88,6 +88,12 @@ struct HomePage {
   private crownDegrees: number = 0;
   private today: string = dayKey(Date.now());
 
+  /** Sends a change as it happens instead of at the next tick, which stays as the fallback. */
+  @Monitor('session.rev')
+  onSessionChange(): void {
+    this.publish();
+  }
+
   aboutToAppear(): void {
     this.store.open(this.getUIContext().getHostContext() as common.UIAbilityContext);
     this.consented = this.store.hasConsent();
@@ -468,9 +474,9 @@ struct HomePage {
 
   private phoneLabel(): string {
     if (this.link.state === LinkState.CONNECTED) {
-      return 'Phone';
+      return this.link.phoneName || 'Phone';
     }
-    return this.link.state === LinkState.OFF ? 'Connect' : 'Searching';
+    return this.link.state === LinkState.OFF ? 'Tap to connect' : 'Searching';
   }
 
   @Builder
@@ -561,6 +567,7 @@ struct HomePage {
         day: this.day,
         connected: this.link.state === LinkState.CONNECTED,
         phoneLabel: this.phoneLabel(),
+        searching: this.link.state === LinkState.SEARCHING,
         onConnect: () => this.startLink(),
         onOpenDemos: () => {
           // A developer tool: unreachable in release builds.
@@ -618,7 +625,7 @@ struct HomePage {
       } else if (this.link.state === LinkState.APPROVAL) {
         ConfirmView({
           title: 'Pair phone?',
-          message: 'A phone wants to\nshare workouts',
+          message: `${this.link.phoneName || 'A phone'}\nwants to share workouts`,
           keepLabel: 'Allow',
           endLabel: 'Not now',
           onKeep: () => this.link.allow(),

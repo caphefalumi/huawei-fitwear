@@ -4,7 +4,7 @@ import type { Routine } from "@/features/workout"
 
 import { mergeSessions, type SharedSession, type WirePlan } from "./protocol"
 
-export type WatchStatus = "off" | "searching" | "approval" | "connected"
+export type WatchStatus = "off" | "searching" | "connecting" | "approval" | "connected"
 
 /** A rest end that differs by less than this is the same rest. */
 const REST_TOLERANCE_MS = 1500

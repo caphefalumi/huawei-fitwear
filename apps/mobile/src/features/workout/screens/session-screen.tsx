@@ -760,7 +760,7 @@ function ActiveSession({
           </Text>
           <Text style={styles.progressLabel}>{formatClock((now - startedAt) / 1000)}</Text>
         </View>
-        {watch.enabled ? <Text style={styles.progressLabel}>Watch · {watch.label}</Text> : null}
+        {watch.enabled ? <Text style={styles.progressLabel}>Watch · {watch.summary}</Text> : null}
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: `${(position / slots.length) * 100}%` }]} />
         </View>

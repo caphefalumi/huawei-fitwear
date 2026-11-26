@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query"
+import * as Device from "expo-device"
 import { router } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { AppState, Platform } from "react-native"
@@ -13,6 +14,10 @@ import { createWatchNutrition } from "./nutrition"
 import { phoneId, usePairing } from "./pairing.store"
 import { resetWatchSession, useWatchStore } from "./store"
 import { WatchLink } from "./watch-link"
+
+// iOS only tells apps "iPhone" for the user's device name, so the model says more there.
+const phoneName = () =>
+  (Platform.OS === "ios" ? Device.modelName : (Device.deviceName ?? Device.modelName)) ?? undefined
 
 /**
  * Mounted once for a signed-in user: connects to the watch while the app is in the
@@ -60,6 +65,7 @@ export function WatchBridge() {
                   void queryClient.invalidateQueries({ queryKey: mealsQueryKeys.all(owner) }),
               })
             : undefined,
+          phoneName(),
         )
         setReady(true)
       },
@@ -75,6 +81,10 @@ export function WatchBridge() {
     if (enabled && (foreground || inBackground)) link.current?.start()
     else link.current?.stop()
   }, [enabled, foreground, inBackground, ready])
+
+  useEffect(() => {
+    link.current?.setForeground(foreground)
+  }, [foreground, ready])
 
   // The watch gets new totals and favorites whenever the meals here change.
   useEffect(() => {

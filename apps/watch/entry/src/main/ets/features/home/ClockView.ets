@@ -35,6 +35,8 @@ export struct ClockView {
   @Require @Param day: FoodDay;
   @Param connected: boolean = false;
   @Param phoneLabel: string = '';
+  /** Looking for a phone: a spinner replaces the status dot. */
+  @Param searching: boolean = false;
   @Event onConnect: () => void = () => {};
   @Event onOpenDemos: () => void = () => {};
 
@@ -61,8 +63,15 @@ export struct ClockView {
           Text(formatDate(this.now))
             .fontSize(Type.SMALL)
             .fontColor(Palette.MUTED)
-          Circle({ width: 7, height: 7 }).fill(this.connected ? Palette.ACCENT : Palette.TRACK)
+          if (this.searching) {
+            LoadingProgress().width(14).height(14).color(Palette.ACCENT)
+          } else {
+            Circle({ width: 7, height: 7 }).fill(this.connected ? Palette.ACCENT : Palette.TRACK)
+          }
           Text(this.phoneLabel)
+            .constraintSize({ maxWidth: 96 })
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
             .fontSize(12)
             .fontColor(this.connected ? Palette.TEXT : Palette.MUTED)
         }

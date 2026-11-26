@@ -25,10 +25,10 @@ export const MAX_MESSAGE_BYTES: number = 180;
 const ATT_ERR_INVALID_ATTR_VALUE_LEN: number = 0x0d;
 
 /**
- * Apple Accessory Design Guidelines recommended advertising interval.
- * 152.5 ms (244 * 0.625 ms slots) avoids collision with standard 2.4 GHz Wi-Fi DTIM beacons.
+ * Fast advertising so a phone finds the watch quickly: 20 ms (32 * 0.625 ms slots), from the
+ * Apple Accessory Design Guidelines. It only runs until a phone connects or ADV_TIMEOUT_MS.
  */
-const ADV_INTERVAL_APPLE_SLOTS: number = 244;
+const ADV_INTERVAL_SLOTS: number = 32;
 
 /** Max duration (ms) to advertise without a client before turning off radio to save battery. */
 const ADV_TIMEOUT_MS: number = 120_000;
@@ -59,7 +59,7 @@ function decodeUtf8(buffer: ArrayBuffer): string {
 
 /**
  * Production BLE GATT peripheral for Fitwear.
- * Private service, dynamic advertising, Apple-compliant intervals, ATT watchdog, and UTF-8 notify/write.
+ * Private service, dynamic fast advertising, ATT watchdog, and UTF-8 notify/write.
  * Caller must hold ohos.permission.ACCESS_BLUETOOTH before start().
  */
 export class BleGattServerService {
@@ -212,9 +212,8 @@ export class BleGattServerService {
       this.gattServer.on('descriptorWrite', this.onDescriptorWrite);
       this.gattServer.on('BLEMtuChange', this.onMtuChange);
 
-      // Apple Accessory Design Guidelines compliant advertising interval (152.5 ms)
       const setting: ble.AdvertiseSetting = {
-        interval: ADV_INTERVAL_APPLE_SLOTS,
+        interval: ADV_INTERVAL_SLOTS,
         txPower: 0,
         connectable: true,
       };

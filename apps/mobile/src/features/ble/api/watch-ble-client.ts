@@ -1,9 +1,11 @@
-import { PermissionsAndroid, Platform } from "react-native"
+import { AppState, PermissionsAndroid, Platform } from "react-native"
 import {
   BleError,
   BleManager,
   Characteristic,
+  ConnectionPriority,
   Device,
+  ScanMode,
   State,
   Subscription,
 } from "react-native-ble-plx"
@@ -11,6 +13,7 @@ import {
 import { captureException } from "@/lib/analytics/posthog"
 
 import {
+  BLE_CONNECT_TIMEOUT_MS,
   BLE_MAX_MESSAGE_BYTES,
   BLE_REQUESTED_MTU,
   BLE_SCAN_TIMEOUT_MS,
@@ -69,6 +72,41 @@ async function requestAndroidBlePermissions(): Promise<boolean> {
 }
 
 /**
+ * Right after launch iOS reports Unknown until the radio is ready. Waiting for the first real
+ * state saves a whole retry cycle.
+ */
+async function bluetoothState(manager: BleManager): Promise<State> {
+  const current = await manager.state()
+  if (current !== State.Unknown && current !== State.Resetting) return current
+  return new Promise<State>((resolve) => {
+    const done = (state: State) => {
+      clearTimeout(timeout)
+      subscription.remove()
+      resolve(state)
+    }
+    const timeout = setTimeout(() => done(current), 2000)
+    const subscription = manager.onStateChange((state) => {
+      if (state !== State.Unknown && state !== State.Resetting) done(state)
+    }, false)
+  })
+}
+
+/**
+ * Android only: a short connection interval while the app is in use, the power-saving default
+ * otherwise. iOS chooses its own interval.
+ */
+async function applyPriority(device: Device, foreground: boolean): Promise<void> {
+  if (Platform.OS !== "android") return
+  try {
+    await device.requestConnectionPriority(
+      foreground ? ConnectionPriority.High : ConnectionPriority.Balanced,
+    )
+  } catch {
+    // A speed hint only; the link works without it.
+  }
+}
+
+/**
  * Production BLE central for the VoocHealth watch GATT peripheral.
  *
  * Usage:
@@ -91,6 +129,7 @@ export class WatchBleClient {
   private status: WatchBleStatus = "disconnected"
   /** Bumped on disconnect/destroy/new scan so in-flight connect callbacks abort. */
   private session = 0
+  private foreground = AppState.currentState !== "background"
 
   constructor(listener: WatchBleListener) {
     this.listener = listener
@@ -107,6 +146,14 @@ export class WatchBleClient {
   /** Alias for startScan — preferred public name. */
   connect(): Promise<void> {
     return this.startScan()
+  }
+
+  /** Trades battery for latency while the app is in front. */
+  setForeground(foreground: boolean): void {
+    this.foreground = foreground
+    if (this.isConnected() && this.connectedDevice) {
+      void applyPriority(this.connectedDevice, foreground)
+    }
   }
 
   async startScan(): Promise<void> {
@@ -130,7 +177,7 @@ export class WatchBleClient {
     this.bindBluetoothState(manager)
 
     try {
-      const btState = await manager.state()
+      const btState = await bluetoothState(manager)
       if (btState !== State.PoweredOn) {
         this.listener.onError(`Bluetooth is ${btState}. Turn Bluetooth on and retry.`)
         return
@@ -172,7 +219,11 @@ export class WatchBleClient {
 
     manager.startDeviceScan(
       [FITWEAR_SERVICE_UUID],
-      { allowDuplicates: false },
+      {
+        allowDuplicates: false,
+        // Android's default scan listens about a tenth of the time.
+        scanMode: this.foreground ? ScanMode.LowLatency : ScanMode.Balanced,
+      },
       async (scanError: BleError | null, scannedDevice: Device | null) => {
         if (session !== this.session) return
         if (scanError) {
@@ -194,12 +245,16 @@ export class WatchBleClient {
         let connected: Device | null = null
         try {
           this.setStatus("connecting")
-          connected = await scannedDevice.connect({ requestMTU: BLE_REQUESTED_MTU })
+          connected = await scannedDevice.connect({
+            requestMTU: BLE_REQUESTED_MTU,
+            timeout: BLE_CONNECT_TIMEOUT_MS,
+          })
           if (session !== this.session) {
             await this.safeCancel(connected)
             return
           }
           this.connectedDevice = connected
+          void applyPriority(connected, this.foreground)
 
           // Register disconnect listener immediately so drops during discovery are caught
           this.disconnectSub = connected.onDisconnected((_error, device) => {
@@ -260,8 +315,9 @@ export class WatchBleClient {
             // Keep the notify subscription.
           }
 
+          // The advertised name is the freshest; the system's cached one can be missing.
           this.listener.onDeviceName(
-            connected.name || connected.localName || `Watch (${connected.id})`,
+            scannedDevice.localName || scannedDevice.name || connected.name || "None",
           )
           this.listener.onError(null)
           this.setStatus("connected")
