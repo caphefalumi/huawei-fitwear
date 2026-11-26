@@ -28,6 +28,9 @@ trap finish EXIT
 
 adb wait-for-device
 adb shell getprop sys.boot_completed | grep -q '^1$'
+# A slow runner can leave Pixel Launcher "isn't responding" over the app under
+# test, hiding it from Maestro. App crashes still fail the flows.
+adb shell settings put global hide_error_dialogs 1
 adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
 adb shell pm path com.fitwear.mobile >/dev/null
 
