@@ -96,6 +96,14 @@ jobs:
         run: |
           mkdir Payload
           cp -R "app.xcarchive/Products/Applications/$APP_NAME.app" Payload/
+          app="Payload/$APP_NAME.app"
+          # An unsigned build carries no entitlements, so HealthKit fails after sideloading.
+          # Ad-hoc sign it so the re-signing tool can read them.
+          if [[ -d "$app/Frameworks" ]]; then
+            find "$app/Frameworks" -mindepth 1 -maxdepth 1 \( -name '*.framework' -o -name '*.dylib' \) -exec codesign --force --sign - {} \;
+          fi
+          codesign --force --sign - --entitlements "../../ios/$APP_NAME/$APP_NAME.entitlements" "$app"
+          codesign --display --entitlements - "$app" | grep com.apple.developer.healthkit
           zip -qry app-release.ipa Payload
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
