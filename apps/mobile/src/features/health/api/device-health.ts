@@ -10,7 +10,7 @@ export type HealthMeasurement = { value: number; time: Date }
 async function androidHealth() {
   // Health Connect is Android-only; loading it on iOS or web would access a missing native module.
   const health: typeof HealthConnect = require("react-native-health-connect")
-  if (!(await health.initialize()))
+  if (!(await health.initialize().catch(() => false)))
     throw new Error(
       "Health Connect is unavailable. Install or update Health Connect and try again.",
     )
@@ -77,6 +77,37 @@ export async function readDeviceHealth(metric: Metric): Promise<HealthMeasuremen
     return sample ? { value: sample.quantity, time: sample.startDate } : null
   }
   throw new Error("Health data is only available on supported Android and iOS devices.")
+}
+
+export async function isDeviceHealthAvailable(): Promise<boolean> {
+  if (Platform.OS === "android") {
+    const health: typeof HealthConnect = require("react-native-health-connect")
+    return (await health.getSdkStatus()) === health.SdkAvailabilityStatus.SDK_AVAILABLE
+  }
+  if (Platform.OS === "ios") {
+    const health: typeof HealthKit = require("@kingstinct/react-native-healthkit")
+    return health.isHealthDataAvailable()
+  }
+  return false
+}
+
+/** Asks for everything the app uses. HealthKit does not reveal which reads were allowed. */
+export async function connectDeviceHealth(): Promise<void> {
+  if (Platform.OS === "android") {
+    const health = await androidHealth()
+    const granted = await health.requestPermission([
+      { accessType: "read", recordType: "Weight" },
+      { accessType: "read", recordType: "HeartRate" },
+      { accessType: "write", recordType: "ExerciseSession" },
+    ])
+    if (!granted.length) throw new Error("Health Connect permission was not granted.")
+    return
+  }
+  const health = await appleHealth()
+  await health.requestAuthorization({
+    toRead: ["HKQuantityTypeIdentifierBodyMass", "HKQuantityTypeIdentifierHeartRate"],
+    toShare: ["HKWorkoutTypeIdentifier"],
+  })
 }
 
 /** Call only in response to an explicit request to share this completed workout. */

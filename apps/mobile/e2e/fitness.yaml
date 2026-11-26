@@ -36,6 +36,14 @@ tags:
 - hideKeyboard
 - tapOn:
     id: "login-submit"
+# The one-time Health Connect offer appears on devices that have Health Connect.
+- extendedWaitUntil:
+    visible: "Connect to Health Connect"
+    timeout: 10000
+    optional: true
+- tapOn:
+    text: "Not now"
+    optional: true
 - extendedWaitUntil:
     visible: "Today"
     timeout: 30000
@@ -51,7 +59,7 @@ tags:
 - tapOn:
     id: "tab-profile"
 - extendedWaitUntil:
-    visible: "Health & goals"
+    visible: "Health data"
     timeout: 20000
 - tapOn:
     id: "tab-meals"

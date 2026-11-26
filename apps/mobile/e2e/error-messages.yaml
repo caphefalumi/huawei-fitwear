@@ -285,6 +285,14 @@ tags:
           commands:
             - tapOn:
                 id: "login-submit"
+      # The one-time Health Connect offer appears on devices that have Health Connect.
+      - extendedWaitUntil:
+          visible: "Connect to Health Connect"
+          timeout: 10000
+          optional: true
+      - tapOn:
+          text: "Not now"
+          optional: true
       - extendedWaitUntil:
           visible: "Today"
           timeout: 20000

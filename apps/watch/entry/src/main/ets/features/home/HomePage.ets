@@ -612,6 +612,7 @@ struct HomePage {
           onAgree: () => {
             this.store.giveConsent();
             this.consented = true;
+            this.startLink();
           },
         });
       } else if (this.link.state === LinkState.APPROVAL) {
