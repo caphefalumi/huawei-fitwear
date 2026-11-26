@@ -1,6 +1,7 @@
 /** The watch's connection to the paired phone, on top of the BLE GATT server. */
 import { common } from '@kit.AbilityKit';
 import { BleGattServerListener, BleGattServerService } from '../ble/BleGattServerService';
+import { BackgroundLink } from './BackgroundLink';
 import {
   DayInfo,
   encodeFrames,
@@ -36,6 +37,7 @@ export class PhoneLink {
   @Trace state: LinkState = LinkState.OFF;
   private handlers: PhoneLinkHandlers | undefined = undefined;
   private service: BleGattServerService | undefined = undefined;
+  private readonly background: BackgroundLink = new BackgroundLink();
   private assembler: FrameAssembler = new FrameAssembler();
   private deviceId: string = '';
   private pendingPhone: string = '';
@@ -61,12 +63,17 @@ export class PhoneLink {
     this.service = new BleGattServerService(listener);
     this.state = LinkState.SEARCHING;
     this.service.start(context);
+    // The service may have failed at once and stopped the link again.
+    if (this.service) {
+      this.background.start(context);
+    }
   }
 
   stop(): void {
     const service = this.service;
     this.service = undefined;
     service?.stop();
+    this.background.stop();
     this.deviceId = '';
     this.pendingPhone = '';
     this.state = LinkState.OFF;

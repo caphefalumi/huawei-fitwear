@@ -80,7 +80,11 @@ diary. A log stays on the watch until the phone's totals include it.
 Messages are defined in `features/link/SyncProtocol.ets`, mirrored by
 `apps/mobile/src/features/watch/protocol.ts`; change both together. Limits:
 
-- Both apps must be open. There is no background task or background BLE yet.
+- Both apps must be running. While linked, the watch holds a `bluetoothInteraction`
+  background task, and Android runs a `connectedDevice` foreground service (with a
+  notification) once the watch has connected; iOS uses the Bluetooth background mode.
+  A closed app does not sync. Android gives up 5 minutes after losing the watch in the
+  background, and the watch stops advertising after 2 minutes alone.
 - The link is not encrypted at the Bluetooth level; the pairing prompt only stops
   unknown phones.
 
