@@ -1,10 +1,14 @@
+import { useQueryClient } from "@tanstack/react-query"
 import { router } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { AppState, Platform } from "react-native"
 
+import { useAuth } from "@/features/auth"
+import { mealsQueryKeys, useMeals } from "@/features/meals"
 import { useRoutines } from "@/features/workout"
 import { captureException } from "@/lib/analytics/posthog"
 
+import { createWatchNutrition } from "./nutrition"
 import { phoneId, usePairing } from "./pairing.store"
 import { resetWatchSession, useWatchStore } from "./store"
 import { WatchLink } from "./watch-link"
@@ -19,6 +23,11 @@ export function WatchBridge() {
   const link = useRef<WatchLink | null>(null)
   const [ready, setReady] = useState(false)
   const today = useRoutines().today
+  const owner = useAuth().user?.id
+  const queryClient = useQueryClient()
+  const { history, summary } = useMeals()
+  const meals = useRef(history)
+  meals.current = history
 
   useEffect(() => {
     void load()
@@ -39,7 +48,17 @@ export function WatchBridge() {
     void phoneId().then(
       (id) => {
         if (cancelled) return
-        link.current = new WatchLink(id)
+        link.current = new WatchLink(
+          id,
+          owner
+            ? createWatchNutrition({
+                owner,
+                history: () => meals.current,
+                onSaved: () =>
+                  void queryClient.invalidateQueries({ queryKey: mealsQueryKeys.all(owner) }),
+              })
+            : undefined,
+        )
         setReady(true)
       },
       () => captureException(new Error("Could not prepare the watch connection.")),
@@ -47,12 +66,17 @@ export function WatchBridge() {
     return () => {
       cancelled = true
     }
-  }, [enabled])
+  }, [enabled, owner, queryClient])
 
   useEffect(() => {
     if (enabled && foreground) link.current?.start()
     else link.current?.stop()
   }, [enabled, foreground, ready])
+
+  // The watch gets new totals and favorites whenever the meals here change.
+  useEffect(() => {
+    void link.current?.sendDay()
+  }, [history, summary])
 
   // Offer today's routine to the watch while no workout is running.
   const routineKey = JSON.stringify(today)

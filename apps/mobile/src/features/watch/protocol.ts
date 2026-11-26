@@ -7,6 +7,8 @@ export const PROTOCOL_VERSION = 1
 const MAX_MESSAGE_CHARS = 16000
 const MAX_EXERCISES = 30
 const MAX_SETS = 20
+export const MAX_FOOD_LOGS = 20
+export const MAX_FAVORITES = 5
 /** Longest frame header, "~999.999.999~". */
 const HEADER_CHARS = 13
 
@@ -47,11 +49,37 @@ export type SharedSession = {
   skip: number[]
 }
 
+export type WireMacros = { protein: number; carbs: number; fat: number }
+
+/** A recent meal the watch can log again. `ref` is that meal's ID. */
+export type WireFavorite = WireMacros & { ref: string; name: string; kcal: number }
+
+/** Today's nutrition, as the watch shows it. */
+export type WireDay = {
+  /** Local date, YYYY-MM-DD. */
+  date: string
+  /** Whose data this is, so one account's quick logs never reach another. */
+  owner: string
+  /** 0 until the profile is complete enough to have targets. */
+  kcalTarget: number
+  target: WireMacros
+  kcalEaten: number
+  eaten: WireMacros
+  favorites: WireFavorite[]
+  /** IDs of watch quick logs that these totals already include, or that were dropped. */
+  applied: string[]
+}
+
+/** A favorite logged on the watch. The phone copies the meal `ref` points to. */
+export type WireFoodLog = { id: string; ref: string; owner: string; at: number }
+
 export type SyncMessage =
   | { t: "hello"; v: number; phone: string }
   | { t: "welcome"; v: number; ok: boolean }
   | { t: "plan"; plan: WirePlan }
   | { t: "session"; session: SharedSession }
+  | { t: "day"; day: WireDay }
+  | { t: "food"; logs: WireFoodLog[] }
 
 /** Splits a message into ASCII frames of at most `maxBytes`. */
 export function encodeFrames(message: SyncMessage, maxBytes: number, id: number): string[] {
@@ -132,6 +160,16 @@ function isSession(session: SharedSession | undefined) {
   )
 }
 
+const isFoodLog = (log: WireFoodLog | undefined) =>
+  !!log &&
+  isText(log.id, 64) &&
+  log.id !== "" &&
+  isText(log.ref, 64) &&
+  log.ref !== "" &&
+  isText(log.owner, 64) &&
+  Number.isFinite(log.at) &&
+  log.at > 0
+
 /** Input from the radio is untrusted: anything malformed is ignored. */
 export function parseMessage(json: string): SyncMessage | undefined {
   let message: SyncMessage
@@ -142,7 +180,14 @@ export function parseMessage(json: string): SyncMessage | undefined {
   }
   if (message?.t === "welcome") return typeof message.ok === "boolean" ? message : undefined
   if (message?.t === "session") return isSession(message.session) ? message : undefined
-  // The phone only ever receives the two messages above.
+  if (message?.t === "food") {
+    return Array.isArray(message.logs) &&
+      message.logs.length <= MAX_FOOD_LOGS &&
+      message.logs.every(isFoodLog)
+      ? message
+      : undefined
+  }
+  // The phone only ever receives the messages above.
   return undefined
 }
 

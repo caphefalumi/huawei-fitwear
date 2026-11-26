@@ -3,13 +3,13 @@ import { BusinessError, power } from '@kit.BasicServicesKit';
 import { util } from '@kit.ArkTS';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import BuildProfile from 'BuildProfile';
-import { NO_PLAN, SAMPLE_DAY, SAMPLE_FAVORITES, SAMPLE_PLAN } from '../common/SampleData';
+import { NO_PLAN, SAMPLE_DAY, SAMPLE_PLAN } from '../common/SampleData';
 import { LinkState, PhoneLink, PhoneLinkHandlers } from '../link/PhoneLink';
-import { mergeSessions, SharedSession, WorkoutPlan } from '../link/SyncProtocol';
+import { DayInfo, mergeSessions, SharedSession, WorkoutPlan } from '../link/SyncProtocol';
 import { HAPTIC_ALERT_MS, HAPTIC_SIGNAL_MS, HAPTIC_TICK_MS, vibrate } from '../common/Haptics';
 import { Palette } from '../common/Ui';
 import { PrivacyView } from '../privacy/PrivacyView';
-import { FoodDay } from '../quicklog/FoodDay';
+import { FoodDay, isoDay } from '../quicklog/FoodDay';
 import { QuickLogView } from '../quicklog/QuickLogView';
 import { FormGuideView } from '../workout/FormGuideView';
 import { dayKey, encodeState, restoreState } from '../storage/SavedState';
@@ -34,9 +34,25 @@ const CONTROLS_PAGE: number = 1;
 /** Crown rotation per detent. Direction and size need tuning on a real watch. */
 const CROWN_STEP_DEGREES: number = 30;
 const TICK_MS: number = 500;
+/** How often unsaved quick logs are offered to the phone again. */
+const FOOD_RETRY_MS: number = 60000;
 
 function initialPlan(): WorkoutPlan {
   return BuildProfile.DEBUG ? SAMPLE_PLAN : NO_PLAN;
+}
+
+/** Debug builds can be tried without a phone; release builds show only the phone's figures. */
+function sampleDay(): DayInfo {
+  return {
+    date: isoDay(Date.now()),
+    owner: SAMPLE_DAY.owner,
+    kcalTarget: SAMPLE_DAY.kcalTarget,
+    kcalEaten: SAMPLE_DAY.kcalEaten,
+    target: SAMPLE_DAY.target,
+    eaten: SAMPLE_DAY.eaten,
+    favorites: SAMPLE_DAY.favorites,
+    applied: [],
+  };
 }
 
 /** The watch app's single screen: W1 normal and workout states, W2–W4 on top. */
@@ -52,7 +68,10 @@ struct HomePage {
   /** Session id and revision the phone already has. */
   private sentKey: string = '';
   @Local session: WorkoutSession = new WorkoutSession(initialPlan());
-  @Local day: FoodDay = new FoodDay(SAMPLE_DAY, SAMPLE_FAVORITES);
+  @Local day: FoodDay = new FoodDay();
+  /** Quick logs last offered to the phone, and when. */
+  private sentFood: string = '';
+  private sentFoodAt: number = 0;
   @Local consented: boolean = false;
   @Local visible: boolean = true;
   @Local now: number = Date.now();
@@ -79,6 +98,7 @@ struct HomePage {
       this.interrupt();
       this.startLink();
     }
+    this.useSampleDay();
     this.startTicker();
   }
 
@@ -168,9 +188,14 @@ struct HomePage {
       allowPhone: (phone: string) => this.store.allowPhone(phone),
       onReady: () => {
         this.sentKey = '';
+        this.sentFood = '';
       },
       onPlan: (plan: WorkoutPlan) => this.receivePlan(plan),
       onSession: (session: SharedSession) => this.receiveSession(session),
+      onDay: (info: DayInfo) => {
+        this.day.apply(info);
+        this.save();
+      },
     };
   }
 
@@ -238,6 +263,25 @@ struct HomePage {
     }
   }
 
+  private publishFood(now: number): void {
+    if (this.link.state !== LinkState.CONNECTED) {
+      return;
+    }
+    const logs = this.day.due(now);
+    const key = logs.map((log) => log.id).join();
+    if (logs.length > 0 && (key !== this.sentFood || now - this.sentFoodAt >= FOOD_RETRY_MS)) {
+      this.sentFood = key;
+      this.sentFoodAt = now;
+      this.link.sendFood(logs);
+    }
+  }
+
+  private useSampleDay(): void {
+    if (BuildProfile.DEBUG && !this.day.hasData) {
+      this.day.apply(sampleDay());
+    }
+  }
+
   private startTicker(): void {
     if (this.ticker === -1) {
       this.ticker = setInterval(() => this.tick(), TICK_MS);
@@ -258,17 +302,18 @@ struct HomePage {
     this.store.clear();
     this.phonePlan = undefined;
     this.session = new WorkoutSession(initialPlan());
-    this.day = new FoodDay(SAMPLE_DAY, SAMPLE_FAVORITES);
+    this.day = new FoodDay();
+    this.useSampleDay();
     this.summaryDismissed = false;
     this.homePage = CLOCK_PAGE;
     this.consented = false;
     this.interrupted = false;
   }
 
-  /** At midnight yesterday's food logs and finished workout go away. */
+  /** At midnight yesterday's food totals and finished workout go away. */
   private startNewDay(today: string): void {
     this.today = today;
-    this.day = new FoodDay(SAMPLE_DAY, SAMPLE_FAVORITES);
+    this.day.today = isoDay(this.now);
     if (this.session.status !== WorkoutStatus.ACTIVE) {
       this.session = new WorkoutSession(this.session.plan);
       this.summaryDismissed = false;
@@ -322,6 +367,7 @@ struct HomePage {
     // One place to save and send: any change is on disk and on the phone within a tick.
     this.save();
     this.publish();
+    this.publishFood(this.now);
     if (!this.visible && this.session.status !== WorkoutStatus.ACTIVE) {
       this.stopTicker();
     }

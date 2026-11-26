@@ -2,7 +2,9 @@
 import { common } from '@kit.AbilityKit';
 import { BleGattServerListener, BleGattServerService } from '../ble/BleGattServerService';
 import {
+  DayInfo,
   encodeFrames,
+  FoodLog,
   FrameAssembler,
   PROTOCOL_VERSION,
   SharedSession,
@@ -26,6 +28,7 @@ export interface PhoneLinkHandlers {
   onReady: () => void;
   onPlan: (plan: WorkoutPlan) => void;
   onSession: (session: SharedSession) => void;
+  onDay: (day: DayInfo) => void;
 }
 
 @ObservedV2
@@ -91,6 +94,12 @@ export class PhoneLink {
     }
   }
 
+  sendFood(logs: FoodLog[]): void {
+    if (this.state === LinkState.CONNECTED) {
+      this.send({ t: 'food', logs: logs });
+    }
+  }
+
   private accept(): void {
     this.pendingPhone = '';
     this.state = LinkState.CONNECTED;
@@ -131,6 +140,8 @@ export class PhoneLink {
       this.handlers.onPlan(message.plan as WorkoutPlan);
     } else if (message.t === 'session') {
       this.handlers.onSession(message.session as SharedSession);
+    } else if (message.t === 'day') {
+      this.handlers.onDay(message.day as DayInfo);
     }
   }
 

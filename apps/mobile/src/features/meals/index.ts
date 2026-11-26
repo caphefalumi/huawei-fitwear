@@ -1,4 +1,7 @@
 /** Public API. Screens are composed by route files directly. */
+export { fetchMeal, fetchMealSummary, writeMeal } from "./api/meals-api"
+export type { ApiMeal } from "./api/meals-api"
+export { mealTitle } from "./utils/meal-journal"
 export {
   estimatePortion,
   fromApiItem,

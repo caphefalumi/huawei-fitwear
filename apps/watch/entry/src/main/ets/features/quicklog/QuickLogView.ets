@@ -1,8 +1,8 @@
+import { util } from '@kit.ArkTS';
 import { HAPTIC_SIGNAL_MS, vibrate } from '../common/Haptics';
 import { Palette, PillButton, Type } from '../common/Ui';
-import { Food, FoodDay } from './FoodDay';
-
-const UNDO_WINDOW_MS: number = 5000;
+import { FavoriteMeal } from '../link/SyncProtocol';
+import { FoodDay, UNDO_WINDOW_MS } from './FoodDay';
 
 /** W1e: one favorite per page, tap to log, 5 seconds to undo. */
 @ComponentV2
@@ -16,8 +16,10 @@ export struct QuickLogView {
     clearTimeout(this.undoTimer);
   }
 
-  private log(food: Food): void {
-    this.day.log(food);
+  private log(food: FavoriteMeal): void {
+    if (!this.day.log(food, util.generateRandomUUID(), Date.now())) {
+      return;
+    }
     this.justLogged = food.name;
     vibrate(HAPTIC_SIGNAL_MS);
     clearTimeout(this.undoTimer);
@@ -46,7 +48,7 @@ export struct QuickLogView {
   }
 
   @Builder
-  foodCard(food: Food) {
+  foodCard(food: FavoriteMeal) {
     Column({ space: 6 }) {
       Text('Quick log')
         .fontSize(Type.SMALL)
@@ -74,13 +76,13 @@ export struct QuickLogView {
           .height(48)
           .color(Palette.TRACK)
         Column() {
-          this.macroRow('Pro', food.macros.protein)
-          this.macroRow('Carb', food.macros.carbs)
-          this.macroRow('Fat', food.macros.fat)
+          this.macroRow('Pro', food.protein)
+          this.macroRow('Carb', food.carbs)
+          this.macroRow('Fat', food.fat)
         }.alignItems(HorizontalAlign.Start)
       }
-      if (this.day.timesLogged(food) > 0) {
-        Text(`Logged today ×${this.day.timesLogged(food)}`)
+      if (this.day.waiting(food) > 0) {
+        Text(`Waiting for phone ×${this.day.waiting(food)}`)
           .fontSize(12)
           .fontColor(Palette.ACCENT);
       }
@@ -94,7 +96,7 @@ export struct QuickLogView {
   build() {
     Column() {
       if (this.day.favorites.length === 0) {
-        Text('Add favorites on your phone')
+        Text(this.day.hasData ? 'Log a meal on your phone first' : 'Open the phone app')
           .width('70%')
           .fontSize(16)
           .fontColor(Palette.TEXT)
@@ -120,10 +122,10 @@ export struct QuickLogView {
           Swiper() {
             ForEach(
               this.day.favorites,
-              (food: Food) => {
+              (food: FavoriteMeal) => {
                 this.foodCard(food);
               },
-              (food: Food) => food.name,
+              (food: FavoriteMeal) => food.ref,
             )
           }
           .index(this.favoriteIndex)
@@ -138,12 +140,12 @@ export struct QuickLogView {
           Row({ space: 5 }) {
             ForEach(
               this.day.favorites,
-              (food: Food, index: number) => {
+              (food: FavoriteMeal, index: number) => {
                 Circle({ width: 6, height: 6 }).fill(
                   index === this.favoriteIndex ? Palette.ACCENT : Palette.TRACK,
                 );
               },
-              (food: Food) => food.name,
+              (food: FavoriteMeal) => food.ref,
             )
           }
           .margin({ bottom: 10 })

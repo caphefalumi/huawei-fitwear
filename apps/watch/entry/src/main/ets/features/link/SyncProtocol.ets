@@ -9,6 +9,10 @@ const MAX_EXERCISES: number = 30;
 const MAX_SETS: number = 20;
 /** Longest frame header, "~999.999.999~". */
 const HEADER_CHARS: number = 13;
+export const MAX_FOOD_LOGS: number = 20;
+const MAX_FAVORITES: number = 5;
+const MAX_APPLIED: number = 40;
+const MAX_NUTRIENT: number = 1000000;
 
 export interface PlanExercise {
   key: string;
@@ -51,14 +55,56 @@ export interface SharedSession {
   skip: number[];
 }
 
+export interface Macros {
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+/** A recent meal the watch can log again. `ref` is that meal's ID on the phone. */
+export interface FavoriteMeal {
+  ref: string;
+  name: string;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+/** Today's nutrition, from the phone. */
+export interface DayInfo {
+  /** Local date, YYYY-MM-DD. */
+  date: string;
+  /** Whose data this is, so one account's quick logs never reach another. */
+  owner: string;
+  /** 0 until the profile is complete enough to have targets. */
+  kcalTarget: number;
+  target: Macros;
+  kcalEaten: number;
+  eaten: Macros;
+  favorites: FavoriteMeal[];
+  /** IDs of watch quick logs that these totals already include, or that were dropped. */
+  applied: string[];
+}
+
+/** A favorite logged on the watch. The phone copies the meal `ref` points to. */
+export interface FoodLog {
+  id: string;
+  ref: string;
+  owner: string;
+  at: number;
+}
+
 export interface SyncMessage {
-  /** 'hello' (phone), 'welcome' (watch), 'plan' (phone) or 'session' (both). */
+  /** 'hello', 'plan', 'day' (phone), 'welcome', 'food' (watch) or 'session' (both). */
   t: string;
   v?: number;
   phone?: string;
   ok?: boolean;
   plan?: WorkoutPlan;
   session?: SharedSession;
+  day?: DayInfo;
+  logs?: FoodLog[];
 }
 
 export interface Slot {
@@ -213,6 +259,40 @@ function isSession(session: SharedSession): boolean {
   );
 }
 
+function isMacros(macros: Macros): boolean {
+  return (
+    isCount(macros.protein, MAX_NUTRIENT) &&
+    isCount(macros.carbs, MAX_NUTRIENT) &&
+    isCount(macros.fat, MAX_NUTRIENT)
+  );
+}
+
+export function isDay(day: DayInfo): boolean {
+  return (
+    isText(day.date, 10) &&
+    isText(day.owner, 64) &&
+    isCount(day.kcalTarget, MAX_NUTRIENT) &&
+    isCount(day.kcalEaten, MAX_NUTRIENT) &&
+    isMacros(day.target) &&
+    isMacros(day.eaten) &&
+    Array.isArray(day.favorites) &&
+    day.favorites.length <= MAX_FAVORITES &&
+    day.favorites.every(
+      (food: FavoriteMeal) =>
+        isText(food.ref, 64) &&
+        food.ref !== '' &&
+        isText(food.name, 60) &&
+        isCount(food.kcal, MAX_NUTRIENT) &&
+        isCount(food.protein, MAX_NUTRIENT) &&
+        isCount(food.carbs, MAX_NUTRIENT) &&
+        isCount(food.fat, MAX_NUTRIENT),
+    ) &&
+    Array.isArray(day.applied) &&
+    day.applied.length <= MAX_APPLIED &&
+    day.applied.every((id: string) => isText(id, 64))
+  );
+}
+
 /** Input from the radio is untrusted: anything malformed is ignored. */
 export function parseMessage(json: string): SyncMessage | undefined {
   try {
@@ -232,6 +312,9 @@ export function parseMessage(json: string): SyncMessage | undefined {
     }
     if (message.t === 'session') {
       return isSession(message.session as SharedSession) ? message : undefined;
+    }
+    if (message.t === 'day') {
+      return isDay(message.day as DayInfo) ? message : undefined;
     }
     return undefined;
   } catch (err) {

@@ -1,5 +1,4 @@
-import { WorkoutPlan } from '../link/SyncProtocol';
-import { DayTotals, Food } from '../quicklog/FoodDay';
+import { DayInfo, WorkoutPlan } from '../link/SyncProtocol';
 
 /** Shown until the phone sends its plan. */
 export const NO_PLAN: WorkoutPlan = { name: '', minutes: 0, exercises: [] };
@@ -41,17 +40,17 @@ export const SAMPLE_PLAN: WorkoutPlan = {
   ],
 };
 
-export const SAMPLE_DAY: DayTotals = {
+/** Debug builds only, like SAMPLE_PLAN. The date is filled in when it is used. */
+export const SAMPLE_DAY: DayInfo = {
+  date: '',
+  owner: 'sample',
   kcalTarget: 2000,
   kcalEaten: 760,
   target: { protein: 120, carbs: 220, fat: 65 },
   eaten: { protein: 66, carbs: 154, fat: 23 },
+  favorites: [
+    { ref: 'sample-1', name: 'Chicken rice', kcal: 520, protein: 35, carbs: 60, fat: 12 },
+    { ref: 'sample-2', name: 'Beef pho', kcal: 450, protein: 30, carbs: 55, fat: 11 },
+  ],
+  applied: [],
 };
-
-export const SAMPLE_FAVORITES: Food[] = [
-  { name: 'Chicken rice with broccoli', kcal: 520, macros: { protein: 35, carbs: 60, fat: 12 } },
-  { name: 'Oatmeal with banana', kcal: 340, macros: { protein: 11, carbs: 62, fat: 6 } },
-  { name: 'Beef pho', kcal: 450, macros: { protein: 30, carbs: 55, fat: 11 } },
-  { name: 'Greek yogurt', kcal: 150, macros: { protein: 15, carbs: 12, fat: 4 } },
-  { name: 'Protein shake', kcal: 180, macros: { protein: 30, carbs: 8, fat: 3 } },
-];

@@ -74,6 +74,32 @@ export struct ClockView {
           .fontColor(Palette.TEXT)
       }// Hidden developer entry to the IMU sensor page.
       .gesture(LongPressGesture({ duration: 800 }).onAction(() => this.onOpenDemos()))
+      if (!this.day.hasData) {
+        this.note('Open the phone app to see today\'s food');
+      } else if (this.day.kcalTarget === 0) {
+        this.note(`${this.day.kcalEaten} kcal eaten\nSet your goals on the phone`);
+      } else {
+        this.targets();
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center);
+  }
+
+  @Builder
+  note(message: string) {
+    Text(message)
+      .width('70%')
+      .fontSize(Type.SMALL)
+      .fontColor(Palette.MUTED)
+      .textAlign(TextAlign.Center);
+  }
+
+  /** Calories left, macro progress and the protein still to eat. */
+  @Builder
+  targets() {
+    Column({ space: 4 }) {
       Row({ space: 10 }) {
         Stack() {
           Progress({
@@ -102,10 +128,9 @@ export struct ClockView {
           this.macroBar('Fat', this.day.eaten.fat, this.day.target.fat)
         }
       }
-      SwipeHint({ label: 'Workout' })
-    }
-    .width('100%')
-    .height('100%')
-    .justifyContent(FlexAlign.Center);
+      Text(`${Math.max(0, this.day.target.protein - this.day.eaten.protein)} g protein left`)
+        .fontSize(12)
+        .fontColor(Palette.TEXT)
+    };
   }
 }

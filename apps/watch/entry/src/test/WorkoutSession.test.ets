@@ -1,13 +1,15 @@
 import { describe, expect, it } from '@ohos/hypium';
 import {
+  DayInfo,
   encodeFrames,
+  FavoriteMeal,
   FrameAssembler,
   mergeSessions,
   SharedSession,
   SyncMessage,
   WorkoutPlan,
 } from '../main/ets/features/link/SyncProtocol';
-import { FoodDay } from '../main/ets/features/quicklog/FoodDay';
+import { FoodDay, isoDay } from '../main/ets/features/quicklog/FoodDay';
 import { encodeState, restoreState } from '../main/ets/features/storage/SavedState';
 import {
   IDLE_ANSWER_MS,
@@ -39,16 +41,37 @@ const SUPERSET: WorkoutPlan = {
 /** The same frame is asserted by apps/mobile's protocol test. */
 const FIXTURE_FRAME: string = '~7.0.1~{"t":"welcome","v":1,"ok":true}';
 
-function emptyDay(): FoodDay {
-  return new FoodDay(
-    {
-      kcalTarget: 2000,
-      kcalEaten: 100,
-      target: { protein: 100, carbs: 200, fat: 60 },
-      eaten: { protein: 1, carbs: 2, fat: 3 },
-    },
-    [{ name: 'Rice', kcal: 500, macros: { protein: 10, carbs: 20, fat: 5 } }],
-  );
+const RICE: FavoriteMeal = {
+  ref: 'm1',
+  name: 'Rice',
+  kcal: 500,
+  protein: 10,
+  carbs: 20,
+  fat: 5,
+};
+
+function info(date: string, applied: string[] = [], owner: string = 'u1'): DayInfo {
+  return {
+    date: date,
+    owner: owner,
+    kcalTarget: 2000,
+    kcalEaten: 100,
+    target: { protein: 100, carbs: 200, fat: 60 },
+    eaten: { protein: 1, carbs: 2, fat: 3 },
+    favorites: [RICE],
+    applied: applied,
+  };
+}
+
+function emptyDay(now: number = Date.now()): FoodDay {
+  return new FoodDay(now);
+}
+
+/** A day the phone has sent its figures for. */
+function loadedDay(now: number): FoodDay {
+  const day = emptyDay(now);
+  day.apply(info(isoDay(now)));
+  return day;
 }
 
 function started(plan: WorkoutPlan = PLAN): WorkoutSession {
@@ -217,22 +240,52 @@ export default function workoutSessionTest() {
   });
 
   describe('FoodDay', () => {
-    it('adds a logged favorite to totals and undoes it', 0, () => {
-      const day = new FoodDay(
-        {
-          kcalTarget: 2000,
-          kcalEaten: 100,
-          target: { protein: 100, carbs: 200, fat: 60 },
-          eaten: { protein: 1, carbs: 2, fat: 3 },
-        },
-        [{ name: 'Rice', kcal: 500, macros: { protein: 10, carbs: 20, fat: 5 } }],
-      );
-      day.log(day.favorites[0]);
+    const noon = new Date(2026, 0, 10, 12, 0, 0).getTime();
+
+    it('shows nothing and logs nothing before the phone has sent its figures', 0, () => {
+      const day = emptyDay(noon);
+      expect(day.hasData).assertFalse();
+      expect(day.log(RICE, 'a', noon)).assertFalse();
+    });
+
+    it('adds a quick log to the totals and undoes it', 0, () => {
+      const day = loadedDay(noon);
+      expect(day.log(RICE, 'a', noon)).assertTrue();
       expect(day.kcalEaten).assertEqual(600);
       expect(day.eaten.carbs).assertEqual(22);
-      expect(day.timesLogged(day.favorites[0])).assertEqual(1);
+      expect(day.waiting(RICE)).assertEqual(1);
       day.undoLast();
       expect(day.kcalEaten).assertEqual(100);
+    });
+
+    it('sends a quick log only once it can no longer be undone', 0, () => {
+      const day = loadedDay(noon);
+      day.log(RICE, 'a', noon);
+      expect(day.due(noon + 4000).length).assertEqual(0);
+      const due = day.due(noon + 5000);
+      expect(due.length).assertEqual(1);
+      expect(due[0].ref).assertEqual('m1');
+      expect(due[0].owner).assertEqual('u1');
+    });
+
+    it('keeps a log until the phone totals include it, without counting it twice', 0, () => {
+      const day = loadedDay(noon);
+      day.log(RICE, 'a', noon);
+      day.apply(info(isoDay(noon)));
+      expect(day.kcalEaten).assertEqual(600);
+      day.apply(info(isoDay(noon), ['a']));
+      expect(day.pending.length).assertEqual(0);
+      expect(day.kcalEaten).assertEqual(100);
+    });
+
+    it('drops another account logs and yesterday totals', 0, () => {
+      const day = loadedDay(noon);
+      day.log(RICE, 'a', noon);
+      day.apply(info(isoDay(noon), [], 'u2'));
+      expect(day.pending.length).assertEqual(0);
+      day.today = isoDay(noon + 24 * 60 * 60 * 1000);
+      expect(day.kcalEaten).assertEqual(0);
+      expect(day.kcalTarget).assertEqual(2000);
     });
   });
 
@@ -241,15 +294,16 @@ export default function workoutSessionTest() {
     const nextDay = noon + 24 * 60 * 60 * 1000;
     const none: WorkoutPlan = { name: '', minutes: 0, exercises: [] };
 
-    it('restores a workout in progress, its plan and today food logs', 0, () => {
+    it('restores a workout in progress, its plan and the nutrition figures', 0, () => {
       const session = new WorkoutSession(PLAN);
-      const day = emptyDay();
+      const day = emptyDay(noon);
+      day.apply(info(isoDay(noon)));
       session.start(noon, 'one');
       session.doneSet(noon + 1000);
-      day.log(day.favorites[0]);
+      day.log(RICE, 'a', noon);
       const saved = encodeState(session, day, false, noon + 1000);
 
-      const restoredDay = emptyDay();
+      const restoredDay = emptyDay(noon);
       const restored = restoreState(saved, none, restoredDay, noon + 11000).session;
       expect(restored.plan.name).assertEqual('Push');
       expect(restored.status).assertEqual(WorkoutStatus.ACTIVE);
@@ -259,22 +313,24 @@ export default function workoutSessionTest() {
       expect(restoredDay.kcalEaten).assertEqual(600);
     });
 
-    it('brings an interrupted workout back paused and drops yesterday food logs', 0, () => {
+    it('brings an interrupted workout back paused and keeps unsent quick logs', 0, () => {
       const session = new WorkoutSession(PLAN);
-      const day = emptyDay();
+      const day = emptyDay(noon);
+      day.apply(info(isoDay(noon)));
       session.start(noon, 'one');
       session.changeReps(1, noon + 5000);
-      day.log(day.favorites[0]);
+      day.log(RICE, 'a', noon);
       const saved = encodeState(session, day, false, noon + 5000);
 
-      const restoredDay = emptyDay();
+      const restoredDay = emptyDay(nextDay);
       const restored = restoreState(saved, none, restoredDay, nextDay).session;
       expect(restored.status).assertEqual(WorkoutStatus.ACTIVE);
       expect(restored.paused).assertTrue();
       expect(restored.hasProgress).assertTrue();
       expect(restored.activeMs).assertEqual(5000);
       expect(restored.tick(nextDay + 1000)).assertEqual(TickEvent.NONE);
-      expect(restoredDay.kcalEaten).assertEqual(100);
+      expect(restoredDay.kcalEaten).assertEqual(0);
+      expect(restoredDay.pending.length).assertEqual(1);
     });
 
     it('ignores damaged data', 0, () => {
