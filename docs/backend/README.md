@@ -183,12 +183,13 @@ flowchart LR
 
 `.github/workflows/release.yml` validates both applications before migrating D1 and deploying the backend.
 
-- **Triggers**: Every push to `main`, or manual dispatch. Migration and deployment run only on `main`.
+- **Triggers**: Every push to `main`, or manual dispatch. Migrations and deployments run only on `main`.
 - **Release gates**:
   - `ci`: Backend typecheck → mobile typecheck → backend unit/integration tests → mobile Jest tests → Wrangler dry-run build, in sequence.
   - `checks`: Lint and formatting run in parallel. Release checks never autoformat or commit changes.
   - Maestro E2E remains nightly/manual in Mobile CI; it is not a release gate.
 - **Deployment**: After all gates succeed, `deploy` applies remote D1 migrations, then runs `bun run backend:deploy` (`wrangler deploy`). A failed migration prevents deployment.
+- **Staging**: `deploy-staging` runs after `ci`, alongside the production deployment. It applies the D1 migrations to `fitwear-d1-staging`, seeds the USDA catalog, deploys `fitwear-backend-staging` and checks `/swagger/json`. Mobile E2E runs against this backend. Neither deployment waits for the other.
 - **Rollback**: Worker rollback does not reverse D1 migrations; review schema changes for compatibility with the currently deployed Worker before merging.
 - **Secrets Management**:
   Secrets are provisioned using Wrangler and GitHub CLI (`gh`):

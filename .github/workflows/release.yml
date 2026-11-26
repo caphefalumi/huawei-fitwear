@@ -45,6 +45,49 @@ jobs:
             done < <(find assets/exercise-loops -type f -name '*.gif' -print0)
           fi
 
+  deploy-staging:
+    name: Migrate and deploy staging backend
+    needs: ci
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: staging
+      url: ${{ vars.E2E_API_URL }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+
+      - name: Validate Worker bindings before migration
+        working-directory: apps/backend
+        run: bunx wrangler deploy --env staging --dry-run
+
+      - name: Apply Cloudflare D1 migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bun run --cwd apps/backend db:migrate:staging
+
+      - name: Seed USDA catalog in D1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: apps/backend
+        run: bunx wrangler d1 execute fitwear-d1-staging --env staging --remote --file scripts/usda_food_catalog.sql
+
+      - name: Deploy Cloudflare Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bun run --cwd apps/backend deploy:staging
+
+      - name: Smoke test
+        env:
+          API_URL: ${{ vars.E2E_API_URL }}
+        run: curl --fail --silent --show-error --retry 5 --retry-delay 3 --retry-all-errors --output /dev/null "${API_URL%/}/swagger/json"
+
   deploy:
     name: Migrate and deploy backend
     needs: ci
