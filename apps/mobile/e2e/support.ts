@@ -11,6 +11,9 @@ export type Ui = { app: App; device: Device; screen: Screen }
 
 export const DEDICATED_ACCOUNT = "e2e"
 
+/** The app under test, as e2e.config.ts pins it. */
+export const APP_ID = "com.fitwear.mobile"
+
 /** Visible text or accessibility label, first match. */
 export function byText(screen: Screen, text: TextMatch): Locator {
   return screen.getByText(text, { visible: true }).first()
@@ -120,15 +123,16 @@ export async function setOffline({ device, screen }: Pick<Ui, "device" | "screen
     await maybeVisible(banner, 10000)
     return
   }
-  // The app checks its session once when the network returns. If that check
-  // runs before the emulator's link is really up, it fails and the app stays
-  // offline until the next network change. Wi-Fi off and on, with cellular
-  // still up, is such a change once the link has settled.
+  // After a short offline spell the app can stay in offline mode although the
+  // device is back online (connectivity reports Wi-Fi and cellular validated).
+  // Returning to the foreground makes it read the network again, as it would
+  // for a person who switches away and back. The app is not restarted, so an
+  // unsaved draft stays on screen.
   await goOnline(device)
   for (let attempt = 0; attempt < 3; attempt += 1) {
     if (await bannerGone(banner, 15000)) return
-    await device.setNetwork("offline")
-    await device.setNetwork("online")
+    await device.home()
+    await device.openApp(APP_ID)
   }
   await bannerGone(banner, 15000)
 }
