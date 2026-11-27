@@ -293,3 +293,20 @@ export function blockLine(block: ExerciseBlock) {
     ? `${sets} - ${amount}${warm}`
     : `${warmups} warm-up${warmups === 1 ? "" : "s"}`
 }
+
+export type TargetResult = { mark: string; met: boolean; spoken: string }
+
+/**
+ * Confirmed reps (or seconds) against the set's target: `✓` on target, `+2` over, `-1` under.
+ * Warm-ups and sets without a target have none.
+ */
+export function targetResult(
+  set: Pick<WorkoutSet, "isWarmup" | "targetReps" | "userConfirmedReps">,
+): TargetResult | null {
+  if (set.isWarmup || !(set.targetReps > 0)) return null
+  const diff = set.userConfirmedReps - set.targetReps
+  if (diff === 0) return { mark: "✓", met: true, spoken: `goal of ${set.targetReps} met` }
+  return diff > 0
+    ? { mark: `+${diff}`, met: true, spoken: `${diff} above goal of ${set.targetReps}` }
+    : { mark: `-${-diff}`, met: false, spoken: `${-diff} short of goal of ${set.targetReps}` }
+}

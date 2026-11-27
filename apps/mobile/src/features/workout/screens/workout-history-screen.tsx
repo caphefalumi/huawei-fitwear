@@ -24,6 +24,7 @@ import { usePlanInput } from "../store/plan-preferences.store"
 import { readSessionDraft, type SessionDraft } from "../store/session-draft.store"
 import {
   blockLine,
+  targetResult,
   compareWithPrevious,
   durationSeconds,
   exerciseBlocks,
@@ -250,6 +251,7 @@ function SetRow({ set, label, unit }: { set: WorkoutSet; label: string; unit: st
       ? `Watch counted ${set.detectedReps}`
       : null
   const amount = unit === "reps" ? "reps" : unit === "seconds" ? "seconds" : "minutes"
+  const target = targetResult(set)
   return (
     <View
       style={styles.setRow}
@@ -258,17 +260,25 @@ function SetRow({ set, label, unit }: { set: WorkoutSet; label: string; unit: st
         set.isWarmup ? "Warm-up set" : `Set ${label}`,
         set.weightKg ? `${formatKg(set.weightKg)} kg` : "body weight",
         `${set.userConfirmedReps} ${amount}`,
+        target?.spoken,
         watch,
       ]
         .filter(Boolean)
         .join(", ")}
     >
-      <Text style={[styles.setCell, styles.setIndex]}>{label}</Text>
+      <Text style={[styles.setIndex, set.isWarmup && styles.setWarmup]}>{label}</Text>
       <Text style={styles.setCell}>{set.weightKg ? formatKg(set.weightKg) : "-"}</Text>
       <Text style={styles.setCell}>{set.userConfirmedReps}</Text>
-      <Text style={[styles.setNote]} numberOfLines={1}>
-        {watch ?? ""}
-      </Text>
+      <View style={styles.setGoal}>
+        {target ? (
+          <Text style={[styles.targetMark, !target.met && styles.targetMissed]}>{target.mark}</Text>
+        ) : null}
+        {watch ? (
+          <Text style={styles.setNote} numberOfLines={1}>
+            {watch}
+          </Text>
+        ) : null}
+      </View>
     </View>
   )
 }
@@ -317,11 +327,11 @@ function ExerciseCard({
       </Pressable>
       {expanded ? (
         <>
-          <View style={styles.setRow} importantForAccessibility="no-hide-descendants">
-            <Text style={[styles.setCell, styles.setIndex, styles.setHead]}>Set</Text>
+          <View style={styles.setHeader} importantForAccessibility="no-hide-descendants">
+            <Text style={[styles.setIndex, styles.setHead]}>Set</Text>
             <Text style={[styles.setCell, styles.setHead]}>kg</Text>
             <Text style={[styles.setCell, styles.setHead]}>{unitLabel}</Text>
-            <Text style={styles.setNote} />
+            <Text style={[styles.setCell, styles.setHead]}>Goal</Text>
           </View>
           {block.sets.map((set) => (
             <SetRow
@@ -539,16 +549,36 @@ const styles = StyleSheet.create({
   chevronOpen: { transform: [{ rotate: "90deg" }] },
   delta: { color: C.textMuted, fontSize: 12 },
   deltaUp: { color: C.accent, fontWeight: "600" },
+  // Set label on the left, then three equal numeric columns aligned right so digits line up.
+  setHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 8,
+    paddingBottom: 6,
+  },
   setRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 6,
+    gap: 12,
+    minHeight: 44,
+    paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: C.border,
   },
-  setCell: { width: 64, color: C.text, fontSize: 14 },
-  setIndex: { width: 44 },
-  setHead: { color: C.textMuted, fontSize: 11, fontWeight: "600" },
-  setNote: { flex: 1, textAlign: "right", color: C.textMuted, fontSize: 11 },
+  setIndex: { width: 32, color: C.text, fontSize: 14, fontWeight: "600" },
+  setWarmup: { color: C.textMuted, fontWeight: "400" },
+  setCell: {
+    flex: 1,
+    textAlign: "right",
+    color: C.text,
+    fontSize: 15,
+    fontVariant: ["tabular-nums"],
+  },
+  setHead: { color: C.textMuted, fontSize: 12, fontWeight: "500" },
+  setGoal: { flex: 1, alignItems: "flex-end" },
+  targetMark: { color: C.accent, fontSize: 15, fontWeight: "600", fontVariant: ["tabular-nums"] },
+  targetMissed: { color: C.textMuted, fontWeight: "400" },
+  setNote: { color: C.textMuted, fontSize: 11 },
   footnote: { color: C.textMuted, fontSize: 11, textAlign: "center" },
 })

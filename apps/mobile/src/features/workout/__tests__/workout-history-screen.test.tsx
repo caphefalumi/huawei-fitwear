@@ -71,6 +71,7 @@ const session = {
       exerciseId: "barbell-squat",
       setIndex: 1,
       userConfirmedReps: 10,
+      targetReps: 8,
       weightKg: 20,
       isWarmup: true,
       exercise: exercise("barbell-squat", "Squat", "Legs"),
@@ -80,6 +81,7 @@ const session = {
       exerciseId: "barbell-squat",
       setIndex: 2,
       userConfirmedReps: 8,
+      targetReps: 10,
       detectedReps: 7,
       weightKg: 42.5,
       exercise: exercise("barbell-squat", "Squat", "Legs"),
@@ -89,6 +91,7 @@ const session = {
       exerciseId: "plank",
       setIndex: 3,
       userConfirmedReps: 45,
+      targetReps: 45,
       weightKg: 0,
       exercise: exercise("plank", "Plank", "Core", "seconds"),
     },
@@ -212,14 +215,19 @@ test("shows sets grouped by exercise with totals and the change since last time"
   expect(screen.getByText("1 set - 45 s")).toBeTruthy()
   expect(screen.queryByLabelText("Warm-up set, 20 kg, 10 reps")).toBeNull()
   await fireEvent.press(screen.getByText("Expand all"))
+  expect(screen.getAllByText("Goal", { includeHiddenElements: true })).toHaveLength(2)
+  expect(screen.getByText("-2")).toBeTruthy()
+  expect(screen.getByText("✓")).toBeTruthy()
   expect(screen.getByText("Collapse all")).toBeTruthy()
   expect(screen.getByLabelText("Warm-up set, 20 kg, 10 reps")).toBeTruthy()
-  expect(screen.getByLabelText("Set 1, 42.5 kg, 8 reps, Watch counted 7")).toBeTruthy()
-  expect(screen.getByLabelText("Set 1, body weight, 45 seconds")).toBeTruthy()
+  expect(
+    screen.getByLabelText("Set 1, 42.5 kg, 8 reps, 2 short of goal of 10, Watch counted 7"),
+  ).toBeTruthy()
+  expect(screen.getByLabelText("Set 1, body weight, 45 seconds, goal of 45 met")).toBeTruthy()
   expect(await screen.findByText("+2.5 kg vs Nov 18")).toBeTruthy()
   expect(screen.getByText("First time")).toBeTruthy()
   await fireEvent.press(screen.getByText("Plank"))
-  expect(screen.queryByLabelText("Set 1, body weight, 45 seconds")).toBeNull()
+  expect(screen.queryByLabelText("Set 1, body weight, 45 seconds, goal of 45 met")).toBeNull()
   expect(screen.getByText("Expand all")).toBeTruthy()
   expect(fetchPreviousProgression).toHaveBeenCalledWith(
     expect.objectContaining({ id: "workout-1", startedAt: session.startedAt }),

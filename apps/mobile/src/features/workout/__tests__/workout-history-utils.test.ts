@@ -8,6 +8,7 @@ import {
   setsByMuscleGroup,
   summarizeSets,
   summaryLine,
+  targetResult,
   totalsByWeek,
   trainedDays,
   weekSections,
@@ -205,4 +206,16 @@ test("collapsed exercise line shows sets and volume, or reps and time without lo
   expect(blockLine(pushUps)).toBe("1 set - 15 reps")
   const plank = { ...pushUps, unit: "seconds" }
   expect(blockLine(plank)).toBe("1 set - 15 s")
+})
+
+test("marks each set against its target", () => {
+  const result = (userConfirmedReps: number, targetReps = 10, isWarmup = false) =>
+    targetResult({ userConfirmedReps, targetReps, isWarmup })?.mark ?? null
+  expect(result(10)).toBe("✓")
+  expect(result(12)).toBe("+2")
+  expect(result(8)).toBe("-2")
+  expect(result(0)).toBe("-10")
+  expect(result(10, 10, true)).toBeNull()
+  expect(result(10, 0)).toBeNull()
+  expect(targetResult({ userConfirmedReps: 9, targetReps: 10 })?.met).toBe(false)
 })
