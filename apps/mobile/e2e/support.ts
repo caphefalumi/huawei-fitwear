@@ -93,8 +93,17 @@ export async function scrollTo(screen: Screen, locator: Locator, direction: "up"
 
 /** Closes the one-time Health Connect offer if this device shows it. */
 export async function skipHealthConnectOffer(screen: Screen) {
-  if (await maybeVisible(byText(screen, "Connect to Health Connect"), 10000)) {
-    await byText(screen, "Not now").tap()
+  const offer = byText(screen, "Connect to Health Connect")
+  if (await maybeVisible(offer, 10000)) {
+    try {
+      await byText(screen, "Not now").tap()
+    } catch (error) {
+      // The offer is a modal window. Closing it can briefly hand focus away
+      // from the app, which the engine reports as a tap that left the app.
+      // Only that case is tolerated, and only if the offer really closed.
+      if (!String(error).includes("left com.fitwear.mobile")) throw error
+    }
+    await waitHidden(offer, 10000)
   }
 }
 
