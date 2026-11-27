@@ -10,6 +10,7 @@ import {
   field,
   hideKeyboard,
   launchClean,
+  maybeHidden,
   maybeVisible,
   openSignIn,
   scrollTo,
@@ -218,9 +219,15 @@ test(
         "Could not connect to save your change. Check your connection and try again. Your entries are still here.",
       ),
     ).toBeVisible()
-    await device.setAirplaneMode(false)
-    await byText(screen, "Try again").tap()
-    await waitHidden(byText(screen, "Could not save your meal"), 30000)
+    await setOffline(ui, false)
+    // As at sign-in, the emulator's network can lag behind airplane mode, so a
+    // first retry may fail the same way. Retry while the error is still shown.
+    const saveError = byText(screen, "Could not save your meal")
+    for (let attempt = 0; attempt < 4 && (await saveError.isVisible()); attempt += 1) {
+      await byText(screen, "Try again").tap()
+      await maybeHidden(saveError, 20000)
+    }
+    await waitHidden(saveError, 10000)
     // The error clears as soon as the retry starts; the draft only empties once the
     // save resolves, so wait for the cleared list before restarting the app.
     await scrollTo(screen, byText(screen, /^No items yet/), "down")

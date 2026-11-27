@@ -50,6 +50,16 @@ export async function maybeVisible(locator: Locator, timeout: number) {
   }
 }
 
+/** Waits for an element to go away; resolves false when it stays. */
+export async function maybeHidden(locator: Locator, timeout: number) {
+  try {
+    await locator.waitFor({ state: "hidden", timeout })
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** Android hides the keyboard directly; a no-op when it is already down. */
 export async function hideKeyboard(device: Device) {
   await device.dismissKeyboard()
