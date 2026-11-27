@@ -221,6 +221,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     let active = true
     let validation: AbortController | null = null
+    // A network change that arrives while a check is in flight. Reconnecting
+    // often comes up on cellular and moves to Wi-Fi seconds later, which can
+    // fail the check started on cellular; check again after it ends.
+    let revalidate = false
     let networkVersion = 0
     const native = Platform.OS !== "web"
     const startRevision = revision.current
@@ -245,7 +249,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     async function validate() {
       const saved = credential.current
-      if (!active || !saved || validation) return
+      if (validation) {
+        revalidate = true
+        return
+      }
+      if (!active || !saved) return
+      revalidate = false
       const currentRevision = revision.current
       const controller = new AbortController()
       const stillCurrent = () =>
@@ -304,7 +313,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
           setError(userFacingSessionError(cause))
         }
       } finally {
-        if (validation === controller) validation = null
+        if (validation === controller) {
+          validation = null
+          if (revalidate && active && !cloudAvailable.current && reachable.current !== false) {
+            void validate()
+          }
+        }
       }
     }
 
