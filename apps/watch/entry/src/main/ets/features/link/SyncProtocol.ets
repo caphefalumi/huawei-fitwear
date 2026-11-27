@@ -155,7 +155,7 @@ export function sessionSlots(exercises: PlanExercise[]): Slot[] {
 
 /** Splits a message into ASCII frames of at most maxBytes. */
 export function encodeFrames(message: SyncMessage, maxBytes: number, id: number): string[] {
-  const json = JSON.stringify(message).replace(/[\u0080-￿]/g, (char: string) => {
+  const json = JSON.stringify(message).replace(/[\u0080-\uffff]/g, (char: string) => {
     return '\\u' + ('000' + char.charCodeAt(0).toString(16)).slice(-4);
   });
   const size = Math.max(1, maxBytes - HEADER_CHARS);

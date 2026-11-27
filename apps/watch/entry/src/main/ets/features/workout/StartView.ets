@@ -51,7 +51,7 @@ export struct StartView {
             .textAlign(TextAlign.Center)
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
-          Text(`${this.plan.exercises.length} exercises · ${this.plan.minutes} min`)
+          Text(`${this.plan.exercises.length} exercises, ${this.plan.minutes} min`)
             .fontSize(Type.CAPTION)
             .fontFeature(TABULAR)
             .fontColor(Palette.MUTED);

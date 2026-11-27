@@ -85,7 +85,7 @@ export struct QuickLogView {
       if (this.day.waiting(food) > 0) {
         Row({ space: 4 }) {
           LoadingProgress().width(12).height(12).color(Palette.ACCENT)
-          Text(`Waiting for phone ×${this.day.waiting(food)}`)
+          Text(`${this.day.waiting(food)} waiting for phone`)
             .fontSize(Type.CAPTION)
             .fontFeature(TABULAR)
             .fontColor(Palette.ACCENT)
@@ -121,7 +121,8 @@ export struct QuickLogView {
         };
       } else if (this.justLogged !== '') {
         Column({ space: 10 }) {
-          Text('âœ“ Logged')
+          SymbolBadge({ icon: $r('sys.symbol.checkmark') })
+          Text('Logged')
             .fontSize(Type.TITLE)
             .fontWeight(FontWeight.Bold)
             .fontColor(Palette.TEXT)
