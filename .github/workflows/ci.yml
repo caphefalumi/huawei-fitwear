@@ -52,13 +52,12 @@ jobs:
               - 'package.json'
               - 'bun.lock'
               - '.oxlintrc*'
-              - '.oxfmtrc*'
               - '.github/arkts-lint.json'
               - '.github/workflows/ci.yml'
               - '.github/actions/**'
 
-  # One static-analysis job for every app: oxlint for mobile and backend, oxk
-  # for the watch's ArkTS, and a formatting check for both formatters.
+  # One lint job for every app: oxlint for mobile and backend, oxk for the
+  # watch's ArkTS. Formatting is not checked here; format.yml formats main after merge.
   lint:
     name: Lint
     needs: changes
@@ -75,16 +74,6 @@ jobs:
           node: "true"
       - name: Lint mobile, backend and watch
         run: bun run lint
-      - name: Check formatting
-        run: bun run fmt:check
-      # oxk has no --check flag: format the watch sources, then fail on any diff.
-      - name: Check watch ArkTS formatting
-        run: |
-          bun run fmt:watch
-          if ! git diff --exit-code -- apps/watch; then
-            echo "::error::Watch ArkTS is not formatted. Run 'bun run fmt:watch' and commit the result."
-            exit 1
-          fi
 
   backend:
     name: Backend

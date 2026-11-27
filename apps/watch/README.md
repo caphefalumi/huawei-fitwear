@@ -44,8 +44,8 @@ bun run fmt:watch    # oxk format, using apps/watch/.oxfmtrc.json
 
 `apps/watch/.oxfmtrc.json` holds the ArkTS style (semicolons, single quotes) and
 ignores every non-`.ets` file, so the root oxfmt leaves the DevEco JSON5 files
-alone. Pull requests fail the **Lint** check when ArkTS is unlinted or unformatted;
-pushes to `main` are also auto-formatted. Huawei's `code-linter.json5` is not used in CI.
+alone. Pull requests run `oxk lint` in the **Lint** check. Formatting is not checked
+on pull requests: the Auto-format workflow formats `main` after each merge. Huawei's `code-linter.json5` is not used in CI.
 
 ## Getting Started
 
