@@ -656,6 +656,25 @@ describe("Persistent feature APIs", () => {
     )
     expect((await (await request("/workouts", other.session.token)).json()).count).toBe(0)
     expect((await (await request("/workouts/stats", own.session.token)).json()).totalSets).toBe(3)
+    const listed = (await (await request("/workouts", own.session.token)).json()).sessions[0]
+    expect(listed).toMatchObject({
+      id: body.id,
+      totalSets: 2,
+      totalReps: 9,
+      totalVolumeKg: 270,
+      muscleGroups: [
+        { muscleGroup: "Chest", sets: 1 },
+        { muscleGroup: "Core", sets: 1 },
+      ],
+    })
+    const statsSession = (await (await request("/workouts/stats", own.session.token)).json())
+      .sessions[0]
+    expect(statsSession).toMatchObject({
+      id: body.id,
+      startedAt: body.startedAt.replace("Z", ".000Z"),
+      totalSets: 2,
+      totalVolumeKg: 270,
+    })
 
     for (const [patch, expected] of [
       [{ sets: [body.sets[0], body.sets[0]] }, 400],
@@ -780,6 +799,21 @@ describe("Persistent feature APIs", () => {
       await request("/workouts/progression?excludeSessionId=newer", own.session.token)
     ).json()
     expect(excluded.exercises[0]).toMatchObject({ latestSessionId: "older", maxWeightKg: 60 })
+    const before = await (
+      await request(
+        `/workouts/progression?excludeSessionId=newer&before=${encodeURIComponent("2026-01-02T10:00:00Z")}`,
+        own.session.token,
+      )
+    ).json()
+    expect(before.exercises).toHaveLength(1)
+    expect(before.exercises[0]).toMatchObject({ latestSessionId: "older" })
+    const none = await (
+      await request(
+        `/workouts/progression?before=${encodeURIComponent("2026-01-01T10:00:00Z")}`,
+        own.session.token,
+      )
+    ).json()
+    expect(none.exercises).toEqual([])
     expect(
       (await (await request("/workouts/progression", other.session.token)).json()).exercises[0],
     ).toMatchObject({ latestSessionId: "other", maxWeightKg: 200 })

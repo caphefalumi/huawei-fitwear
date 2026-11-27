@@ -54,7 +54,10 @@ const listQuery = t.Object({
   offset: t.Optional(t.Numeric({ minimum: 0, multipleOf: 1 })),
 })
 const statsQuery = t.Object({ from: t.Optional(dateKey), to: t.Optional(dateKey) })
-const progressionQuery = t.Object({ excludeSessionId: t.Optional(t.String({ minLength: 1 })) })
+const progressionQuery = t.Object({
+  excludeSessionId: t.Optional(t.String({ minLength: 1 })),
+  before: t.Optional(t.String({ format: "date-time" })),
+})
 
 export type WorkoutCreateBody = Static<typeof createBody>
 export type WorkoutCompleteBody = Static<typeof completeBody>
