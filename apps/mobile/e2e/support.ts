@@ -11,9 +11,6 @@ export type Ui = { app: App; device: Device; screen: Screen }
 
 export const DEDICATED_ACCOUNT = "e2e"
 
-/** The app under test, as e2e.config.ts pins it. */
-export const APP_ID = "com.fitwear.mobile"
-
 /** Visible text or accessibility label, first match. */
 export function byText(screen: Screen, text: TextMatch): Locator {
   return screen.getByText(text, { visible: true }).first()
@@ -121,24 +118,12 @@ export async function setOffline({ device, screen }: Pick<Ui, "device" | "screen
     await device.setAirplaneMode(true)
     // A modal screen can cover the root banner, so its absence is no error.
     await maybeVisible(banner, 10000)
-    // Stay offline a few seconds, as Maestro's slower steps did. When airplane
-    // mode went off again about a second later, the app missed the reconnect
-    // and kept offline mode although the device was online again.
-    await pause(5000)
     return
   }
-  // After a short offline spell the app can stay in offline mode although the
-  // device is back online (connectivity reports Wi-Fi and cellular validated).
-  // Returning to the foreground makes it read the network again, as it would
-  // for a person who switches away and back. The app is not restarted, so an
-  // unsaved draft stays on screen.
   await goOnline(device)
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    if (await bannerGone(banner, 15000)) return
-    await device.home()
-    await device.openApp(APP_ID)
-  }
-  await bannerGone(banner, 15000)
+  // Best effort: the banner can stay while the app still treats the session
+  // as offline. A step that needs the network asserts on its own result.
+  await bannerGone(banner, 30000)
 }
 
 /** A fixed wait, only where the app gives nothing on screen to wait for. */
