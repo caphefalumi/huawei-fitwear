@@ -113,6 +113,9 @@ test(
     await waitVisible(soup, 5000)
     await swipeRowLeft(screen, soup)
     await byText(screen, "Delete E2E Journal Soup").tap()
+    // The app sends the DELETE when the Undo toast closes, so see the toast
+    // first: waiting only for it to be hidden passes before it ever appears.
+    await waitVisible(byText(screen, "Meal deleted"), 5000)
     await waitHidden(byText(screen, "Meal deleted"), 10000)
     await waitHidden(soup, 15000)
     await expect(byText(screen, /^(No meals logged on.*|No meals yet)$/)).toBeVisible()

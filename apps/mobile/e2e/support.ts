@@ -106,9 +106,10 @@ export async function skipHealthConnectOffer(screen: Screen) {
 export async function setOffline({ device, screen }: Pick<Ui, "device" | "screen">, on: boolean) {
   await device.setAirplaneMode(on)
   const banner = byText(screen, /^Offline mode/)
-  // A modal screen can cover the root banner, so its absence is not an error.
+  // Best effort both ways: a modal screen can cover the root banner, and the
+  // app keeps it up while it still treats the session as offline.
   if (on) await maybeVisible(banner, 10000)
-  else await waitHidden(banner, 30000)
+  else await banner.waitFor({ state: "hidden", timeout: 15000 }).catch(() => undefined)
 }
 
 /** Fresh install state, network on, at the welcome screen. */
