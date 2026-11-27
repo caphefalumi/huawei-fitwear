@@ -1,6 +1,6 @@
 /**
  * IMU-RepNet (checkpoint repnet-seed43) on MindSpore Lite. The model file is the bundle's
- * imu_repnet.onnx converted to .ms; apps/watch/README.md says how.
+ * imu_repnet.onnx converted to .ms; docs/watch/rep-counting.md says how.
  */
 import { resourceManager } from '@kit.LocalizationKit';
 import { mindSporeLite } from '@kit.MindSporeLiteKit';
