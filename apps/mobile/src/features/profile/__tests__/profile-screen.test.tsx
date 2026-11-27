@@ -89,6 +89,8 @@ beforeEach(() => {
   jest.clearAllMocks()
   useInjuries.setState({ injuries: [] })
   useDeveloperMode.setState({ enabled: false, features: { testError: false } })
+  usePairing.setState({ enabled: false, name: "" })
+  useWatchStore.setState({ status: "off", error: null })
   mockUseAuth.mockReturnValue({
     user: { name: "Member", email: "member@example.com", birthDate: null },
     signOut,
@@ -171,8 +173,6 @@ test("shows the connected watch by its own name on the device row", async () => 
     screen.getByRole("button", { name: "Huawei Watch, Connected, HUAWEI WATCH 5" }),
   ).toBeTruthy()
   expect(screen.queryByText("Set up")).toBeNull()
-  usePairing.setState({ enabled: false, name: "" })
-  useWatchStore.setState({ status: "off" })
 })
 
 test("a failed name edit keeps the draft and can be saved on retry", async () => {

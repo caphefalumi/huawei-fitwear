@@ -61,6 +61,7 @@ bun lint                     # Lint mobile and backend workspaces
 - **Routing**: Use **Expo Router**. Route screens live in `apps/mobile/app/` as thin route files. Keep feature logic in `src/features/<feature>/`, not in route files.
 - **Navigation hooks**: Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
 - **Async React tests**: Await each state-changing async action and its rejection inside `await act(async () => { ... })`; never fire-and-forget an action inside `act` and wait for its result afterward. Await scheduled updates before leaving the boundary when necessary, assert the resulting state, and inspect test output for `act(...)` warnings rather than suppressing them.
+- **Store state in tests**: Never call a store's `setState` (Zustand or similar) while a component that subscribes to it is still mounted, including "cleanup" lines at the end of a test; the update re-renders outside `act(...)` and warns. Reset shared store state in `beforeEach` instead, before anything renders, so it also runs when a test fails early. If a test must change a store mid-test to drive the UI, wrap that call in `act(() => { ... })`.
 - **Pre-commit verification**:
   ```bash
   cd apps/mobile
