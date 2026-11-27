@@ -87,25 +87,57 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pods-
 
+      # ccache reuses compiled C, Objective-C and C++ between runs; Swift is not
+      # cached. React Native's wrapper (scripts/xcode/ccache-clang.sh) supplies the
+      # Xcode-specific sloppiness settings; these env vars add location and size.
+      - name: Install ccache
+        if: matrix.platform == 'ios'
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+        run: |
+          brew install ccache
+          {
+            echo "CCACHE_DIR=$HOME/.ccache"
+            echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE"
+            echo "CCACHE_MAXSIZE=2G"
+          } >> "$GITHUB_ENV"
+
+      # A new key every run saves the cache this build filled; restore-keys
+      # starts each build from the most recent one.
+      - name: Cache ccache
+        if: matrix.platform == 'ios'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.ccache
+          key: ${{ runner.os }}-ccache-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-
+
+      # USE_CCACHE=1 makes the Expo Podfile route CC/CXX/LD through ccache.
       - name: Install CocoaPods dependencies
         if: matrix.platform == 'ios'
         working-directory: apps/mobile/ios
+        env:
+          USE_CCACHE: "1"
         run: pod install
 
       - name: Archive iOS app (unsigned)
         if: matrix.platform == 'ios'
         working-directory: apps/mobile
-        run: >-
-          xcodebuild archive
-          -workspace "ios/$APP_NAME.xcworkspace"
-          -scheme "$APP_NAME"
-          -configuration Release
-          -sdk iphoneos
-          -destination 'generic/platform=iOS'
-          -archivePath build/ios/app.xcarchive
-          CODE_SIGNING_ALLOWED=NO
-          CODE_SIGNING_REQUIRED=NO
-          CODE_SIGN_IDENTITY=""
+        run: |
+          ccache --zero-stats
+          xcodebuild archive \
+            -workspace "ios/$APP_NAME.xcworkspace" \
+            -scheme "$APP_NAME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/ios/app.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+          ccache --show-stats
 
       - name: Package IPA
         if: matrix.platform == 'ios'
