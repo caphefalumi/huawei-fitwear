@@ -499,11 +499,15 @@ Legend: **Purpose · Structure · Actions · States · Copy**
 
 ### 11.6 Progress (`/progress`)
 
-- **Purpose:** weight trend and body-composition context.
-- **Structure:** back header; title `Your progress.`; large weight value + unit; date of latest log; line chart with latest-point dot; stat blocks for `Body composition` / `Body fat` / `Muscle mass`; a "log weight" prompt.
-- **Actions:** back; open weight sheet (from Profile) to log; range selection if present.
-- **States:** no data (prompt "Log your weight to keep your nutrition guidance current."), single point, trend.
-- **Copy:** "Personal-scale estimates, not a diagnosis.", "Weight", "Goal 70.0 kg · Updated Oct 7".
+- **Purpose:** answer "am I on track": weight against the goal, training time against the plan, recent workouts, body composition.
+- **Structure:** back header `‹ Today`; title `Progress` with the range as subtitle (`Last 7 days`, `Last 30 days`, `Last 3 months`, `Last 12 months`); range segments `Week` / `Month` / `3 mo` / `Year`; then four cards:
+  - **Weight:** change pill (accent when it heads to the target weight, muted when it moves away), current weight, line chart with a dashed `Goal 70.0` line (the y-axis stretches to include a goal within 5 kg of the logs; a farther goal is pinned to the edge with an arrow), first and last log dates (`Nov 3`). With a target weight: a progress bar, `1.5 kg to go` and `60% of the way from 75.0 kg` (measured from the first log), plus `At this pace, around Jan 20 (estimate)` from a linear trend over the last 28 days (at least 3 logs, within a year) or `Your recent trend is moving away from your goal.`; once reached, `Target weight reached - 70.0 kg`.
+  - **Training time:** total time as the hero number with the change against the period before (`+1h 10m vs previous 30 days`; none for `Year`). Bars are days (`Week`), Monday-to-Sunday weeks (`Month`, `3 mo`) or months (`Year`), each topped with its time (`1h 05m`; with more than 8 bars only the busiest and the current one). The current bar is accent, others `track`. A dashed plan line marks sessions x minutes per week (per month for `Year`, none for `Week`), with `Plan 3h / week`. Tapping a bar shows `Nov 17 - 23: 3 sessions, 2h 10m`. Three tiles: `Sessions`, `Avg session`, `Weeks on plan` (`3 of 5`; the current week counts once it reaches the plan).
+  - **Recent workouts:** the 3 latest workouts as Workout history rows (summary line and muscle groups), each opening the workout; `View all ›` opens Workout history. Empty: `No workouts yet` with `Start today's workout` (or `View plan` on a rest day).
+  - **Body composition:** `~19%` Body fat and `~58 kg` Lean mass from the CUN-BAE formula (BMI, age, sex), lean mass = weight x (1 - body fat); a range such as `~19-32%` when sex is not given; date of the latest weight log. No change over time is shown, since it only restates the weight change.
+- **Actions:** back; switch range; tap a training bar; open a workout or Workout history; complete profile.
+- **States:** no weight logs (`No weight logs yet`), a single log (`Not enough logs`), no target weight (no goal line or progress), training data loading or unavailable, body composition missing profile fields (`Add your Height in Profile to see an estimate.` + `Complete profile`) or outside the formula (under 18, over 80, BMI outside 16 to 50).
+- **Copy:** "Personal-scale estimates, not a diagnosis", "Training time", "Weeks on plan", "Tap a bar for details."
 
 ### 11.7 Meals journal (`/(tabs)/meals`)
 

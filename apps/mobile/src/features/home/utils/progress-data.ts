@@ -1,17 +1,21 @@
-import type { WorkoutStats } from "@/features/workout/api/workout-api"
-
 export const RANGES = ["Week", "Month", "3 mo", "Year"] as const
 export type Range = (typeof RANGES)[number]
 export type RangeData = {
+  /** Change from the first to the last log in the range, or null with fewer than two logs. */
+  changeKg: number | null
   delta: string
   weights: number[]
   dates: string[]
-  bars: { label: string; sessions: number }[]
-  sessionsNote: string
-  duration: string
-  durationNote: string
 }
-const RANGE_DAYS: Record<Range, number> = { Week: 7, Month: 30, "3 mo": 90, Year: 365 }
+export const RANGE_DAYS: Record<Range, number> = { Week: 7, Month: 30, "3 mo": 90, Year: 365 }
+
+/** Subtitle under the page title for the range being viewed. */
+export const RANGE_PERIODS: Record<Range, string> = {
+  Week: "Last 7 days",
+  Month: "Last 30 days",
+  "3 mo": "Last 3 months",
+  Year: "Last 12 months",
+}
 
 export function progressBounds(range: Range, now = new Date()) {
   const from = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -24,7 +28,6 @@ export function progressBounds(range: Range, now = new Date()) {
 export function progressData(
   range: Range,
   logs: { loggedDate: string; weightKg: number }[],
-  stats: WorkoutStats | null,
   now = new Date(),
 ): RangeData {
   const { from, to } = progressBounds(range, now)
@@ -33,29 +36,8 @@ export function progressData(
     .sort((a, b) => a.loggedDate.localeCompare(b.loggedDate))
   const change =
     selected.length > 1 ? selected[selected.length - 1].weightKg - selected[0].weightKg : null
-  const count = range === "Week" ? 7 : range === "Month" ? 4 : range === "3 mo" ? 3 : 12
-  const buckets = Array.from({ length: count }, (_, index) => {
-    const date = new Date(`${from}T12:00:00`)
-    date.setDate(date.getDate() + Math.ceil((index * RANGE_DAYS[range]) / count))
-    return {
-      label: date.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
-      sessions: 0,
-    }
-  })
-  let completedSessionCount = 0
-  let durationSeconds = 0
-  const start = new Date(`${from}T12:00:00`)
-  for (const day of stats?.byDate ?? []) {
-    if (day.date < from || day.date > to) continue
-    const current = new Date(`${day.date}T12:00:00`)
-    const elapsed = Math.round((current.getTime() - start.getTime()) / 86_400_000)
-    const index = Math.min(count - 1, Math.floor((elapsed * count) / RANGE_DAYS[range]))
-    buckets[index].sessions += day.sessionCount
-    completedSessionCount += day.sessionCount
-    durationSeconds += day.totalDurationSeconds
-  }
-  const minutes = Math.floor(durationSeconds / 60)
   return {
+    changeKg: change,
     delta: change === null ? "Not enough logs" : `${change > 0 ? "+" : ""}${change.toFixed(1)} kg`,
     weights: selected.map((log) => log.weightKg),
     dates: selected.length
@@ -64,11 +46,5 @@ export function progressData(
           ...(selected.length > 1 ? [selected[selected.length - 1].loggedDate] : []),
         ]
       : [],
-    bars: buckets,
-    sessionsNote: stats
-      ? `${completedSessionCount} completed sessions`
-      : "Training data unavailable",
-    duration: stats ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : "—",
-    durationNote: `total duration · last ${RANGE_DAYS[range]} days`,
   }
 }

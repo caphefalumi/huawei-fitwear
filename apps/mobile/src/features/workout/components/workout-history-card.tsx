@@ -19,9 +19,12 @@ const dayLabel = (value: string) => {
 export function WorkoutHistoryCard({
   session,
   onPress,
+  bare = false,
 }: {
   session: WorkoutSession
   onPress: () => void
+  /** Without its own border and fill, for a list inside another card. */
+  bare?: boolean
 }) {
   const line = summaryLine(session)
   const groups = (sessionSummary(session)?.muscleGroups ?? [])
@@ -30,7 +33,7 @@ export function WorkoutHistoryCard({
   const day = dayLabel(session.startedAt)
   return (
     <Pressable
-      style={styles.card}
+      style={bare ? styles.bare : styles.card}
       accessibilityLabel={[session.sessionTitle, day, line, groups.join(", ")]
         .filter(Boolean)
         .join(", ")}
@@ -67,6 +70,7 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 4,
   },
+  bare: { paddingVertical: 10, gap: 4 },
   top: { flexDirection: "row", alignItems: "baseline", gap: 12 },
   title: { flex: 1, color: C.text, fontSize: 15, fontWeight: "600" },
   day: { color: C.textMuted, fontSize: 12 },

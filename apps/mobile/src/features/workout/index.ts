@@ -28,7 +28,13 @@ export {
   useTrainingWeights,
   type StrengthLevel,
 } from "./store/training-weights.store"
-export { WorkoutProvider, useWorkouts, workoutQueryKeys } from "./hooks/workout-hooks"
+export { WorkoutHistoryCard } from "./components/workout-history-card"
+export {
+  WorkoutProvider,
+  useWorkouts,
+  useWorkoutProgress,
+  workoutQueryKeys,
+} from "./hooks/workout-hooks"
 export type {
   Exercise,
   SessionWithSets,
