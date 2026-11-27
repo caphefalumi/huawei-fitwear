@@ -161,6 +161,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const setCloudAvailable = useCallback((available: boolean) => {
     cloudAvailable.current = available
+    console.log("[E2EDBG] setCloudAvailable", available)
     if (Platform.OS === "web") return
     pauseAccountRequests(!available)
     onlineManager.setOnline(available)
@@ -245,6 +246,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     async function validate() {
       const saved = credential.current
+      console.log("[E2EDBG] validate", {
+        active,
+        saved: Boolean(saved),
+        inFlight: Boolean(validation),
+      })
       if (!active || !saved || validation) return
       const currentRevision = revision.current
       const controller = new AbortController()
@@ -269,8 +275,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
         credential.current = { token, identity }
         showSession(identity, response.user)
         identifyUser(response.user)
+        console.log("[E2EDBG] validate ok", { reachable: reachable.current })
         setCloudAvailable(reachable.current !== false)
       } catch (cause) {
+        console.log("[E2EDBG] validate failed", {
+          current: stillCurrent(),
+          code: cause instanceof ApiError ? cause.code : String(cause),
+          status: cause instanceof ApiError ? cause.status : undefined,
+        })
         if (!stillCurrent()) return
         if (
           native &&
@@ -348,6 +360,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
     function updateNetwork(state: NetworkState) {
       const wasReachable = reachable.current
       const available = state.isConnected !== false && state.isInternetReachable !== false
+      console.log("[E2EDBG] network", {
+        type: state.type,
+        connected: state.isConnected,
+        reachable: state.isInternetReachable,
+        wasReachable,
+        cloud: cloudAvailable.current,
+        inFlight: Boolean(validation),
+      })
       reachable.current = available
       if (!available) {
         setCloudAvailable(false)
