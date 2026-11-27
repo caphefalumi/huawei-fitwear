@@ -113,17 +113,35 @@ function project(key: QueryKey, accountId: string, data: unknown): unknown {
           completedAt: session.completedAt,
           avgHeartRateBpm: null,
           maxHeartRateBpm: null,
+          totalSets: session.totalSets,
+          totalReps: session.totalReps,
+          totalVolumeKg: session.totalVolumeKg,
+          muscleGroups: session.muscleGroups?.map(({ muscleGroup, sets }) => ({
+            muscleGroup,
+            sets,
+          })),
         })),
       })),
     }
   }
   if (key[2] === "stats") {
-    const { byDate } = data as WorkoutStats
+    const { byDate, sessions } = data as WorkoutStats
     return {
       byDate: byDate.slice(-366).map(({ date, sessionCount, totalDurationSeconds }) => ({
         date,
         sessionCount,
         totalDurationSeconds,
+      })),
+      sessions: sessions?.slice(-400).map((session) => ({
+        id: session.id,
+        sessionTitle: session.sessionTitle,
+        workoutSplit: session.workoutSplit,
+        startedAt: session.startedAt,
+        completedAt: session.completedAt,
+        totalSets: session.totalSets,
+        totalReps: session.totalReps,
+        totalVolumeKg: session.totalVolumeKg,
+        muscleGroups: session.muscleGroups.map(({ muscleGroup, sets }) => ({ muscleGroup, sets })),
       })),
     } satisfies WorkoutStats
   }

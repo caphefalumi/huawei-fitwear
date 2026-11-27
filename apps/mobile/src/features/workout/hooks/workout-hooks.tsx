@@ -40,7 +40,15 @@ export type WorkoutSet = {
   exercise: Exercise
 }
 
-export type WorkoutSession = {
+/** Working-set totals the server adds to listed sessions. Warm-ups are not counted. */
+export type WorkoutSummary = {
+  totalSets: number
+  totalReps: number
+  totalVolumeKg: number
+  muscleGroups: { muscleGroup: string; sets: number }[]
+}
+
+export type WorkoutSession = Partial<WorkoutSummary> & {
   id: string
   userId: string
   sessionTitle: string
@@ -127,10 +135,12 @@ function useWorkoutState(): WorkoutState {
       (previous: typeof historyQuery.data) => {
         if (!previous?.pages.length) return previous
         const allSessions = previous.pages.flatMap((page) => page.sessions)
-        const sessionsWithUpdate = [
-          session,
-          ...allSessions.filter((entry) => entry.id !== session.id),
-        ]
+        // Replace a listed session where it is, so opening an old workout does not move it to the
+        // top. Its sets come along, and the card works its totals out from them.
+        const listed = allSessions.some((entry) => entry.id === session.id)
+        const sessionsWithUpdate = listed
+          ? allSessions.map((entry) => (entry.id === session.id ? session : entry))
+          : [session, ...allSessions]
         let offset = 0
         return {
           ...previous,
