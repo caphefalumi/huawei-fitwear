@@ -9,11 +9,6 @@ export function NetworkStatusBanner() {
   const state = useNetworkState()
   const { offline } = useAuth()
   const insets = useSafeAreaInsets()
-  console.log("[E2EDBG] banner", {
-    offline,
-    connected: state.isConnected,
-    reachable: state.isInternetReachable,
-  })
   if (!offline && state.isInternetReachable !== false && state.isConnected !== false) return null
 
   return (
