@@ -7,6 +7,7 @@ import { useAuth } from "@/features/auth"
 import { useWatchStatus } from "@/features/watch"
 import { Palette as C } from "@/theme"
 
+import { WatchDeviceRow } from "../components/device-card"
 import { MenuGroup, MenuRow } from "../components/menu"
 import { NameSheet } from "../components/sheets"
 import { useProfileEditor } from "../components/use-profile-editor"
@@ -70,10 +71,11 @@ export function ProfileScreen() {
       </MenuGroup>
 
       <MenuGroup title="Devices">
-        <MenuRow
-          icon={{ ios: "applewatch", android: "watch", web: "watch" }}
-          label="VoocHealth watch"
-          value={watch.summary}
+        <WatchDeviceRow
+          enabled={watch.enabled}
+          status={watch.status}
+          name={watch.name}
+          label={watch.label}
           onPress={() => router.push("/watch")}
         />
       </MenuGroup>

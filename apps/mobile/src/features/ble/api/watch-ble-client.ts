@@ -107,7 +107,7 @@ async function applyPriority(device: Device, foreground: boolean): Promise<void>
 }
 
 /**
- * Production BLE central for the VoocHealth watch GATT peripheral.
+ * Production BLE central for the Huawei Watch GATT peripheral.
  *
  * Usage:
  * ```ts

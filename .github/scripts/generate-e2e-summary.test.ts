@@ -3,19 +3,19 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os"
 import path from "node:path"
 
-import { generateSummary } from "./generate-maestro-summary"
+import { generateSummary } from "./generate-e2e-summary"
 
 let tempDir: string
 let artifactsDir: string
 beforeEach(() => {
-  tempDir = mkdtempSync(path.join(tmpdir(), "maestro-summary-"))
-  artifactsDir = path.join(tempDir, "maestro-artifacts")
+  tempDir = mkdtempSync(path.join(tmpdir(), "e2e-summary-"))
+  artifactsDir = path.join(tempDir, "e2e-artifacts")
   mkdirSync(artifactsDir)
 })
 afterEach(() => rmSync(tempDir, { recursive: true, force: true }))
 
 function writeReport(xml: string) {
-  writeFileSync(path.join(artifactsDir, "report.xml"), xml)
+  writeFileSync(path.join(artifactsDir, "junit.xml"), xml)
 }
 
 test("new flows are listed without known names or suite counters", () => {
@@ -33,7 +33,7 @@ test("new flows are listed without known names or suite counters", () => {
   expect(markdown).not.toContain("fitness.yaml")
 })
 
-test("maestro exit code 1 still yields a full failed-flow summary", () => {
+test("e2e exit code 1 still yields a full failed-flow summary", () => {
   writeReport(`<testsuites><testsuite tests="2" failures="1">
     <testcase name="fitness" time="10"/>
     <testcase name="error-messages" file="error-messages.yaml" time="44" status="FAILURE">
@@ -44,7 +44,7 @@ test("maestro exit code 1 still yields a full failed-flow summary", () => {
   expect(success).toBe(false)
   expect(markdown).toContain("**Status:** Failed")
   expect(markdown).toContain("2 total; 1 passed, 1 failed, 0 errors, 0 skipped")
-  expect(markdown).toContain("**Maestro exit code:** 1")
+  expect(markdown).toContain("**e2e exit code:** 1")
   expect(markdown).toContain("One or more flows failed")
   expect(markdown).toContain("error-messages: Failed")
   expect(markdown).toContain("Enter your username.")
@@ -119,15 +119,15 @@ test("all recordings keep their flow-relative paths", () => {
   expect(markdown).toContain("https://example.test/bundle")
 })
 
-test("CLI appends its summary even when Maestro failed or report is missing", () => {
-  const script = path.join(import.meta.dir, "generate-maestro-summary.ts")
+test("CLI appends its summary even when e2e failed or report is missing", () => {
+  const script = path.join(import.meta.dir, "generate-e2e-summary.ts")
   const summaryFile = path.join(tempDir, "summary.md")
   writeFileSync(summaryFile, "Previous step\n")
-  const env = { ...process.env, MAESTRO_EXIT_CODE: "1", GITHUB_STEP_SUMMARY: summaryFile }
+  const env = { ...process.env, E2E_EXIT_CODE: "1", GITHUB_STEP_SUMMARY: summaryFile }
   const missingReport = Bun.spawnSync([process.execPath, script], { cwd: tempDir, env })
   expect(missingReport.exitCode).toBe(0)
   expect(readFileSync(summaryFile, "utf8")).toContain("JUnit report unavailable")
-  expect(readFileSync(summaryFile, "utf8")).toContain("**Maestro exit code:** 1")
+  expect(readFileSync(summaryFile, "utf8")).toContain("**e2e exit code:** 1")
   writeReport('<testsuite><testcase name="new-flow"/></testsuite>')
   const passed = Bun.spawnSync([process.execPath, script], { cwd: tempDir, env })
   expect(passed.exitCode).toBe(0)

@@ -257,10 +257,10 @@ if (import.meta.main) {
   try {
     const command = process.argv[2]
     if (command !== "snapshot" && command !== "cleanup") {
-      throw new Error("Usage: bun .github/scripts/cleanup-maestro-account.ts <snapshot|cleanup>")
+      throw new Error("Usage: bun .github/scripts/cleanup-e2e-account.ts <snapshot|cleanup>")
     }
-    const email = requiredEnv("MAESTRO_TEST_EMAIL")
-    const statePath = requiredEnv("MAESTRO_CLEANUP_STATE")
+    const email = requiredEnv("E2E_TEST_EMAIL")
+    const statePath = requiredEnv("E2E_CLEANUP_STATE")
     const cloudflareAccountId = requiredEnv("CLOUDFLARE_ACCOUNT_ID")
     const token = requiredEnv("CLOUDFLARE_API_TOKEN")
     const config = JSON.parse(

@@ -54,7 +54,7 @@ bun run mobile:typecheck   # mobile typecheck
 bun run mobile:test        # mobile unit tests
 bun run backend:typecheck
 bun run backend:test
-bun run mobile:test:e2e    # Maestro flows, when your change affects them
+bun run mobile:test:e2e    # Android E2E tests (e2e), when your change affects them
 ```
 
 Formatting is applied automatically after pushes to `main` using the GitHub App configured by `APP_ID` and `APP_PRIVATE_KEY`. The app needs contents write access and permission to bypass the `main` ruleset.

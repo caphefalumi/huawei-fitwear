@@ -9,6 +9,8 @@ import { SettingsScreen } from "@/features/profile/screens/settings-screen"
 import { TrainingScreen } from "@/features/profile/screens/training-screen"
 import { useDeveloperMode } from "@/features/profile/store/developer-mode.store"
 import { PERIOD_AREA, useInjuries } from "@/features/recovery"
+import { useWatchStore } from "@/features/watch"
+import { usePairing } from "@/features/watch/pairing.store"
 import {
   clearExerciseLoopCache,
   exerciseLoopCacheBytes,
@@ -87,6 +89,8 @@ beforeEach(() => {
   jest.clearAllMocks()
   useInjuries.setState({ injuries: [] })
   useDeveloperMode.setState({ enabled: false, features: { testError: false } })
+  usePairing.setState({ enabled: false, name: "" })
+  useWatchStore.setState({ status: "off", error: null })
   mockUseAuth.mockReturnValue({
     user: { name: "Member", email: "member@example.com", birthDate: null },
     signOut,
@@ -149,7 +153,7 @@ test("groups the menu and opens each destination without claiming a connection",
   for (const [name, route] of [
     ["Body & goals", "/body-profile"],
     ["Training & recovery", "/training"],
-    ["VoocHealth watch, Not set up", "/watch"],
+    ["Huawei Watch, Not set up", "/watch"],
     ["Settings", "/settings"],
     ["Account & privacy", "/account-data"],
     ["Third-party services, Apple Health", "/third-party-services"],
@@ -157,6 +161,18 @@ test("groups the menu and opens each destination without claiming a connection",
     await fireEvent.press(screen.getByRole("button", { name }))
     expect(router.push).toHaveBeenLastCalledWith(route)
   }
+})
+
+test("shows the connected watch by its own name on the device row", async () => {
+  usePairing.setState({ enabled: true, name: "HUAWEI WATCH 5" })
+  useWatchStore.setState({ status: "connected", error: null })
+  const screen = await render(<ProfileScreen />)
+  expect(screen.getByText("Huawei Watch")).toBeTruthy()
+  expect(screen.getByText("HUAWEI WATCH 5")).toBeTruthy()
+  expect(
+    screen.getByRole("button", { name: "Huawei Watch, Connected, HUAWEI WATCH 5" }),
+  ).toBeTruthy()
+  expect(screen.queryByText("Set up")).toBeNull()
 })
 
 test("a failed name edit keeps the draft and can be saved on retry", async () => {

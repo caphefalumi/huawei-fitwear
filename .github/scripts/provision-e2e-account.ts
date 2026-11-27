@@ -1,9 +1,9 @@
 import { hashPassword, isPasswordWithinLimit } from "../../apps/backend/src/modules/auth/password"
-import { createD1Query } from "./cleanup-maestro-account"
+import { createD1Query } from "./cleanup-e2e-account"
 
 // Explicit opt-in only, after staging isolation validation. Never alter an existing account.
-const email = process.env.MAESTRO_TEST_EMAIL!.toLowerCase()
-const password = process.env.MAESTRO_TEST_PASSWORD!
+const email = process.env.E2E_TEST_EMAIL!.toLowerCase()
+const password = process.env.E2E_TEST_PASSWORD!
 const query = createD1Query({
   cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
   databaseId: process.env.E2E_D1_DATABASE_ID!,

@@ -1,6 +1,6 @@
 import { util } from '@kit.ArkTS';
 import { HAPTIC_SIGNAL_MS, vibrate } from '../common/Haptics';
-import { Palette, PillButton, Type } from '../common/Ui';
+import { ButtonKind, Palette, SymbolBadge, TABULAR, Type, WatchButton } from '../common/Ui';
 import { FavoriteMeal } from '../link/SyncProtocol';
 import { FoodDay, UNDO_WINDOW_MS } from './FoodDay';
 
@@ -35,58 +35,77 @@ export struct QuickLogView {
   }
 
   @Builder
-  macroRow(label: string, grams: number) {
-    Row() {
-      Text(label)
-        .width(36)
-        .fontSize(Type.SMALL)
-        .fontColor(Palette.MUTED)
+  macro(label: string, grams: number) {
+    Column() {
       Text(`${grams} g`)
-        .fontSize(Type.SMALL)
+        .fontSize(Type.CAPTION)
+        .fontWeight(FontWeight.Medium)
+        .fontFeature(TABULAR)
         .fontColor(Palette.TEXT)
-    };
+      Text(label)
+        .fontSize(11)
+        .fontColor(Palette.MUTED)
+    }
+    .constraintSize({ minWidth: 40 });
   }
 
   @Builder
   foodCard(food: FavoriteMeal) {
     Column({ space: 6 }) {
-      Text('Quick log')
-        .fontSize(Type.SMALL)
-        .fontColor(Palette.MUTED)
-      Text(food.name)
-        .width('70%')
-        .fontSize(16)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(Palette.TEXT)
-        .textAlign(TextAlign.Center)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-      Row({ space: 12 }) {
-        Column() {
-          Text(`${food.kcal}`)
-            .fontSize(30)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(Palette.TEXT)
-          Text('kcal')
-            .fontSize(Type.SMALL)
-            .fontColor(Palette.MUTED)
-        }
-        Divider()
-          .vertical(true)
-          .height(48)
-          .color(Palette.TRACK)
-        Column() {
-          this.macroRow('Pro', food.protein)
-          this.macroRow('Carb', food.carbs)
-          this.macroRow('Fat', food.fat)
-        }.alignItems(HorizontalAlign.Start)
+      Column({ space: 2 }) {
+        Text('Quick log')
+          .fontSize(Type.CAPTION)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(Palette.ACCENT)
+        Text(food.name)
+          .width('70%')
+          .fontSize(Type.HEADLINE)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(Palette.TEXT)
+          .textAlign(TextAlign.Center)
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      Row({ space: 4 }) {
+        Text(`${food.kcal}`)
+          .fontSize(Type.METRIC)
+          .fontWeight(FontWeight.Bold)
+          .fontFeature(TABULAR)
+          .fontColor(Palette.TEXT)
+        Text('kcal')
+          .fontSize(Type.CAPTION)
+          .fontColor(Palette.MUTED)
+      }
+      .alignItems(VerticalAlign.Bottom)
+      Row({ space: 4 }) {
+        this.macro('Protein', food.protein)
+        this.macro('Carbs', food.carbs)
+        this.macro('Fat', food.fat)
       }
       if (this.day.waiting(food) > 0) {
-        Text(`Waiting for phone ×${this.day.waiting(food)}`)
-          .fontSize(12)
-          .fontColor(Palette.ACCENT);
+        Row({ space: 4 }) {
+          LoadingProgress().width(12).height(12).color(Palette.ACCENT)
+          Text('Waiting for phone')
+            .fontSize(Type.CAPTION)
+            .fontColor(Palette.ACCENT)
+          SymbolGlyph($r('sys.symbol.xmark'))
+            .fontSize(Type.CAPTION - 3)
+            .fontColor([Palette.ACCENT])
+          Text(`${this.day.waiting(food)}`)
+            .fontSize(Type.CAPTION)
+            .fontFeature(TABULAR)
+            .fontColor(Palette.ACCENT)
+        }
+        .accessibilityGroup(true)
+        .accessibilityText(`Waiting for phone, ${this.day.waiting(food)} times`);
       }
-      PillButton({ label: 'Log', primary: true, onTap: () => this.log(food) })
+      WatchButton({
+        label: 'Log',
+        kind: ButtonKind.PRIMARY,
+        icon: $r('sys.symbol.plus'),
+        buttonWidth: 120,
+        onTap: () => this.log(food),
+      })
     }
     .width('100%')
     .height('100%')
@@ -96,25 +115,38 @@ export struct QuickLogView {
   build() {
     Column() {
       if (this.day.favorites.length === 0) {
-        Text(this.day.hasData ? 'Log a meal on your phone first' : 'Open the phone app')
-          .width('70%')
-          .fontSize(16)
-          .fontColor(Palette.TEXT)
-          .textAlign(TextAlign.Center);
+        Column({ space: 8 }) {
+          SymbolBadge({ icon: $r('sys.symbol.fork_knife') })
+          Text('No favorites yet')
+            .fontSize(Type.HEADLINE)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(Palette.TEXT)
+          Text(this.day.hasData ? 'Log a meal on your phone first' : 'Open the phone app')
+            .width('70%')
+            .fontSize(Type.CAPTION)
+            .fontColor(Palette.MUTED)
+            .textAlign(TextAlign.Center)
+        };
       } else if (this.justLogged !== '') {
         Column({ space: 10 }) {
-          Text('✓ Logged')
+          SymbolBadge({ icon: $r('sys.symbol.checkmark') })
+          Text('Logged')
             .fontSize(Type.TITLE)
             .fontWeight(FontWeight.Bold)
             .fontColor(Palette.TEXT)
           Text(this.justLogged)
             .width('70%')
-            .fontSize(Type.SMALL)
+            .fontSize(Type.CAPTION)
             .fontColor(Palette.MUTED)
             .textAlign(TextAlign.Center)
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-          PillButton({ label: 'Undo', onTap: () => this.undo() })
+          WatchButton({
+            label: 'Undo',
+            icon: $r('sys.symbol.arrow_counterclockwise'),
+            buttonWidth: 110,
+            onTap: () => this.undo(),
+          })
         };
       } else {
         Stack({ alignContent: Alignment.Bottom }) {
@@ -141,14 +173,15 @@ export struct QuickLogView {
             ForEach(
               this.day.favorites,
               (food: FavoriteMeal, index: number) => {
-                Circle({ width: 6, height: 6 }).fill(
-                  index === this.favoriteIndex ? Palette.ACCENT : Palette.TRACK,
+                Circle({ width: 5, height: 5 }).fill(
+                  index === this.favoriteIndex ? Palette.TEXT : Palette.TRACK,
                 );
               },
               (food: FavoriteMeal) => food.ref,
             )
           }
-          .margin({ bottom: 10 })
+          .margin({ bottom: 14 })
+          .accessibilityLevel('no')
         }
         .width('100%')
         .height('100%');

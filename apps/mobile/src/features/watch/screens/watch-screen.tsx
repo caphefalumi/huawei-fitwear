@@ -57,7 +57,7 @@ export function WatchScreen() {
   return (
     <Screen contentStyle={styles.content}>
       <BackHeader label="Back" onPress={() => router.back()} />
-      <PageHeading title="VoocHealth watch" />
+      <PageHeading title="Huawei Watch" />
       <Card style={styles.hero}>
         <View style={styles.badgeArea}>
           {looking && !blocked ? <Pulse /> : null}

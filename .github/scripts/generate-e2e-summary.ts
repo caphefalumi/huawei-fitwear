@@ -44,7 +44,7 @@ function findRecordings(dir: string): string[] {
 }
 
 export function generateSummary({
-  artifactsDir = "maestro-artifacts",
+  artifactsDir = "e2e-artifacts",
   exitCode,
   artifactsUrl = "",
   recordingUrl = "",
@@ -53,7 +53,7 @@ export function generateSummary({
   let cases: TestCase[] = []
   let reportError = ""
   try {
-    const xml = fs.readFileSync(path.join(artifactsDir, "report.xml"), "utf8")
+    const xml = fs.readFileSync(path.join(artifactsDir, "junit.xml"), "utf8")
     const report = new DOMParser({ onError: onWarningStopParsing }).parseFromString(
       xml,
       "application/xml",
@@ -105,19 +105,19 @@ export function generateSummary({
     String(exitCode) === "0" && !reportError && passed > 0 && failed === 0 && errors === 0
   const duration = cases.reduce((total, test) => total + test.duration, 0)
   const lines = [
-    "## Maestro E2E results",
+    "## Mobile E2E results",
     "",
     `**Status:** ${success ? "Passed" : "Failed"}`,
     `**Flows:** ${cases.length} total; ${passed} passed, ${failed} failed, ${errors} errors, ${skipped} skipped`,
     `**Flow time:** ${duration.toFixed(2)}s`,
-    `**Maestro exit code:** ${exitCode === undefined ? "Not recorded" : cell(String(exitCode))}`,
+    `**e2e exit code:** ${exitCode === undefined ? "Not recorded" : cell(String(exitCode))}`,
     "",
   ]
   if (reportError) {
     lines.push(`> ${cell(reportError)}`, "")
     if (String(exitCode) !== "0" && exitCode !== undefined && exitCode !== "") {
       lines.push(
-        "> Maestro exited before a readable JUnit report was produced. Download the artifact bundle for Maestro logs and screenshots.",
+        "> e2e exited before a readable JUnit report was produced. Download the artifact bundle for e2e logs and screenshots.",
         "",
       )
     }
@@ -168,7 +168,7 @@ export function generateSummary({
     if (recordingUrl) lines.push(`[Download all recordings](<${recordingUrl}>)`, "")
   } else {
     lines.push(
-      "No recordings were generated. Flows can opt in with startRecording/stopRecording.",
+      "No recordings were generated. Set video in apps/mobile/e2e.config.ts to record.",
       "",
     )
   }
@@ -184,7 +184,7 @@ if (import.meta.main) {
       ? `https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}`
       : ""
   const { markdown, success } = generateSummary({
-    exitCode: process.env.MAESTRO_EXIT_CODE || undefined,
+    exitCode: process.env.E2E_EXIT_CODE || undefined,
     artifactsUrl: process.env.ARTIFACTS_URL,
     recordingUrl: process.env.RECORDING_URL,
     runUrl,
@@ -194,6 +194,6 @@ if (import.meta.main) {
   } else {
     console.log(markdown)
   }
-  // Always exit successfully so this reporting step stays green when Maestro failed earlier.
+  // Always exit successfully so this reporting step stays green when e2e failed earlier.
   process.exitCode = 0
 }

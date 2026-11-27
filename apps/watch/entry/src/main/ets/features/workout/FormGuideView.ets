@@ -1,6 +1,6 @@
 import { common } from '@kit.AbilityKit';
 import { loadAnimation, mediaId } from '../media/ExerciseMedia';
-import { Palette, PillButton, Type } from '../common/Ui';
+import { Palette, Type, WatchButton } from '../common/Ui';
 
 /** W3: the exercise animation from the mobile app. */
 @ComponentV2
@@ -34,16 +34,17 @@ export struct FormGuideView {
     Column({ space: 8 }) {
       Text(this.exerciseName)
         .width('70%')
-        .fontSize(Type.SMALL)
-        .fontColor(Palette.MUTED)
+        .fontSize(Type.HEADLINE)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(Palette.TEXT)
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
       if (mediaId(this.exerciseKey) === '') {
         Text('No animation for this exercise')
           .width('70%')
-          .fontSize(Type.SMALL)
-          .fontColor(Palette.TEXT)
+          .fontSize(Type.CAPTION)
+          .fontColor(Palette.MUTED)
           .textAlign(TextAlign.Center);
       } else {
         Image(
@@ -51,12 +52,19 @@ export struct FormGuideView {
             ? this.gifUri
             : $rawfile(`exercise-loops/${mediaId(this.exerciseKey)}.webp`),
         )
-          .width(124)
-          .height(124)
-          .borderRadius(18)
-          .objectFit(ImageFit.Contain);
+          .width(128)
+          .height(128)
+          .borderRadius(20)
+          .backgroundColor(Palette.SURFACE)
+          .objectFit(ImageFit.Contain)
+          .accessibilityText(`${this.exerciseName} form animation`);
       }
-      PillButton({ label: 'Back', onTap: () => this.onBack() })
+      WatchButton({
+        label: 'Back',
+        icon: $r('sys.symbol.chevron_left'),
+        buttonWidth: 110,
+        onTap: () => this.onBack(),
+      })
     }
     .width('100%')
     .height('100%')

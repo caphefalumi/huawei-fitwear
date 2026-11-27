@@ -198,7 +198,7 @@ bun run lint
 
 The **Mobile E2E** workflow runs on `workflow_dispatch`, the daily `schedule` at **01:00 Asia/Ho_Chi_Minh**, and pushes to `feat/build-mobile` while that branch is verifying the release build. There are no E2E pull request triggers. Manual dispatch must target `main` or `feat/build-mobile`. The separate Mobile CI workflow continues handling Jest and typechecking on pull requests.
 
-Every E2E run uses an **x86_64 Android release APK matching the checked-out app inputs and staging API URL**, then installs it on an API 34 AOSP Pixel 6 emulator with KVM. A GitHub Actions cache is keyed by tracked mobile application sources, dependency manifests/lockfile, workflow build configuration, and staging API URL. **Changes only to Maestro flows, mobile tests, or README content reuse the cached APK** without rerunning Expo/Gradle. Changes to app code, dependencies, native configuration, or API URL produce a cache miss and a fresh build. A missing or evicted cache also triggers a fresh build, never a fallback to an unrelated APK. A manual run can set `force_rebuild=true` to bypass the cache. Each workflow run uploads its selected APK as a same-run artifact for the emulator job. Native Gradle minification and Sentry upload are disabled for fresh builds. Maestro 2.12.0 runs the top-level flows in `apps/mobile/e2e/`. Place shared subflows in nested directories. These tests do not require Google services.
+Every E2E run uses an **x86_64 Android release APK matching the checked-out app inputs and staging API URL**, then installs it on an API 34 AOSP Pixel 6 emulator with KVM. A GitHub Actions cache is keyed by tracked mobile application sources, dependency manifests/lockfile, workflow build configuration, and staging API URL. **Changes only to E2E tests, mobile tests, or README content reuse the cached APK** without rerunning Expo/Gradle. Changes to app code, dependencies, native configuration, or API URL produce a cache miss and a fresh build. A missing or evicted cache also triggers a fresh build, never a fallback to an unrelated APK. A manual run can set `force_rebuild=true` to bypass the cache. Each workflow run uploads its selected APK as a same-run artifact for the emulator job. Native Gradle minification and Sentry upload are disabled for fresh builds. The [`e2e`](https://www.npmjs.com/package/e2e) runner with the [`@e2e-dev/mobile`](https://www.npmjs.com/package/@e2e-dev/mobile) engine runs `apps/mobile/e2e/**/*.e2e.ts` (config in `apps/mobile/e2e.config.ts`). Tests are ES modules written in `.ts`; shared steps live in `apps/mobile/e2e/support.ts`. They use locators only, so no AI model is needed. These tests do not require Google services.
 
 **Required staging configuration, before enabling the nightly workflow:**
 
@@ -206,22 +206,22 @@ Every E2E run uses an **x86_64 Android release APK matching the checked-out app 
 | --------------------------------- | ----------------------------------------------------------------- |
 | Repository variable `E2E_API_URL` | HTTPS staging API, with isolated backend bindings                 |
 | Secret `E2E_D1_DATABASE_ID`       | Staging Cloudflare D1 database UUID, distinct from production     |
-| Secret `MAESTRO_TEST_EMAIL`       | Dedicated account on the staging backend                          |
-| Secret `MAESTRO_TEST_PASSWORD`    | Password for the staging account                                  |
+| Secret `MAESTRO_TEST_EMAIL`       | Dedicated staging account, passed to tests as `E2E_TEST_EMAIL`    |
+| Secret `MAESTRO_TEST_PASSWORD`    | Its password, passed to tests as `E2E_TEST_PASSWORD`              |
 | Secret `CLOUDFLARE_ACCOUNT_ID`    | Cloudflare account containing the staging D1 database             |
 | Secret `CLOUDFLARE_API_TOKEN`     | Token scoped to the staging database for the snapshot and cleanup |
 
 The validation job refuses missing settings, non-HTTPS URLs, the configured production API hostname, and the production D1 database UUID. **The hostname and database checks are safeguards, not a substitute for provisioning a genuinely separate staging Worker, D1 database, and other writable bindings.** Make sure the staging API truly uses the staging D1 database, KV, R2, and queues as needed, and never forwards writes to production. Avoid using production credentials or real customer accounts.
 
-Before running Maestro, the cleanup helper snapshots the staging account's existing session and meal IDs to a private run-specific file. After testing, even on Maestro failure, it deletes only new sessions and meals belonging to that account. It preserves baseline records. The cleanup helper independently refuses the production database UUID. Because cleanup is not guaranteed following runner loss, force cancellation, or timeout, periodically review staging data. Do not use the dedicated account outside this workflow. Any new E2E flows that create different server-side entities must add safe cleanup first.
+Before the tests run, the cleanup helper snapshots the staging account's existing session and meal IDs to a private run-specific file. After testing, even when tests fail, it deletes only new sessions and meals belonging to that account. It preserves baseline records. The cleanup helper independently refuses the production database UUID. Because cleanup is not guaranteed following runner loss, force cancellation, or timeout, periodically review staging data. Do not use the dedicated account outside this workflow. Any new E2E tests that create different server-side entities must add safe cleanup first.
 
-Run all flows manually from the main branch:
+Run all tests manually from the main branch:
 
 ```bash
 gh workflow run mobile-e2e.yml --ref main
 ```
 
-Or select a subset by Maestro tag:
+Or select a subset by test tag:
 
 ```bash
 gh workflow run mobile-e2e.yml --ref main -f include_tags=fitness,errors
@@ -230,17 +230,17 @@ gh workflow run mobile-e2e.yml --ref main -f include_tags=fitness,errors
 gh workflow run mobile-e2e.yml --ref main -f force_rebuild=true
 ```
 
-Omitting `include_tags` runs all top-level YAML flows. E2E runs are globally serialized for the dedicated account and never cancel an existing run.
+Omitting `include_tags` runs every test. E2E runs are globally serialized for the dedicated account and never cancel an existing run.
 
-The workflow uploads the build-input-matched APK, per-attempt JUnit reports, screenshots, diagnostics, and opt-in recordings for **7 days**. The job summary lists flow outcomes, durations, and failure details. Missing, invalid, empty, or failed JUnit reports fail the workflow. The emulator is stopped, application storage is cleared, and airplane mode is disabled before the test job ends. Any required account cleanup failure also fails the job.
+The workflow uploads the build-input-matched APK, per-attempt JUnit reports, screenshots, traces, and a video of every test for **7 days**. The job summary lists test outcomes, durations, and failure details. Missing, invalid, empty, or failed JUnit reports fail the workflow. The emulator is stopped, application storage is cleared, and airplane mode is disabled before the test job ends. Any required account cleanup failure also fails the job.
 
 Helper regression tests can be run from the repository root:
 
 ```bash
-bun test ./.github/scripts/generate-maestro-summary.test.ts ./.github/scripts/cleanup-maestro-account.test.ts ./.github/scripts/validate-e2e-environment.test.ts
+bun test ./.github/scripts/generate-e2e-summary.test.ts ./.github/scripts/cleanup-e2e-account.test.ts ./.github/scripts/validate-e2e-environment.test.ts
 ```
 
-The fitness flow checks authentication, session restoration, and read-only screens. The error flow checks form validation, offline login and recovery, and offline meal-save retry. Each flow stops the app before clearing device state. Password fields use stable `login-password` and `sign-up-password` test IDs. For sign-up scrolling, start the swipe from the submit button to avoid trapping the gesture inside the date fields.
+The fitness test checks authentication, session restoration, and read-only screens. The error test checks form validation, offline login and recovery, and offline meal-save retry. The meal history test logs, moves, finds and deletes a meal. Each test starts from cleared app data. Password fields use stable `login-password` and `sign-up-password` test IDs. For sign-up scrolling, start the swipe from the submit button to avoid trapping the gesture inside the date fields.
 
 ### Gradle caching
 

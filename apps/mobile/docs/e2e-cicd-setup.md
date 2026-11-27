@@ -1,6 +1,6 @@
 # Mobile E2E and CI/CD
 
-How the Fitwear mobile app is tested in GitHub Actions: unit checks on pull requests, optional manual native builds, and Android Maestro end-to-end runs against a release APK and the production API.
+How the Fitwear mobile app is tested in GitHub Actions: unit checks on pull requests, optional manual native builds, and Android end-to-end runs (e2e + @e2e-dev/mobile) against a release APK and the production API.
 
 ---
 
@@ -10,9 +10,9 @@ How the Fitwear mobile app is tested in GitHub Actions: unit checks on pull requ
 | ---------------- | ------------------------------------ | --------------------------------------------------------- | ----------------------------------------------------------------- |
 | **Mobile CI**    | `.github/workflows/mobile-ci.yml`    | `pull_request` → `main`, merge group, `workflow_dispatch` | Typecheck + Jest when `apps/mobile/**` (or root lockfile) changes |
 | **Mobile Build** | `.github/workflows/mobile-build.yml` | `workflow_dispatch`                                       | Debug APK (Android) and iOS Simulator build, via matrix           |
-| **Mobile E2E**   | `.github/workflows/mobile-e2e.yml`   | Cron + `workflow_dispatch`                                | Release APK + Android emulator + Maestro flows                    |
+| **Mobile E2E**   | `.github/workflows/mobile-e2e.yml`   | Cron + `workflow_dispatch`                                | Release APK + Android emulator + e2e tests                    |
 
-Mobile CI does **not** run Maestro. E2E is nightly and manual only.
+Mobile CI does **not** run the E2E tests. E2E is nightly and manual only.
 
 ```mermaid
 flowchart TB
@@ -28,8 +28,8 @@ flowchart TB
     Prepare -->|rebuild_apk false| Fetch[Reuse prior release APK]
     Build --> Art[Artifact fitwear-release-apk]
     Fetch --> Art
-    Art --> Maestro[Android Maestro E2E]
-    Maestro --> Summary[Job summary + artifacts]
+    Art --> E2E[Android E2E]
+    E2E --> Summary[Job summary + artifacts]
   end
 ```
 
@@ -62,7 +62,7 @@ Not used by the E2E pipeline (E2E builds or reuses a **release** APK on Linux).
 
 - **Schedule:** `0 1 * * *` in timezone `Asia/Ho_Chi_Minh` (always builds a fresh APK).
 - **Manual:** `workflow_dispatch` inputs:
-  - `include_tags` — comma-separated Maestro tags (OR). Empty = all top-level flows under `apps/mobile/e2e/`.
+  - `include_tags` — comma-separated test tags (any match). Empty = every test in `apps/mobile/e2e/`.
   - `force_rebuild` — build a new release APK even when only flows/docs/tests changed.
 
 **Concurrency:** Group `mobile-e2e-dedicated-account`, `cancel-in-progress: false` so only one E2E run uses the dedicated account at a time.
@@ -106,91 +106,87 @@ Long-lived feature branches use git diff from the **last successful build SHA** 
 
 ---
 
-## Job 3: Android Maestro E2E (`e2e`)
+## Job 3: Android E2E (`e2e`)
 
-Runs if `prepare` succeeded and `build` or `fetch-apk` succeeded/skipped as expected.
+Runs after `build` uploads the release APK for this run.
 
 ### Bootstrap
 
-- Run unit tests for CI helper scripts: `generate-maestro-summary`, `cleanup-maestro-account`, `e2e-apk-plan`, `record-maestro-exit`.
+- Set up Bun and Node.js 26. The `e2e` runner needs Node.js 22.22.3+ or 24.8+.
+- Run unit tests for CI helper scripts: `generate-e2e-summary`, `cleanup-e2e-account`, `validate-e2e-environment`.
 - Download release APK into `apps/mobile/android/app/build/outputs/apk/release/`.
-- Enable **KVM** on the runner (`/dev/kvm`); Maestro step uses hardware acceleration (`-accel on`).
+- Enable **KVM** on the runner (`/dev/kvm`); the emulator uses hardware acceleration (`-accel on`).
 
-### Emulator and Maestro
+### Emulator and test runner
 
-- **Image:** API 34, AOSP (`target: default`), `x86_64`, **Pixel 6** profile, 4 GB RAM.
-- **Maestro:** CLI **2.12.0** via official installer.
+- **Image:** API 34, `google_apis`, `x86_64`, **Pixel 6** profile, 4 GB RAM.
+- **Runner:** [`e2e`](https://www.npmjs.com/package/e2e) with the [`@e2e-dev/mobile`](https://www.npmjs.com/package/@e2e-dev/mobile) engine (built on agent-device, driving the emulator through adb), pinned in `apps/mobile/package.json`.
 - **Action:** `reactivecircus/android-emulator-runner@v2`.
 
-**Emulator script (high level)**
+**Emulator script (`run-e2e-android.sh`, high level)**
 
-1. `adb install -r` release APK.
-2. `maestro test` on `apps/mobile/e2e` with JUnit output under `maestro-artifacts/`.
-3. Env: `MAESTRO_TEST_EMAIL`, `MAESTRO_TEST_PASSWORD`, optional `MAESTRO_INCLUDE_TAGS`.
-4. Write Maestro exit code to `maestro-artifacts/maestro-exit-code.txt`.
-5. On test failure the script still exits **0** from the emulator action so later steps can upload artifacts; the real exit code is recovered in a separate step.
+1. `adb install -r` release APK and push the barcode photo fixture.
+2. `e2e run --target android --reporter list,junit --output e2e-artifacts` from `apps/mobile`.
+3. Env: `E2E_TEST_EMAIL`, `E2E_TEST_PASSWORD`, optional `E2E_TAGS` (comma-separated, any match).
+4. Write the exit code to `E2E_EXIT_CODE` in `GITHUB_ENV`.
+5. On test failure the script still exits **0** from the emulator action so later steps can upload artifacts; the final gate restores the failure.
 6. Device cleanup: force-stop app, `pm clear`, disable airplane mode.
 
 ### Dedicated E2E account (D1 cleanup)
 
-Before Maestro:
+Before the tests:
 
-- **`cleanup-maestro-account.ts snapshot`** — records session and meal IDs for `MAESTRO_TEST_EMAIL` via Cloudflare D1 API (DB id from `apps/backend/wrangler.json`). State file: `RUNNER_TEMP`, not uploaded.
+- **`cleanup-e2e-account.ts snapshot`** — records session and meal IDs for `E2E_TEST_EMAIL` via Cloudflare D1 API. State file: `RUNNER_TEMP`, not uploaded.
 
-After Maestro (`always()`, if snapshot succeeded):
+After the tests (`always()`, if snapshot succeeded):
 
-- **`cleanup-maestro-account.ts cleanup`** — deletes only sessions/meals **created after** the snapshot; account and baseline data remain.
+- **`cleanup-e2e-account.ts cleanup`** — deletes only sessions/meals **created after** the snapshot; account and baseline data remain.
 
-Requires secrets: `MAESTRO_TEST_EMAIL`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`.
+Requires secrets: `MAESTRO_TEST_EMAIL` (mapped to `E2E_TEST_EMAIL`), `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`.
 
 ### Reporting and failure semantics
 
-| Step                                             | Role                                                                                                               |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| **Record Maestro exit code**                     | `record-maestro-exit.ts` reads `maestro-exit-code.txt` → `steps.maestro.outputs.exit_code` and `MAESTRO_EXIT_CODE` |
-| **Upload recordings / artifacts**                | MP4s and full `maestro-artifacts/` (attempt-suffixed names)                                                        |
-| **Generate Maestro E2E summary**                 | Parses JUnit → GitHub **job summary** (flow table, failure details, recording links)                               |
-| **Fail job when Maestro reported test failures** | `exit` with recorded code if non-zero                                                                              |
+| Step | Role |
+| --- | --- |
+| **Upload recordings / artifacts** | Test MP4s and the full `e2e-artifacts/` (attempt-suffixed names) |
+| **Publish E2E results** | Parses `e2e-artifacts/junit.xml` → GitHub **job summary** (test table, failure details, recording links) |
+| **Require passing E2E run and valid JUnit** | Fails if `E2E_EXIT_CODE` is non-zero or the JUnit report is missing or empty |
 
 Summary generator always exits 0 so reporting does not mask a failed test step.
 
 ---
 
-## Maestro flows (repository)
+## E2E tests (repository)
 
-| Flow                        | Path                                        | Tags             |
-| --------------------------- | ------------------------------------------- | ---------------- |
-| Error messages & validation | `apps/mobile/e2e/error-messages.yaml` | `e2e`, `errors`  |
-| Fitness / auth journey      | `apps/mobile/e2e/fitness.yaml`        | `e2e`, `fitness` |
+| Test | Path | Tags |
+| --- | --- | --- |
+| Error messages & validation | `apps/mobile/e2e/error-messages.e2e.ts` | `e2e`, `errors` |
+| Fitness / auth journey | `apps/mobile/e2e/fitness.e2e.ts` | `e2e`, `fitness` |
+| Meal journal history | `apps/mobile/e2e/meal-history.e2e.ts` | `e2e`, `meals` |
 
-**App id:** `com.fitwear.mobile`.
+**App id:** `com.fitwear.mobile`. Config: `apps/mobile/e2e.config.ts`. Tests are ES modules in `.ts` files matching `e2e/**/*.e2e.ts`; shared steps live in `e2e/support.ts`. They use locators and `expect` only, so no AI model or API key is needed.
 
-CI discovers **top-level** `.yaml`/`.yml` files in `e2e/`. Put shared subflows in subdirectories so they are not run as separate top-level journeys.
+The fitness test picks a barcode crop from the [Hảo Hảo shrimp noodle package photo](https://foody.nz/cdn/shop/products/thung-30-goi-mi-hao-hao-tom-chua-cay-75g-201902180900116138_bfdedf59-5329-4c42-b54e-65c3ef13ce6e_2048x2048.jpeg?v=1604714785), checks EAN-13 `8934563138165` through the staging catalog lookup, and opens nutrition review without saving the item.
 
-The fitness flow picks a barcode crop from the [Hảo Hảo shrimp noodle package photo](https://foody.nz/cdn/shop/products/thung-30-goi-mi-hao-hao-tom-chua-cay-75g-201902180900116138_bfdedf59-5329-4c42-b54e-65c3ef13ce6e_2048x2048.jpeg?v=1604714785), checks EAN-13 `8934563138165` through the staging catalog lookup, and opens nutrition review without saving the item.
+**Conventions:**
 
-**Conventions (from README):**
-
-- Password fields: test IDs `login-password`, `sign-up-password`.
-- Sign-up footer scroll: start swipe from submit button (date fields can steal center swipes).
-- Optional `startRecording` per flow; artifacts land under `maestro-artifacts/`.
+- Password fields: test IDs `login-password`, `sign-up-password`. The account password is an `e2e` credential, filled by the runner and redacted from reports.
+- Sign-up footer scroll: start the swipe from the submit button (date fields can steal center swipes).
+- Every test records video (`video: "on"`); files land under `e2e-artifacts/results/`.
+- Swipe directions name where the content scrolls: `direction: "right"` moves the finger left.
 
 ---
 
 ## Local E2E
 
-From `apps/mobile` (requires local Maestro + device/emulator + credentials):
+From `apps/mobile`, with a booted emulator or connected device that has the app installed:
 
 ```bash
-bun run test:e2e              # all top-level flows
-bun run test:e2e:errors       # error-messages.yaml only
-```
-
-Pass credentials the same way CI does:
-
-```bash
-maestro test -e MAESTRO_TEST_EMAIL=... -e MAESTRO_TEST_PASSWORD=... e2e
-maestro test --include-tags fitness e2e
+export E2E_TEST_EMAIL=... E2E_TEST_PASSWORD=...
+bun run test:e2e              # all tests
+bun run test:e2e:errors       # error-messages.e2e.ts only
+npx e2e run --tag fitness     # by tag
+npx e2e doctor                # check the setup
 ```
 
 Release APK for parity with CI: build with `EXPO_PUBLIC_API_URL` pointing at the same API host, install on an x86_64 emulator or device.
@@ -199,26 +195,28 @@ Release APK for parity with CI: build with `EXPO_PUBLIC_API_URL` pointing at the
 
 ## GitHub secrets
 
-| Secret                  | Used for                                                  |
-| ----------------------- | --------------------------------------------------------- |
-| `MAESTRO_TEST_EMAIL`    | Login/sign-up flows; D1 snapshot/cleanup identity         |
-| `MAESTRO_TEST_PASSWORD` | Maestro `-e` injection                                    |
-| `CLOUDFLARE_API_TOKEN`  | D1 HTTP API (cleanup)                                     |
-| `CLOUDFLARE_ACCOUNT_ID` | D1 HTTP API (cleanup)                                     |
-| `GITHUB_TOKEN`          | Default; artifact download across runs (`actions: write`) |
+| Secret | Used for |
+| --- | --- |
+| `MAESTRO_TEST_EMAIL` | `E2E_TEST_EMAIL`: login flows; D1 snapshot/cleanup identity |
+| `MAESTRO_TEST_PASSWORD` | `E2E_TEST_PASSWORD`: the `e2e` credential's password |
+| `CLOUDFLARE_API_TOKEN` | D1 HTTP API (cleanup) |
+| `CLOUDFLARE_ACCOUNT_ID` | D1 HTTP API (cleanup) |
+
+The secrets keep their original names; the workflow maps them to the `E2E_*` variables.
 
 ---
 
 ## Helper scripts (`.github/scripts/`)
 
-| Script                        | Purpose                                    |
-| ----------------------------- | ------------------------------------------ |
-| `e2e-apk-plan.ts`             | Decide `rebuild_apk`; gh + git integration |
-| `record-maestro-exit.ts`      | Bridge emulator runner → workflow outputs  |
-| `generate-maestro-summary.ts` | JUnit → step summary markdown              |
-| `cleanup-maestro-account.ts`  | `snapshot` / `cleanup` for D1 hygiene      |
+| Script | Purpose |
+| --- | --- |
+| `run-e2e-android.sh` | Emulator setup and `e2e run` |
+| `generate-e2e-summary.ts` | JUnit → step summary markdown |
+| `verify-e2e-result.ts` | Final pass/fail gate |
+| `cleanup-e2e-account.ts` | `snapshot` / `cleanup` for D1 hygiene |
+| `validate-e2e-environment.ts` | Staging isolation checks |
 
-Each has a matching `*.test.ts` run in the E2E job before emulator work.
+The summary, cleanup and validation helpers have matching `*.test.ts` files, run in the E2E job before emulator work.
 
 ---
 
@@ -242,8 +240,8 @@ gh workflow run mobile-e2e.yml -f force_rebuild=true
 | Name                              | Contents                                 |
 | --------------------------------- | ---------------------------------------- |
 | `fitwear-release-apk`             | `app-release.apk` (build or reused)      |
-| `maestro-e2e-artifacts-<attempt>` | JUnit, logs, screenshots, exit code file |
-| `fitwear-e2e-recording-<attempt>` | Flow MP4s when recorded                  |
+| `mobile-e2e-artifacts-<attempt>` | JUnit, report.json, screenshots, traces |
+| `fitwear-e2e-recording-<attempt>` | Test MP4s                  |
 
 Job summary links to artifact URLs when upload steps succeed.
 
@@ -253,7 +251,7 @@ Job summary links to artifact URLs when upload steps succeed.
 
 ```
 PR → Mobile CI (typecheck + Jest)     [fast, path-filtered]
-Nightly / manual → Mobile E2E        [release APK + Maestro + D1 cleanup]
+Nightly / manual → Mobile E2E        [release APK + e2e + D1 cleanup]
 ```
 
 Merge gates depend on repository branch protection; E2E is not wired into `pull_request` in `mobile-e2e.yml` today.

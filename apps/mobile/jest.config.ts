@@ -4,7 +4,7 @@ module.exports = {
   setupFilesAfterEnv: ["<rootDir>/jest-setup.ts"],
   testTimeout: 15000,
   testMatch: ["<rootDir>/src/**/*.test.[jt]s?(x)"],
-  testPathIgnorePatterns: ["/node_modules/", "/e2e/", "/\\.maestro/"],
+  testPathIgnorePatterns: ["/node_modules/", "/e2e/"],
   transformIgnorePatterns: [
     "node_modules/(?!(.bun|(jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|native-base|react-native-svg|standard-navigation))",
   ],

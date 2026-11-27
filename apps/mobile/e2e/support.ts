@@ -1,0 +1,106 @@
+import type { Device } from "@e2e-dev/mobile"
+// Shared steps for the Android E2E suite (e2e + @e2e-dev/mobile).
+//
+// Locators mirror the Maestro flows these tests replaced: a text match checks
+// the accessible name and the visible text, and the first match wins, where
+// e2e would otherwise require exactly one node.
+import { credentials, expect } from "e2e"
+import type { App, Locator, Screen, TextMatch } from "e2e"
+
+export type Ui = { app: App; device: Device; screen: Screen }
+
+export const DEDICATED_ACCOUNT = "e2e"
+
+/** Visible text or accessibility label, first match. */
+export function byText(screen: Screen, text: TextMatch): Locator {
+  return screen.getByText(text, { visible: true }).first()
+}
+
+/** An input found by its placeholder, accessibility label or visible text. */
+export function field(screen: Screen, text: string): Locator {
+  return screen
+    .getByPlaceholder(text, { visible: true })
+    .or(screen.getByLabel(text, { visible: true }))
+    .or(screen.getByText(text, { visible: true }))
+    .first()
+}
+
+export function byId(screen: Screen, id: TextMatch): Locator {
+  return screen.getByTestId(id, { visible: true })
+}
+
+export async function waitVisible(locator: Locator, timeout: number) {
+  await expect(locator).toBeVisible({ timeout })
+}
+
+export async function waitHidden(locator: Locator, timeout: number) {
+  await expect(locator).toBeHidden({ timeout })
+}
+
+/** Waits for an element that may not appear; resolves false when it does not. */
+export async function maybeVisible(locator: Locator, timeout: number) {
+  try {
+    await locator.waitFor({ state: "visible", timeout })
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Android hides the keyboard directly; a no-op when it is already down. */
+export async function hideKeyboard(device: Device) {
+  await device.dismissKeyboard()
+}
+
+/** Fills an input and puts the keyboard away, as each Maestro input step did. */
+export async function enter(device: Device, locator: Locator, value: string) {
+  await locator.fill(value)
+  await hideKeyboard(device)
+}
+
+export async function scrollTo(screen: Screen, locator: Locator, direction: "up" | "down") {
+  await screen.scrollUntilVisible(locator, { direction, timeout: 10000 })
+}
+
+/** Closes the one-time Health Connect offer if this device shows it. */
+export async function skipHealthConnectOffer(screen: Screen) {
+  if (await maybeVisible(byText(screen, "Connect to Health Connect"), 10000)) {
+    await byText(screen, "Not now").tap()
+  }
+}
+
+/** Fresh install state, network on, at the welcome screen. */
+export async function launchClean({ app, device, screen }: Ui) {
+  await device.setAirplaneMode(false)
+  await app.clearState()
+  await waitVisible(byText(screen, "Explore the app"), 30000)
+}
+
+export async function openSignIn(screen: Screen) {
+  await byText(screen, "Sign in").tap()
+  await waitVisible(byText(screen, "Hi, welcome back."), 20000)
+}
+
+/** Signs in with the dedicated staging account and waits for Today. */
+export async function signIn({ device, screen }: Ui) {
+  const account = credentials.user(DEDICATED_ACCOUNT)
+  await field(screen, "example@gmail.com").fill(account.username)
+  await byId(screen, "login-password").fill(account.password)
+  await hideKeyboard(device)
+  await byId(screen, "login-submit").tap()
+  await skipHealthConnectOffer(screen)
+  await waitVisible(byText(screen, "Today"), 30000)
+}
+
+/** Relaunches the app without clearing its data. */
+export async function relaunch({ app, screen }: Ui) {
+  await app.restart()
+  await waitVisible(byText(screen, "Today"), 30000)
+}
+
+/** Local calendar date as YYYY-MM-DD, the format of the calendar day test IDs. */
+export function isoDay(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${date.getFullYear()}-${month}-${day}`
+}

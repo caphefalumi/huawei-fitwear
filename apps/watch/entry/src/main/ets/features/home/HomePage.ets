@@ -7,7 +7,7 @@ import { NO_PLAN, SAMPLE_DAY, SAMPLE_PLAN } from '../common/SampleData';
 import { LinkState, PhoneLink, PhoneLinkHandlers } from '../link/PhoneLink';
 import { DayInfo, mergeSessions, SharedSession, WorkoutPlan } from '../link/SyncProtocol';
 import { HAPTIC_ALERT_MS, HAPTIC_SIGNAL_MS, HAPTIC_TICK_MS, vibrate } from '../common/Haptics';
-import { Palette } from '../common/Ui';
+import { pageDots, Palette } from '../common/Ui';
 import { PrivacyView } from '../privacy/PrivacyView';
 import { FoodDay, isoDay } from '../quicklog/FoodDay';
 import { QuickLogView } from '../quicklog/QuickLogView';
@@ -496,6 +496,9 @@ struct HomePage {
         title: 'Still training?',
         message: 'Sets done are saved',
         keepLabel: 'Keep going',
+        endLabel: 'End workout',
+        endDestructive: true,
+        icon: $r('sys.symbol.timer'),
         onKeep: () => this.session.stillTraining(Date.now()),
         onEnd: () => this.session.end(Date.now()),
       });
@@ -504,6 +507,8 @@ struct HomePage {
         title: 'End workout?',
         message: `${this.session.exercisesDone}/${this.session.plan.exercises.length} exercises done\nSets done are saved`,
         keepLabel: 'Keep going',
+        endLabel: 'End workout',
+        endDestructive: true,
         onKeep: () => {
           this.confirmingEnd = false;
         },
@@ -544,7 +549,7 @@ struct HomePage {
       .index(this.workoutPage)
       .vertical(true)
       .loop(false)
-      .indicator(false)
+      .indicator(pageDots())
       .onChange((index: number) => {
         this.workoutPage = index;
         if (index === CONTROLS_PAGE) {
@@ -603,7 +608,7 @@ struct HomePage {
     .index(this.homePage)
     .vertical(true)
     .loop(false)
-    .indicator(false)
+    .indicator(pageDots())
     .onChange((index: number) => {
       this.homePage = index;
     })
@@ -625,6 +630,7 @@ struct HomePage {
       } else if (this.link.state === LinkState.APPROVAL) {
         ConfirmView({
           title: 'Pair phone?',
+          icon: $r('sys.symbol.bluetooth'),
           message: `${this.link.phoneName || 'A phone'}\nwants to share workouts`,
           keepLabel: 'Allow',
           endLabel: 'Not now',

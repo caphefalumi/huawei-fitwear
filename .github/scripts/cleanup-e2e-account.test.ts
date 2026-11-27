@@ -4,7 +4,7 @@ import fs from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 
-import { createD1Query, runAccountCommand } from "./cleanup-maestro-account"
+import { createD1Query, runAccountCommand } from "./cleanup-e2e-account"
 
 let db: Database
 let tempDir: string
@@ -42,7 +42,7 @@ function retainedItems() {
 }
 
 beforeEach(() => {
-  tempDir = fs.mkdtempSync(path.join(tmpdir(), "maestro-account-"))
+  tempDir = fs.mkdtempSync(path.join(tmpdir(), "e2e-account-"))
   db = new Database(":memory:")
   db.exec("PRAGMA foreign_keys = ON")
   // Use the repository's real user/session schema, including the custom-auth migration.

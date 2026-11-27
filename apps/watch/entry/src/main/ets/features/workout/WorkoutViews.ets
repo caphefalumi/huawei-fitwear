@@ -1,11 +1,31 @@
 import { HAPTIC_SIGNAL_MS, HAPTIC_TICK_MS, vibrate } from '../common/Haptics';
-import { MIN_TARGET, Palette, PillButton, SwipeHint, Type } from '../common/Ui';
-import { WorkoutPhase, WorkoutSession, WorkoutStatus } from './WorkoutSession';
+import {
+  ButtonKind,
+  IconButton,
+  LinkButton,
+  Palette,
+  SymbolBadge,
+  TABULAR,
+  Type,
+  WatchButton,
+} from '../common/Ui';
+import { WorkoutSession, WorkoutStatus } from './WorkoutSession';
 
 /** Changes the rep count with haptics; shared by the buttons and the crown. */
 export function adjustReps(session: WorkoutSession, delta: number): void {
   const reachedTarget = session.changeReps(delta, Date.now());
   vibrate(reachedTarget ? HAPTIC_SIGNAL_MS : HAPTIC_TICK_MS);
+}
+
+/** More sets than this read better as "Set 3 of 10" alone. */
+const MAX_SET_DOTS: number = 8;
+
+function range(count: number): number[] {
+  const items: number[] = [];
+  for (let i = 0; i < count; i++) {
+    items.push(i);
+  }
+  return items;
 }
 
 /** W1c: which exercise, which set, which rep. */
@@ -14,59 +34,90 @@ export struct SetView {
   @Require @Param session: WorkoutSession;
   @Event onViewForm: () => void = () => {};
 
+  private isTimed(): boolean {
+    return this.session.exercise.unit === 'seconds';
+  }
+
+  /** Finished sets filled, the current one outlined in accent. */
   @Builder
-  stepButton(label: string, delta: number) {
-    Button(label, { type: ButtonType.Circle })
-      .width(MIN_TARGET)
-      .height(MIN_TARGET)
-      .fontSize(22)
-      .fontColor(Palette.TEXT)
-      .backgroundColor(Palette.SURFACE)
-      .onClick(() => adjustReps(this.session, delta));
+  setDots() {
+    Row({ space: 4 }) {
+      ForEach(
+        range(this.session.exercise.sets),
+        (index: number) => {
+          Circle({ width: 7, height: 7 })
+            .fill(index < this.session.setIndex ? Palette.ACCENT : Palette.BACKGROUND)
+            .stroke(index <= this.session.setIndex ? Palette.ACCENT : Palette.TRACK)
+            .strokeWidth(1.5);
+        },
+        (index: number) => `${index}`,
+      )
+    }
+    .accessibilityLevel('no');
   }
 
   build() {
     Column({ space: 6 }) {
-      Text(
-        `${this.session.exercise.name} · Set ${this.session.setIndex + 1}/${this.session.exercise.sets}`,
-      )
-        .width('72%')
-        .fontSize(Type.SMALL)
-        .fontColor(Palette.MUTED)
-        .textAlign(TextAlign.Center)
-        .maxLines(2)
-      Row({ space: 10 }) {
-        this.stepButton('−', this.session.exercise.unit === 'seconds' ? -5 : -1)
-        Text() {
-          Span(`${this.session.reps}`)
-            .fontSize(Type.BIG)
-            .fontWeight(FontWeight.Bold)
-          Span(
-            `/${this.session.exercise.reps}${this.session.exercise.unit === 'seconds' ? 's' : ''}`,
-          ).fontSize(Type.TITLE)
+      Column({ space: 3 }) {
+        Text(this.session.exercise.name)
+          .width('72%')
+          .fontSize(Type.HEADLINE)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(Palette.TEXT)
+          .textAlign(TextAlign.Center)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Row({ space: 6 }) {
+          Text(`Set ${this.session.setIndex + 1} of ${this.session.exercise.sets}`)
+            .fontSize(Type.CAPTION)
+            .fontWeight(FontWeight.Medium)
+            .fontFeature(TABULAR)
+            .fontColor(Palette.ACCENT)
+          if (this.session.exercise.sets <= MAX_SET_DOTS) {
+            this.setDots();
+          }
         }
-        .fontColor(Palette.TEXT)
-        .constraintSize({ minWidth: 72 })
-        .textAlign(TextAlign.Center)
-        this.stepButton('+', this.session.exercise.unit === 'seconds' ? 5 : 1)
       }
-      PillButton({
+      .accessibilityGroup(true)
+      Row({ space: 8 }) {
+        IconButton({
+          icon: $r('sys.symbol.minus'),
+          label: this.isTimed() ? 'Minus 5 seconds' : 'One less rep',
+          onTap: () => adjustReps(this.session, this.isTimed() ? -5 : -1),
+        })
+        Column() {
+          Text(`${this.session.reps}`)
+            .fontSize(Type.HERO)
+            .fontWeight(FontWeight.Bold)
+            .fontFeature(TABULAR)
+            .fontColor(Palette.TEXT)
+            .lineHeight(Type.HERO + 2)
+          Text(`of ${this.session.exercise.reps}${this.isTimed() ? ' s' : ' reps'}`)
+            .fontSize(Type.CAPTION)
+            .fontFeature(TABULAR)
+            .fontColor(Palette.MUTED)
+        }
+        .constraintSize({ minWidth: 76 })
+        .accessibilityGroup(true)
+        .accessibilityText(
+          `${this.session.reps} of ${this.session.exercise.reps} ${this.isTimed() ? 'seconds' : 'reps'}`,
+        )
+        IconButton({
+          icon: $r('sys.symbol.plus'),
+          label: this.isTimed() ? 'Plus 5 seconds' : 'One more rep',
+          onTap: () => adjustReps(this.session, this.isTimed() ? 5 : 1),
+        })
+      }
+      WatchButton({
         label: 'Done set',
-        primary: true,
-        pillWidth: 116,
+        kind: ButtonKind.PRIMARY,
+        icon: $r('sys.symbol.checkmark'),
         onTap: () => {
           vibrate(HAPTIC_SIGNAL_MS);
           this.session.doneSet(Date.now());
         },
       })
-      Text('View form')
-        .fontSize(Type.SMALL)
-        .fontColor(Palette.TEXT)
-        .decoration({ type: TextDecorationType.Underline, color: Palette.MUTED })
-        .padding({ left: 12, right: 12, top: 4, bottom: 4 })
-        .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-        .onClick(() => this.onViewForm())
-      SwipeHint()
+      LinkButton({ label: 'Form', icon: $r('sys.symbol.eye'), onTap: () => this.onViewForm() })
     }
     .width('100%')
     .height('100%')
@@ -74,10 +125,26 @@ export struct SetView {
   }
 }
 
-/** W2: rest countdown. */
+/**
+ * Rest replaces the set screen under the finger that tapped "Done set", so its
+ * buttons ignore taps this soon after appearing. A late or bounced touch must
+ * not skip the rest the wearer just earned.
+ */
+const REST_TAP_GUARD_MS: number = 600;
+
+/** W2: rest countdown on a ring that follows the round screen's edge. */
 @ComponentV2
 export struct RestView {
   @Require @Param session: WorkoutSession;
+  private shownAt: number = 0;
+
+  aboutToAppear(): void {
+    this.shownAt = Date.now();
+  }
+
+  private settled(): boolean {
+    return Date.now() - this.shownAt >= REST_TAP_GUARD_MS;
+  }
 
   /** Rest follows the previous set, which may belong to the previous exercise. */
   private restTotal(): number {
@@ -94,47 +161,68 @@ export struct RestView {
     // Set 1 after a rest means the previous exercise has just finished.
     return this.session.setIndex === 0
       ? this.session.exercise.name
-      : `Set ${this.session.setIndex + 1}/${this.session.exercise.sets}`;
+      : `Set ${this.session.setIndex + 1} of ${this.session.exercise.sets}`;
   }
 
   build() {
-    Column({ space: 8 }) {
-      Text(`Rest · next: ${this.next()}`)
-        .width('72%')
-        .fontSize(Type.SMALL)
-        .fontColor(Palette.MUTED)
-        .textAlign(TextAlign.Center)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-      Stack() {
-        Progress({
-          value: Math.min(this.session.restLeftMs / 1000, this.restTotal()),
-          total: this.restTotal(),
-          type: ProgressType.Ring,
-        })
-          .width(100)
-          .height(100)
-          .color(Palette.ACCENT)
-          .backgroundColor(Palette.TRACK)
-          .style({ strokeWidth: 7 })
-        Text(this.countdown())
-          .fontSize(30)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(Palette.TEXT)
+    Stack() {
+      Progress({
+        value: Math.min(this.session.restLeftMs / 1000, this.restTotal()),
+        total: this.restTotal(),
+        type: ProgressType.Ring,
+      })
+        .width('94%')
+        .aspectRatio(1)
+        .color(Palette.ACCENT)
+        .backgroundColor(Palette.SURFACE)
+        .style({ strokeWidth: 8 })
+        .accessibilityLevel('no')
+      Column({ space: 6 }) {
+        Column() {
+          Text('Rest')
+            .fontSize(Type.CAPTION)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(Palette.ACCENT)
+          Text(this.countdown())
+            .fontSize(Type.HERO)
+            .fontWeight(FontWeight.Bold)
+            .fontFeature(TABULAR)
+            .fontColor(Palette.TEXT)
+            .lineHeight(Type.HERO + 2)
+          Text(`Next: ${this.next()}`)
+            .width(140)
+            .fontSize(Type.CAPTION)
+            .fontColor(Palette.MUTED)
+            .textAlign(TextAlign.Center)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .accessibilityGroup(true)
+        Row({ space: 8 }) {
+          WatchButton({
+            label: 'Skip',
+            buttonWidth: 70,
+            onTap: () => {
+              if (this.settled()) {
+                this.session.skipRest(Date.now());
+              }
+            },
+          })
+          WatchButton({
+            label: '+15 s',
+            buttonWidth: 70,
+            onTap: () => {
+              if (this.settled()) {
+                this.session.extendRest(Date.now());
+              }
+            },
+          })
+        }
       }
-      Row({ space: 8 }) {
-        PillButton({ label: 'Skip', pillWidth: 68, onTap: () => this.session.skipRest(Date.now()) })
-        PillButton({
-          label: '+15 s',
-          pillWidth: 68,
-          onTap: () => this.session.extendRest(Date.now()),
-        })
-      }
-      SwipeHint()
     }
     .width('100%')
     .height('100%')
-    .justifyContent(FlexAlign.Center);
+    .alignContent(Alignment.Center);
   }
 }
 
@@ -147,25 +235,42 @@ export struct ControlsView {
   @Event onEnd: () => void = () => {};
 
   build() {
-    Column({ space: 10 }) {
-      SwipeHint({
-        up: true,
-        label: `Paused · ${this.session.plan.name} ${this.session.exercisesDone}/${this.session.plan.exercises.length}`,
-      })
-      PillButton({
+    Column({ space: 8 }) {
+      Column({ space: 2 }) {
+        Text('Paused')
+          .fontSize(Type.HEADLINE)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(Palette.TEXT)
+        Text(
+          `${this.session.plan.name} · ${this.session.exercisesDone}/${this.session.plan.exercises.length}`,
+        )
+          .width('70%')
+          .fontSize(Type.CAPTION)
+          .fontFeature(TABULAR)
+          .fontColor(Palette.MUTED)
+          .textAlign(TextAlign.Center)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .accessibilityGroup(true)
+      .margin({ bottom: 2 })
+      WatchButton({
         label: 'Continue',
-        primary: true,
-        pillWidth: 130,
+        kind: ButtonKind.PRIMARY,
+        icon: $r('sys.symbol.play_fill'),
         onTap: () => this.onContinue(),
       })
-      PillButton({ label: 'Skip exercise', pillWidth: 130, onTap: () => this.onSkipExercise() })
-      Text('End workout')
-        .fontSize(12)
-        .fontColor(Palette.MUTED)
-        .decoration({ type: TextDecorationType.Underline, color: Palette.MUTED })
-        .padding({ left: 12, right: 12, top: 6, bottom: 6 })
-        .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-        .onClick(() => this.onEnd())
+      WatchButton({
+        label: 'Skip exercise',
+        icon: $r('sys.symbol.forward_end_fill'),
+        onTap: () => this.onSkipExercise(),
+      })
+      WatchButton({
+        label: 'End workout',
+        kind: ButtonKind.DESTRUCTIVE,
+        icon: $r('sys.symbol.xmark'),
+        onTap: () => this.onEnd(),
+      })
     }
     .width('100%')
     .height('100%')
@@ -173,33 +278,48 @@ export struct ControlsView {
   }
 }
 
-/** Two-button question: "End workout?" and "Still training?". */
+/** Two-answer question: "End workout?", "Still training?", "Pair phone?". */
 @ComponentV2
 export struct ConfirmView {
   @Require @Param title: string;
   @Require @Param message: string;
   @Require @Param keepLabel: string;
   @Param endLabel: string = 'End';
+  /** The second answer throws something away. */
+  @Param endDestructive: boolean = false;
+  @Param icon: Resource | undefined = undefined;
   @Event onKeep: () => void = () => {};
   @Event onEnd: () => void = () => {};
 
   build() {
-    Column({ space: 10 }) {
-      Text(this.title)
-        .fontSize(Type.TITLE)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(Palette.TEXT)
-      Text(this.message)
-        .fontSize(Type.SMALL)
-        .fontColor(Palette.MUTED)
-        .textAlign(TextAlign.Center)
-      PillButton({
+    Column({ space: 8 }) {
+      if (this.icon !== undefined) {
+        SymbolBadge({ icon: this.icon, diameter: 40 });
+      }
+      Column({ space: 3 }) {
+        Text(this.title)
+          .fontSize(Type.TITLE)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(Palette.TEXT)
+          .textAlign(TextAlign.Center)
+        Text(this.message)
+          .width('72%')
+          .fontSize(Type.CAPTION)
+          .fontColor(Palette.MUTED)
+          .textAlign(TextAlign.Center)
+      }
+      .accessibilityGroup(true)
+      .margin({ bottom: 2 })
+      WatchButton({
         label: this.keepLabel,
-        primary: true,
-        pillWidth: 130,
+        kind: ButtonKind.PRIMARY,
         onTap: () => this.onKeep(),
       })
-      PillButton({ label: this.endLabel, onTap: () => this.onEnd() })
+      WatchButton({
+        label: this.endLabel,
+        kind: this.endDestructive ? ButtonKind.DESTRUCTIVE : ButtonKind.SECONDARY,
+        onTap: () => this.onEnd(),
+      })
     }
     .width('100%')
     .height('100%')
@@ -215,32 +335,51 @@ export struct SummaryView {
   @Event onDone: () => void = () => {};
   @Event onContinue: () => void = () => {};
 
+  private early(): boolean {
+    return this.session.status === WorkoutStatus.ENDED_EARLY;
+  }
+
   @Builder
   stat(value: number, label: string) {
     Column() {
       Text(`${value}`)
-        .fontSize(26)
+        .fontSize(Type.METRIC)
         .fontWeight(FontWeight.Bold)
+        .fontFeature(TABULAR)
         .fontColor(Palette.TEXT)
       Text(label)
-        .fontSize(12)
+        .fontSize(Type.CAPTION)
         .fontColor(Palette.MUTED)
-    };
+    }
+    .constraintSize({ minWidth: 44 })
+    .accessibilityGroup(true)
+    .accessibilityText(`${value} ${label}`);
   }
 
   build() {
-    Column({ space: 10 }) {
-      Text(
-        this.session.status === WorkoutStatus.ENDED_EARLY
-          ? `Ended early · ${this.session.exercisesDone}/${this.session.plan.exercises.length} exercises`
-          : 'Workout done',
-      )
-        .width('72%')
-        .fontSize(15)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(Palette.TEXT)
-        .textAlign(TextAlign.Center)
-      Row({ space: 18 }) {
+    Column({ space: 6 }) {
+      Row({ space: 6 }) {
+        if (this.early()) {
+          SymbolGlyph($r('sys.symbol.stopwatch'))
+            .fontSize(Type.HEADLINE)
+            .fontColor([Palette.ACCENT]);
+        } else {
+          SymbolGlyph($r('sys.symbol.checkmark_circle_fill'))
+            .fontSize(Type.HEADLINE)
+            .fontColor([Palette.ACCENT]);
+        }
+        Text(
+          this.early()
+            ? `Ended · ${this.session.exercisesDone}/${this.session.plan.exercises.length}`
+            : 'Workout done',
+        )
+          .fontSize(Type.HEADLINE)
+          .fontWeight(FontWeight.Bold)
+          .fontFeature(TABULAR)
+          .fontColor(Palette.TEXT)
+      }
+      .accessibilityGroup(true)
+      Row({ space: 16 }) {
         this.stat(this.session.records.length, 'sets')
         this.stat(this.session.totalReps, 'reps')
         this.stat(Math.round(this.session.activeMs / 60000), 'min')
@@ -248,18 +387,12 @@ export struct SummaryView {
       // The phone saves workouts to the account; the watch cannot.
       Text(this.connected ? 'Save it on your phone' : 'Open phone to save')
         .width('72%')
-        .fontSize(12)
+        .fontSize(Type.CAPTION)
         .fontColor(Palette.MUTED)
         .textAlign(TextAlign.Center)
-      PillButton({ label: 'Done', primary: true, onTap: () => this.onDone() })
-      if (this.session.status === WorkoutStatus.ENDED_EARLY) {
-        Text('Continue')
-          .fontSize(Type.SMALL)
-          .fontColor(Palette.TEXT)
-          .decoration({ type: TextDecorationType.Underline, color: Palette.MUTED })
-          .padding({ left: 12, right: 12, top: 2, bottom: 2 })
-          .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-          .onClick(() => this.onContinue());
+      WatchButton({ label: 'Done', kind: ButtonKind.PRIMARY, onTap: () => this.onDone() })
+      if (this.early()) {
+        LinkButton({ label: 'Continue', onTap: () => this.onContinue() });
       }
     }
     .width('100%')
