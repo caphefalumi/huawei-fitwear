@@ -175,9 +175,8 @@ export struct QuickLogView {
             ForEach(
               this.day.favorites,
               (food: FavoriteMeal, index: number) => {
-                Circle({ width: 5, height: 5 }).fill(
-                  index === this.favoriteIndex ? Palette.TEXT : Palette.TRACK,
-                );
+                Circle({ width: 5, height: 5 })
+                  .fill(index === this.favoriteIndex ? Palette.TEXT : Palette.TRACK);
               },
               (food: FavoriteMeal) => food.ref,
             )
