@@ -598,10 +598,14 @@ test("follows the reps the watch counts, and keeps a count changed here", async 
   expect(screen.getByText("HUAWEI WATCH 5")).toBeTruthy()
   const live = { id: "from-watch", pos: 0, reps: 0, auto: true }
 
-  // Every set starts at 0 on the watch, so the target stays until it counts a rep.
-  await act(async () => useWatchStore.setState({ live }))
+  // Every set starts at 0 on the watch: the target stays unless it counts from the wrist.
+  await act(async () => useWatchStore.setState({ live: { ...live, auto: false } }))
   expect(screen.getByLabelText(`${first.reps} reps`)).toBeTruthy()
+  expect(screen.queryByText("Live from watch")).toBeNull()
+  await act(async () => useWatchStore.setState({ live }))
+  expect(screen.getByLabelText("0 reps")).toBeTruthy()
   expect(screen.getByText("Live from watch")).toBeTruthy()
+  expect(screen.getByText("Start moving. Your watch counts each rep.")).toBeTruthy()
 
   await act(async () => useWatchStore.setState({ live: { ...live, reps: 3 } }))
   expect(screen.getByLabelText("3 reps")).toBeTruthy()

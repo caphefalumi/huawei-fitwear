@@ -523,14 +523,17 @@ function ActiveSession({
   const setKey = `${saveId}:${position}`
   const liveHere =
     watch.connected && phase === "set" && live && `${live.id}:${live.pos}` === setKey ? live : null
-  /** The set the watch has counted a rep in. Until then the target stays, as every set starts at 0 there. */
+  /**
+   * The set whose count comes from the watch. Every set starts at 0 there, so the target stays here
+   * until the watch counts from the wrist or its count changes.
+   */
   const [countedSet, setCountedSet] = useState("")
   /** The set whose count was changed here; the watch's count is offered, not imposed, from then on. */
   const [editedSet, setEditedSet] = useState("")
   const bump = useSharedValue(1)
   const bumpStyle = useAnimatedStyle(() => ({ transform: [{ scale: bump.get() }] }))
   const followWatch = useEffectEvent(() => {
-    if (!liveHere || (liveHere.reps === 0 && countedSet !== setKey)) return
+    if (!liveHere || (liveHere.reps === 0 && !liveHere.auto && countedSet !== setKey)) return
     setCountedSet(setKey)
     if (editedSet === setKey || liveHere.reps === draft) return
     setDraft(liveHere.reps)
@@ -966,7 +969,7 @@ function ActiveSession({
             label={seconds ? "Fewer seconds" : "Fewer reps"}
             onPress={() => changeDraft(-step)}
           />
-          <ProgressRing size={ringSize} stroke={12} progress={repProgress}>
+          <ProgressRing size={ringSize} stroke={8} progress={repProgress}>
             <Animated.Text
               style={[styles.countNumber, bumpStyle]}
               accessibilityLabel={unitLabel(exercise, draft)}
@@ -985,20 +988,28 @@ function ActiveSession({
             onPress={() => changeDraft(step)}
           />
         </View>
-        {followingWatch ? (
-          <Text style={styles.countCaption}>
-            {watchCount.auto ? "Counted from your wrist" : "Changed on your watch"}
-          </Text>
-        ) : watchCount ? (
-          <Pressable
-            style={styles.useWatch}
-            accessibilityLabel={`Use the watch's count, ${unitLabel(exercise, watchCount.reps)}`}
-            onPress={takeWatchCount}
-          >
-            <Text style={styles.useWatchLabel}>Use watch count · {watchCount.reps}</Text>
-          </Pressable>
-        ) : liveHere?.auto ? (
-          <Text style={styles.countCaption}>Your watch counts each rep as you move.</Text>
+        {/* Held open while the watch is connected, so the cards below stay put when counting starts. */}
+        {watch.connected ? (
+          <View style={styles.captionRow}>
+            {followingWatch ? (
+              <Text style={styles.countCaption}>
+                {!watchCount.auto
+                  ? "Changed on your watch"
+                  : watchCount.reps
+                    ? "Counted from your wrist"
+                    : "Start moving. Your watch counts each rep."}
+              </Text>
+            ) : watchCount ? (
+              <Pressable
+                style={styles.useWatch}
+                hitSlop={12}
+                accessibilityLabel={`Use the watch's count, ${unitLabel(exercise, watchCount.reps)}`}
+                onPress={takeWatchCount}
+              >
+                <Text style={styles.useWatchLabel}>Use watch count · {watchCount.reps}</Text>
+              </Pressable>
+            ) : null}
+          </View>
         ) : null}
       </Card>
 
@@ -1036,7 +1047,7 @@ function ActiveSession({
   const restView = (
     <>
       <View style={styles.restHero}>
-        <ProgressRing size={Math.min(248, width - 112)} stroke={10} progress={restProgress}>
+        <ProgressRing size={Math.min(248, width - 112)} stroke={8} progress={restProgress}>
           <Text style={styles.restLabel}>Rest</Text>
           <Text style={styles.restClock} accessibilityLabel={`Rest, ${formatClock(restLeft)} left`}>
             {formatClock(restLeft)}
@@ -1234,15 +1245,21 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
     color: C.textMuted,
   },
+  captionRow: {
+    minHeight: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   countCaption: {
     fontSize: 13,
+    lineHeight: 20,
     color: C.textMuted,
     textAlign: "center",
   },
   useWatch: {
-    alignSelf: "center",
-    minHeight: 44,
-    paddingHorizontal: 12,
+    minWidth: 0,
+    minHeight: 20,
+    paddingHorizontal: 8,
   },
   useWatchLabel: {
     fontSize: 13,

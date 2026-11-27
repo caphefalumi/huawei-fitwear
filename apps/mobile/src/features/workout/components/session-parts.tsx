@@ -91,7 +91,8 @@ export function ProgressRing({
   }))
   return (
     <View style={{ width: size, height: size }}>
-      <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
+      {/* Turned on its view, not with SVG props, which web passes to the DOM: the arc starts at 12 o'clock. */}
+      <Svg width={size} height={size} style={[StyleSheet.absoluteFill, styles.fromTop]}>
         <Circle
           cx={size / 2}
           cy={size / 2}
@@ -109,8 +110,6 @@ export function ProgressRing({
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={length}
-          rotation="-90"
-          origin={`${size / 2}, ${size / 2}`}
           animatedProps={arc}
         />
       </Svg>
@@ -279,6 +278,9 @@ const styles = StyleSheet.create({
   },
   roundPlain: {
     backgroundColor: "transparent",
+  },
+  fromTop: {
+    transform: [{ rotate: "-90deg" }],
   },
   ringCenter: {
     position: "absolute",
