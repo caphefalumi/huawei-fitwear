@@ -175,6 +175,8 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     if (apiToken) config.headers.set("Authorization", `Bearer ${apiToken}`)
+    ;(config as { e2eStart?: number }).e2eStart = Date.now()
+    console.log("[E2EDBG] request", config.method, config.url)
     return config
   },
   undefined,
@@ -201,7 +203,22 @@ function retryAfterSeconds(details: unknown, header: unknown): number | undefine
     : undefined
 }
 
+apiClient.interceptors.response.use((response) => {
+  const start = (response.config as { e2eStart?: number }).e2eStart ?? Date.now()
+  console.log("[E2EDBG] response", response.config.url, response.status, Date.now() - start)
+  return response
+}, undefined)
 apiClient.interceptors.response.use(undefined, (cause: unknown) => {
+  if (axios.isAxiosError(cause)) {
+    const start = (cause.config as { e2eStart?: number } | undefined)?.e2eStart ?? Date.now()
+    console.log(
+      "[E2EDBG] failure",
+      cause.config?.url,
+      cause.code,
+      cause.message,
+      Date.now() - start,
+    )
+  }
   // Aborts are not connection failures and must remain recognizable to Query.
   if (axios.isCancel(cause)) return Promise.reject(cause)
   if (!axios.isAxiosError(cause)) return Promise.reject(cause)

@@ -164,6 +164,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const setCloudAvailable = useCallback((available: boolean) => {
     cloudAvailable.current = available
+    console.log("[E2EDBG] cloud", available)
     if (Platform.OS === "web") return
     pauseAccountRequests(!available)
     onlineManager.setOnline(available)
@@ -238,6 +239,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
     function scheduleRetry() {
       if (!active || retryTimer || reachable.current === false) return
+      console.log("[E2EDBG] retry scheduled", retryDelay)
       retryTimer = setTimeout(() => {
         retryTimer = null
         if (active && !cloudAvailable.current && reachable.current !== false) void validate()
@@ -386,6 +388,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     function updateNetwork(state: NetworkState) {
       const wasReachable = reachable.current
       const available = state.isConnected !== false && state.isInternetReachable !== false
+      console.log("[E2EDBG] network", state.type, available, Boolean(validation))
       reachable.current = available
       if (!available) {
         cancelRetry()
