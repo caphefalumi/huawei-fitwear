@@ -61,8 +61,62 @@ on pull requests: the Auto-format workflow formats `main` after each merge. Huaw
 The app opens on `features/home/HomePage.ets`, which covers wireframe screens
 W1a–W1e and W2–W4. The workout plan comes from the paired phone; debug builds
 start with a sample plan and sample food (`features/common/SampleData.ets`) so they
-can be tried alone. Release builds show only what the phone sends. Reps are entered
-with −/+ or the crown (no IMU counting yet).
+can be tried alone. Release builds show only what the phone sends. Reps are counted
+from the wrist (see [Rep counting](#rep-counting)) and can be corrected with −/+ or
+the crown.
+
+## Rep counting
+
+During a set of reps, the watch counts them with IMU-RepNet, a model trained on
+wrist IMU data (checkpoint `repnet-seed43` of the `imu-repnet-v1` bundle). The set
+screen shows `· auto` while it counts. Timed sets, rest, pauses and the form screen
+do not count.
+
+- `features/reps/AutoReps.ets` samples the accelerometer (m/s², with gravity) and
+  gyroscope (rad/s) at 100 Hz while a set is on screen, and starts from zero at each
+  new set or after a pause.
+- `ImuResampler.ets` puts both sensors on one 10 ms grid by their timestamps. If
+  either sensor is silent for more than 0.5 s, it starts over.
+- `RepCounter.ets` is a line-by-line port of the bundle's `reference_counter.py`.
+  Every 0.5 s, it runs the model on the newest 12.8 s and averages each 0.1 s step's
+  periodicity × rate over every window. The count is `floor(0.1 · Σ p·r + 0.7)`.
+- Counted reps are added to the set, so −/+ and the crown still correct it. Reaching
+  the target vibrates once.
+- `RepNet.ets` runs `resources/rawfile/repnet/imu_repnet.ms` on MindSpore Lite Kit
+  (CPU, fp32). If the model cannot load or run, reps stay manual.
+
+The `.ms` file is the bundle's `imu_repnet.onnx` (SHA-256 `fe8f1f09…f35b`) converted
+with the MindSpore Lite 2.10.0 converter named in the
+[OpenHarmony conversion guide](https://gitcode.com/openharmony/docs/blob/master/en/application-dev/ai/mindspore/mindspore-lite-converter-guidelines.md).
+It runs on Linux x86-64 (WSL works):
+
+```bash
+curl -LO https://ms-release.obs.cn-north-4.myhuaweicloud.com/2.10.0/MindSporeLite/lite/release/linux/x86_64/mindspore-lite-2.10.0-linux-x64.tar.gz
+echo "6c9bd48171f8581e9e264a805a9f3839001752451828bafcf3a6212dbc7462bd  mindspore-lite-2.10.0-linux-x64.tar.gz" | sha256sum -c
+tar -xzf mindspore-lite-2.10.0-linux-x64.tar.gz
+export LD_LIBRARY_PATH=$PWD/mindspore-lite-2.10.0-linux-x64/tools/converter/lib:$LD_LIBRARY_PATH
+./mindspore-lite-2.10.0-linux-x64/tools/converter/converter/converter_lite \
+  --fmk=ONNX --modelFile=imu_repnet.onnx --outputFile=imu_repnet
+cp imu_repnet.ms <repo>/apps/watch/entry/src/main/resources/rawfile/repnet/
+```
+
+A retrained model brings new constants (`theta`, `offset`, floors) in its
+`imu_repnet.json`. Copy them into `RepCounter.ets` and copy its test vectors into
+`src/ohosTest/resources/rawfile/repnet/`.
+
+Checks:
+
+- Local unit tests (`src/test/RepCounter.test.ets`) compare preprocessing and counting
+  with values from the reference algorithm, and test the resampler.
+- The device test (`src/ohosTest/ets/test/RepNet.test.ets`) runs the shipped model on
+  MindSpore Lite. It checks the bundle's 4 test windows (within 1e-4) and its squat
+  set, which must match all 34 counts after each 0.5 s chunk and end at 10.
+
+Limits from the model's handout: it was trained only on MM-Fit (10 exercises, mostly
+10-rep sets), so accuracy on other exercises is unmeasured. Alternating-arm
+exercises count only the watch arm's reps. The first rep shows about 1 s into a
+set. Counting with the screen off, and battery use at 100 Hz, still need testing on
+a physical watch.
 
 ## Unfinished workouts
 
@@ -118,6 +172,7 @@ the phone's nutrition figures and unsent quick logs survive an app restart
 - Replace the sample food data with data synced from the phone.
 - Test phone sync with a physical watch and phone.
 - Test crown, vibration, back gesture and battery use on a physical watch.
+- Test rep counting on a physical watch: counts per exercise, screen off, and battery.
 
 ## Wearable Design Considerations
 
