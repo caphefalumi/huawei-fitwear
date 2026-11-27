@@ -1,4 +1,4 @@
-import { Palette, SwipeHint, Type } from '../common/Ui';
+import { Palette, TABULAR, Type } from '../common/Ui';
 import { FoodDay } from '../quicklog/FoodDay';
 
 const WEEKDAYS: string[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -28,7 +28,7 @@ function formatDate(now: number): string {
   return `${WEEKDAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}`;
 }
 
-/** W1a: time first, then kcal left and macro bars. */
+/** W1a: time first, then the phone link, kcal left and macro bars. */
 @ComponentV2
 export struct ClockView {
   @Require @Param now: number;
@@ -42,47 +42,66 @@ export struct ClockView {
 
   @Builder
   macroBar(label: string, eaten: number, target: number) {
-    Row({ space: 4 }) {
+    Row({ space: 6 }) {
       Text(label)
-        .width(34)
-        .fontSize(12)
+        .width(30)
+        .fontSize(Type.CAPTION)
         .fontColor(Palette.MUTED)
-      Progress({ value: Math.min(eaten, target), total: target, type: ProgressType.Linear })
-        .width(52)
+      Progress({ value: Math.min(eaten, target), total: Math.max(target, 1), type: ProgressType.Linear })
+        .width(54)
         .color(Palette.ACCENT)
         .backgroundColor(Palette.TRACK)
-        .style({ strokeWidth: 6 })
-    };
+        .style({ strokeWidth: 5, strokeRadius: 3 })
+    }
+    .accessibilityGroup(true)
+    .accessibilityText(`${label} ${eaten} of ${target} grams`);
+  }
+
+  /** Phone link as a small capsule; tapping it looks for the phone again. */
+  @Builder
+  phoneChip() {
+    Row({ space: 6 }) {
+      if (this.searching) {
+        LoadingProgress().width(14).height(14).color(Palette.MUTED);
+      } else {
+        SymbolGlyph($r('sys.symbol.bluetooth'))
+          .fontSize(13)
+          .fontColor([this.connected ? Palette.ACCENT : Palette.MUTED]);
+      }
+      Text(this.phoneLabel)
+        .constraintSize({ maxWidth: 104 })
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .fontSize(Type.CAPTION)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(this.connected ? Palette.TEXT : Palette.MUTED)
+    }
+    .height(28)
+    .padding({ left: 10, right: 12 })
+    .borderRadius(14)
+    .backgroundColor(Palette.SURFACE)
+    .responseRegion({ x: 0, y: -10, width: '100%', height: 48 })
+    .accessibilityGroup(true)
+    .accessibilityText(`Phone, ${this.phoneLabel}`)
+    .onClick(() => this.onConnect());
   }
 
   build() {
-    Column({ space: 8 }) {
-      SwipeHint({ up: true, label: 'Quick log' })
+    Column({ space: 6 }) {
       Column() {
-        Row({ space: 5 }) {
-          Text(formatDate(this.now))
-            .fontSize(Type.SMALL)
-            .fontColor(Palette.MUTED)
-          if (this.searching) {
-            LoadingProgress().width(14).height(14).color(Palette.ACCENT);
-          } else {
-            Circle({ width: 7, height: 7 }).fill(this.connected ? Palette.ACCENT : Palette.TRACK);
-          }
-          Text(this.phoneLabel)
-            .constraintSize({ maxWidth: 96 })
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .fontSize(12)
-            .fontColor(this.connected ? Palette.TEXT : Palette.MUTED)
-        }
-        .responseRegion({ x: 0, y: -12, width: '100%', height: 44 })
-        .onClick(() => this.onConnect())
+        Text(formatDate(this.now))
+          .fontSize(Type.CAPTION)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(Palette.ACCENT)
         Text(formatTime(this.now))
-          .fontSize(Type.BIG)
+          .fontSize(Type.HERO)
           .fontWeight(FontWeight.Bold)
+          .fontFeature(TABULAR)
           .fontColor(Palette.TEXT)
+          .lineHeight(Type.HERO + 4)
       }// Hidden developer entry to the IMU sensor page.
       .gesture(LongPressGesture({ duration: 800 }).onAction(() => this.onOpenDemos()))
+      this.phoneChip()
       if (!this.day.hasData) {
         this.note("Open the phone app to see today's food");
       } else if (this.day.kcalTarget === 0) {
@@ -100,7 +119,8 @@ export struct ClockView {
   note(message: string) {
     Text(message)
       .width('70%')
-      .fontSize(Type.SMALL)
+      .margin({ top: 4 })
+      .fontSize(Type.CAPTION)
       .fontColor(Palette.MUTED)
       .textAlign(TextAlign.Center);
   }
@@ -116,30 +136,34 @@ export struct ClockView {
             total: this.day.kcalTarget,
             type: ProgressType.Ring,
           })
-            .width(78)
-            .height(78)
+            .width(70)
+            .height(70)
             .color(Palette.ACCENT)
             .backgroundColor(Palette.TRACK)
             .style({ strokeWidth: 7 })
           Column() {
             Text(`${Math.abs(this.day.kcalTarget - this.day.kcalEaten)}`)
-              .fontSize(16)
+              .fontSize(Type.HEADLINE)
               .fontWeight(FontWeight.Bold)
+              .fontFeature(TABULAR)
               .fontColor(Palette.TEXT)
             Text(this.day.kcalEaten > this.day.kcalTarget ? 'kcal over' : 'kcal left')
-              .fontSize(12)
+              .fontSize(11)
               .fontColor(Palette.MUTED)
           }
         }
-        Column({ space: 6 }) {
+        .accessibilityGroup(true)
+        Column({ space: 7 }) {
           this.macroBar('Pro', this.day.eaten.protein, this.day.target.protein)
           this.macroBar('Carb', this.day.eaten.carbs, this.day.target.carbs)
           this.macroBar('Fat', this.day.eaten.fat, this.day.target.fat)
         }
       }
       Text(`${Math.max(0, this.day.target.protein - this.day.eaten.protein)} g protein left`)
-        .fontSize(12)
-        .fontColor(Palette.TEXT)
-    };
+        .fontSize(Type.CAPTION)
+        .fontFeature(TABULAR)
+        .fontColor(Palette.MUTED)
+    }
+    .margin({ top: 4 });
   }
 }

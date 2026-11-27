@@ -1,9 +1,9 @@
 import { formatTime } from '../home/ClockView';
-import { Palette, PillButton, SwipeHint, Type } from '../common/Ui';
+import { ButtonKind, Palette, SymbolBadge, TABULAR, Type, WatchButton } from '../common/Ui';
 import { WorkoutPlan } from '../link/SyncProtocol';
 import { REST_DAY_NAME } from './WorkoutSession';
 
-/** W1b: a single question, answered with one tap. */
+/** W1b: today's workout, started with one tap. */
 @ComponentV2
 export struct StartView {
   @Require @Param plan: WorkoutPlan;
@@ -11,29 +11,58 @@ export struct StartView {
   @Event onStart: () => void = () => {};
 
   @Builder
-  message(text: string) {
-    Text(text).width('70%').fontSize(16).fontColor(Palette.TEXT).textAlign(TextAlign.Center);
+  message(icon: Resource, title: string, detail: string) {
+    SymbolBadge({ icon: icon });
+    Text(title)
+      .fontSize(Type.HEADLINE)
+      .fontWeight(FontWeight.Bold)
+      .fontColor(Palette.TEXT)
+      .textAlign(TextAlign.Center);
+    Text(detail)
+      .width('70%')
+      .fontSize(Type.CAPTION)
+      .fontColor(Palette.MUTED)
+      .textAlign(TextAlign.Center);
   }
 
   build() {
-    Column({ space: 10 }) {
-      SwipeHint({ up: true, label: formatTime(this.now) })
+    Column({ space: 8 }) {
+      Text(formatTime(this.now))
+        .fontSize(Type.CAPTION)
+        .fontWeight(FontWeight.Medium)
+        .fontFeature(TABULAR)
+        .fontColor(Palette.MUTED)
       if (this.plan.name === REST_DAY_NAME) {
-        this.message('Rest day');
+        this.message($r('sys.symbol.figure_walk'), 'Rest day', 'Recovery is part of the plan');
       } else if (this.plan.exercises.length === 0) {
-        this.message('Open VoocHealth on your phone');
+        this.message($r('sys.symbol.phone_fill'), 'No workout yet', 'Open VoocHealth on your phone');
       } else {
-        Text('Start workout?')
-          .fontSize(Type.TITLE)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(Palette.TEXT);
-        Text(
-          `${this.plan.name} · ${this.plan.exercises.length} exercises\nabout ${this.plan.minutes} min`,
-        )
-          .fontSize(Type.SMALL)
-          .fontColor(Palette.MUTED)
-          .textAlign(TextAlign.Center);
-        PillButton({ label: 'Start', primary: true, onTap: () => this.onStart() });
+        SymbolBadge({ icon: $r('sys.symbol.dumbbell') });
+        Column({ space: 2 }) {
+          Text('Today')
+            .fontSize(Type.CAPTION)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(Palette.ACCENT);
+          Text(this.plan.name)
+            .width('72%')
+            .fontSize(Type.TITLE)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(Palette.TEXT)
+            .textAlign(TextAlign.Center)
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
+          Text(`${this.plan.exercises.length} exercises · ${this.plan.minutes} min`)
+            .fontSize(Type.CAPTION)
+            .fontFeature(TABULAR)
+            .fontColor(Palette.MUTED);
+        }
+        .accessibilityGroup(true);
+        WatchButton({
+          label: 'Start',
+          kind: ButtonKind.PRIMARY,
+          icon: $r('sys.symbol.play_fill'),
+          onTap: () => this.onStart(),
+        });
       }
     }
     .width('100%')
