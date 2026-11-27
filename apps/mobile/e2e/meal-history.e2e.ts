@@ -10,6 +10,7 @@ import {
   isoDay,
   launchClean,
   openSignIn,
+  pause,
   relaunch,
   scrollTo,
   signIn,
@@ -124,7 +125,7 @@ test(
     // The app sends the DELETE only when the Undo toast closes and keeps the row
     // hidden meanwhile, so nothing on screen marks the request as done. Give it
     // time to finish; a restart right away would kill it in flight.
-    await new Promise((resolve) => setTimeout(resolve, 5000))
+    await pause(5000)
     await relaunch(ui)
     await byId(screen, "tab-meals").tap()
     await waitVisible(byText(screen, "Meals history ›"), 20000)

@@ -121,6 +121,10 @@ export async function setOffline({ device, screen }: Pick<Ui, "device" | "screen
     await device.setAirplaneMode(true)
     // A modal screen can cover the root banner, so its absence is no error.
     await maybeVisible(banner, 10000)
+    // Stay offline a few seconds, as Maestro's slower steps did. When airplane
+    // mode went off again about a second later, the app missed the reconnect
+    // and kept offline mode although the device was online again.
+    await pause(5000)
     return
   }
   // After a short offline spell the app can stay in offline mode although the
@@ -135,6 +139,11 @@ export async function setOffline({ device, screen }: Pick<Ui, "device" | "screen
     await device.openApp(APP_ID)
   }
   await bannerGone(banner, 15000)
+}
+
+/** A fixed wait, only where the app gives nothing on screen to wait for. */
+export function pause(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 async function goOnline(device: Device) {
