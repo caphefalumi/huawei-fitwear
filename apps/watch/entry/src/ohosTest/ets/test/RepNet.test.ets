@@ -53,7 +53,10 @@ export default function repNetTest() {
           });
         });
         const started = Date.now();
-        const output: RepNetOutput = await net.run(window);
+        const running = net.run(window);
+        // Time the call holds the calling (UI) thread before handing the work off.
+        const blocking = Date.now() - started;
+        const output: RepNetOutput = await running;
         let worst = 0;
         for (let k = 0; k < 128; k++) {
           worst = Math.max(
@@ -65,10 +68,11 @@ export default function repNetTest() {
         hilog.info(
           0x0000,
           'RepNetTest',
-          'case %{public}d: max diff %{public}s, %{public}d ms',
+          'case %{public}d: max diff %{public}s, %{public}d ms, %{public}d ms on the calling thread',
           i,
           worst.toExponential(2),
           Date.now() - started,
+          blocking,
         );
         expect(worst).assertLessOrEqual(1e-4);
       }
@@ -83,7 +87,8 @@ export default function repNetTest() {
       const counts: number[] = [];
       for (let i = 0; i < stream.chunks.length; i++) {
         counter.push(stream.chunks[i]);
-        counts.push(await counter.update());
+        await counter.update();
+        counts.push(counter.referenceCount);
       }
       hilog.info(
         0x0000,
@@ -95,6 +100,47 @@ export default function repNetTest() {
       expect(counts.length).assertEqual(34);
       expect(JSON.stringify(counts)).assertEqual(JSON.stringify(stream.counts));
       expect(counts[33]).assertEqual(10);
+    });
+
+    // Expected counts come from the display rules run on the bundle's ONNX model in Python.
+    it('shows the squat set a second late, then holds 10 through 10 s of sway', 0, async () => {
+      const net = await loadNet();
+      const stream = JSON.parse(await readVectors('repnet/stream_vectors.json')) as StreamVectors;
+      const counter = new RepCounter({
+        run: (window: Float32Array): Promise<RepNetOutput> => net.run(window),
+      });
+      const shown: number[] = [];
+      for (let i = 0; i < stream.chunks.length; i++) {
+        counter.push(stream.chunks[i]);
+        shown.push(await counter.update());
+      }
+      // The wrist rests at the last pose with a slow 0.3 Hz sway, which the model alone counts.
+      const lastChunk = stream.chunks[stream.chunks.length - 1];
+      const last = lastChunk[lastChunk.length - 1];
+      for (let hop = 0; hop < 20; hop++) {
+        const chunk: number[][] = [];
+        for (let k = 0; k < 50; k++) {
+          const t = (hop * 50 + k) / 100;
+          const s = Math.sin(2 * Math.PI * 0.3 * t);
+          const c = Math.cos(2 * Math.PI * 0.3 * t);
+          chunk.push([
+            last[0] + 0.1 * s,
+            last[1] + 0.05 * s,
+            last[2] + 0.02 * s,
+            last[3] + 0.02 * c,
+            last[4] + 0.02 * c,
+            last[5] + 0.02 * c,
+          ]);
+        }
+        counter.push(chunk);
+        shown.push(await counter.update());
+      }
+      hilog.info(0x0000, 'RepNetTest', 'shown %{public}s', JSON.stringify(shown));
+      const expected = [
+        0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 9,
+        9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+      ];
+      expect(JSON.stringify(shown)).assertEqual(JSON.stringify(expected));
     });
   });
 }

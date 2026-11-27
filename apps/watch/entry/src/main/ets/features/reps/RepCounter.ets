@@ -1,8 +1,15 @@
 /**
- * IMU-RepNet rep counter, ported line by line from the model bundle's
- * deploy/reference_counter.py (the specification of a port). Feed raw 100 Hz rows
- * [acc x, y, z in m/s² with gravity, gyro x, y, z in rad/s] and start a new counter,
- * or reset this one, at the start of every set.
+ * IMU-RepNet rep counter. Feed raw 100 Hz rows [acc x, y, z in m/s² with gravity,
+ * gyro x, y, z in rad/s] and start a new counter, or reset this one, at every set.
+ *
+ * `referenceCount` is the model bundle's deploy/reference_counter.py, ported line by line.
+ * It can go down: every newer window re-scores the last seconds, and once the wrist stops,
+ * those seconds score lower. `count`, the number to show, adds four rules on top:
+ * - it leaves out the newest second, which later windows still re-score;
+ * - it freezes when the bundle's end-of-set gate closes, and resumes when it reopens;
+ * - it never goes down;
+ * - stretches where the wrist barely moves add nothing (the model counts any rhythm,
+ *   however faint, as reps).
  */
 
 /** 5 raw samples make one input sample: 100 Hz to 20 Hz. */
@@ -19,6 +26,20 @@ const FLOOR_ACC: number = 0.2;
 const FLOOR_GYR: number = 0.05;
 const THETA: number = 0.0;
 const OFFSET: number = 0.7;
+// End-of-set gate (imu_repnet.json "gate"): mean periodicity of a window's newest 2 s.
+const GATE_TOKENS: number = 20;
+const GATE_ON: number = 0.8;
+/** on_thresh − off_margin. */
+const GATE_OFF: number = 0.6;
+/** A set ends 1 s before the last window that still found it going on. */
+const GATE_TAIL_TOKENS: number = 10;
+/** The newest second is left out of the shown count. */
+const DISPLAY_LAG_TOKENS: number = 10;
+/** A token counts only if the wrist moved in the 2 s ending with it. */
+const MOTION_SAMPLES: number = 40;
+/** Pooled std thresholds; reps measure about 2 m/s² and 0.2 rad/s, a still wrist under 0.15 and 0.02. */
+const MOTION_ACC: number = 0.4;
+const MOTION_GYR: number = 0.1;
 
 export interface RepNetOutput {
   /** Probability that each token is inside a set; the newest token is last. */
@@ -45,11 +66,22 @@ export class RepCounter {
   private sumP: number[] = [];
   private sumRate: number[] = [];
   private seen: number[] = [];
+  /** Per token: the wrist moved in the 2 s ending with it. */
+  private moving: boolean[] = [];
+  /** The set's first 2 s have arrived, so its first tokens are judged for good. */
+  private firstTokensJudged: boolean = false;
+  private gateOpen: boolean = false;
+  /** End token of the last window that found the set going on. */
+  private lastOn: number = 0;
+  /** The count held since the gate closed; -1 while counting. */
+  private frozen: number = -1;
   /** Changes on reset, so a window still running from before is dropped. */
   private generation: number = 0;
   private running: boolean = false;
-  /** The count to show. */
+  /** The count to show; it never goes down. */
   count: number = 0;
+  /** The bundle's reference count, for checks and logs. */
+  referenceCount: number = 0;
 
   constructor(model: RepModel) {
     this.model = model;
@@ -62,7 +94,13 @@ export class RepCounter {
     this.sumP = [];
     this.sumRate = [];
     this.seen = [];
+    this.moving = [];
+    this.firstTokensJudged = false;
+    this.gateOpen = false;
+    this.lastOn = 0;
+    this.frozen = -1;
     this.count = 0;
+    this.referenceCount = 0;
     this.generation++;
     this.running = false;
   }
@@ -80,7 +118,7 @@ export class RepCounter {
 
   /**
    * Runs one window ending at the newest whole token if a token arrived since the last
-   * run, then returns the count. Does nothing while a window is already running.
+   * run, then returns the count to show. Does nothing while a window is already running.
    */
   async update(): Promise<number> {
     const end = this.inputLength - (this.inputLength % SAMPLES_PER_TOKEN);
@@ -93,8 +131,10 @@ export class RepCounter {
     try {
       const output = await this.model.run(this.window(end));
       if (generation === this.generation) {
-        this.add(end / SAMPLES_PER_TOKEN, output);
-        this.count = Math.floor(this.realCount() + OFFSET);
+        const endToken = end / SAMPLES_PER_TOKEN;
+        this.add(endToken, output);
+        this.referenceCount = Math.floor(this.realCount() + OFFSET);
+        this.show(endToken, output.periodicity);
       }
     } finally {
       if (generation === this.generation) {
@@ -104,10 +144,43 @@ export class RepCounter {
     return this.count;
   }
 
-  /** The unrounded count, for logs. */
+  /** The unrounded reference count, for logs. */
   realCount(): number {
+    return this.density(this.seen.length, false);
+  }
+
+  /** Applies the display rules after a window ending at endToken. */
+  private show(endToken: number, periodicity: Float32Array): void {
+    this.judgeMotion();
+    let value = Math.floor(this.density(endToken - DISPLAY_LAG_TOKENS, true) + OFFSET);
+    let recent = 0;
+    for (let k = periodicity.length - GATE_TOKENS; k < periodicity.length; k++) {
+      recent += periodicity[k];
+    }
+    recent /= GATE_TOKENS;
+    if (!this.gateOpen && recent >= GATE_ON) {
+      this.gateOpen = true;
+      this.frozen = -1;
+    } else if (this.gateOpen && recent < GATE_OFF) {
+      this.gateOpen = false;
+      this.frozen = Math.floor(this.density(this.lastOn - GATE_TAIL_TOKENS, true) + OFFSET);
+    }
+    if (this.gateOpen) {
+      this.lastOn = endToken;
+    }
+    if (this.frozen >= 0) {
+      value = this.frozen;
+    }
+    this.count = Math.max(this.count, value);
+  }
+
+  /** Reps in tokens before `upto`: the sum of averaged periodicity × rate, in reps. */
+  private density(upto: number, movingOnly: boolean): number {
     let total = 0;
-    for (let token = 0; token < this.seen.length; token++) {
+    for (let token = 0; token < Math.min(upto, this.seen.length); token++) {
+      if (movingOnly && !this.moving[token]) {
+        continue;
+      }
       const n = Math.max(this.seen[token], 1);
       const p = this.sumP[token] / n;
       if (p >= THETA) {
@@ -115,6 +188,72 @@ export class RepCounter {
       }
     }
     return total * TOKEN_SECONDS;
+  }
+
+  /**
+   * Marks each token moving or still by the 2 s of input ending with it. Tokens in the
+   * set's first 2 s are judged on those first 2 s, again each time until all have arrived.
+   */
+  private judgeMotion(): void {
+    let first: boolean | undefined = undefined;
+    for (let token = 0; token < this.seen.length; token++) {
+      const end = (token + 1) * SAMPLES_PER_TOKEN;
+      const early = end < MOTION_SAMPLES;
+      if (token < this.moving.length && (!early || this.firstTokensJudged)) {
+        continue;
+      }
+      let moved: boolean;
+      if (early) {
+        if (first === undefined) {
+          first = this.hasMotion(0, Math.min(MOTION_SAMPLES, this.inputLength));
+        }
+        moved = first;
+      } else {
+        moved = this.hasMotion(end - MOTION_SAMPLES, end);
+      }
+      if (token < this.moving.length) {
+        this.moving[token] = moved;
+      } else {
+        this.moving.push(moved);
+      }
+    }
+    if (this.inputLength >= MOTION_SAMPLES) {
+      this.firstTokensJudged = true;
+    }
+  }
+
+  /** The wrist moved in input samples [start, end), by pooled std of acc or of gyro. */
+  private hasMotion(start: number, end: number): boolean {
+    return this.spread(start, end, 0) >= MOTION_ACC || this.spread(start, end, 3) >= MOTION_GYR;
+  }
+
+  /** Population std of three channels together after centering each, from the input. */
+  private spread(start: number, end: number, first: number): number {
+    const n = end - start;
+    if (n < 2) {
+      return 0;
+    }
+    const means: number[] = [0, 0, 0];
+    for (let t = start; t < end; t++) {
+      for (let c = 0; c < 3; c++) {
+        means[c] += this.input[t * CHANNELS + first + c];
+      }
+    }
+    let sum = 0;
+    for (let t = start; t < end; t++) {
+      for (let c = 0; c < 3; c++) {
+        sum += this.input[t * CHANNELS + first + c] - means[c] / n;
+      }
+    }
+    const mean = sum / (3 * n);
+    let squares = 0;
+    for (let t = start; t < end; t++) {
+      for (let c = 0; c < 3; c++) {
+        const d = this.input[t * CHANNELS + first + c] - means[c] / n - mean;
+        squares += d * d;
+      }
+    }
+    return Math.sqrt(squares / (3 * n));
   }
 
   /** Averages the five pending rows into one input sample. */

@@ -41,6 +41,24 @@ function rampModel(windows: Float32Array[]): RepModel {
   };
 }
 
+/** Gives every token the periodicity and rate currently set on it. */
+class ScriptedModel {
+  periodicity: number = 1;
+  rate: number = 1;
+
+  model(): RepModel {
+    return {
+      run: (window: Float32Array): Promise<RepNetOutput> => {
+        const output: RepNetOutput = {
+          periodicity: new Float32Array(128).fill(this.periodicity),
+          rate: new Float32Array(128).fill(this.rate),
+        };
+        return Promise.resolve(output);
+      },
+    };
+  }
+}
+
 function expectNear(actual: number, expected: number, tolerance: number): void {
   expect(Math.abs(actual - expected)).assertLessOrEqual(tolerance);
 }
@@ -100,7 +118,7 @@ export default function repCounterTest() {
         255,
         [1.70184541, 0.80122602, -0.639823616, -0.0853033066, -0.143807292, -0.0362771749],
       );
-      expect(counter.count).assertEqual(2);
+      expect(counter.referenceCount).assertEqual(2);
       expectNear(counter.realCount(), 1.39804693, 1e-6);
     });
 
@@ -125,7 +143,7 @@ export default function repCounterTest() {
         255,
         [-1.98199713, 0.218402848, -0.16974093, -0.10106013, -0.369274586, 0.098664403],
       );
-      expect(counter.count).assertEqual(8);
+      expect(counter.referenceCount).assertEqual(8);
       expectNear(counter.realCount(), 7.74000031, 1e-6);
     });
 
@@ -146,7 +164,8 @@ export default function repCounterTest() {
       const counter = new RepCounter(rampModel(windows));
       for (let hop = 0; hop < counts.length; hop++) {
         counter.push(rows(hop * 50, hop * 50 + 50));
-        expect(await counter.update()).assertEqual(counts[hop]);
+        await counter.update();
+        expect(counter.referenceCount).assertEqual(counts[hop]);
         expectNear(counter.realCount(), reals[hop], 1e-6);
       }
     });
@@ -181,11 +200,80 @@ export default function repCounterTest() {
       finish(output);
       expect(await running).assertEqual(0);
       expect(counter.realCount()).assertEqual(0);
-      // The new set's first window runs at once: 2 tokens at 0.2 reps each, shown as 1.
+      // The new set's first window runs at once: 2 tokens at 0.2 reps each, counted as 1.
       counter.push(rows(0, 20));
       const next = counter.update();
       finish(output);
-      expect(await next).assertEqual(1);
+      await next;
+      expect(counter.referenceCount).assertEqual(1);
+    });
+  });
+
+  describe('RepCounter display', () => {
+    it('shows each rep a second after the reference does', 0, async () => {
+      const model = new ScriptedModel();
+      const counter = new RepCounter(model.model());
+      // Every token: periodicity 1, 1 rep/s, so 0.1 rep per 0.1 s token, 5 tokens per hop.
+      for (let hop = 1; hop <= 8; hop++) {
+        counter.push(rows((hop - 1) * 50, hop * 50));
+        await counter.update();
+        expect(counter.referenceCount).assertEqual(Math.floor(0.5 * hop + 0.7));
+        expect(counter.count).assertEqual(Math.max(0, Math.floor(0.5 * hop - 0.3)));
+      }
+    });
+
+    it('holds the count once the set ends and goes on when the set does', 0, async () => {
+      const model = new ScriptedModel();
+      const counter = new RepCounter(model.model());
+      let hop = 0;
+      const shown: number[] = [];
+      const step = async (periodicity: number): Promise<void> => {
+        model.periodicity = periodicity;
+        counter.push(rows(hop * 50, hop * 50 + 50));
+        hop++;
+        shown.push(await counter.update());
+      };
+      for (let i = 0; i < 6; i++) {
+        await step(1);
+      }
+      const referenceAtStop = counter.referenceCount;
+      // The set ends: later windows re-score every token low, so the reference drops.
+      for (let i = 0; i < 4; i++) {
+        await step(0.1);
+      }
+      expect(counter.referenceCount).assertLess(referenceAtStop);
+      expect(shown[9]).assertEqual(shown[5]);
+      // It goes on: the gate reopens and counting continues from the held count.
+      for (let i = 0; i < 10; i++) {
+        await step(1);
+      }
+      expect(shown[19]).assertLarger(shown[9]);
+      for (let i = 1; i < shown.length; i++) {
+        expect(shown[i]).assertLargerOrEqual(shown[i - 1]);
+      }
+    });
+
+    it('counts nothing while the wrist is still', 0, async () => {
+      const model = new ScriptedModel();
+      model.rate = 2;
+      const counter = new RepCounter(model.model());
+      const still: number[][] = [];
+      for (let i = 0; i < 50; i++) {
+        still.push([0.3, -0.2, 9.8, 0.001, 0, -0.001]);
+      }
+      for (let hop = 0; hop < 6; hop++) {
+        counter.push(still);
+        await counter.update();
+      }
+      // The model alone finds 6 reps in 3 s of stillness; none are shown.
+      expect(counter.referenceCount).assertEqual(6);
+      expect(counter.count).assertEqual(0);
+      for (let hop = 6; hop < 12; hop++) {
+        counter.push(rows(hop * 50, hop * 50 + 50));
+        await counter.update();
+      }
+      expect(counter.count).assertLargerOrEqual(1);
+      expect(counter.count).assertLess(counter.referenceCount);
     });
   });
 

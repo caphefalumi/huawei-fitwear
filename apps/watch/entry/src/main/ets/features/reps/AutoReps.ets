@@ -149,8 +149,9 @@ export class AutoReps {
           hilog.debug(
             0x0000,
             'AutoReps',
-            'Reps %{public}d (%{public}s)',
+            'Reps %{public}d (reference %{public}d, %{public}s)',
             count,
+            counter.referenceCount,
             counter.realCount().toFixed(3),
           );
           this.apply(count);
