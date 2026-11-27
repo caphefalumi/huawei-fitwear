@@ -66,5 +66,5 @@ test("says what changed when the plan settings change", async () => {
   const screen = await render(<WorkoutPlanScreen />)
   expect(screen.queryByText(/^Plan updated/)).toBeNull()
   await act(async () => usePlanPreferences.getState().setMinutes(30))
-  expect(screen.getByText("Plan updated · 30 min")).toBeTruthy()
+  expect(screen.getByText("Plan updated - 30 min")).toBeTruthy()
 })

@@ -1,11 +1,26 @@
 import { apiRequest } from "@/lib/api/client"
 
-import type { Exercise, SessionWithSets, WorkoutSession } from "../hooks/workout-hooks"
+import type {
+  Exercise,
+  SessionWithSets,
+  WorkoutSession,
+  WorkoutSummary,
+} from "../hooks/workout-hooks"
+import type { ExerciseProgression } from "../utils/progression"
 
 export type WorkoutPage = { sessions: WorkoutSession[]; count: number }
 export type WorkoutWriteInput = { path: string; method: string; body?: unknown }
+export type StatsSession = WorkoutSummary & {
+  id: string
+  sessionTitle: string
+  workoutSplit: string
+  startedAt: string
+  completedAt: string
+}
 export type WorkoutStats = {
   byDate: { date: string; sessionCount: number; totalDurationSeconds: number }[]
+  /** Completed sessions in the range, oldest first. Missing in caches saved by older versions. */
+  sessions?: StatsSession[]
 }
 
 export async function fetchExerciseCatalog(signal?: AbortSignal): Promise<Exercise[]> {
@@ -32,6 +47,14 @@ export function fetchWorkoutHistory(pageParam: number, signal?: AbortSignal): Pr
 export function fetchWorkoutStats(signal?: AbortSignal): Promise<WorkoutStats> {
   const from = new Date(Date.now() - 365 * 86_400_000).toISOString().slice(0, 10)
   return apiRequest<WorkoutStats>(`/workouts/stats?from=${from}`, { signal })
+}
+
+export function fetchPreviousProgression(
+  session: { id: string; startedAt: string },
+  signal?: AbortSignal,
+): Promise<{ exercises: ExerciseProgression[] }> {
+  const query = `excludeSessionId=${encodeURIComponent(session.id)}&before=${encodeURIComponent(session.startedAt)}`
+  return apiRequest(`/workouts/progression?${query}`, { signal })
 }
 
 export function fetchWorkoutSession(id: string, signal?: AbortSignal): Promise<SessionWithSets> {

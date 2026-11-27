@@ -88,7 +88,7 @@ export function HomeScreen() {
         <Card style={styles.focus}>
           <Text style={styles.focusLine} numberOfLines={1}>
             Today: {today.name}
-            {today.exercises.length ? ` · ${today.sets} sets · ~${today.minutes} min` : ""}
+            {today.exercises.length ? ` - ${today.sets} sets - ~${today.minutes} min` : ""}
           </Text>
           {nutrition.status === "ready" ? (
             <Text style={styles.focusMuted} numberOfLines={1}>
@@ -101,7 +101,7 @@ export function HomeScreen() {
           ) : null}
           {injuries.length ? <Text style={styles.focusMuted}>{injuryTitle(injuries)}</Text> : null}
           <Pressable onPress={() => router.push("/watch")}>
-            <Text style={styles.focusMuted}>Watch · {watch.summary}</Text>
+            <Text style={styles.focusMuted}>Watch - {watch.summary}</Text>
           </Pressable>
         </Card>
       </Animated.View>

@@ -17,6 +17,72 @@ import type {
   WorkoutStatsQuery,
 } from "./index"
 
+type SummaryRow = {
+  workoutSessionId: string
+  weightKg: number
+  userConfirmedReps: number
+  isWarmup: boolean
+  repetitionUnit: string
+  muscleGroup: string
+}
+export type WorkoutSummary = {
+  totalSets: number
+  totalReps: number
+  totalVolumeKg: number
+  muscleGroups: { muscleGroup: string; sets: number }[]
+}
+
+/** Working-set totals per session. Warm-ups are left out; reps and volume count rep-based sets only. */
+export function summarizeSets(rows: SummaryRow[]) {
+  const totals = new Map<
+    string,
+    { totalSets: number; totalReps: number; totalVolumeKg: number; groups: Map<string, number> }
+  >()
+  for (const row of rows) {
+    if (row.isWarmup) continue
+    const entry = totals.get(row.workoutSessionId) ?? {
+      totalSets: 0,
+      totalReps: 0,
+      totalVolumeKg: 0,
+      groups: new Map<string, number>(),
+    }
+    entry.totalSets++
+    entry.groups.set(row.muscleGroup, (entry.groups.get(row.muscleGroup) ?? 0) + 1)
+    if (row.repetitionUnit === "reps") {
+      entry.totalReps += row.userConfirmedReps
+      entry.totalVolumeKg += row.weightKg * row.userConfirmedReps
+    }
+    totals.set(row.workoutSessionId, entry)
+  }
+  const summaries = new Map<string, WorkoutSummary>()
+  for (const [id, entry] of totals)
+    summaries.set(id, {
+      totalSets: entry.totalSets,
+      totalReps: entry.totalReps,
+      totalVolumeKg: Math.round(entry.totalVolumeKg * 100) / 100,
+      muscleGroups: [...entry.groups]
+        .map(([muscleGroup, sets]) => ({ muscleGroup, sets }))
+        .sort((a, b) => b.sets - a.sets || a.muscleGroup.localeCompare(b.muscleGroup)),
+    })
+  return summaries
+}
+const EMPTY_SUMMARY: WorkoutSummary = {
+  totalSets: 0,
+  totalReps: 0,
+  totalVolumeKg: 0,
+  muscleGroups: [],
+}
+const summaryColumns = {
+  workoutSessionId: workoutSets.workoutSessionId,
+  weightKg: workoutSets.weightKg,
+  userConfirmedReps: workoutSets.userConfirmedReps,
+  isWarmup: workoutSets.isWarmup,
+  repetitionUnit: exercises.repetitionUnit,
+  muscleGroup: exercises.muscleGroup,
+}
+/** D1 allows 100 bound parameters per statement. */
+const ID_CHUNK = 50
+
 const badRequest = (message: string) => status(400, { success: false, message })
 const parseTimestamp = (value: string | undefined, fallback = new Date()) => {
   const date = value === undefined ? fallback : new Date(value)
@@ -131,6 +197,7 @@ export abstract class Workouts {
           isNotNull(workoutSessions.completedAt),
           eq(workoutSets.isWarmup, false),
           query.excludeSessionId ? ne(workoutSessions.id, query.excludeSessionId) : undefined,
+          query.before ? lt(workoutSessions.startedAt, parseTimestamp(query.before)) : undefined,
         ),
       )
       .orderBy(
@@ -195,7 +262,26 @@ export abstract class Workouts {
       .limit(query.limit ?? 20)
       .offset(query.offset ?? 0)
       .all()
-    return { sessions, count: totals!.count }
+    const rows: SummaryRow[] = []
+    for (let start = 0; start < sessions.length; start += ID_CHUNK) {
+      const ids = sessions.slice(start, start + ID_CHUNK).map((session) => session.id)
+      rows.push(
+        ...(await db
+          .select(summaryColumns)
+          .from(workoutSets)
+          .innerJoin(exercises, eq(exercises.id, workoutSets.exerciseId))
+          .where(inArray(workoutSets.workoutSessionId, ids))
+          .all()),
+      )
+    }
+    const summaries = summarizeSets(rows)
+    return {
+      sessions: sessions.map((session) => ({
+        ...session,
+        ...(summaries.get(session.id) ?? EMPTY_SUMMARY),
+      })),
+      count: totals!.count,
+    }
   }
 
   static async byId(userId: string, sessionId: string, d1?: D1Database) {
@@ -332,12 +418,7 @@ export abstract class Workouts {
       .all()
     const sets = sessions.length
       ? await db
-          .select({
-            workoutSessionId: workoutSets.workoutSessionId,
-            weightKg: workoutSets.weightKg,
-            userConfirmedReps: workoutSets.userConfirmedReps,
-            repetitionUnit: exercises.repetitionUnit,
-          })
+          .select(summaryColumns)
           .from(workoutSets)
           .innerJoin(exercises, eq(exercises.id, workoutSets.exerciseId))
           .innerJoin(workoutSessions, eq(workoutSessions.id, workoutSets.workoutSessionId))
@@ -383,6 +464,7 @@ export abstract class Workouts {
         bucket.totalVolumeKg += set.weightKg * set.userConfirmedReps
       }
     }
+    const summaries = summarizeSets(sets)
     const days = [...byDate.values()].map((day) => ({
       ...day,
       totalVolumeKg: Math.round(day.totalVolumeKg * 100) / 100,
@@ -396,6 +478,14 @@ export abstract class Workouts {
         Math.round(days.reduce((total, day) => total + day.totalVolumeKg, 0) * 100) / 100,
       totalDurationSeconds: days.reduce((total, day) => total + day.totalDurationSeconds, 0),
       byDate: days,
+      sessions: sessions.map((session) => ({
+        id: session.id,
+        sessionTitle: session.sessionTitle,
+        workoutSplit: session.workoutSplit,
+        startedAt: session.startedAt,
+        completedAt: session.completedAt,
+        ...(summaries.get(session.id) ?? EMPTY_SUMMARY),
+      })),
     }
   }
 }
