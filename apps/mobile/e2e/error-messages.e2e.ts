@@ -35,6 +35,7 @@ async function submitSignUp(screen: Ui["screen"]) {
 
 /** A fresh sign-up form with name and email filled; blank fields keep no prior date. */
 async function freshSignUp(ui: Ui) {
+  const { device, screen } = ui
   await launchClean(ui)
   await openSignIn(screen)
   await byText(screen, "Sign up").tap()
