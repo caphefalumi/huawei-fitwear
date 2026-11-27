@@ -9,3 +9,7 @@ expo-env.d.ts
 /android
 /ios
 .env.local
+
+# e2e run output (CI writes it here; e2e requires it inside the project)
+/e2e-artifacts
+/.e2e

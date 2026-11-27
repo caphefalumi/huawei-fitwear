@@ -3,14 +3,30 @@ set -Eeuo pipefail
 
 # Android emulator is provisioned by android-emulator-runner before this script.
 # e2e writes junit.xml, report.json and per-test results/ (videos, screenshots,
-# traces) under --output.
-artifacts="$PWD/e2e-artifacts"
+# traces) under --output, which e2e requires inside its project (apps/mobile).
+artifacts="$PWD/apps/mobile/e2e-artifacts"
 mkdir -p "$artifacts"
+
+# Each test's video is written to results/<test>/<attempt>/video/video.mp4.
+# Copy them to recordings/<test>__<attempt>.mp4 so every test has its own file.
+collect_recordings() {
+  local recordings="$artifacts/recordings" video name
+  rm -rf "$recordings"
+  [[ -d "$artifacts/results" ]] || return 0
+  mkdir -p "$recordings"
+  while IFS= read -r -d '' video; do
+    name="${video#"$artifacts/results/"}"
+    name="${name%/video/*}"
+    name="${name//\//__}"
+    cp "$video" "$recordings/$name.mp4"
+  done < <(find "$artifacts/results" -type f -path '*/video/*.mp4' -print0)
+}
 
 finish() {
   local original_status=$?
   trap - EXIT
   set +e
+  collect_recordings
   adb shell am force-stop com.fitwear.mobile >/dev/null 2>&1
   local stop_status=$?
   adb shell pm clear com.fitwear.mobile >/dev/null 2>&1
@@ -65,5 +81,5 @@ cd apps/mobile
 npx --no-install e2e run \
   --target android \
   --reporter list,junit \
-  --output "$artifacts" \
+  --output e2e-artifacts \
   "${args[@]}"
