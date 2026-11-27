@@ -5,10 +5,6 @@ on:
     - cron: "0 1 * * *"
       timezone: Asia/Ho_Chi_Minh
   workflow_dispatch:
-  # Keep the temporary release-build branch trigger for pre-merge verification.
-  push:
-    branches:
-      - feat/build-mobile
 
 permissions:
   contents: read
@@ -69,6 +65,23 @@ jobs:
         if: matrix.platform == 'android'
         working-directory: apps/mobile/android
         run: ./gradlew --build-cache assembleRelease
+
+      # Prebuild writes ios/ fresh on every run and no Podfile.lock is committed,
+      # so key on the generated Podfile and the JS lockfile (native modules come
+      # from node_modules). Pods/Manifest.lock lets pod install reuse unchanged
+      # pods, the restored Podfile.lock keeps resolution stable, and the
+      # download cache covers pods that did change.
+      - name: Cache CocoaPods
+        if: matrix.platform == 'ios'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            apps/mobile/ios/Pods
+            apps/mobile/ios/Podfile.lock
+            ~/Library/Caches/CocoaPods
+          key: ${{ runner.os }}-pods-${{ hashFiles('apps/mobile/ios/Podfile', 'apps/mobile/ios/Podfile.properties.json', 'bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
 
       - name: Install CocoaPods dependencies
         if: matrix.platform == 'ios'
