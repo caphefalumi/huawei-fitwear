@@ -10,7 +10,6 @@ import {
   field,
   hideKeyboard,
   launchClean,
-  maybeHidden,
   maybeVisible,
   openSignIn,
   scrollTo,
@@ -221,13 +220,15 @@ test(
     ).toBeVisible()
     await setOffline(ui, false)
     // As at sign-in, the emulator's network can lag behind airplane mode, so a
-    // first retry may fail the same way. Retry while the error is still shown.
+    // first retry may fail the same way. The error clears when a retry starts
+    // and comes back if it fails, so retry until it stays away.
     const saveError = byText(screen, "Could not save your meal")
-    for (let attempt = 0; attempt < 4 && (await saveError.isVisible()); attempt += 1) {
+    for (let attempt = 0; attempt < 4; attempt += 1) {
       await byText(screen, "Try again").tap()
-      await maybeHidden(saveError, 20000)
+      await waitHidden(saveError, 30000)
+      if (!(await maybeVisible(saveError, 15000))) break
     }
-    await waitHidden(saveError, 10000)
+    await waitHidden(saveError, 5000)
     // The error clears as soon as the retry starts; the draft only empties once the
     // save resolves, so wait for the cleared list before restarting the app.
     await scrollTo(screen, byText(screen, /^No items yet/), "down")
