@@ -12,7 +12,7 @@ const native =
   Platform.OS === "android" ? requireOptionalNativeModule<NativeService>("WatchLinkService") : null
 
 export const watchService = {
-  start: () => native?.start("VoocHealth watch", "Keeping your watch in sync") ?? false,
+  start: () => native?.start("Huawei Watch", "Keeping your watch in sync") ?? false,
   stop: () => native?.stop(),
   onTick: (listener: () => void) => native?.addListener("onTick", listener),
 }
