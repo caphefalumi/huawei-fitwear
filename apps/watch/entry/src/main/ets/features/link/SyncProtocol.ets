@@ -55,6 +55,21 @@ export interface SharedSession {
   skip: number[];
 }
 
+/**
+ * The set on screen while it is counted, sent on every change.
+ * Watch to phone only, and never merged into the session: it is gone once the set is done.
+ */
+export interface LiveReps {
+  /** The session the set belongs to. */
+  id: string;
+  /** The set's position in sessionSlots(plan). */
+  pos: number;
+  /** Reps so far, or seconds for timed holds. */
+  reps: number;
+  /** Counted from the wrist, not with the buttons or the crown. */
+  auto: boolean;
+}
+
 export interface Macros {
   protein: number;
   carbs: number;
@@ -96,7 +111,7 @@ export interface FoodLog {
 }
 
 export interface SyncMessage {
-  /** 'hello', 'plan', 'day' (phone), 'welcome', 'food' (watch) or 'session' (both). */
+  /** 'hello', 'plan', 'day' (phone), 'welcome', 'food', 'reps' (watch) or 'session' (both). */
   t: string;
   v?: number;
   phone?: string;
@@ -105,6 +120,8 @@ export interface SyncMessage {
   ok?: boolean;
   plan?: WorkoutPlan;
   session?: SharedSession;
+  /** With 'reps'. Older phone apps ignore the message. */
+  live?: LiveReps;
   day?: DayInfo;
   logs?: FoodLog[];
 }

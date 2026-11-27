@@ -7,6 +7,7 @@ import { useAuth } from "@/features/auth"
 import { dateKey, useHealth } from "@/features/health"
 import { useInjuries } from "@/features/recovery"
 import { useWatchStore } from "@/features/watch"
+import { usePairing } from "@/features/watch/pairing.store"
 import { resetWatchSession } from "@/features/watch/store"
 import { usePlanPreferences, useTrainingWeights } from "@/features/workout"
 import { writeWorkout } from "@/features/workout/api/workout-api"
@@ -88,7 +89,8 @@ beforeEach(() => {
   useTrainingWeights.setState({ level: null, custom: {} })
   useWorkoutLog.setState({ finished: [] })
   resetWatchSession()
-  useWatchStore.setState({ remoteSeq: 0, outbox: 0 })
+  useWatchStore.setState({ remoteSeq: 0, outbox: 0, status: "off" })
+  usePairing.setState({ enabled: false, name: "" })
   // The coming Monday: Full Body on Monday, Wednesday and Friday.
   useDemoClock.setState({ offsetDays: (8 - new Date().getDay()) % 7 })
   jest.mocked(useLocalSearchParams).mockReturnValue({ date: dateKey(planNow()) })
@@ -564,6 +566,60 @@ test("offers to continue or restart a cycle trained on the watch", async () => {
   const sent = useWatchStore.getState().session!
   expect(sent.id).not.toBe("from-watch")
   expect(sent).toMatchObject({ status: "active", pos: 0, log: [] })
+  await screen.unmount()
+  queryClient.clear()
+})
+
+test("follows the reps the watch counts, and keeps a count changed here", async () => {
+  const routine = routineOn(planNow(), input)
+  const first = routine.exercises[0]!
+  usePairing.setState({ enabled: true, name: "HUAWEI WATCH 5" })
+  useWatchStore.setState({ routine, status: "connected" })
+  useWatchStore.getState().receive({
+    id: "from-watch",
+    rev: 1,
+    plan: routine.name,
+    status: "active",
+    at: Date.now(),
+    end: 0,
+    pos: 0,
+    rest: 0,
+    log: [],
+    skip: [],
+  })
+  jest.mocked(useLocalSearchParams).mockReturnValue({ watch: "1" })
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const screen = await render(
+    <QueryClientProvider client={queryClient}>
+      <SessionScreen />
+    </QueryClientProvider>,
+  )
+  await screen.findByRole("header", { name: first.name })
+  expect(screen.getByText("HUAWEI WATCH 5")).toBeTruthy()
+  const live = { id: "from-watch", pos: 0, reps: 0, auto: true }
+
+  // Every set starts at 0 on the watch, so the target stays until it counts a rep.
+  await act(async () => useWatchStore.setState({ live }))
+  expect(screen.getByLabelText(`${first.reps} reps`)).toBeTruthy()
+  expect(screen.getByText("Live from watch")).toBeTruthy()
+
+  await act(async () => useWatchStore.setState({ live: { ...live, reps: 3 } }))
+  expect(screen.getByLabelText("3 reps")).toBeTruthy()
+  expect(screen.getByText("Counted from your wrist")).toBeTruthy()
+
+  // A count changed here is not overwritten; the watch's is offered instead.
+  await fireEvent.press(screen.getByLabelText("More reps"))
+  await act(async () => useWatchStore.setState({ live: { ...live, reps: 5 } }))
+  expect(screen.getByLabelText("4 reps")).toBeTruthy()
+  await fireEvent.press(screen.getByLabelText("Use the watch's count, 5 reps"))
+  expect(screen.getByLabelText("5 reps")).toBeTruthy()
+
+  // A count for another set is not this one's.
+  await act(async () => useWatchStore.setState({ live: { ...live, pos: 3, reps: 9 } }))
+  expect(screen.getByLabelText("5 reps")).toBeTruthy()
+
+  await fireEvent.press(screen.getByText("Done set"))
+  expect(useWatchStore.getState().session!.log).toEqual([[0, 0, 5]])
   await screen.unmount()
   queryClient.clear()
 })

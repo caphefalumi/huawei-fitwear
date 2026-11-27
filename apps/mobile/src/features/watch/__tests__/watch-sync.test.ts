@@ -115,3 +115,18 @@ test("sends the watch only what it needs from a routine", () => {
     ],
   })
 })
+
+test("reads the count of the set on the watch and drops a malformed one", () => {
+  const live = { id: "one", pos: 2, reps: 7, auto: true }
+  const [frame] = encodeFrames({ t: "reps", live }, 180, 4)
+  expect(new FrameAssembler().push(frame!)).toEqual({ t: "reps", live })
+  for (const bad of [
+    { ...live, id: "" },
+    { ...live, reps: -1 },
+    { ...live, pos: 1.5 },
+    { ...live, auto: "yes" },
+  ]) {
+    const [junk] = encodeFrames({ t: "reps", live: bad as never }, 180, 5)
+    expect(new FrameAssembler().push(junk!)).toBeUndefined()
+  }
+})

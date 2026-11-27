@@ -5,7 +5,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import BuildProfile from 'BuildProfile';
 import { NO_PLAN, SAMPLE_DAY, SAMPLE_PLAN } from '../common/SampleData';
 import { LinkState, PhoneLink, PhoneLinkHandlers } from '../link/PhoneLink';
-import { DayInfo, mergeSessions, SharedSession, WorkoutPlan } from '../link/SyncProtocol';
+import { DayInfo, LiveReps, mergeSessions, SharedSession, WorkoutPlan } from '../link/SyncProtocol';
 import { HAPTIC_ALERT_MS, HAPTIC_SIGNAL_MS, HAPTIC_TICK_MS, vibrate } from '../common/Haptics';
 import { pageDots, Palette } from '../common/Ui';
 import { PrivacyView } from '../privacy/PrivacyView';
@@ -69,6 +69,8 @@ struct HomePage {
   private phonePlan: WorkoutPlan | undefined = undefined;
   /** Session id and revision the phone already has. */
   private sentKey: string = '';
+  /** The set and count the phone was last shown. */
+  private sentReps: string = '';
   @Local session: WorkoutSession = new WorkoutSession(initialPlan());
   @Local day: FoodDay = new FoodDay();
   /** Quick logs last offered to the phone, and when. */
@@ -94,6 +96,13 @@ struct HomePage {
   @Monitor('session.rev')
   onSessionChange(): void {
     this.publish();
+  }
+
+  /** Shows each rep on the phone as it is counted, after the session that places it. */
+  @Monitor('session.reps')
+  onRepsChange(): void {
+    this.publish();
+    this.publishReps();
   }
 
   /** Starts and stops counting reps as sets begin, pause and end. */
@@ -220,6 +229,7 @@ struct HomePage {
       allowPhone: (phone: string) => this.store.allowPhone(phone),
       onReady: () => {
         this.sentKey = '';
+        this.sentReps = '';
         this.sentFood = '';
       },
       onPlan: (plan: WorkoutPlan) => this.receivePlan(plan),
@@ -294,6 +304,30 @@ struct HomePage {
     if (key !== this.sentKey) {
       this.sentKey = key;
       this.link.sendSession(shared);
+    }
+  }
+
+  /** Sends the count of the set on screen whenever it, or the set, has changed. */
+  private publishReps(): void {
+    const session = this.session;
+    if (
+      this.link.state !== LinkState.CONNECTED ||
+      session.id === '' ||
+      session.status !== WorkoutStatus.ACTIVE ||
+      session.phase !== WorkoutPhase.SET
+    ) {
+      return;
+    }
+    const live: LiveReps = {
+      id: session.id,
+      pos: session.position,
+      reps: session.reps,
+      auto: this.autoReps.counting,
+    };
+    const key = `${live.id}:${live.pos}:${live.reps}:${live.auto}`;
+    if (key !== this.sentReps) {
+      this.sentReps = key;
+      this.link.sendReps(live);
     }
   }
 
@@ -402,6 +436,7 @@ struct HomePage {
     // One place to save and send: any change is on disk and on the phone within a tick.
     this.save();
     this.publish();
+    this.publishReps();
     this.publishFood(this.now);
     if (this.idleInBackground()) {
       this.stopTicker();
