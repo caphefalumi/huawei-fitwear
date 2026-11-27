@@ -14,17 +14,21 @@ import {
   openSignIn,
   scrollTo,
   skipHealthConnectOffer,
+  typeInto,
   waitHidden,
   waitVisible,
 } from "./support"
 
 type BirthDate = { year: string; month: string; day: string }
 
-/** Enter each date field separately: auto-advance moves focus between them. */
+/**
+ * Type each date field separately. A full field auto-advances focus to the next
+ * one, so fill's read-back would check the wrong field; type as a person would.
+ */
 async function enterBirthDate({ device, screen }: Ui, date: BirthDate) {
-  await byId(screen, "sign-up-dob-year").fill(date.year)
-  await byId(screen, "sign-up-dob-month").fill(date.month)
-  await byId(screen, "sign-up-dob-day").fill(date.day)
+  await typeInto(byId(screen, "sign-up-dob-year"), date.year)
+  await typeInto(byId(screen, "sign-up-dob-month"), date.month)
+  await typeInto(byId(screen, "sign-up-dob-day"), date.day)
   await hideKeyboard(device)
 }
 

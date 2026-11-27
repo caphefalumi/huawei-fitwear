@@ -58,6 +58,32 @@ export async function enter(device: Device, locator: Locator, value: string) {
   await hideKeyboard(device)
 }
 
+/**
+ * Focuses an input and types through the keyboard, as Maestro's tapOn +
+ * inputText did. Use it where the app moves focus while typing (auto-advance),
+ * which breaks fill's read-back check. The date fields select their text on
+ * focus, so typing replaces it.
+ */
+export async function typeInto(locator: Locator, value: string) {
+  await locator.pressSequentially(value)
+}
+
+/**
+ * Drags from the right edge of a row to the left edge of the screen, as
+ * Maestro's `swipe: direction: LEFT` did. A locator swipe only drags half of
+ * the matched node, which on a short text label is too little to open a row.
+ */
+export async function swipeRowLeft(screen: Screen, locator: Locator) {
+  const box = await locator.boundingBox()
+  if (!box) throw new Error("swipeRowLeft: the row has no bounding box")
+  const y = box.y + box.height / 2
+  await screen.swipe({
+    from: { x: box.x + box.width - 10, y },
+    to: { x: 10, y },
+    duration: 300,
+  })
+}
+
 export async function scrollTo(screen: Screen, locator: Locator, direction: "up" | "down") {
   await screen.scrollUntilVisible(locator, { direction, timeout: 10000 })
 }

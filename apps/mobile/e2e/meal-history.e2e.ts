@@ -13,6 +13,7 @@ import {
   relaunch,
   scrollTo,
   signIn,
+  swipeRowLeft,
   waitHidden,
   waitVisible,
 } from "./support"
@@ -101,15 +102,16 @@ test(
     await expect(byText(screen, "1 meal")).toBeVisible()
     await byText(screen, "Clear food search").tap()
 
-    // Swipe to delete, undo, then delete for good. A "right" swipe scrolls the
-    // row's content right, so the finger travels left.
-    await soup.swipe({ direction: "right" })
+    // Swipe to delete, undo, then delete for good. Clearing the search moves
+    // the row, so wait for the day view before measuring it.
+    await waitVisible(byText(screen, "Meals history ›"), 10000)
+    await swipeRowLeft(screen, soup)
     await byText(screen, "Delete E2E Journal Soup").tap()
     await waitVisible(byText(screen, "Meal deleted"), 5000)
     await expect(soup).toBeHidden()
     await byText(screen, "Undo").tap()
     await waitVisible(soup, 5000)
-    await soup.swipe({ direction: "right" })
+    await swipeRowLeft(screen, soup)
     await byText(screen, "Delete E2E Journal Soup").tap()
     await waitHidden(byText(screen, "Meal deleted"), 10000)
     await waitHidden(soup, 15000)
