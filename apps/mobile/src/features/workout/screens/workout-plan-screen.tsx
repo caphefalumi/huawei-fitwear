@@ -110,8 +110,7 @@ export function WorkoutPlanScreen() {
     useCallback(() => {
       const parts: ReturnType<typeof planParts> = JSON.parse(signature)
       const changed = seenPlan ? parts.filter((part) => seenPlan?.[part.key] !== part.value) : []
-      if (changed.length)
-        setToast(`Plan updated · ${changed.map((part) => part.label).join(" · ")}`)
+      if (changed.length) setToast(`Plan updated - ${changed.map((part) => part.label).join(", ")}`)
       seenPlan = Object.fromEntries(parts.map((part) => [part.key, part.value]))
     }, [signature]),
   )
@@ -129,7 +128,7 @@ export function WorkoutPlanScreen() {
         <PageHeading
           eyebrow="My plan"
           title="Workout plan"
-          subtitle={`${plan.sessions ?? 3}x/week · ${minutes} min · ${plan.goal}`}
+          subtitle={`${plan.sessions ?? 3}x/week - ${minutes} min - ${plan.goal}`}
         />
         <Pressable
           accessibilityRole="link"
@@ -249,7 +248,7 @@ export function WorkoutPlanScreen() {
                 </View>
                 <ExerciseRows routine={next} />
                 {injuries.length ? (
-                  <Text style={styles.footnote}>IF READY · not cleared medically</Text>
+                  <Text style={styles.footnote}>IF READY - not cleared medically</Text>
                 ) : null}
                 <Text style={styles.viewLink}>View routine ›</Text>
               </Card>
