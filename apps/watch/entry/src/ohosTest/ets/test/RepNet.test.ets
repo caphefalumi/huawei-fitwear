@@ -1,5 +1,4 @@
 import { abilityDelegatorRegistry } from '@kit.TestKit';
-import { application } from '@kit.AbilityKit';
 import { util } from '@kit.ArkTS';
 import { resourceManager } from '@kit.LocalizationKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -24,20 +23,19 @@ interface StreamVectors {
   counts: number[];
 }
 
-async function moduleResources(name: string): Promise<resourceManager.ResourceManager> {
+/** The test module's resources: the app's rawfiles (the model) plus its own (the vectors). */
+function resources(): resourceManager.ResourceManager {
   const app = abilityDelegatorRegistry.getAbilityDelegator().getAppContext();
-  return (await application.createModuleContext(app, name)).resourceManager;
+  return app.createModuleContext('entry_test').resourceManager;
 }
 
-/** The vectors ship with this test module only. */
 async function readVectors(path: string): Promise<string> {
-  const bytes = await (await moduleResources('entry_test')).getRawFileContent(path);
+  const bytes = await resources().getRawFileContent(path);
   return util.TextDecoder.create('utf-8').decodeToString(bytes);
 }
 
-/** The model as the app ships it, from the entry module's resources. */
-async function loadNet(): Promise<RepNet> {
-  return RepNet.load(await moduleResources('entry'));
+function loadNet(): Promise<RepNet> {
+  return RepNet.load(resources());
 }
 
 export default function repNetTest() {
@@ -67,9 +65,9 @@ export default function repNetTest() {
         hilog.info(
           0x0000,
           'RepNetTest',
-          'case %{public}d: max diff %{public}f, %{public}d ms',
+          'case %{public}d: max diff %{public}s, %{public}d ms',
           i,
-          worst,
+          worst.toExponential(2),
           Date.now() - started,
         );
         expect(worst).assertLessOrEqual(1e-4);
@@ -90,9 +88,9 @@ export default function repNetTest() {
       hilog.info(
         0x0000,
         'RepNetTest',
-        'counts %{public}s, real %{public}f',
+        'counts %{public}s, real %{public}s',
         JSON.stringify(counts),
-        counter.realCount(),
+        counter.realCount().toFixed(3),
       );
       expect(counts.length).assertEqual(34);
       expect(JSON.stringify(counts)).assertEqual(JSON.stringify(stream.counts));

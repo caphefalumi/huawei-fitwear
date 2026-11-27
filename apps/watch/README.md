@@ -85,18 +85,21 @@ do not count.
 - `RepNet.ets` runs `resources/rawfile/repnet/imu_repnet.ms` on MindSpore Lite Kit
   (CPU, fp32). If the model cannot load or run, reps stay manual.
 
-The `.ms` file is the bundle's `imu_repnet.onnx` (SHA-256 `fe8f1f09…f35b`) converted
-with the MindSpore Lite 2.10.0 converter named in the
-[OpenHarmony conversion guide](https://gitcode.com/openharmony/docs/blob/master/en/application-dev/ai/mindspore/mindspore-lite-converter-guidelines.md).
-It runs on Linux x86-64 (WSL works):
+The `.ms` file (SHA-256 `5cdb429c…83dc`) is the bundle's `imu_repnet.onnx` (SHA-256
+`fe8f1f09…f35b`) converted as the
+[OpenHarmony conversion guide](https://gitcode.com/openharmony/docs/blob/master/en/application-dev/ai/mindspore/mindspore-lite-converter-guidelines.md)
+describes. Use the converter that matches the watch's inference engine, which is
+MindSpore Lite 2.7.0 on HarmonyOS 6.1.1. A newer converter's model still runs, but the
+engine logs a version warning. The converter runs on Linux x86-64 (WSL works):
 
 ```bash
-curl -LO https://ms-release.obs.cn-north-4.myhuaweicloud.com/2.10.0/MindSporeLite/lite/release/linux/x86_64/mindspore-lite-2.10.0-linux-x64.tar.gz
-echo "6c9bd48171f8581e9e264a805a9f3839001752451828bafcf3a6212dbc7462bd  mindspore-lite-2.10.0-linux-x64.tar.gz" | sha256sum -c
-tar -xzf mindspore-lite-2.10.0-linux-x64.tar.gz
-export LD_LIBRARY_PATH=$PWD/mindspore-lite-2.10.0-linux-x64/tools/converter/lib:$LD_LIBRARY_PATH
-./mindspore-lite-2.10.0-linux-x64/tools/converter/converter/converter_lite \
+curl -LO https://ms-release.obs.cn-north-4.myhuaweicloud.com/2.7.0/MindSporeLite/lite/release/linux/x86_64/mindspore-lite-2.7.0-linux-x64.tar.gz
+echo "8bb1097100c9fec12675670ba2d4264a2cd6da3a9be093eb56631d00fc0c455b  mindspore-lite-2.7.0-linux-x64.tar.gz" | sha256sum -c
+tar -xzf mindspore-lite-2.7.0-linux-x64.tar.gz
+export LD_LIBRARY_PATH=$PWD/mindspore-lite-2.7.0-linux-x64/tools/converter/lib:$LD_LIBRARY_PATH
+./mindspore-lite-2.7.0-linux-x64/tools/converter/converter/converter_lite \
   --fmk=ONNX --modelFile=imu_repnet.onnx --outputFile=imu_repnet
+chmod u+w imu_repnet.ms   # written read-only; hvigor cannot replace a read-only copy
 cp imu_repnet.ms <repo>/apps/watch/entry/src/main/resources/rawfile/repnet/
 ```
 
@@ -110,7 +113,10 @@ Checks:
   with values from the reference algorithm, and test the resampler.
 - The device test (`src/ohosTest/ets/test/RepNet.test.ets`) runs the shipped model on
   MindSpore Lite. It checks the bundle's 4 test windows (within 1e-4) and its squat
-  set, which must match all 34 counts after each 0.5 s chunk and end at 10.
+  set, which must match all 34 counts after each 0.5 s chunk and end at 10. On the
+  HarmonyOS 6.1.1 wearable emulator the largest window error is 2.5e-5, and a window
+  takes about 70–150 ms. That timing is from an x86 emulator, not a watch.
+  The emulator has no IMU, so live counting needs a physical watch.
 
 Limits from the model's handout: it was trained only on MM-Fit (10 exercises, mostly
 10-rep sets), so accuracy on other exercises is unmeasured. Alternating-arm
