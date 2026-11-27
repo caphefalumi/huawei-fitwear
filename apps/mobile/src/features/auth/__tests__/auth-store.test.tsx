@@ -344,6 +344,56 @@ test("airplane-mode cold start restores successful reads immediately, then valid
   expect(leases.size).toBe(0)
 })
 
+test("a network change during a failing reconnect check validates again", async () => {
+  await seedLease()
+  saved.getToken.mockResolvedValue("secret-a")
+  jest.mocked(getNetworkStateAsync).mockResolvedValue(airplane)
+  const { result } = await renderAccount()
+  await waitFor(() => expect(result.current.loading).toBe(false))
+  expect(result.current.offline).toBe(true)
+
+  // Reconnecting comes up on one network, then moves to another while the
+  // first check is still out; that check then fails with the old network.
+  const first = Promise.withResolvers<AxiosResponse<unknown>>()
+  request.mockReturnValueOnce(first.promise)
+  await act(async () => {
+    jest.mocked(addNetworkStateListener).mock.lastCall?.[0](wifi)
+  })
+  await act(async () => {
+    jest.mocked(addNetworkStateListener).mock.lastCall?.[0](wifi)
+  })
+  expect(request).toHaveBeenCalledTimes(1)
+
+  request.mockResolvedValueOnce(json(200, authenticated()))
+  await act(async () => {
+    first.reject(new AxiosError("Network Error", "ERR_NETWORK"))
+  })
+  await waitFor(() => expect(result.current.offline).toBe(false))
+  expect(request).toHaveBeenCalledTimes(2)
+  expect(request.mock.calls[1][0]?.url).toBe("/auth/session")
+})
+
+test("a reconnect check that fails while connected is retried without a new network event", async () => {
+  await seedLease()
+  saved.getToken.mockResolvedValue("secret-a")
+  jest.mocked(getNetworkStateAsync).mockResolvedValue(airplane)
+  const { result } = await renderAccount()
+  await waitFor(() => expect(result.current.loading).toBe(false))
+  expect(result.current.offline).toBe(true)
+
+  request.mockRejectedValueOnce(new AxiosError("Network Error", "ERR_NETWORK"))
+  request.mockResolvedValueOnce(json(200, authenticated()))
+  await act(async () => {
+    jest.mocked(addNetworkStateListener).mock.lastCall?.[0](wifi)
+  })
+  await waitFor(() => expect(request).toHaveBeenCalledTimes(1))
+  expect(result.current.offline).toBe(true)
+
+  await waitFor(() => expect(result.current.offline).toBe(false), { timeout: 5000 })
+  expect(request).toHaveBeenCalledTimes(2)
+  expect(request.mock.calls[1][0]?.url).toBe("/auth/session")
+})
+
 test("shows offline mode if Wi-Fi is connected but the API cannot be reached", async () => {
   await seedLease()
   saved.getToken.mockResolvedValue("secret-a")

@@ -11,6 +11,9 @@ export default {
       engine: mobile({ platform: "android", device: process.env.E2E_ANDROID_DEVICE }),
       // CI installs the release APK with adb before the run.
       app: { bundleId: "com.fitwear.mobile", environment: "staging" },
+      // Set on the target, so a run that cannot record fails instead of
+      // silently skipping the video. Every test gets its own recording.
+      video: "on",
     },
   ],
   tests: "e2e/**/*.e2e.ts",
@@ -20,7 +23,6 @@ export default {
   // Each flow changes the shared account; a retry would rerun it on top of a
   // half-finished attempt, so a failure is reported as it happened.
   retries: 0,
-  video: "on",
   reporters: ["list", "junit"],
   // Undeclared until both values exist, so a local run without them fails
   // at credentials.user() with a clear message instead of at config load.

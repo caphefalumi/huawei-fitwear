@@ -6,6 +6,7 @@ import {
   type Ui,
   byId,
   byText,
+  closeCaptureSheet,
   enter,
   field,
   hideKeyboard,
@@ -13,18 +14,23 @@ import {
   maybeVisible,
   openSignIn,
   scrollTo,
+  setOffline,
   skipHealthConnectOffer,
+  typeInto,
   waitHidden,
   waitVisible,
 } from "./support"
 
 type BirthDate = { year: string; month: string; day: string }
 
-/** Enter each date field separately: auto-advance moves focus between them. */
+/**
+ * Type each date field separately. A full field auto-advances focus to the next
+ * one, so fill's read-back would check the wrong field; type as a person would.
+ */
 async function enterBirthDate({ device, screen }: Ui, date: BirthDate) {
-  await byId(screen, "sign-up-dob-year").fill(date.year)
-  await byId(screen, "sign-up-dob-month").fill(date.month)
-  await byId(screen, "sign-up-dob-day").fill(date.day)
+  await typeInto(byId(screen, "sign-up-dob-year"), date.year)
+  await typeInto(byId(screen, "sign-up-dob-month"), date.month)
+  await typeInto(byId(screen, "sign-up-dob-day"), date.day)
   await hideKeyboard(device)
 }
 
@@ -138,11 +144,11 @@ test(
     ).toBeVisible()
 
     // Replace the previous credential error before testing the offline failure.
-    await device.setAirplaneMode(true)
+    await setOffline(ui, true)
     await enter(device, password, "offline-e2e-password")
     await submit.tap()
     await waitVisible(byText(screen, "Can't connect. Check your connection and try again."), 20000)
-    await device.setAirplaneMode(false)
+    await setOffline(ui, false)
     await password.fill(account.password)
     await hideKeyboard(device)
     // The emulator's network can lag behind airplane mode being switched off, so a
@@ -150,7 +156,7 @@ test(
     let signedIn = false
     for (let attempt = 0; attempt < 4 && !signedIn; attempt += 1) {
       if (await submit.isVisible()) await submit.tap()
-      await skipHealthConnectOffer(screen)
+      await skipHealthConnectOffer(ui)
       signedIn = await maybeVisible(byText(screen, "Today"), 20000)
     }
     expect(signedIn, "signed in after the network came back").toBe(true)
@@ -164,6 +170,7 @@ test(
     await expect(byText(screen, "Today")).toBeVisible()
     await device.closeApp()
     await device.setAirplaneMode(false)
+    await device.setNetwork("online")
     await app.open()
     await waitVisible(byText(screen, "Today"), 30000)
 
@@ -172,7 +179,7 @@ test(
     await waitVisible(byText(screen, "Capture meal"), 20000)
     await byText(screen, "Capture meal").tap()
     await waitVisible(byText(screen, "Capture your meal"), 20000)
-    await byText(screen, "Close Capture your meal").tap()
+    await closeCaptureSheet(ui)
     await byText(screen, "Enter meal manually").tap()
     await waitVisible(byText(screen, "Log Meal"), 20000)
     await byText(screen, "+ Add item").tap()
@@ -201,7 +208,7 @@ test(
     await scrollTo(screen, byText(screen, "Add item"), "down")
     await byText(screen, "Add item").tap()
     await waitVisible(byText(screen, "Log Meal"), 20000)
-    await device.setAirplaneMode(true)
+    await setOffline(ui, true)
     await byText(screen, "Log Meal").tap()
     await screen.scrollUntilVisible(byText(screen, "Could not save your meal"), {
       direction: "up",
@@ -213,9 +220,17 @@ test(
         "Could not connect to save your change. Check your connection and try again. Your entries are still here.",
       ),
     ).toBeVisible()
-    await device.setAirplaneMode(false)
-    await byText(screen, "Try again").tap()
-    await waitHidden(byText(screen, "Could not save your meal"), 30000)
+    await setOffline(ui, false)
+    // As at sign-in, the emulator's network can lag behind airplane mode, so a
+    // first retry may fail the same way. The error clears when a retry starts
+    // and comes back if it fails, so retry until it stays away.
+    const saveError = byText(screen, "Could not save your meal")
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      await byText(screen, "Try again").tap()
+      await waitHidden(saveError, 30000)
+      if (!(await maybeVisible(saveError, 15000))) break
+    }
+    await waitHidden(saveError, 5000)
     // The error clears as soon as the retry starts; the draft only empties once the
     // save resolves, so wait for the cleared list before restarting the app.
     await scrollTo(screen, byText(screen, /^No items yet/), "down")

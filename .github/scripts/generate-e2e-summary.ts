@@ -156,12 +156,15 @@ export function generateSummary({
     }
   }
 
-  const recordings = findRecordings(artifactsDir).sort()
+  // run-e2e-android.sh copies one named video per test into recordings/.
+  const collected = path.join(artifactsDir, "recordings")
+  const recordingsDir = fs.existsSync(collected) ? collected : artifactsDir
+  const recordings = findRecordings(recordingsDir).sort()
   lines.push("### Recordings", "")
   if (recordings.length > 0) {
     lines.push("| File | Size (bytes) |", "| --- | ---: |")
     for (const recording of recordings) {
-      const name = path.relative(artifactsDir, recording).replaceAll("\\", "/")
+      const name = path.relative(recordingsDir, recording).replaceAll("\\", "/")
       lines.push(`| ${cell(name)} | ${fs.statSync(recording).size} |`)
     }
     lines.push("")
@@ -184,6 +187,7 @@ if (import.meta.main) {
       ? `https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}`
       : ""
   const { markdown, success } = generateSummary({
+    artifactsDir: process.argv[2] || undefined,
     exitCode: process.env.E2E_EXIT_CODE || undefined,
     artifactsUrl: process.env.ARTIFACTS_URL,
     recordingUrl: process.env.RECORDING_URL,

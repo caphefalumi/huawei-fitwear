@@ -1,6 +1,7 @@
 name: Mobile E2E
 
-# No pull_request or merge_group triggers. Nightly and manual runs stay on main.
+# No pull_request or merge_group triggers. Nightly runs use main; manual runs
+# may use any branch (Actions > Mobile E2E > Run workflow > pick the branch).
 # Push is limited to the release-build branch so that fix can be proven before merge.
 on:
   schedule:
@@ -35,6 +36,8 @@ defaults:
 env:
   APK_DIR: apps/mobile/android/app/build/outputs/apk/release
   APK_ARTIFACT: fitwear-release-apk
+  # e2e only accepts an --output directory inside its project (apps/mobile).
+  E2E_ARTIFACTS: apps/mobile/e2e-artifacts
 
 jobs:
   validate:
@@ -49,12 +52,16 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
-      # Staging credentials stay on trusted refs. feat/build-mobile is included
-      # so the release-build fix can be proven before it merges to main.
-      - name: Restrict E2E runs to trusted branches
-        if: github.ref != 'refs/heads/main' && github.ref != 'refs/heads/feat/build-mobile'
+      # Staging credentials stay on trusted refs. A manual run may use any
+      # branch: only people with write access can dispatch it. Automatic runs
+      # (schedule, push) stay on main and feat/build-mobile.
+      - name: Restrict automatic E2E runs to trusted branches
+        if: >-
+          github.event_name != 'workflow_dispatch' &&
+          github.ref != 'refs/heads/main' &&
+          github.ref != 'refs/heads/feat/build-mobile'
         run: |
-          echo "::error::Mobile E2E runs must use main (trusted code with staging credentials)."
+          echo "::error::Automatic Mobile E2E runs must use main or feat/build-mobile; start other branches manually."
           exit 1
 
       - name: Checkout repository
@@ -274,8 +281,9 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: fitwear-e2e-recording-${{ github.run_attempt }}
-          path: e2e-artifacts/**/*.mp4
-          if-no-files-found: ignore
+          # One <test>__<attempt>.mp4 per e2e test, collected by run-e2e-android.sh.
+          path: ${{ env.E2E_ARTIFACTS }}/recordings/*.mp4
+          if-no-files-found: warn
           retention-days: 7
 
       - name: Upload JUnit, screenshots, and diagnostics
@@ -284,7 +292,10 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: mobile-e2e-artifacts-${{ github.run_attempt }}
-          path: e2e-artifacts/
+          # Videos are already in the recording artifact above.
+          path: |
+            ${{ env.E2E_ARTIFACTS }}/
+            !${{ env.E2E_ARTIFACTS }}/recordings/**
           if-no-files-found: warn
           retention-days: 7
 
@@ -293,8 +304,8 @@ jobs:
         env:
           RECORDING_URL: ${{ steps.upload-recording.outputs.artifact-url }}
           ARTIFACTS_URL: ${{ steps.upload-artifacts.outputs.artifact-url }}
-        run: bun .github/scripts/generate-e2e-summary.ts
+        run: bun .github/scripts/generate-e2e-summary.ts "$E2E_ARTIFACTS"
 
       - name: Require passing E2E run and valid JUnit
         if: always()
-        run: bun .github/scripts/verify-e2e-result.ts
+        run: bun .github/scripts/verify-e2e-result.ts "$E2E_ARTIFACTS"

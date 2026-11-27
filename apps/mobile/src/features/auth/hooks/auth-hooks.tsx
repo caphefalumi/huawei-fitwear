@@ -94,6 +94,9 @@ function identifyUser(user: AuthUser) {
   })
 }
 
+const RECONNECT_RETRY_MS = 2_000
+const RECONNECT_RETRY_MAX_MS = 30_000
+
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<{ user: SessionUser; expiresAt: string } | null>(null)
   const [offline, setOffline] = useState(false)
@@ -221,6 +224,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     let active = true
     let validation: AbortController | null = null
+    // A network change that arrives while a check is in flight. Reconnecting
+    // often comes up on cellular and moves to Wi-Fi seconds later, which can
+    // fail the check started on cellular; check again after it ends.
+    let revalidate = false
+    // A check that fails while the device still reports a connection is tried
+    // again with backoff: no further network event may come to trigger it.
+    let retryTimer: ReturnType<typeof setTimeout> | null = null
+    let retryDelay = RECONNECT_RETRY_MS
+    function cancelRetry() {
+      if (retryTimer) clearTimeout(retryTimer)
+      retryTimer = null
+    }
+    function scheduleRetry() {
+      if (!active || retryTimer || reachable.current === false) return
+      retryTimer = setTimeout(() => {
+        retryTimer = null
+        if (active && !cloudAvailable.current && reachable.current !== false) void validate()
+      }, retryDelay)
+      retryDelay = Math.min(retryDelay * 2, RECONNECT_RETRY_MAX_MS)
+    }
     let networkVersion = 0
     const native = Platform.OS !== "web"
     const startRevision = revision.current
@@ -245,7 +268,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     async function validate() {
       const saved = credential.current
-      if (!active || !saved || validation) return
+      if (validation) {
+        revalidate = true
+        return
+      }
+      if (!active || !saved) return
+      revalidate = false
+      cancelRetry()
       const currentRevision = revision.current
       const controller = new AbortController()
       const stillCurrent = () =>
@@ -269,6 +298,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         credential.current = { token, identity }
         showSession(identity, response.user)
         identifyUser(response.user)
+        retryDelay = RECONNECT_RETRY_MS
         setCloudAvailable(reachable.current !== false)
       } catch (cause) {
         if (!stillCurrent()) return
@@ -279,7 +309,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
           (cause.code === "NETWORK_ERROR" || cause.code === "TIMEOUT")
         ) {
           setCloudAvailable(false)
-          if (showSavedSession()) return
+          if (showSavedSession()) {
+            scheduleRetry()
+            return
+          }
           if (previous) {
             setError("Your session expired. Please sign in again.")
             await clearSession().catch(() => {
@@ -304,7 +337,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
           setError(userFacingSessionError(cause))
         }
       } finally {
-        if (validation === controller) validation = null
+        if (validation === controller) {
+          validation = null
+          if (revalidate && active && !cloudAvailable.current && reachable.current !== false) {
+            void validate()
+          }
+        }
       }
     }
 
@@ -350,6 +388,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const available = state.isConnected !== false && state.isInternetReachable !== false
       reachable.current = available
       if (!available) {
+        cancelRetry()
         setCloudAvailable(false)
         if (credential.current) {
           if (!showSavedSession()) {
@@ -390,6 +429,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     void hydrate()
     return () => {
       active = false
+      cancelRetry()
       validation?.abort()
       network?.remove()
       foreground?.remove()

@@ -119,6 +119,18 @@ test("all recordings keep their flow-relative paths", () => {
   expect(markdown).toContain("https://example.test/bundle")
 })
 
+test("collected per-test recordings are listed once, by test name", () => {
+  writeReport('<testsuite><testcase name="flow"/></testsuite>')
+  const original = path.join(artifactsDir, "results", "logs-a-meal", "attempt-1", "video")
+  mkdirSync(original, { recursive: true })
+  writeFileSync(path.join(original, "video.mp4"), "one")
+  mkdirSync(path.join(artifactsDir, "recordings"), { recursive: true })
+  writeFileSync(path.join(artifactsDir, "recordings", "logs-a-meal__attempt-1.mp4"), "one")
+  const { markdown } = generateSummary({ artifactsDir, exitCode: "0" })
+  expect(markdown).toContain("| logs-a-meal__attempt-1.mp4 | 3 |")
+  expect(markdown).not.toContain("video/video.mp4")
+})
+
 test("CLI appends its summary even when e2e failed or report is missing", () => {
   const script = path.join(import.meta.dir, "generate-e2e-summary.ts")
   const summaryFile = path.join(tempDir, "summary.md")

@@ -4,15 +4,18 @@ import { expect } from "e2e"
 import {
   byId,
   byText,
+  closeCaptureSheet,
   enter,
   field,
   hideKeyboard,
   isoDay,
   launchClean,
   openSignIn,
+  pause,
   relaunch,
   scrollTo,
   signIn,
+  swipeRowLeft,
   waitHidden,
   waitVisible,
 } from "./support"
@@ -34,7 +37,7 @@ test(
     // Log a meal with a manually entered item.
     await byText(screen, "Capture meal").tap()
     await waitVisible(byText(screen, "Capture your meal"), 20000)
-    await byText(screen, "Close Capture your meal").tap()
+    await closeCaptureSheet(ui)
     await byText(screen, "Enter meal manually").tap()
     await waitVisible(byText(screen, "+ Add item"), 15000)
     await byText(screen, "+ Add item").tap()
@@ -101,21 +104,29 @@ test(
     await expect(byText(screen, "1 meal")).toBeVisible()
     await byText(screen, "Clear food search").tap()
 
-    // Swipe to delete, undo, then delete for good. A "right" swipe scrolls the
-    // row's content right, so the finger travels left.
-    await soup.swipe({ direction: "right" })
+    // Swipe to delete, undo, then delete for good. Clearing the search moves
+    // the row, so wait for the day view before measuring it.
+    await waitVisible(byText(screen, "Meals history ›"), 10000)
+    await swipeRowLeft(screen, soup)
     await byText(screen, "Delete E2E Journal Soup").tap()
     await waitVisible(byText(screen, "Meal deleted"), 5000)
     await expect(soup).toBeHidden()
     await byText(screen, "Undo").tap()
     await waitVisible(soup, 5000)
-    await soup.swipe({ direction: "right" })
+    await swipeRowLeft(screen, soup)
     await byText(screen, "Delete E2E Journal Soup").tap()
+    // The app sends the DELETE when the Undo toast closes, so see the toast
+    // first: waiting only for it to be hidden passes before it ever appears.
+    await waitVisible(byText(screen, "Meal deleted"), 5000)
     await waitHidden(byText(screen, "Meal deleted"), 10000)
     await waitHidden(soup, 15000)
     await expect(byText(screen, /^(No meals logged on.*|No meals yet)$/)).toBeVisible()
 
     // The deletion reached the server: search finds nothing after a restart.
+    // The app sends the DELETE only when the Undo toast closes and keeps the row
+    // hidden meanwhile, so nothing on screen marks the request as done. Give it
+    // time to finish; a restart right away would kill it in flight.
+    await pause(5000)
     await relaunch(ui)
     await byId(screen, "tab-meals").tap()
     await waitVisible(byText(screen, "Meals history ›"), 20000)

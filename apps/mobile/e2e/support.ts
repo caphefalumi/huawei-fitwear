@@ -16,12 +16,15 @@ export function byText(screen: Screen, text: TextMatch): Locator {
   return screen.getByText(text, { visible: true }).first()
 }
 
-/** An input found by its placeholder, accessibility label or visible text. */
+/**
+ * A text box found by its placeholder or accessible name. Only text boxes: a
+ * form's visible label shares the field's name and comes first in the tree,
+ * and fill on that label fails.
+ */
 export function field(screen: Screen, text: string): Locator {
   return screen
     .getByPlaceholder(text, { visible: true })
-    .or(screen.getByLabel(text, { visible: true }))
-    .or(screen.getByText(text, { visible: true }))
+    .or(screen.getByRole("textbox", text, { visible: true }))
     .first()
 }
 
@@ -58,20 +61,114 @@ export async function enter(device: Device, locator: Locator, value: string) {
   await hideKeyboard(device)
 }
 
+/**
+ * Focuses an input and types through the keyboard, as Maestro's tapOn +
+ * inputText did. Use it where the app moves focus while typing (auto-advance),
+ * which breaks fill's read-back check. The date fields select their text on
+ * focus, so typing replaces it.
+ */
+export async function typeInto(locator: Locator, value: string) {
+  await locator.pressSequentially(value)
+}
+
+/**
+ * Drags from the right edge of a row to the left edge of the screen, as
+ * Maestro's `swipe: direction: LEFT` did. A locator swipe only drags half of
+ * the matched node, which on a short text label is too little to open a row.
+ */
+export async function swipeRowLeft(screen: Screen, locator: Locator) {
+  const box = await locator.boundingBox()
+  if (!box) throw new Error("swipeRowLeft: the row has no bounding box")
+  const y = box.y + box.height / 2
+  await screen.swipe({
+    from: { x: box.x + box.width - 10, y },
+    to: { x: 10, y },
+    duration: 300,
+  })
+}
+
 export async function scrollTo(screen: Screen, locator: Locator, direction: "up" | "down") {
   await screen.scrollUntilVisible(locator, { direction, timeout: 10000 })
 }
 
+const APP_ID = "com.fitwear.mobile"
+
+/**
+ * Taps the control that closes a modal sheet and waits for the sheet to go.
+ * The app's sheets are modal windows; closing one can briefly hand focus to
+ * the launcher, which the engine reports as a tap that left the app. That one
+ * error is accepted only if the app is back in front and the sheet closed.
+ */
+export async function closeSheet(device: Device, control: Locator, sheet: Locator) {
+  try {
+    await control.tap()
+  } catch (error) {
+    if (!String(error).includes(`left ${APP_ID}`)) throw error
+    await expect
+      .poll(async () => (await device.foregroundApp()).bundleId, { timeout: 5000 })
+      .toBe(APP_ID)
+  }
+  await waitHidden(sheet, 10000)
+}
+
 /** Closes the one-time Health Connect offer if this device shows it. */
-export async function skipHealthConnectOffer(screen: Screen) {
-  if (await maybeVisible(byText(screen, "Connect to Health Connect"), 10000)) {
-    await byText(screen, "Not now").tap()
+export async function skipHealthConnectOffer({ device, screen }: Pick<Ui, "device" | "screen">) {
+  const offer = byText(screen, "Connect to Health Connect")
+  if (await maybeVisible(offer, 10000)) {
+    await closeSheet(device, byText(screen, "Not now"), offer)
+  }
+}
+
+/** Closes the capture sheet, which opens with the camera, to enter a meal by hand. */
+export async function closeCaptureSheet({ device, screen }: Pick<Ui, "device" | "screen">) {
+  await closeSheet(
+    device,
+    byText(screen, "Close Capture your meal"),
+    byText(screen, "Capture your meal"),
+  )
+}
+
+/**
+ * Switches airplane mode while the app is open and waits for the "Offline mode"
+ * banner to match. The banner pushes the screen down, so acting before it
+ * settles taps whatever slid under the old position.
+ */
+export async function setOffline({ device, screen }: Pick<Ui, "device" | "screen">, on: boolean) {
+  const banner = byText(screen, /^Offline mode/)
+  if (on) {
+    await device.setAirplaneMode(true)
+    // A modal screen can cover the root banner, so its absence is no error.
+    await maybeVisible(banner, 10000)
+    return
+  }
+  await goOnline(device)
+  // Best effort: the banner can stay while the app still treats the session
+  // as offline. A step that needs the network asserts on its own result.
+  await bannerGone(banner, 30000)
+}
+
+/** A fixed wait, only where the app gives nothing on screen to wait for. */
+export function pause(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function goOnline(device: Device) {
+  await device.setAirplaneMode(false)
+  await device.setNetwork("online")
+}
+
+async function bannerGone(banner: Locator, timeout: number) {
+  try {
+    await banner.waitFor({ state: "hidden", timeout })
+    return true
+  } catch {
+    return false
   }
 }
 
 /** Fresh install state, network on, at the welcome screen. */
 export async function launchClean({ app, device, screen }: Ui) {
-  await device.setAirplaneMode(false)
+  await goOnline(device)
   await app.clearState()
   await waitVisible(byText(screen, "Explore the app"), 30000)
 }
@@ -88,7 +185,7 @@ export async function signIn({ device, screen }: Ui) {
   await byId(screen, "login-password").fill(account.password)
   await hideKeyboard(device)
   await byId(screen, "login-submit").tap()
-  await skipHealthConnectOffer(screen)
+  await skipHealthConnectOffer({ device, screen })
   await waitVisible(byText(screen, "Today"), 30000)
 }
 
