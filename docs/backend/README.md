@@ -114,7 +114,7 @@ From repository root:
 bun run test                     # Backend Bun tests + mobile Expo Jest tests
 bun run backend:test:unit        # Run unit tests only
 bun run backend:test:integration # Run integration tests only
-bun run test:e2e                 # Run the single Maestro native mobile flow
+bun run test:e2e                 # Run the native mobile E2E tests (e2e)
 ```
 
 From `apps/backend/`:
@@ -124,7 +124,7 @@ bun run test:unit                # Unit tests (tests/unit)
 bun run test:integration         # Integration tests (tests/integration)
 ```
 
-The only E2E test is the native Maestro flow in `apps/mobile/e2e/fitness.yaml`. Mobile CI runs it nightly at 02:00 UTC and on manual workflow dispatch, using an Android emulator and local Wrangler backend with D1 migrations applied. The workflow provisions the backend, native build, emulator, and Maestro CLI.
+The E2E tests are the native mobile tests in `apps/mobile/e2e/*.e2e.ts`, run with `e2e` and `@e2e-dev/mobile`. Mobile CI runs it nightly at 02:00 UTC and on manual workflow dispatch, using an Android emulator and local Wrangler backend with D1 migrations applied. The workflow provisions the backend, native build, emulator, and e2e runner.
 
 For runtime proof, first apply local migrations and run Wrangler on port 8788, then run `bun scripts/smoke.ts` from `apps/backend`. Set `SMOKE_API_URL` to the deployed Worker to exercise production D1/R2. Set `SMOKE_ANALYZE=1` to include a real Workers AI call (billable provider usage). The smoke deletes its meals/workouts/recovery/targets and revokes both sessions; its uniquely named test accounts and weight logs remain for inspection.
 
@@ -187,7 +187,7 @@ flowchart LR
 - **Release gates**:
   - `ci`: Backend typecheck → mobile typecheck → backend unit/integration tests → mobile Jest tests → Wrangler dry-run build, in sequence.
   - `checks`: Lint and formatting run in parallel. Release checks never autoformat or commit changes.
-  - Maestro E2E remains nightly/manual in Mobile CI; it is not a release gate.
+  - Mobile E2E remains nightly/manual in Mobile CI; it is not a release gate.
 - **Deployment**: After all gates succeed, `deploy` applies remote D1 migrations, then runs `bun run backend:deploy` (`wrangler deploy`). A failed migration prevents deployment.
 - **Staging**: `deploy-staging` runs after `ci`, alongside the production deployment. It applies the D1 migrations to `fitwear-d1-staging`, seeds the USDA catalog, deploys `fitwear-backend-staging` and checks `/swagger/json`. Mobile E2E runs against this backend. Neither deployment waits for the other.
 - **Rollback**: Worker rollback does not reverse D1 migrations; review schema changes for compatibility with the currently deployed Worker before merging.

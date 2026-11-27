@@ -37,8 +37,8 @@ function wrangler() {
 const config = {
   E2E_API_URL: "https://fitwear-backend-staging.example.workers.dev/",
   E2E_D1_DATABASE_ID: STAGE_DB,
-  MAESTRO_TEST_EMAIL: "e2e@example.test",
-  MAESTRO_TEST_PASSWORD: "test-secret",
+  E2E_TEST_EMAIL: "e2e@example.test",
+  E2E_TEST_PASSWORD: "test-secret",
   CLOUDFLARE_ACCOUNT_ID: "cloudflare-account",
   CLOUDFLARE_API_TOKEN: "api-secret",
 }
@@ -107,6 +107,6 @@ test("rejects staging resources pointing at production", () => {
 
 test("rejects a malformed account email", () => {
   expect(() =>
-    validateE2EEnvironment({ ...config, MAESTRO_TEST_EMAIL: "not-email" }, wrangler()),
+    validateE2EEnvironment({ ...config, E2E_TEST_EMAIL: "not-email" }, wrangler()),
   ).toThrow(/account email/)
 })

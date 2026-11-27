@@ -1,6 +1,6 @@
 import fs from "node:fs"
 
-import { createD1Query } from "./cleanup-maestro-account"
+import { createD1Query } from "./cleanup-e2e-account"
 
 // Called only after validate-e2e-environment has checked the staging bindings.
 // Never initialize a partially populated database: migrations can drop columns.

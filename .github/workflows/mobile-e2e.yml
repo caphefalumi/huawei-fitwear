@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       include_tags:
-        description: Comma-separated Maestro tags (OR); blank runs all top-level flows
+        description: Comma-separated test tags (any match); blank runs every test
         required: false
         type: string
         default: ""
@@ -73,8 +73,8 @@ jobs:
         env:
           E2E_API_URL: ${{ vars.E2E_API_URL }}
           E2E_D1_DATABASE_ID: ${{ secrets.E2E_D1_DATABASE_ID }}
-          MAESTRO_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
-          MAESTRO_TEST_PASSWORD: ${{ secrets.MAESTRO_TEST_PASSWORD }}
+          E2E_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
+          E2E_TEST_PASSWORD: ${{ secrets.MAESTRO_TEST_PASSWORD }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: bun .github/scripts/validate-e2e-environment.ts
@@ -101,8 +101,8 @@ jobs:
       - name: Provision dedicated account in empty staging
         if: inputs.provision_account == true
         env:
-          MAESTRO_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
-          MAESTRO_TEST_PASSWORD: ${{ secrets.MAESTRO_TEST_PASSWORD }}
+          E2E_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
+          E2E_TEST_PASSWORD: ${{ secrets.MAESTRO_TEST_PASSWORD }}
           E2E_D1_DATABASE_ID: ${{ secrets.E2E_D1_DATABASE_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -110,12 +110,12 @@ jobs:
 
       - name: Check staging account and schema before building
         env:
-          MAESTRO_CLEANUP_STATE: ${{ runner.temp }}/maestro-preflight-${{ github.run_id }}-${{ github.run_attempt }}.json
-          MAESTRO_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
+          E2E_CLEANUP_STATE: ${{ runner.temp }}/e2e-preflight-${{ github.run_id }}-${{ github.run_attempt }}.json
+          E2E_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
           E2E_D1_DATABASE_ID: ${{ secrets.E2E_D1_DATABASE_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: bun .github/scripts/cleanup-maestro-account.ts snapshot
+        run: bun .github/scripts/cleanup-e2e-account.ts snapshot
 
   build:
     name: Build Android release APK
@@ -141,6 +141,7 @@ jobs:
           key="$({ git ls-files -s -z -- \
             apps/mobile package.json bun.lock .github/workflows/mobile-e2e.yml .github/actions/setup/action.yml \
             ':(exclude)apps/mobile/e2e/**' \
+            ':(exclude)apps/mobile/e2e.config.ts' \
             ':(exclude)apps/mobile/docs/**' \
             ':(exclude)apps/mobile/src/test-utils/**' \
             ':(exclude,glob)apps/mobile/src/**/__tests__/**' \
@@ -218,24 +219,29 @@ jobs:
           retention-days: 7
 
   e2e:
-    name: Android Maestro E2E
+    name: Android E2E
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      E2E_TELEMETRY_DISABLED: "1"
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
 
+      # The e2e runner (e2e + @e2e-dev/mobile) needs Node.js 22.22.3+ or 24.8+.
       - name: Setup workspace
         uses: ./.github/actions/setup
+        with:
+          node: "true"
 
       - name: Verify E2E helper tests
         run: >-
           bun test
-          ./.github/scripts/generate-maestro-summary.test.ts
-          ./.github/scripts/cleanup-maestro-account.test.ts
+          ./.github/scripts/generate-e2e-summary.test.ts
+          ./.github/scripts/cleanup-e2e-account.test.ts
           ./.github/scripts/validate-e2e-environment.test.ts
 
       - name: Download APK from this run
@@ -252,36 +258,22 @@ jobs:
           fi
           sudo chmod 666 /dev/kvm
 
-      - name: Setup Java
-        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - name: Install Maestro 2.12.0
-        env:
-          MAESTRO_VERSION: "2.12.0"
-        run: |
-          curl --fail --location --silent --show-error --retry 3 https://get.maestro.mobile.dev | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-          "$HOME/.maestro/bin/maestro" --version
-
       - name: Snapshot staging E2E account
         id: snapshot-account
         env:
-          MAESTRO_CLEANUP_STATE: ${{ runner.temp }}/maestro-account-${{ github.run_id }}-${{ github.run_attempt }}.json
-          MAESTRO_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
+          E2E_CLEANUP_STATE: ${{ runner.temp }}/e2e-account-${{ github.run_id }}-${{ github.run_attempt }}.json
+          E2E_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
           E2E_D1_DATABASE_ID: ${{ secrets.E2E_D1_DATABASE_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: bun .github/scripts/cleanup-maestro-account.ts snapshot
+        run: bun .github/scripts/cleanup-e2e-account.ts snapshot
 
-      - name: Execute Maestro flows on Android
+      - name: Run e2e tests on Android
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         env:
-          MAESTRO_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
-          MAESTRO_TEST_PASSWORD: ${{ secrets.MAESTRO_TEST_PASSWORD }}
-          MAESTRO_INCLUDE_TAGS: ${{ inputs.include_tags }}
+          E2E_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
+          E2E_TEST_PASSWORD: ${{ secrets.MAESTRO_TEST_PASSWORD }}
+          E2E_TAGS: ${{ inputs.include_tags }}
         with:
           api-level: 34
           # expo-camera refuses to read barcodes from photos without Play services.
@@ -293,17 +285,17 @@ jobs:
           disable-animations: true
           disable-linux-hw-accel: false
           emulator-options: -accel on -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: bash .github/scripts/run-maestro-android.sh
+          script: bash .github/scripts/run-e2e-android.sh
 
       - name: Clean up staging account
         if: ${{ always() && steps.snapshot-account.outcome == 'success' }}
         env:
-          MAESTRO_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
-          MAESTRO_CLEANUP_STATE: ${{ runner.temp }}/maestro-account-${{ github.run_id }}-${{ github.run_attempt }}.json
+          E2E_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
+          E2E_CLEANUP_STATE: ${{ runner.temp }}/e2e-account-${{ github.run_id }}-${{ github.run_attempt }}.json
           E2E_D1_DATABASE_ID: ${{ secrets.E2E_D1_DATABASE_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: bun .github/scripts/cleanup-maestro-account.ts cleanup
+        run: bun .github/scripts/cleanup-e2e-account.ts cleanup
 
       - name: Upload recording videos
         id: upload-recording
@@ -311,7 +303,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: fitwear-e2e-recording-${{ github.run_attempt }}
-          path: maestro-artifacts/**/*.mp4
+          path: e2e-artifacts/**/*.mp4
           if-no-files-found: ignore
           retention-days: 7
 
@@ -320,21 +312,21 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: maestro-e2e-artifacts-${{ github.run_attempt }}
-          path: maestro-artifacts/
+          name: mobile-e2e-artifacts-${{ github.run_attempt }}
+          path: e2e-artifacts/
           if-no-files-found: warn
           retention-days: 7
 
-      - name: Publish Maestro results
+      - name: Publish E2E results
         if: ${{ always() }}
         env:
           RECORDING_URL: ${{ steps.upload-recording.outputs.artifact-url }}
           ARTIFACTS_URL: ${{ steps.upload-artifacts.outputs.artifact-url }}
-          MAESTRO_EXIT_CODE: ${{ env.MAESTRO_EXIT_CODE }}
-        run: bun .github/scripts/generate-maestro-summary.ts
+          E2E_EXIT_CODE: ${{ env.E2E_EXIT_CODE }}
+        run: bun .github/scripts/generate-e2e-summary.ts
 
-      - name: Require passing Maestro and valid JUnit
+      - name: Require passing E2E run and valid JUnit
         if: ${{ always() }}
         env:
-          MAESTRO_EXIT_CODE: ${{ env.MAESTRO_EXIT_CODE }}
-        run: bun .github/scripts/verify-maestro-result.ts
+          E2E_EXIT_CODE: ${{ env.E2E_EXIT_CODE }}
+        run: bun .github/scripts/verify-e2e-result.ts

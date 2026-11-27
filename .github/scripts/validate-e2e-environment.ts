@@ -19,8 +19,8 @@ type WranglerConfig = WranglerBindings & { env?: { staging?: WranglerBindings } 
 const REQUIRED = [
   "E2E_API_URL",
   "E2E_D1_DATABASE_ID",
-  "MAESTRO_TEST_EMAIL",
-  "MAESTRO_TEST_PASSWORD",
+  "E2E_TEST_EMAIL",
+  "E2E_TEST_PASSWORD",
   "CLOUDFLARE_ACCOUNT_ID",
   "CLOUDFLARE_API_TOKEN",
 ] as const
@@ -120,8 +120,8 @@ export function validateE2EEnvironment(
   if (hostname.endsWith(".workers.dev") && !hostname.startsWith(stageWorker.toLowerCase() + ".")) {
     throw new Error("E2E_API_URL workers.dev hostname must match the staging Worker")
   }
-  if (!env.MAESTRO_TEST_EMAIL!.includes("@")) {
-    throw new Error("MAESTRO_TEST_EMAIL must be an account email")
+  if (!env.E2E_TEST_EMAIL!.includes("@")) {
+    throw new Error("E2E_TEST_EMAIL must be an account email")
   }
   return { apiUrl: api.toString(), databaseId: stageId }
 }
