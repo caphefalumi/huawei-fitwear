@@ -13,19 +13,13 @@ on:
     inputs:
       include_tags:
         description: Comma-separated test tags (any match); blank runs every test
-        required: false
         type: string
-        default: ""
       provision_account:
         description: One-time creation of the dedicated account in an empty staging user table
-        required: false
         type: boolean
-        default: false
       force_rebuild:
         description: Bypass APK cache and build from source
-        required: false
         type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -38,26 +32,30 @@ defaults:
   run:
     shell: bash
 
+env:
+  APK_DIR: apps/mobile/android/app/build/outputs/apk/release
+  APK_ARTIFACT: fitwear-release-apk
+
 jobs:
   validate:
     name: Validate isolated staging configuration
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      E2E_API_URL: ${{ vars.E2E_API_URL }}
+      E2E_D1_DATABASE_ID: ${{ secrets.E2E_D1_DATABASE_ID }}
+      E2E_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
+      E2E_TEST_PASSWORD: ${{ secrets.MAESTRO_TEST_PASSWORD }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
-      - name: Restrict E2E dispatch to trusted branches
-        env:
-          REF: ${{ github.ref }}
+      # Staging credentials stay on trusted refs. feat/build-mobile is included
+      # so the release-build fix can be proven before it merges to main.
+      - name: Restrict E2E runs to trusted branches
+        if: github.ref != 'refs/heads/main' && github.ref != 'refs/heads/feat/build-mobile'
         run: |
-          # Staging credentials stay on trusted refs. feat/build-mobile is included
-          # so the release-build fix can be proven before it merges to main.
-          case "$REF" in
-            refs/heads/main|refs/heads/feat/build-mobile)
-              ;;
-            *)
-              echo "::error::Mobile E2E runs must use main (trusted code with staging credentials)."
-              exit 1
-              ;;
-          esac
+          echo "::error::Mobile E2E runs must use main (trusted code with staging credentials)."
+          exit 1
 
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -67,54 +65,30 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: 1.4.4
+          bun-version-file: package.json
 
       - name: Check E2E configuration and isolation
-        env:
-          E2E_API_URL: ${{ vars.E2E_API_URL }}
-          E2E_D1_DATABASE_ID: ${{ secrets.E2E_D1_DATABASE_ID }}
-          E2E_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
-          E2E_TEST_PASSWORD: ${{ secrets.MAESTRO_TEST_PASSWORD }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: bun .github/scripts/validate-e2e-environment.ts
 
       - name: Check whether staging database is empty
         id: staging-database
-        env:
-          E2E_D1_DATABASE_ID: ${{ secrets.E2E_D1_DATABASE_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: bun .github/scripts/check-empty-staging.ts
 
       - name: Install dependencies to initialize empty staging
-        if: steps.staging-database.outputs.empty == 'true' || inputs.provision_account == true
+        if: steps.staging-database.outputs.empty == 'true' || inputs.provision_account
         run: bun install --frozen-lockfile
 
       - name: Apply migrations to empty staging database
         if: steps.staging-database.outputs.empty == 'true'
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: bun run --cwd apps/backend db:migrate:staging
 
       - name: Provision dedicated account in empty staging
-        if: inputs.provision_account == true
-        env:
-          E2E_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
-          E2E_TEST_PASSWORD: ${{ secrets.MAESTRO_TEST_PASSWORD }}
-          E2E_D1_DATABASE_ID: ${{ secrets.E2E_D1_DATABASE_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        if: inputs.provision_account
         run: bun .github/scripts/provision-e2e-account.ts
 
       - name: Check staging account and schema before building
         env:
-          E2E_CLEANUP_STATE: ${{ runner.temp }}/e2e-preflight-${{ github.run_id }}-${{ github.run_attempt }}.json
-          E2E_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
-          E2E_D1_DATABASE_ID: ${{ secrets.E2E_D1_DATABASE_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          E2E_CLEANUP_STATE: ${{ runner.temp }}/e2e-preflight.json
         run: bun .github/scripts/cleanup-e2e-account.ts snapshot
 
   build:
@@ -149,15 +123,15 @@ jobs:
             ':(exclude)apps/mobile/jest-setup.ts' \
             ':(exclude)apps/mobile/README.md'; \
             printf '%s' "$EXPO_PUBLIC_API_URL"; } | sha256sum | cut -d' ' -f1)"
-          echo "key=$key" >> "$GITHUB_OUTPUT"
+          echo "cache-key=android-e2e-apk-v1-${RUNNER_OS}-${key}" >> "$GITHUB_OUTPUT"
 
       - name: Restore APK with identical build inputs
         id: apk-cache
-        if: inputs.force_rebuild != true
+        if: ${{ !inputs.force_rebuild }}
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
-          key: android-e2e-apk-v1-${{ runner.os }}-${{ steps.fingerprint.outputs.key }}
+          path: ${{ env.APK_DIR }}/app-release.apk
+          key: ${{ steps.fingerprint.outputs.cache-key }}
 
       - name: Setup workspace
         if: steps.apk-cache.outputs.cache-hit != 'true'
@@ -194,11 +168,11 @@ jobs:
         run: ./gradlew assembleRelease --no-daemon --build-cache -Pandroid.enableMinifyInReleaseBuilds=false -PreactNativeArchitectures=x86_64
 
       - name: Save APK for future test-only changes
-        if: steps.apk-cache.outputs.cache-hit != 'true' && inputs.force_rebuild != true
+        if: steps.apk-cache.outputs.cache-hit != 'true' && !inputs.force_rebuild
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
-          key: android-e2e-apk-v1-${{ runner.os }}-${{ steps.fingerprint.outputs.key }}
+          path: ${{ env.APK_DIR }}/app-release.apk
+          key: ${{ steps.fingerprint.outputs.cache-key }}
 
       - name: Record Android build or reuse
         env:
@@ -213,8 +187,8 @@ jobs:
       - name: Upload APK from this commit
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: fitwear-release-apk
-          path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          name: ${{ env.APK_ARTIFACT }}
+          path: ${{ env.APK_DIR }}/app-release.apk
           if-no-files-found: error
           retention-days: 7
 
@@ -225,6 +199,10 @@ jobs:
     timeout-minutes: 45
     env:
       E2E_TELEMETRY_DISABLED: "1"
+      E2E_D1_DATABASE_ID: ${{ secrets.E2E_D1_DATABASE_ID }}
+      E2E_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -247,8 +225,8 @@ jobs:
       - name: Download APK from this run
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: fitwear-release-apk
-          path: apps/mobile/android/app/build/outputs/apk/release
+          name: ${{ env.APK_ARTIFACT }}
+          path: ${{ env.APK_DIR }}
 
       - name: Enable KVM acceleration
         run: |
@@ -261,17 +239,14 @@ jobs:
       - name: Snapshot staging E2E account
         id: snapshot-account
         env:
-          E2E_CLEANUP_STATE: ${{ runner.temp }}/e2e-account-${{ github.run_id }}-${{ github.run_attempt }}.json
-          E2E_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
-          E2E_D1_DATABASE_ID: ${{ secrets.E2E_D1_DATABASE_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          E2E_CLEANUP_STATE: ${{ runner.temp }}/e2e-account.json
         run: bun .github/scripts/cleanup-e2e-account.ts snapshot
 
+      # run-e2e-android.sh records E2E_EXIT_CODE in GITHUB_ENV and always exits 0,
+      # so the cleanup, upload and report steps below still run.
       - name: Run e2e tests on Android
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         env:
-          E2E_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
           E2E_TEST_PASSWORD: ${{ secrets.MAESTRO_TEST_PASSWORD }}
           E2E_TAGS: ${{ inputs.include_tags }}
         with:
@@ -288,18 +263,14 @@ jobs:
           script: bash .github/scripts/run-e2e-android.sh
 
       - name: Clean up staging account
-        if: ${{ always() && steps.snapshot-account.outcome == 'success' }}
+        if: always() && steps.snapshot-account.outcome == 'success'
         env:
-          E2E_TEST_EMAIL: ${{ secrets.MAESTRO_TEST_EMAIL }}
-          E2E_CLEANUP_STATE: ${{ runner.temp }}/e2e-account-${{ github.run_id }}-${{ github.run_attempt }}.json
-          E2E_D1_DATABASE_ID: ${{ secrets.E2E_D1_DATABASE_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          E2E_CLEANUP_STATE: ${{ runner.temp }}/e2e-account.json
         run: bun .github/scripts/cleanup-e2e-account.ts cleanup
 
       - name: Upload recording videos
         id: upload-recording
-        if: ${{ always() }}
+        if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: fitwear-e2e-recording-${{ github.run_attempt }}
@@ -309,7 +280,7 @@ jobs:
 
       - name: Upload JUnit, screenshots, and diagnostics
         id: upload-artifacts
-        if: ${{ always() }}
+        if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: mobile-e2e-artifacts-${{ github.run_attempt }}
@@ -318,15 +289,12 @@ jobs:
           retention-days: 7
 
       - name: Publish E2E results
-        if: ${{ always() }}
+        if: always()
         env:
           RECORDING_URL: ${{ steps.upload-recording.outputs.artifact-url }}
           ARTIFACTS_URL: ${{ steps.upload-artifacts.outputs.artifact-url }}
-          E2E_EXIT_CODE: ${{ env.E2E_EXIT_CODE }}
         run: bun .github/scripts/generate-e2e-summary.ts
 
       - name: Require passing E2E run and valid JUnit
-        if: ${{ always() }}
-        env:
-          E2E_EXIT_CODE: ${{ env.E2E_EXIT_CODE }}
+        if: always()
         run: bun .github/scripts/verify-e2e-result.ts
