@@ -85,11 +85,19 @@ export struct QuickLogView {
       if (this.day.waiting(food) > 0) {
         Row({ space: 4 }) {
           LoadingProgress().width(12).height(12).color(Palette.ACCENT)
-          Text(`Waiting for phone ×${this.day.waiting(food)}`)
+          Text('Waiting for phone')
+            .fontSize(Type.CAPTION)
+            .fontColor(Palette.ACCENT)
+          SymbolGlyph($r('sys.symbol.xmark'))
+            .fontSize(Type.CAPTION - 3)
+            .fontColor([Palette.ACCENT])
+          Text(`${this.day.waiting(food)}`)
             .fontSize(Type.CAPTION)
             .fontFeature(TABULAR)
             .fontColor(Palette.ACCENT)
-        };
+        }
+        .accessibilityGroup(true)
+        .accessibilityText(`Waiting for phone, ${this.day.waiting(food)} times`);
       }
       WatchButton({
         label: 'Log',
