@@ -9,9 +9,9 @@ const UI_SAMPLE_STRIDE: number = 5;
 struct ImuPage {
   @Local running: boolean = false;
   @Local statusText: string = 'Idle';
-  @Local accelText: string = 'x -   y -   z -';
-  @Local gyroText: string = 'x -   y -   z -';
-  @Local accelMag: string = '-';
+  @Local accelText: string = 'x —   y —   z —';
+  @Local gyroText: string = 'x —   y —   z —';
+  @Local accelMag: string = '—';
   @Local sampleCount: number = 0;
 
   private imuListener: ImuSensorListener = {
@@ -83,7 +83,7 @@ struct ImuPage {
             this.running = this.imuService.isRunning();
           })
         Column({ space: 2 }) {
-          Text('Accel m/s2')
+          Text('Accel m/s²')
             .fontSize(11)
             .fontColor('#94A3B8')
           Text(this.accelText)

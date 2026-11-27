@@ -242,7 +242,7 @@ export struct ControlsView {
           .fontWeight(FontWeight.Bold)
           .fontColor(Palette.TEXT)
         Text(
-          `${this.session.plan.name}: ${this.session.exercisesDone}/${this.session.plan.exercises.length}`,
+          `${this.session.plan.name} · ${this.session.exercisesDone}/${this.session.plan.exercises.length}`,
         )
           .width('70%')
           .fontSize(Type.CAPTION)
@@ -370,7 +370,7 @@ export struct SummaryView {
         }
         Text(
           this.early()
-            ? `Ended: ${this.session.exercisesDone}/${this.session.plan.exercises.length}`
+            ? `Ended · ${this.session.exercisesDone}/${this.session.plan.exercises.length}`
             : 'Workout done',
         )
           .fontSize(Type.HEADLINE)

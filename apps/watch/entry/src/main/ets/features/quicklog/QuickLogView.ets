@@ -85,7 +85,7 @@ export struct QuickLogView {
       if (this.day.waiting(food) > 0) {
         Row({ space: 4 }) {
           LoadingProgress().width(12).height(12).color(Palette.ACCENT)
-          Text(`${this.day.waiting(food)} waiting for phone`)
+          Text(`Waiting for phone ×${this.day.waiting(food)}`)
             .fontSize(Type.CAPTION)
             .fontFeature(TABULAR)
             .fontColor(Palette.ACCENT)
