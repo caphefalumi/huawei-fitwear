@@ -4,6 +4,7 @@ import { expect } from "e2e"
 import {
   byId,
   byText,
+  closeCaptureSheet,
   launchClean,
   openSignIn,
   relaunch,
@@ -34,7 +35,7 @@ test(
     await waitVisible(byText(screen, "Capture your meal"), 20000)
     await expect(byText(screen, "Add a ruler")).toBeVisible()
     await expect(byText(screen, "Shoot from above")).toBeVisible()
-    await byText(screen, "Close Capture your meal").tap()
+    await closeCaptureSheet(ui)
     await waitHidden(byText(screen, "Add a ruler"), 5000)
 
     // Use a real barcode image and the staging lookup; do not save to the diary.

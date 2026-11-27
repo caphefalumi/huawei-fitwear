@@ -6,6 +6,7 @@ import {
   type Ui,
   byId,
   byText,
+  closeCaptureSheet,
   enter,
   field,
   hideKeyboard,
@@ -155,7 +156,7 @@ test(
     let signedIn = false
     for (let attempt = 0; attempt < 4 && !signedIn; attempt += 1) {
       if (await submit.isVisible()) await submit.tap()
-      await skipHealthConnectOffer(screen)
+      await skipHealthConnectOffer(ui)
       signedIn = await maybeVisible(byText(screen, "Today"), 20000)
     }
     expect(signedIn, "signed in after the network came back").toBe(true)
@@ -178,7 +179,7 @@ test(
     await waitVisible(byText(screen, "Capture meal"), 20000)
     await byText(screen, "Capture meal").tap()
     await waitVisible(byText(screen, "Capture your meal"), 20000)
-    await byText(screen, "Close Capture your meal").tap()
+    await closeCaptureSheet(ui)
     await byText(screen, "Enter meal manually").tap()
     await waitVisible(byText(screen, "Log Meal"), 20000)
     await byText(screen, "+ Add item").tap()

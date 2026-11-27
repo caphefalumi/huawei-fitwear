@@ -91,20 +91,41 @@ export async function scrollTo(screen: Screen, locator: Locator, direction: "up"
   await screen.scrollUntilVisible(locator, { direction, timeout: 10000 })
 }
 
+const APP_ID = "com.fitwear.mobile"
+
+/**
+ * Taps the control that closes a modal sheet and waits for the sheet to go.
+ * The app's sheets are modal windows; closing one can briefly hand focus to
+ * the launcher, which the engine reports as a tap that left the app. That one
+ * error is accepted only if the app is back in front and the sheet closed.
+ */
+export async function closeSheet(device: Device, control: Locator, sheet: Locator) {
+  try {
+    await control.tap()
+  } catch (error) {
+    if (!String(error).includes(`left ${APP_ID}`)) throw error
+    await expect
+      .poll(async () => (await device.foregroundApp()).bundleId, { timeout: 5000 })
+      .toBe(APP_ID)
+  }
+  await waitHidden(sheet, 10000)
+}
+
 /** Closes the one-time Health Connect offer if this device shows it. */
-export async function skipHealthConnectOffer(screen: Screen) {
+export async function skipHealthConnectOffer({ device, screen }: Pick<Ui, "device" | "screen">) {
   const offer = byText(screen, "Connect to Health Connect")
   if (await maybeVisible(offer, 10000)) {
-    try {
-      await byText(screen, "Not now").tap()
-    } catch (error) {
-      // The offer is a modal window. Closing it can briefly hand focus away
-      // from the app, which the engine reports as a tap that left the app.
-      // Only that case is tolerated, and only if the offer really closed.
-      if (!String(error).includes("left com.fitwear.mobile")) throw error
-    }
-    await waitHidden(offer, 10000)
+    await closeSheet(device, byText(screen, "Not now"), offer)
   }
+}
+
+/** Closes the capture sheet, which opens with the camera, to enter a meal by hand. */
+export async function closeCaptureSheet({ device, screen }: Pick<Ui, "device" | "screen">) {
+  await closeSheet(
+    device,
+    byText(screen, "Close Capture your meal"),
+    byText(screen, "Capture your meal"),
+  )
 }
 
 /**
@@ -164,7 +185,7 @@ export async function signIn({ device, screen }: Ui) {
   await byId(screen, "login-password").fill(account.password)
   await hideKeyboard(device)
   await byId(screen, "login-submit").tap()
-  await skipHealthConnectOffer(screen)
+  await skipHealthConnectOffer({ device, screen })
   await waitVisible(byText(screen, "Today"), 30000)
 }
 

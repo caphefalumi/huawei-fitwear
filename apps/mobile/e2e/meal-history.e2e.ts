@@ -4,6 +4,7 @@ import { expect } from "e2e"
 import {
   byId,
   byText,
+  closeCaptureSheet,
   enter,
   field,
   hideKeyboard,
@@ -36,7 +37,7 @@ test(
     // Log a meal with a manually entered item.
     await byText(screen, "Capture meal").tap()
     await waitVisible(byText(screen, "Capture your meal"), 20000)
-    await byText(screen, "Close Capture your meal").tap()
+    await closeCaptureSheet(ui)
     await byText(screen, "Enter meal manually").tap()
     await waitVisible(byText(screen, "+ Add item"), 15000)
     await byText(screen, "+ Add item").tap()
