@@ -27,6 +27,9 @@ finish() {
   trap - EXIT
   set +e
   collect_recordings
+  # Device logs and network state for diagnosing failures, as Maestro's bundle had.
+  adb logcat -d -v threadtime >"$artifacts/logcat.txt" 2>&1
+  adb shell dumpsys connectivity >"$artifacts/connectivity.txt" 2>&1
   adb shell am force-stop com.fitwear.mobile >/dev/null 2>&1
   local stop_status=$?
   adb shell pm clear com.fitwear.mobile >/dev/null 2>&1
