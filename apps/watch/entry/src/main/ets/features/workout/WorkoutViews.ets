@@ -52,8 +52,7 @@ export struct SetView {
         },
         (index: number) => `${index}`,
       )
-    }
-    .accessibilityLevel('no');
+    }.accessibilityLevel('no');
   }
 
   build() {
@@ -77,8 +76,7 @@ export struct SetView {
             this.setDots();
           }
         }
-      }
-      .accessibilityGroup(true)
+      }.accessibilityGroup(true)
       Row({ space: 8 }) {
         IconButton({
           icon: $r('sys.symbol.minus'),
@@ -196,8 +194,7 @@ export struct RestView {
             .textAlign(TextAlign.Center)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .accessibilityGroup(true)
+        }.accessibilityGroup(true)
         Row({ space: 8 }) {
           WatchButton({
             label: 'Skip',
@@ -377,8 +374,7 @@ export struct SummaryView {
           .fontWeight(FontWeight.Bold)
           .fontFeature(TABULAR)
           .fontColor(Palette.TEXT)
-      }
-      .accessibilityGroup(true)
+      }.accessibilityGroup(true)
       Row({ space: 16 }) {
         this.stat(this.session.records.length, 'sets')
         this.stat(this.session.totalReps, 'reps')

@@ -72,16 +72,14 @@ export struct WatchButton {
     Button({ type: ButtonType.Capsule }) {
       Row({ space: 6 }) {
         if (this.icon !== undefined) {
-          SymbolGlyph(this.icon)
-            .fontSize(18)
-            .fontColor([this.labelColor()]);
+          SymbolGlyph(this.icon).fontSize(18).fontColor([this.labelColor()]);
         }
         Text(this.label)
           .fontSize(Type.BODY)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.labelColor())
           .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
       .padding({ left: 14, right: 14 })
     }
@@ -89,7 +87,12 @@ export struct WatchButton {
     .height(BUTTON_HEIGHT)
     .backgroundColor(this.kind === ButtonKind.PRIMARY ? Palette.ACCENT_FILL : Palette.SURFACE)
     .accessibilityText(this.label)
-    .responseRegion({ x: 0, y: (BUTTON_HEIGHT - MIN_TARGET) / 2, width: '100%', height: MIN_TARGET })
+    .responseRegion({
+      x: 0,
+      y: (BUTTON_HEIGHT - MIN_TARGET) / 2,
+      width: '100%',
+      height: MIN_TARGET,
+    })
     .onClick(() => this.onTap());
   }
 }
@@ -105,14 +108,12 @@ export struct LinkButton {
   build() {
     Row({ space: 5 }) {
       if (this.icon !== undefined) {
-        SymbolGlyph(this.icon)
-          .fontSize(15)
-          .fontColor([this.color]);
+        SymbolGlyph(this.icon).fontSize(15).fontColor([this.color]);
       }
       Text(this.label)
         .fontSize(Type.BODY)
         .fontWeight(FontWeight.Medium)
-        .fontColor(this.color);
+        .fontColor(this.color)
     }
     .height(32)
     .padding({ left: 12, right: 12 })
@@ -135,7 +136,7 @@ export struct IconButton {
     Button({ type: ButtonType.Circle }) {
       SymbolGlyph(this.icon)
         .fontSize(22)
-        .fontColor([Palette.TEXT]);
+        .fontColor([Palette.TEXT])
     }
     .width(this.diameter)
     .height(this.diameter)
@@ -156,7 +157,7 @@ export struct SymbolBadge {
     Stack() {
       SymbolGlyph(this.icon)
         .fontSize(this.diameter * 0.5)
-        .fontColor([this.filled ? Palette.ON_ACCENT : Palette.ACCENT]);
+        .fontColor([this.filled ? Palette.ON_ACCENT : Palette.ACCENT])
     }
     .width(this.diameter)
     .height(this.diameter)
@@ -168,13 +169,15 @@ export struct SymbolBadge {
 
 /** Page dots on the right edge, where HarmonyOS wearables show vertical pages. */
 export function pageDots(): DotIndicator {
-  return new DotIndicator()
-    .right(0)
-    .itemWidth(5)
-    .itemHeight(5)
-    // The indicator is drawn rotated on a vertical Swiper, so width runs along the edge.
-    .selectedItemWidth(12)
-    .selectedItemHeight(5)
-    .color(Palette.TRACK)
-    .selectedColor(Palette.TEXT);
+  return (
+    new DotIndicator()
+      .right(0)
+      .itemWidth(5)
+      .itemHeight(5)
+      // The indicator is drawn rotated on a vertical Swiper, so width runs along the edge.
+      .selectedItemWidth(12)
+      .selectedItemHeight(5)
+      .color(Palette.TRACK)
+      .selectedColor(Palette.TEXT)
+  );
 }

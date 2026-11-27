@@ -35,14 +35,18 @@ export struct StartView {
       if (this.plan.name === REST_DAY_NAME) {
         this.message($r('sys.symbol.figure_walk'), 'Rest day', 'Recovery is part of the plan');
       } else if (this.plan.exercises.length === 0) {
-        this.message($r('sys.symbol.phone_fill'), 'No workout yet', 'Open VoocHealth on your phone');
+        this.message(
+          $r('sys.symbol.phone_fill'),
+          'No workout yet',
+          'Open VoocHealth on your phone',
+        );
       } else {
         SymbolBadge({ icon: $r('sys.symbol.dumbbell') });
         Column({ space: 2 }) {
           Text('Today')
             .fontSize(Type.CAPTION)
             .fontWeight(FontWeight.Medium)
-            .fontColor(Palette.ACCENT);
+            .fontColor(Palette.ACCENT)
           Text(this.plan.name)
             .width('72%')
             .fontSize(Type.TITLE)
@@ -50,13 +54,12 @@ export struct StartView {
             .fontColor(Palette.TEXT)
             .textAlign(TextAlign.Center)
             .maxLines(2)
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
           Text(`${this.plan.exercises.length} exercises · ${this.plan.minutes} min`)
             .fontSize(Type.CAPTION)
             .fontFeature(TABULAR)
-            .fontColor(Palette.MUTED);
-        }
-        .accessibilityGroup(true);
+            .fontColor(Palette.MUTED)
+        }.accessibilityGroup(true);
         WatchButton({
           label: 'Start',
           kind: ButtonKind.PRIMARY,

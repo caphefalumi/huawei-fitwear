@@ -47,7 +47,11 @@ export struct ClockView {
         .width(30)
         .fontSize(Type.CAPTION)
         .fontColor(Palette.MUTED)
-      Progress({ value: Math.min(eaten, target), total: Math.max(target, 1), type: ProgressType.Linear })
+      Progress({
+        value: Math.min(eaten, target),
+        total: Math.max(target, 1),
+        type: ProgressType.Linear,
+      })
         .width(54)
         .color(Palette.ACCENT)
         .backgroundColor(Palette.TRACK)
@@ -151,8 +155,7 @@ export struct ClockView {
               .fontSize(11)
               .fontColor(Palette.MUTED)
           }
-        }
-        .accessibilityGroup(true)
+        }.accessibilityGroup(true)
         Column({ space: 7 }) {
           this.macroBar('Pro', this.day.eaten.protein, this.day.target.protein)
           this.macroBar('Carb', this.day.eaten.carbs, this.day.target.carbs)

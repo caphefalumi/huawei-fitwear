@@ -75,8 +75,7 @@ export struct QuickLogView {
         Text('kcal')
           .fontSize(Type.CAPTION)
           .fontColor(Palette.MUTED)
-      }
-      .alignItems(VerticalAlign.Bottom)
+      }.alignItems(VerticalAlign.Bottom)
       Row({ space: 4 }) {
         this.macro('Protein', food.protein)
         this.macro('Carbs', food.carbs)
@@ -84,7 +83,10 @@ export struct QuickLogView {
       }
       if (this.day.waiting(food) > 0) {
         Row({ space: 4 }) {
-          LoadingProgress().width(12).height(12).color(Palette.ACCENT)
+          LoadingProgress()
+            .width(12)
+            .height(12)
+            .color(Palette.ACCENT)
           Text('Waiting for phone')
             .fontSize(Type.CAPTION)
             .fontColor(Palette.ACCENT)
