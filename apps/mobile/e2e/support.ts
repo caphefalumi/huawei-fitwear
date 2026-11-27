@@ -16,12 +16,15 @@ export function byText(screen: Screen, text: TextMatch): Locator {
   return screen.getByText(text, { visible: true }).first()
 }
 
-/** An input found by its placeholder, accessibility label or visible text. */
+/**
+ * A text box found by its placeholder or accessible name. Only text boxes: a
+ * form's visible label shares the field's name and comes first in the tree,
+ * and fill on that label fails.
+ */
 export function field(screen: Screen, text: string): Locator {
   return screen
     .getByPlaceholder(text, { visible: true })
-    .or(screen.getByLabel(text, { visible: true }))
-    .or(screen.getByText(text, { visible: true }))
+    .or(screen.getByRole("textbox", text, { visible: true }))
     .first()
 }
 
