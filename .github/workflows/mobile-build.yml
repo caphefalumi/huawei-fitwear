@@ -5,10 +5,6 @@ on:
     - cron: "0 1 * * *"
       timezone: Asia/Ho_Chi_Minh
   workflow_dispatch:
-  # Keep the temporary release-build branch trigger for pre-merge verification.
-  push:
-    branches:
-      - feat/build-mobile
 
 permissions:
   contents: read
