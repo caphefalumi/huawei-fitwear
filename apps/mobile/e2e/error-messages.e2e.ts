@@ -13,6 +13,7 @@ import {
   maybeVisible,
   openSignIn,
   scrollTo,
+  setOffline,
   skipHealthConnectOffer,
   typeInto,
   waitHidden,
@@ -142,11 +143,11 @@ test(
     ).toBeVisible()
 
     // Replace the previous credential error before testing the offline failure.
-    await device.setAirplaneMode(true)
+    await setOffline(ui, true)
     await enter(device, password, "offline-e2e-password")
     await submit.tap()
     await waitVisible(byText(screen, "Can't connect. Check your connection and try again."), 20000)
-    await device.setAirplaneMode(false)
+    await setOffline(ui, false)
     await password.fill(account.password)
     await hideKeyboard(device)
     // The emulator's network can lag behind airplane mode being switched off, so a
@@ -205,7 +206,7 @@ test(
     await scrollTo(screen, byText(screen, "Add item"), "down")
     await byText(screen, "Add item").tap()
     await waitVisible(byText(screen, "Log Meal"), 20000)
-    await device.setAirplaneMode(true)
+    await setOffline(ui, true)
     await byText(screen, "Log Meal").tap()
     await screen.scrollUntilVisible(byText(screen, "Could not save your meal"), {
       direction: "up",

@@ -95,6 +95,19 @@ export async function skipHealthConnectOffer(screen: Screen) {
   }
 }
 
+/**
+ * Switches airplane mode while the app is open and waits for the "Offline mode"
+ * banner to match. The banner pushes the screen down, so acting before it
+ * settles taps whatever slid under the old position.
+ */
+export async function setOffline({ device, screen }: Pick<Ui, "device" | "screen">, on: boolean) {
+  await device.setAirplaneMode(on)
+  const banner = byText(screen, /^Offline mode/)
+  // A modal screen can cover the root banner, so its absence is not an error.
+  if (on) await maybeVisible(banner, 10000)
+  else await waitHidden(banner, 30000)
+}
+
 /** Fresh install state, network on, at the welcome screen. */
 export async function launchClean({ app, device, screen }: Ui) {
   await device.setAirplaneMode(false)
