@@ -169,6 +169,7 @@ test(
     await expect(byText(screen, "Today")).toBeVisible()
     await device.closeApp()
     await device.setAirplaneMode(false)
+    await device.setNetwork("online")
     await app.open()
     await waitVisible(byText(screen, "Today"), 30000)
 

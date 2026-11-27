@@ -113,17 +113,42 @@ export async function skipHealthConnectOffer(screen: Screen) {
  * settles taps whatever slid under the old position.
  */
 export async function setOffline({ device, screen }: Pick<Ui, "device" | "screen">, on: boolean) {
-  await device.setAirplaneMode(on)
   const banner = byText(screen, /^Offline mode/)
-  // Best effort both ways: a modal screen can cover the root banner, and the
-  // app keeps it up while it still treats the session as offline.
-  if (on) await maybeVisible(banner, 10000)
-  else await banner.waitFor({ state: "hidden", timeout: 15000 }).catch(() => undefined)
+  if (on) {
+    await device.setAirplaneMode(true)
+    // A modal screen can cover the root banner, so its absence is no error.
+    await maybeVisible(banner, 10000)
+    return
+  }
+  // The API 34 emulator does not always bring Wi-Fi back when airplane mode
+  // goes off, and the app stays offline. Turn Wi-Fi on as well, and toggle
+  // once more if the app still reports offline.
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await goOnline(device)
+    if (await bannerGone(banner, 30000)) return
+    await device.setAirplaneMode(true)
+  }
+  await goOnline(device)
+  await bannerGone(banner, 30000)
+}
+
+async function goOnline(device: Device) {
+  await device.setAirplaneMode(false)
+  await device.setNetwork("online")
+}
+
+async function bannerGone(banner: Locator, timeout: number) {
+  try {
+    await banner.waitFor({ state: "hidden", timeout })
+    return true
+  } catch {
+    return false
+  }
 }
 
 /** Fresh install state, network on, at the welcome screen. */
 export async function launchClean({ app, device, screen }: Ui) {
-  await device.setAirplaneMode(false)
+  await goOnline(device)
   await app.clearState()
   await waitVisible(byText(screen, "Explore the app"), 30000)
 }
