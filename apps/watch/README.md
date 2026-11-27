@@ -92,6 +92,11 @@ do not count.
   - It never goes down.
   - A 0.1 s step adds nothing unless the wrist moved in the 2 s ending with it: pooled
     std of at least 0.4 m/s² or 0.1 rad/s. Reps measure about 2 m/s².
+- **Done set** records `finalCount()`, so a tap right after the last rep keeps it.
+  If the set's gate has already closed, that is the held count. Otherwise it is the
+  count without only the newest 0.5 s, but never less than what the screen shows.
+  Replays recorded the right count for taps 0–5 s after any of the 10 reps
+  (360 of 360), and 0 for taps during 1–15 s of standing still.
 - Counted reps are added to the set, so −/+ and the crown still correct it. Reaching
   the target vibrates once.
 - `RepNet.ets` runs `resources/rawfile/repnet/imu_repnet.ms` on MindSpore Lite Kit
@@ -127,8 +132,9 @@ Checks:
 - The device test (`src/ohosTest/ets/test/RepNet.test.ets`) runs the shipped model on
   MindSpore Lite. It checks the bundle's 4 test windows (within 1e-4) and its squat
   set, which must match all 34 counts after each 0.5 s chunk and end at 10. It then
-  adds 10 s of slow sway, and the shown count must follow the evaluated rules hop by
-  hop and hold at 10. On the
+  adds 10 s of slow sway. The shown and recorded counts must follow the evaluated
+  rules hop by hop and hold at 10, and a tap right as the last rep ends must record
+  10 while the screen shows 9. On the
   HarmonyOS 6.1.1 wearable emulator the largest window error is 2.5e-5, and a window
   takes about 70–150 ms. That timing is from an x86 emulator, not a watch.
   The emulator has no IMU, so live counting needs a physical watch.
@@ -152,9 +158,9 @@ Limits:
 - From the model's handout: it was trained only on MM-Fit (10 exercises, mostly
   10-rep sets), so accuracy on other exercises is unmeasured. Alternating-arm
   exercises count only the watch arm's reps.
-- From the display rules: each rep shows about 0.5 s after it ends, so tapping
-  **Done set** sooner after the last rep records one fewer. Exercises where the
-  watch wrist stays still (leg press, calf raises) count nothing.
+- From the display rules: each rep shows on screen about 0.5 s after it ends, though
+  **Done set** records it sooner. Exercises where the watch wrist stays still (leg
+  press, calf raises) count nothing.
 - Untested: counting with the screen off, and battery use at 100 Hz, need a physical
   watch.
 

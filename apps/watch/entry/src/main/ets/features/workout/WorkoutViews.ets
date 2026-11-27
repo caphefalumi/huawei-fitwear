@@ -35,6 +35,8 @@ export struct SetView {
   /** The watch is counting these reps from the wrist. */
   @Param autoCounting: boolean = false;
   @Event onViewForm: () => void = () => {};
+  /** Records the set; the screen that owns the rep counter adds its last rep first. */
+  @Event onDoneSet: () => void = () => {};
 
   private isTimed(): boolean {
     return this.session.exercise.unit === 'seconds';
@@ -117,7 +119,7 @@ export struct SetView {
         icon: $r('sys.symbol.checkmark'),
         onTap: () => {
           vibrate(HAPTIC_SIGNAL_MS);
-          this.session.doneSet(Date.now());
+          this.onDoneSet();
         },
       })
       LinkButton({ label: 'Form', icon: $r('sys.symbol.eye'), onTap: () => this.onViewForm() })

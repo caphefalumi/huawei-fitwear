@@ -253,6 +253,26 @@ export default function repCounterTest() {
       }
     });
 
+    it('records the rep the screen has not shown yet when the set is finished', 0, async () => {
+      const model = new ScriptedModel();
+      const counter = new RepCounter(model.model());
+      expect(counter.finalCount()).assertEqual(0);
+      for (let hop = 0; hop < 4; hop++) {
+        counter.push(rows(hop * 50, hop * 50 + 50));
+        await counter.update();
+      }
+      // 20 tokens of 0.1 rep: the screen leaves out 1 s (1.0 + 0.7 → 1), the record only 0.5 s (1.5 + 0.7 → 2).
+      expect(counter.count).assertEqual(1);
+      expect(counter.finalCount()).assertEqual(2);
+      // Once the set has ended, the held count is what gets recorded.
+      model.periodicity = 0.1;
+      for (let hop = 4; hop < 8; hop++) {
+        counter.push(rows(hop * 50, hop * 50 + 50));
+        await counter.update();
+      }
+      expect(counter.finalCount()).assertEqual(counter.count);
+    });
+
     it('counts nothing while the wrist is still', 0, async () => {
       const model = new ScriptedModel();
       model.rate = 2;

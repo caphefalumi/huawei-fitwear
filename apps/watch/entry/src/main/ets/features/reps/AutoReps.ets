@@ -90,6 +90,23 @@ export class AutoReps {
     this.counting = this.sensors.isRunning();
   }
 
+  /**
+   * Call just before the set on screen is recorded: adds a rep counted but not shown yet,
+   * so a Done set tapped right after the last rep keeps it. The set's own vibration
+   * covers it.
+   */
+  finish(session: WorkoutSession): void {
+    const counter = this.counter;
+    if (counter === undefined || session !== this.session) {
+      return;
+    }
+    const count = counter.finalCount();
+    if (count > this.applied) {
+      session.changeReps(count - this.applied, Date.now());
+      this.applied = count;
+    }
+  }
+
   stop(): void {
     if (this.session === undefined && !this.sensors.isRunning()) {
       return;

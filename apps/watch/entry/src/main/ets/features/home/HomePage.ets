@@ -440,6 +440,12 @@ struct HomePage {
     this.session.resume(Date.now());
   }
 
+  /** Records the set with any rep counted but not shown yet. */
+  private doneSet(): void {
+    this.autoReps.finish(this.session);
+    this.session.doneSet(Date.now());
+  }
+
   private openForm(): void {
     this.session.pause(Date.now());
     this.showingForm = true;
@@ -550,6 +556,7 @@ struct HomePage {
               session: this.session,
               autoCounting: this.autoReps.counting,
               onViewForm: () => this.openForm(),
+              onDoneSet: () => this.doneSet(),
             });
           }
         }

@@ -110,9 +110,12 @@ export default function repNetTest() {
         run: (window: Float32Array): Promise<RepNetOutput> => net.run(window),
       });
       const shown: number[] = [];
+      // What Done set would record if tapped after each chunk.
+      const recorded: number[] = [];
       for (let i = 0; i < stream.chunks.length; i++) {
         counter.push(stream.chunks[i]);
         shown.push(await counter.update());
+        recorded.push(counter.finalCount());
       }
       // The wrist rests at the last pose with a slow 0.3 Hz sway, which the model alone counts.
       const lastChunk = stream.chunks[stream.chunks.length - 1];
@@ -134,13 +137,23 @@ export default function repNetTest() {
         }
         counter.push(chunk);
         shown.push(await counter.update());
+        recorded.push(counter.finalCount());
       }
       hilog.info(0x0000, 'RepNetTest', 'shown %{public}s', JSON.stringify(shown));
+      hilog.info(0x0000, 'RepNetTest', 'recorded %{public}s', JSON.stringify(recorded));
       const expected = [
         0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 9,
         9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
       ];
       expect(JSON.stringify(shown)).assertEqual(JSON.stringify(expected));
+      // Done set right as the last rep ends (chunk 33) records 10 while the screen shows 9.
+      const expectedRecorded = [
+        0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9,
+        9, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+      ];
+      expect(JSON.stringify(recorded)).assertEqual(JSON.stringify(expectedRecorded));
+      expect(shown[33]).assertEqual(9);
+      expect(recorded[33]).assertEqual(10);
     });
   });
 }

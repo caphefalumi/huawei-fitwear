@@ -35,6 +35,12 @@ const GATE_OFF: number = 0.6;
 const GATE_TAIL_TOKENS: number = 10;
 /** The newest second is left out of the shown count. */
 const DISPLAY_LAG_TOKENS: number = 10;
+/**
+ * A set finished before the gate closes is recorded without only its newest 0.5 s, so a
+ * Done set tapped right after the last rep keeps it. Replays of the bundle's squat set
+ * record the right count for taps 0–5 s after any rep, and 0 after standing still.
+ */
+const FINAL_LAG_TOKENS: number = 5;
 /** A token counts only if the wrist moved in the 2 s ending with it. */
 const MOTION_SAMPLES: number = 40;
 /** Pooled std thresholds; reps measure about 2 m/s² and 0.2 rad/s, a still wrist under 0.15 and 0.02. */
@@ -75,6 +81,8 @@ export class RepCounter {
   private lastOn: number = 0;
   /** The count held since the gate closed; -1 while counting. */
   private frozen: number = -1;
+  /** End token of the last window. */
+  private endToken: number = 0;
   /** Changes on reset, so a window still running from before is dropped. */
   private generation: number = 0;
   private running: boolean = false;
@@ -99,6 +107,7 @@ export class RepCounter {
     this.gateOpen = false;
     this.lastOn = 0;
     this.frozen = -1;
+    this.endToken = 0;
     this.count = 0;
     this.referenceCount = 0;
     this.generation++;
@@ -149,8 +158,18 @@ export class RepCounter {
     return this.density(this.seen.length, false);
   }
 
+  /** The count to record if the set is finished now; never below the shown count. */
+  finalCount(): number {
+    if (this.frozen >= 0) {
+      return this.count;
+    }
+    const recent = Math.floor(this.density(this.endToken - FINAL_LAG_TOKENS, true) + OFFSET);
+    return Math.max(this.count, recent);
+  }
+
   /** Applies the display rules after a window ending at endToken. */
   private show(endToken: number, periodicity: Float32Array): void {
+    this.endToken = endToken;
     this.judgeMotion();
     let value = Math.floor(this.density(endToken - DISPLAY_LAG_TOKENS, true) + OFFSET);
     let recent = 0;
