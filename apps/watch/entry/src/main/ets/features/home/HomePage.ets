@@ -11,6 +11,7 @@ import { pageDots, Palette } from '../common/Ui';
 import { PrivacyView } from '../privacy/PrivacyView';
 import { FoodDay, isoDay } from '../quicklog/FoodDay';
 import { QuickLogView } from '../quicklog/QuickLogView';
+import { AutoReps } from '../reps/AutoReps';
 import { FormGuideView } from '../workout/FormGuideView';
 import { dayKey, encodeState, restoreState } from '../storage/SavedState';
 import { WatchStore } from '../storage/WatchStore';
@@ -63,6 +64,7 @@ struct HomePage {
   private readonly homePager: SwiperController = new SwiperController();
   private readonly workoutPager: SwiperController = new SwiperController();
   private readonly link: PhoneLink = new PhoneLink();
+  private readonly autoReps: AutoReps = new AutoReps();
   /** The phone's latest plan, held while a different workout is still on screen. */
   private phonePlan: WorkoutPlan | undefined = undefined;
   /** Session id and revision the phone already has. */
@@ -94,6 +96,18 @@ struct HomePage {
     this.publish();
   }
 
+  /** Starts and stops counting reps as sets begin, pause and end. */
+  @Monitor('session', 'session.status', 'session.phase', 'session.paused', 'session.position')
+  onSetChange(): void {
+    this.countReps();
+  }
+
+  /** Counts reps from the wrist during a set, unless the wearer has left the app. */
+  private countReps(): void {
+    const context = this.getUIContext().getHostContext() as common.Context;
+    this.autoReps.sync(this.exited ? undefined : this.session, context.resourceManager);
+  }
+
   aboutToAppear(): void {
     this.store.open(this.getUIContext().getHostContext() as common.UIAbilityContext);
     this.consented = this.store.hasConsent();
@@ -111,6 +125,7 @@ struct HomePage {
   aboutToDisappear(): void {
     this.stopTicker();
     this.link.stop();
+    this.autoReps.stop();
   }
 
   onPageShow(): void {
@@ -132,6 +147,7 @@ struct HomePage {
     // As in the BLE demo, the connection stays up; only the app closing ends it.
     if (this.session.status === WorkoutStatus.ACTIVE && power.isActive()) {
       this.exited = true;
+      this.countReps();
     }
     if (this.idleInBackground()) {
       this.stopTicker();
@@ -382,6 +398,7 @@ struct HomePage {
     } else if (event === TickEvent.STILL_TRAINING || event === TickEvent.AUTO_ENDED) {
       vibrate(HAPTIC_ALERT_MS);
     }
+    this.countReps();
     // One place to save and send: any change is on disk and on the phone within a tick.
     this.save();
     this.publish();
@@ -421,6 +438,12 @@ struct HomePage {
   private continueWorkout(): void {
     this.workoutPage = SET_PAGE;
     this.session.resume(Date.now());
+  }
+
+  /** Records the set with any rep counted but not shown yet. */
+  private doneSet(): void {
+    this.autoReps.finish(this.session);
+    this.session.doneSet(Date.now());
   }
 
   private openForm(): void {
@@ -529,7 +552,12 @@ struct HomePage {
           if (this.session.phase === WorkoutPhase.REST) {
             RestView({ session: this.session });
           } else {
-            SetView({ session: this.session, onViewForm: () => this.openForm() });
+            SetView({
+              session: this.session,
+              autoCounting: this.autoReps.counting,
+              onViewForm: () => this.openForm(),
+              onDoneSet: () => this.doneSet(),
+            });
           }
         }
         .width('100%')

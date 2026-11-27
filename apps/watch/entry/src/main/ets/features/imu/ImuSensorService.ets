@@ -17,6 +17,7 @@ function assertMagnitude(): void {
 
 assertMagnitude();
 
+/** Acceleration in m/s² with gravity, rotation in rad/s, timestamps in ns since boot. */
 export interface ImuSensorListener {
   onStatus: (text: string) => void;
   onAccelerometer: (
@@ -25,8 +26,9 @@ export interface ImuSensorListener {
     z: number,
     magnitude: number,
     sampleCount: number,
+    timestamp: number,
   ) => void;
-  onGyroscope: (x: number, y: number, z: number) => void;
+  onGyroscope: (x: number, y: number, z: number, timestamp: number) => void;
 }
 
 /** Subscribes to accelerometer and gyroscope; reports samples via listener. */
@@ -110,11 +112,12 @@ export class ImuSensorService {
       data.z,
       vectorMagnitude(data.x, data.y, data.z),
       this.sampleCount,
+      data.timestamp,
     );
   };
 
   private onGyro = (data: sensor.GyroscopeResponse): void => {
-    this.listener.onGyroscope(data.x, data.y, data.z);
+    this.listener.onGyroscope(data.x, data.y, data.z, data.timestamp);
   };
 
   private subscribeAccel(intervalNs: number): number {

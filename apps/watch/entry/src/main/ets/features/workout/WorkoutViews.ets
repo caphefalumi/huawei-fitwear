@@ -32,7 +32,11 @@ function range(count: number): number[] {
 @ComponentV2
 export struct SetView {
   @Require @Param session: WorkoutSession;
+  /** The watch is counting these reps from the wrist. */
+  @Param autoCounting: boolean = false;
   @Event onViewForm: () => void = () => {};
+  /** Records the set; the screen that owns the rep counter adds its last rep first. */
+  @Event onDoneSet: () => void = () => {};
 
   private isTimed(): boolean {
     return this.session.exercise.unit === 'seconds';
@@ -90,7 +94,9 @@ export struct SetView {
             .fontFeature(TABULAR)
             .fontColor(Palette.TEXT)
             .lineHeight(Type.HERO + 2)
-          Text(`of ${this.session.exercise.reps}${this.isTimed() ? ' s' : ' reps'}`)
+          Text(
+            `of ${this.session.exercise.reps}${this.isTimed() ? ' s' : ' reps'}${this.autoCounting ? ' · auto' : ''}`,
+          )
             .fontSize(Type.CAPTION)
             .fontFeature(TABULAR)
             .fontColor(Palette.MUTED)
@@ -98,7 +104,8 @@ export struct SetView {
         .constraintSize({ minWidth: 76 })
         .accessibilityGroup(true)
         .accessibilityText(
-          `${this.session.reps} of ${this.session.exercise.reps} ${this.isTimed() ? 'seconds' : 'reps'}`,
+          `${this.session.reps} of ${this.session.exercise.reps} ${this.isTimed() ? 'seconds' : 'reps'}` +
+            (this.autoCounting ? ', counted from your wrist' : ''),
         )
         IconButton({
           icon: $r('sys.symbol.plus'),
@@ -112,7 +119,7 @@ export struct SetView {
         icon: $r('sys.symbol.checkmark'),
         onTap: () => {
           vibrate(HAPTIC_SIGNAL_MS);
-          this.session.doneSet(Date.now());
+          this.onDoneSet();
         },
       })
       LinkButton({ label: 'Form', icon: $r('sys.symbol.eye'), onTap: () => this.onViewForm() })

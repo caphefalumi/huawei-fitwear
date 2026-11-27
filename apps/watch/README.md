@@ -61,8 +61,8 @@ on pull requests: the Auto-format workflow formats `main` after each merge. Huaw
 The app opens on `features/home/HomePage.ets`, which covers wireframe screens
 W1a–W1e and W2–W4. The workout plan comes from the paired phone; debug builds
 start with a sample plan and sample food (`features/common/SampleData.ets`) so they
-can be tried alone. Release builds show only what the phone sends. Reps are entered
-with −/+ or the crown (no IMU counting yet).
+can be tried alone. Release builds show only what the phone sends. Reps are counted
+from the wrist and can be corrected with −/+ or the crown.
 
 ## Unfinished workouts
 
@@ -128,3 +128,4 @@ the phone's nutrition figures and unsent quick logs survive an app restart
 ## Documentation
 
 See [`docs/README.md`](docs/README.md) for official ArkTS syntax, state management, and Sensor Kit guidelines.
+How rep counting works is in [`docs/watch/rep-counting.md`](../../docs/watch/rep-counting.md).
