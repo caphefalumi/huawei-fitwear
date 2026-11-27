@@ -28,20 +28,15 @@ jobs:
           ref: main
           token: ${{ steps.app-token.outputs.token }}
 
+      # oxk's npm CLI needs Node.js ^20.19.0 or >=22.18.0.
       - uses: ./.github/actions/setup
+        with:
+          node: "true"
 
-      - run: bun run fmt
-      - name: Install ArkTS formatter
-        run: cargo install --git https://github.com/ohos-rs/oxc-ark --rev 25ca00609724a45f8bb2804390d04c397cf45044 --locked oxk
-      - name: Format watch ArkTS
-        run: |
-          log=$(mktemp)
-          trap 'rm -f "$log"' EXIT
-          oxk format --config .github/arkts-format.json 'apps/watch/entry/src/**/*.ets' 2>"$log"
-          if [ -s "$log" ]; then
-            cat "$log"
-            exit 1
-          fi
+      # oxfmt for TypeScript, JSON and Markdown, then oxk for the watch's ArkTS.
+      # oxk exits non-zero on a file it cannot parse, which fails this step.
+      - name: Format repository
+        run: bun run fmt
       - name: Commit and push formatting changes
         run: |
           git add -u
