@@ -120,16 +120,17 @@ export async function setOffline({ device, screen }: Pick<Ui, "device" | "screen
     await maybeVisible(banner, 10000)
     return
   }
-  // The API 34 emulator does not always bring Wi-Fi back when airplane mode
-  // goes off, and the app stays offline. Turn Wi-Fi on as well, and toggle
-  // once more if the app still reports offline.
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    await goOnline(device)
-    if (await bannerGone(banner, 30000)) return
-    await device.setAirplaneMode(true)
-  }
+  // The app checks its session once when the network returns. If that check
+  // runs before the emulator's link is really up, it fails and the app stays
+  // offline until the next network change. Wi-Fi off and on, with cellular
+  // still up, is such a change once the link has settled.
   await goOnline(device)
-  await bannerGone(banner, 30000)
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (await bannerGone(banner, 15000)) return
+    await device.setNetwork("offline")
+    await device.setNetwork("online")
+  }
+  await bannerGone(banner, 15000)
 }
 
 async function goOnline(device: Device) {
