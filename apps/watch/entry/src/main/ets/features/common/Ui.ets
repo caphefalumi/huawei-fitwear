@@ -72,7 +72,9 @@ export struct WatchButton {
     Button({ type: ButtonType.Capsule }) {
       Row({ space: 6 }) {
         if (this.icon !== undefined) {
-          SymbolGlyph(this.icon).fontSize(18).fontColor([this.labelColor()]);
+          SymbolGlyph(this.icon)
+            .fontSize(18)
+            .fontColor([this.labelColor()]);
         }
         Text(this.label)
           .fontSize(Type.BODY)
@@ -108,7 +110,9 @@ export struct LinkButton {
   build() {
     Row({ space: 5 }) {
       if (this.icon !== undefined) {
-        SymbolGlyph(this.icon).fontSize(15).fontColor([this.color]);
+        SymbolGlyph(this.icon)
+          .fontSize(15)
+          .fontColor([this.color]);
       }
       Text(this.label)
         .fontSize(Type.BODY)

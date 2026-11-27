@@ -66,7 +66,10 @@ export struct ClockView {
   phoneChip() {
     Row({ space: 6 }) {
       if (this.searching) {
-        LoadingProgress().width(14).height(14).color(Palette.MUTED);
+        LoadingProgress()
+          .width(14)
+          .height(14)
+          .color(Palette.MUTED);
       } else {
         SymbolGlyph($r('sys.symbol.bluetooth'))
           .fontSize(13)

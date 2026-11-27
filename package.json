@@ -16,8 +16,10 @@
     "web": "bun run --cwd apps/mobile web",
     "lint:mobile": "bun run --cwd apps/mobile lint",
     "lint:backend": "bun run --cwd apps/backend lint",
-    "lint": "bun run lint:mobile && bun run lint:backend",
-    "fmt": "oxfmt",
+    "lint:watch": "oxk lint --config .github/arkts-lint.json apps/watch/entry/src/main/ets",
+    "lint": "bun run lint:mobile && bun run lint:backend && bun run lint:watch",
+    "fmt": "oxfmt && bun run fmt:watch",
+    "fmt:watch": "cd apps/watch && oxk format \"entry/src/**/*.ets\"",
     "fmt:check": "oxfmt --check",
     "prepare": "husky",
     "backend:dev": "bun run --cwd apps/backend dev",
@@ -37,6 +39,7 @@
     "test:e2e": "bun run mobile:test:e2e"
   },
   "devDependencies": {
+    "@ohos-rs/oxk": "0.10.0",
     "@xmldom/xmldom": "^0.9.12",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.1",

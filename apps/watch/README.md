@@ -34,10 +34,18 @@ apps/watch/
 - **Target OS**: HarmonyOS NEXT (`wearable` profile).
 - **SDK**: API 11+ (`6.1.1(24)`).
 
-ArkTS files under `entry/src` are formatted on pushes to `main` with the pinned
-`oxk` formatter and `.github/arkts-format.json`. The formatter runs outside the
-watch workspace. Pull requests lint production ArkTS with the open-source `oxk`
-linter and `.github/arkts-lint.json`; Huawei's `code-linter.json5` is not used in CI.
+ArkTS is linted and formatted with [`oxk`](https://www.npmjs.com/package/@ohos-rs/oxk),
+pinned in the root `package.json`. Run these from the repository root:
+
+```bash
+bun run lint:watch   # oxk lint with .github/arkts-lint.json
+bun run fmt:watch    # oxk format, using apps/watch/.oxfmtrc.json
+```
+
+`apps/watch/.oxfmtrc.json` holds the ArkTS style (semicolons, single quotes) and
+ignores every non-`.ets` file, so the root oxfmt leaves the DevEco JSON5 files
+alone. Pull requests run `oxk lint` in the **Lint** check. Formatting is not checked
+on pull requests: the Auto-format workflow formats `main` after each merge. Huawei's `code-linter.json5` is not used in CI.
 
 ## Getting Started
 
