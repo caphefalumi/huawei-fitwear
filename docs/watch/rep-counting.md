@@ -44,6 +44,26 @@ stillness scores them lower. The model also counts any faint rhythm, such as a
 - Otherwise it records the count without only the newest 0.5 s, never less than the
   screen shows.
 
+## On the phone
+
+The watch sends the set on its screen to the phone on every change, as a `reps` message:
+`{ t: "reps", live: { id, pos, reps, auto } }`. `auto` is true while the wrist is being
+counted. The message is separate from the session merge. It goes from the watch to the
+phone only, and older apps on either side ignore it.
+
+The phone's workout screen shows that count for the same session and set:
+
+- A set starts at 0 on the watch. Unless the watch counts from the wrist, the phone keeps
+  the target it filled in until the watch's count changes.
+- Once a count is changed on the phone, the watch no longer overwrites it. The phone
+  offers **Use watch count** instead.
+- **Done set** on the phone records the count it shows. Done set on the watch records
+  `finalCount()`, as above.
+- The count is dropped when the link drops, so a stale count never stays on screen.
+
+Code: `publishReps` in `HomePage.ets`, and `followWatch` in the phone's
+`session-screen.tsx`.
+
 ## How the rules were chosen
 
 The bundle's squat set was replayed through the reference algorithm and its ONNX model

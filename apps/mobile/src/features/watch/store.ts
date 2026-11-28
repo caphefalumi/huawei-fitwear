@@ -2,7 +2,7 @@ import { create } from "zustand"
 
 import type { Routine } from "@/features/workout"
 
-import { mergeSessions, type SharedSession, type WirePlan } from "./protocol"
+import { mergeSessions, type LiveReps, type SharedSession, type WirePlan } from "./protocol"
 
 export type WatchStatus = "off" | "searching" | "connecting" | "approval" | "connected"
 
@@ -30,6 +30,8 @@ type WatchState = {
   routine: Routine | null
   /** True while the workout screen is mounted. */
   sessionOpen: boolean
+  /** The count of the set on the watch's screen; null when it is not connected. */
+  live: LiveReps | null
   publish: (session: LocalSession, routine: Routine) => void
   close: (id: string) => void
   receive: (remote: SharedSession) => void
@@ -47,6 +49,7 @@ export const useWatchStore = create<WatchState>((set, get) => ({
   outbox: 0,
   routine: null,
   sessionOpen: false,
+  live: null,
 
   publish: (local, routine) => {
     const { session, restEndsAt, outbox } = get()
@@ -122,6 +125,7 @@ export function resetWatchSession() {
     routine: null,
     sessionOpen: false,
     watchSessionId: "",
+    live: null,
   })
 }
 

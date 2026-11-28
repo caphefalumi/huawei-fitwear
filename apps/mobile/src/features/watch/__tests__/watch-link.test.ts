@@ -99,3 +99,27 @@ test("reconnects quickly after a drop, and keeps the watch's name until it is fo
   expect(usePairing.getState().name).toBe("")
   link.destroy()
 })
+
+test("keeps the watch's live count while connected and drops it with the link", async () => {
+  const link = new WatchLink("phone-1")
+  link.start()
+  const deliver = (message: Parameters<typeof encodeFrames>[0], id: number) => {
+    for (const frame of encodeFrames(message, 180, id)) {
+      mockClient.listener.onMessage("watch-to-phone", frame, frame.length)
+    }
+  }
+  const live = { id: "s1", pos: 0, reps: 4, auto: true }
+
+  // Nothing is taken from a watch that has not been welcomed yet.
+  mockClient.listener.onStatus("connected")
+  deliver({ t: "reps", live }, 1)
+  expect(useWatchStore.getState().live).toBeNull()
+
+  deliver({ t: "welcome", v: 1, ok: true }, 2)
+  deliver({ t: "reps", live }, 3)
+  expect(useWatchStore.getState().live).toEqual(live)
+
+  mockClient.listener.onStatus("disconnected")
+  expect(useWatchStore.getState().live).toBeNull()
+  link.destroy()
+})

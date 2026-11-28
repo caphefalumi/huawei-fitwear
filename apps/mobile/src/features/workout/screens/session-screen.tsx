@@ -3,8 +3,19 @@ import * as Crypto from "expo-crypto"
 import * as Haptics from "expo-haptics"
 import { router, useLocalSearchParams } from "expo-router"
 import { usePreventRemove } from "expo-router/react-navigation"
-import { useEffect, useEffectEvent, useRef, useState } from "react"
-import { StyleSheet, Text, View } from "react-native"
+import { SymbolView } from "expo-symbols"
+import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react"
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native"
+import Animated, {
+  Easing,
+  ReduceMotion,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { BackHeader, Button, Card, PageHeading, Screen } from "@/components/ui"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -19,6 +30,16 @@ import { planNow, usePlanNow } from "@/lib/time/demo-clock"
 import { Palette as C } from "@/theme"
 
 import { writeWorkout } from "../api/workout-api"
+import {
+  EASE_OUT,
+  ExerciseProgress,
+  ExerciseThumb,
+  glyphs,
+  ProgressRing,
+  RoundButton,
+  SetStrip,
+  WatchChip,
+} from "../components/session-parts"
 import { workoutQueryKeys } from "../hooks/workout-hooks"
 import { usePlanInput, usePlanPreferences } from "../store/plan-preferences.store"
 import {
@@ -30,6 +51,7 @@ import {
 import { formatLoad, loadStep, loadUnit, useLoads } from "../store/training-weights.store"
 import { useWorkoutLog } from "../store/workout-log.store"
 import { findExercise } from "../utils/catalog"
+import { EQUIPMENT_LABELS } from "../utils/muscle-groups"
 import { nextLoad, type ExerciseProgression } from "../utils/progression"
 import {
   fromDateKey,
@@ -44,12 +66,14 @@ const TICK_MS = 250
 
 export const formatClock = (totalSeconds: number) => {
   const seconds = Math.max(0, Math.ceil(totalSeconds))
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const clock = `${String(seconds % 60).padStart(2, "0")}`
+  return hours ? `${hours}:${String(minutes).padStart(2, "0")}:${clock}` : `${minutes}:${clock}`
 }
 
 const unitLabel = (exercise: RoutineExercise, value: number) =>
   exercise.unit === "seconds" ? `${value}s` : `${value} reps`
-const target = (exercise: RoutineExercise) => exercise.prescription.split("x")[1] ?? ""
 const average = (values: number[]) =>
   Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
 
@@ -82,6 +106,51 @@ function Stat({ value, label }: { value: string; label: string }) {
     <View style={styles.stat}>
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  )
+}
+
+/** Leave on the leading edge, the clock in the middle, Finish on the trailing edge. */
+function TopBar({
+  title,
+  elapsed,
+  onFinish,
+}: {
+  title: string
+  elapsed: string
+  onFinish: () => void
+}) {
+  const insets = useSafeAreaInsets()
+  return (
+    <View style={[styles.topBar, { paddingTop: insets.top + 6 }]}>
+      <RoundButton
+        glyph={glyphs.back}
+        label="Leave workout"
+        size={44}
+        plain
+        onPress={() => router.back()}
+      />
+      <View style={styles.topCenter}>
+        <Text style={styles.topTitle} numberOfLines={1}>
+          {title}
+        </Text>
+        <Text style={styles.topClock} accessibilityLabel={`${elapsed} elapsed`}>
+          {elapsed}
+        </Text>
+      </View>
+      <Pressable style={styles.finish} hitSlop={8} onPress={onFinish}>
+        <Text style={styles.finishLabel}>Finish</Text>
+      </Pressable>
+    </View>
+  )
+}
+
+/** The screen's one main action, held above the home indicator. */
+function Footer({ children }: { children: ReactNode }) {
+  const insets = useSafeAreaInsets()
+  return (
+    <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
+      {children}
     </View>
   )
 }
@@ -445,6 +514,89 @@ function ActiveSession({
     catalog && catalog.equipment !== "bodyweight"
       ? `${formatLoad(weightKg)} ${loadUnit(catalog)}`
       : "Body weight"
+  const reduceMotion = useReducedMotion()
+  const insets = useSafeAreaInsets()
+  const { width } = useWindowDimensions()
+
+  // --- Live reps from the watch ---
+  const live = useWatchStore((state) => state.live)
+  const setKey = `${saveId}:${position}`
+  const liveHere =
+    watch.connected && phase === "set" && live && `${live.id}:${live.pos}` === setKey ? live : null
+  /**
+   * The set whose count comes from the watch. Every set starts at 0 there, so the target stays here
+   * until the watch counts from the wrist or its count changes.
+   */
+  const [countedSet, setCountedSet] = useState("")
+  /** The set whose count was changed here; the watch's count is offered, not imposed, from then on. */
+  const [editedSet, setEditedSet] = useState("")
+  const bump = useSharedValue(1)
+  const bumpStyle = useAnimatedStyle(() => ({ transform: [{ scale: bump.get() }] }))
+  const followWatch = useEffectEvent(() => {
+    if (!liveHere || (liveHere.reps === 0 && !liveHere.auto && countedSet !== setKey)) return
+    setCountedSet(setKey)
+    if (editedSet === setKey || liveHere.reps === draft) return
+    setDraft(liveHere.reps)
+    if (!reduceMotion) {
+      bump.set(
+        withSequence(
+          withTiming(1.08, { duration: 90, easing: EASE_OUT }),
+          withTiming(1, { duration: 180, easing: EASE_OUT }),
+        ),
+      )
+    }
+  })
+  useEffect(() => followWatch(), [live, setKey, phase])
+  const watchCount = liveHere && countedSet === setKey ? liveHere : null
+  const followingWatch = watchCount !== null && editedSet !== setKey
+
+  const step = exercise?.unit === "seconds" ? 5 : 1
+  const changeDraft = (delta: number) => {
+    setEditedSet(setKey)
+    setDraft((value) => Math.min(999, Math.max(0, value + delta)))
+    void Haptics.selectionAsync().catch(() => {})
+  }
+  const changeWeight = (delta: number) => {
+    if (!slot) return
+    setWeights((values) =>
+      values.map((value, index) =>
+        index === slot.index ? Math.min(1000, Math.max(0, value + delta)) : value,
+      ),
+    )
+    void Haptics.selectionAsync().catch(() => {})
+  }
+
+  // The rep ring fills toward the target; a ring past the target stays full.
+  const repProgress = useSharedValue(0)
+  const repFill = exercise && exercise.reps > 0 ? draft / exercise.reps : 0
+  useEffect(() => {
+    repProgress.set(withTiming(repFill, { duration: 240, easing: EASE_OUT }))
+  }, [repFill, repProgress])
+
+  // The rest ring drains with the clock, on the UI thread rather than with each tick.
+  const lastDone = slots
+    .slice(0, position)
+    .reverse()
+    .find(({ index, set }) => logged[index]?.[set])
+  const restBase = routine.exercises[lastDone?.index ?? slot?.index ?? 0]?.rest ?? 0
+  const restProgress = useSharedValue(1)
+  useEffect(() => {
+    if (phase !== "rest") return
+    const left = Math.max(0, restEndsAt - Date.now())
+    const span = Math.max(left, restBase * 1000, 1)
+    const settle = Math.min(200, left)
+    restProgress.set(
+      withSequence(
+        withTiming(left / span, { duration: settle, easing: EASE_OUT }),
+        // A countdown is a readout, not decoration: it keeps moving under Reduce Motion.
+        withTiming(0, {
+          duration: left - settle,
+          easing: Easing.linear,
+          reduceMotion: ReduceMotion.Never,
+        }),
+      ),
+    )
+  }, [phase, restEndsAt, restBase, restProgress])
 
   const finish = () => {
     setFinishedAt(Date.now())
@@ -453,6 +605,7 @@ function ActiveSession({
 
   const doneSet = () => {
     if (!slot || !exercise) return
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
     setLogged((previous) =>
       previous.map((sets, index) =>
         index === slot.index
@@ -659,240 +812,325 @@ function ActiveSession({
   if (phase === "summary") {
     const holds = sum("seconds")
     return (
-      <Screen contentStyle={styles.content}>
-        <View style={styles.celebrate}>
-          <Text style={styles.celebrateEmoji}>🎉</Text>
-          <Text style={styles.celebrateTitle} accessibilityRole="header">
-            {totalSets ? "Great work!" : "Workout ended"}
-          </Text>
-          <Text style={styles.celebrateSub}>
-            {totalSets ? `You finished ${routine.name}.` : "No sets were logged this time."}
-          </Text>
-        </View>
+      <View style={styles.container}>
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 36 }]}
+        >
+          <View style={styles.celebrate}>
+            <View style={styles.doneBadge}>
+              <SymbolView name={glyphs.check} size={30} tintColor={C.onAccent} />
+            </View>
+            <Text style={styles.celebrateTitle} accessibilityRole="header">
+              {totalSets ? "Great work!" : "Workout ended"}
+            </Text>
+            <Text style={styles.celebrateSub}>
+              {totalSets ? `You finished ${routine.name}.` : "No sets were logged this time."}
+            </Text>
+          </View>
 
-        <View style={styles.stats}>
-          <Stat value={String(done.length)} label="Exercises" />
-          <Stat value={String(totalSets)} label="Sets" />
-          <Stat value={String(sum("reps"))} label="Reps" />
-        </View>
-        <Text style={styles.summaryMeta}>
-          Time {formatClock(((finishedAt ?? now) - startedAt) / 1000)}
-          {holds ? `\nPlus ${formatClock(holds)} of holds` : ""}
-        </Text>
+          <View style={styles.stats}>
+            <Stat value={formatClock(((finishedAt ?? now) - startedAt) / 1000)} label="Time" />
+            <Stat value={String(done.length)} label="Exercises" />
+            <Stat value={String(totalSets)} label="Sets" />
+            <Stat value={String(sum("reps"))} label="Reps" />
+          </View>
+          {holds ? (
+            <Text style={styles.summaryMeta}>Plus {formatClock(holds)} of holds</Text>
+          ) : null}
 
-        {done.length ? (
-          <Card style={styles.summaryList}>
-            {done.map(({ item, sets }) => (
-              <View key={item.key} style={styles.summaryRow}>
-                <Text style={styles.summaryName}>{item.name}</Text>
-                <Text style={styles.summaryValue}>
-                  {sets.map((set) => set.reps).join(", ")}
-                  {item.unit === "seconds" ? "s" : " reps"}
+          {done.length ? (
+            <View style={styles.summaryList}>
+              {done.map(({ item, sets }, index) => (
+                <View key={item.key} style={[styles.summaryRow, index > 0 && styles.divider]}>
+                  <ExerciseThumb exerciseKey={item.key} name={item.name} size={40} />
+                  <View style={styles.summaryCopy}>
+                    <Text style={styles.summaryName} numberOfLines={2}>
+                      {item.name}
+                    </Text>
+                    <Text style={styles.summaryValue}>
+                      {sets.map((set) => set.reps).join(" · ")}
+                      {item.unit === "seconds" ? " s" : " reps"}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : null}
+          {progression.data
+            ? done.map(({ item, sets }) => {
+                const previous = progression.data.exercises.find(
+                  (entry) => entry.exerciseId === item.key,
+                )
+                const best = Math.max(
+                  0,
+                  ...sets.filter((set) => set.reps > 0).map((set) => set.weightKg),
+                )
+                return previous && best > previous.maxWeightKg ? (
+                  <Text key={item.key} style={styles.record}>
+                    New weight record: {item.name} · {formatLoad(best)} kg
+                  </Text>
+                ) : null
+              })
+            : null}
+
+          {changed.length ? (
+            <View style={styles.keep}>
+              <View style={styles.keepCopy}>
+                <Text style={styles.keepTitle}>Use these reps next time</Text>
+                <Text style={styles.keepSub}>
+                  Updates {changed.length === 1 ? "1 exercise" : `${changed.length} exercises`} in{" "}
+                  {routine.name}.
                 </Text>
               </View>
-            ))}
-          </Card>
-        ) : null}
-        {progression.data
-          ? done.map(({ item, sets }) => {
-              const previous = progression.data.exercises.find(
-                (entry) => entry.exerciseId === item.key,
-              )
-              const best = Math.max(
-                0,
-                ...sets.filter((set) => set.reps > 0).map((set) => set.weightKg),
-              )
-              return previous && best > previous.maxWeightKg ? (
-                <Text key={item.key} style={styles.summaryMeta}>
-                  New weight record: {item.name} · {formatLoad(best)} kg
-                </Text>
-              ) : null
-            })
-          : null}
-
-        {changed.length ? (
-          <View style={styles.keep}>
-            <View style={styles.keepCopy}>
-              <Text style={styles.keepTitle}>Use these reps next time</Text>
-              <Text style={styles.keepSub}>
-                Updates {changed.length === 1 ? "1 exercise" : `${changed.length} exercises`} in{" "}
-                {routine.name}.
-              </Text>
+              <Toggle
+                accessibilityLabel="Use these reps next time"
+                value={keepReps}
+                onValueChange={setKeepReps}
+              />
             </View>
-            <Toggle
-              accessibilityLabel="Use these reps next time"
-              value={keepReps}
-              onValueChange={setKeepReps}
-            />
-          </View>
-        ) : null}
+          ) : null}
 
-        {saveError ? (
-          <Text accessibilityRole="alert" style={styles.summaryMeta}>
-            {saveError}
-          </Text>
-        ) : null}
-        <Button
-          label={totalSets ? "Save workout" : "Done"}
-          onPress={() => void close()}
-          busy={saving}
-        />
+          {saveError ? (
+            <Text accessibilityRole="alert" style={styles.error}>
+              {saveError}
+            </Text>
+          ) : null}
+        </ScrollView>
+        <Footer>
+          <Button
+            label={totalSets ? "Save workout" : "Done"}
+            onPress={() => void close()}
+            busy={saving}
+          />
+        </Footer>
         {exitDialog}
-      </Screen>
+      </View>
     )
   }
 
-  const exerciseNumber = slot.index + 1
+  const seconds = exercise.unit === "seconds"
+  const loadable = catalog !== undefined && catalog.equipment !== "bodyweight"
+  const openGuide = () => router.push(`/exercise-guide?name=${exercise.key}`)
+  const fills = routine.exercises.map((item, index) =>
+    skipped.includes(index)
+      ? null
+      : (logged[index]?.filter(Boolean).length ?? 0) / Math.max(1, item.sets),
+  )
+  const takeWatchCount = () => {
+    if (!watchCount) return
+    setEditedSet("")
+    setDraft(watchCount.reps)
+  }
+  const ringSize = Math.min(196, Math.max(132, width - 204))
+  const lastItem = lastDone ? routine.exercises[lastDone.index] : undefined
+  const lastValue = lastDone ? logged[lastDone.index]?.[lastDone.set] : undefined
+
+  const setView = (
+    <>
+      <View style={styles.exerciseHead}>
+        <ExerciseThumb exerciseKey={exercise.key} name={exercise.name} onPress={openGuide} />
+        <View style={styles.exerciseCopy}>
+          <Text style={styles.eyebrow}>
+            Exercise {slot.index + 1} of {routine.exercises.length}
+            {exercise.superset ? " · Superset" : ""}
+          </Text>
+          <Text style={styles.exerciseName} accessibilityRole="header" numberOfLines={2}>
+            {exercise.name}
+          </Text>
+          <Text style={styles.setLine}>
+            Set {slot.set + 1} of {exercise.sets}
+            {loadable ? "" : " · Body weight"}
+          </Text>
+        </View>
+      </View>
+      <SetStrip
+        sets={(logged[slot.index] ?? []).map((value) => ({
+          done: value?.reps,
+          target: exercise.reps,
+        }))}
+        current={slot.set}
+        seconds={seconds}
+      />
+
+      <Card style={styles.countCard}>
+        <View style={styles.cardHead}>
+          <Text style={styles.cardLabel}>{seconds ? "Seconds" : "Reps"}</Text>
+          {watch.enabled ? (
+            <WatchChip
+              live={liveHere !== null && editedSet !== setKey && (liveHere.auto || followingWatch)}
+              label={watch.connected ? watch.name || "Watch connected" : watch.label}
+            />
+          ) : null}
+        </View>
+        <View style={styles.countRow}>
+          <RoundButton
+            glyph={glyphs.minus}
+            label={seconds ? "Fewer seconds" : "Fewer reps"}
+            onPress={() => changeDraft(-step)}
+          />
+          <ProgressRing size={ringSize} stroke={8} progress={repProgress}>
+            <Animated.Text
+              style={[styles.countNumber, bumpStyle]}
+              accessibilityLabel={unitLabel(exercise, draft)}
+              accessibilityLiveRegion={followingWatch ? "polite" : "none"}
+            >
+              {draft}
+            </Animated.Text>
+            <Text style={styles.countOf}>
+              of {exercise.reps}
+              {seconds ? " s" : " reps"}
+            </Text>
+          </ProgressRing>
+          <RoundButton
+            glyph={glyphs.plus}
+            label={seconds ? "More seconds" : "More reps"}
+            onPress={() => changeDraft(step)}
+          />
+        </View>
+        {/* Held open while the watch is connected, so the cards below stay put when counting starts. */}
+        {watch.connected ? (
+          <View style={styles.captionRow}>
+            {followingWatch ? (
+              <Text style={styles.countCaption}>
+                {!watchCount.auto
+                  ? "Changed on your watch"
+                  : watchCount.reps
+                    ? "Counted from your wrist"
+                    : "Start moving. Your watch counts each rep."}
+              </Text>
+            ) : watchCount ? (
+              <Pressable
+                style={styles.useWatch}
+                hitSlop={12}
+                accessibilityLabel={`Use the watch's count, ${unitLabel(exercise, watchCount.reps)}`}
+                onPress={takeWatchCount}
+              >
+                <Text style={styles.useWatchLabel}>Use watch count · {watchCount.reps}</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+      </Card>
+
+      {loadable ? (
+        <Card style={styles.loadCard}>
+          <View style={styles.loadCopy}>
+            <Text style={styles.cardLabel}>Weight</Text>
+            <Text style={styles.loadHint}>{EQUIPMENT_LABELS[catalog.equipment]}</Text>
+          </View>
+          <RoundButton
+            glyph={glyphs.minus}
+            label="Decrease weight"
+            size={44}
+            onPress={() => changeWeight(-loadStep(catalog))}
+          />
+          <Text style={styles.loadValue} accessibilityLabel={`Weight, ${weight}`}>
+            {formatLoad(weightKg)}
+            <Text style={styles.loadUnit}> {loadUnit(catalog)}</Text>
+          </Text>
+          <RoundButton
+            glyph={glyphs.plus}
+            label="Increase weight"
+            size={44}
+            onPress={() => changeWeight(loadStep(catalog))}
+          />
+        </Card>
+      ) : null}
+
+      <Pressable style={styles.skip} onPress={skipExercise}>
+        <Text style={styles.skipLabel}>Skip exercise</Text>
+      </Pressable>
+    </>
+  )
+
+  const restView = (
+    <>
+      <View style={styles.restHero}>
+        <ProgressRing size={Math.min(248, width - 112)} stroke={8} progress={restProgress}>
+          <Text style={styles.restLabel}>Rest</Text>
+          <Text style={styles.restClock} accessibilityLabel={`Rest, ${formatClock(restLeft)} left`}>
+            {formatClock(restLeft)}
+          </Text>
+          {lastItem && lastValue ? (
+            <Text style={styles.restLogged}>Logged {unitLabel(lastItem, lastValue.reps)}</Text>
+          ) : null}
+        </ProgressRing>
+        <View style={styles.restAdjust}>
+          <Pressable
+            style={styles.restButton}
+            accessibilityLabel="Subtract 15 seconds"
+            onPress={() =>
+              setRestEndsAt((value) => Math.max(Date.now(), value - REST_EXTRA_SECONDS * 1000))
+            }
+          >
+            <Text style={styles.restButtonLabel}>−15s</Text>
+          </Pressable>
+          <Pressable
+            style={styles.restButton}
+            accessibilityLabel="Add 15 seconds"
+            onPress={() => setRestEndsAt((value) => value + REST_EXTRA_SECONDS * 1000)}
+          >
+            <Text style={styles.restButtonLabel}>+15s</Text>
+          </Pressable>
+        </View>
+      </View>
+      <Card style={styles.upNext}>
+        <ExerciseThumb
+          exerciseKey={exercise.key}
+          name={exercise.name}
+          size={56}
+          onPress={openGuide}
+        />
+        <View style={styles.upNextCopy}>
+          <Text style={styles.eyebrow}>Up next</Text>
+          <Text style={styles.upNextName} numberOfLines={2}>
+            {exercise.name}
+          </Text>
+          <Text style={styles.upNextSub}>
+            Set {slot.set + 1} of {exercise.sets} · {weight} · {unitLabel(exercise, exercise.reps)}
+          </Text>
+        </View>
+      </Card>
+    </>
+  )
 
   return (
     <View style={styles.container}>
-      <Screen contentStyle={styles.content}>
-        <BackHeader
-          label="Leave"
-          onPress={() => router.back()}
-          actionLabel="Finish"
-          onAction={finish}
-        />
-
-        <View style={styles.progressHead}>
-          <Text style={styles.progressLabel}>
-            Exercise {exerciseNumber} of {routine.exercises.length}
-          </Text>
-          <Text style={styles.progressLabel}>{formatClock((now - startedAt) / 1000)}</Text>
-        </View>
-        {watch.enabled ? <Text style={styles.progressLabel}>Watch - {watch.summary}</Text> : null}
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${(position / slots.length) * 100}%` }]} />
-        </View>
-
+      <TopBar
+        title={routine.name}
+        elapsed={formatClock((now - startedAt) / 1000)}
+        onFinish={finish}
+      />
+      <View
+        style={styles.progressArea}
+        accessible
+        accessibilityRole="progressbar"
+        accessibilityLabel={`Exercise ${slot.index + 1} of ${routine.exercises.length}`}
+        accessibilityValue={{ min: 0, max: slots.length, now: totalSets }}
+      >
+        <ExerciseProgress fills={fills} current={slot.index} />
+      </View>
+      <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scroll}>
+        {phase === "rest" ? restView : setView}
+      </ScrollView>
+      <Footer>
         {phase === "rest" ? (
-          <>
-            <View style={styles.restBlock}>
-              <Text style={styles.restLabel}>Rest</Text>
-              <Text
-                style={styles.restClock}
-                accessibilityLabel={`Rest, ${formatClock(restLeft)} left`}
-              >
-                {formatClock(restLeft)}
-              </Text>
-              <View style={styles.restActions}>
-                <Pressable
-                  style={styles.restButton}
-                  accessibilityLabel="Add 15 seconds"
-                  onPress={() => setRestEndsAt((value) => value + REST_EXTRA_SECONDS * 1000)}
-                >
-                  <Text style={styles.restButtonLabel}>+15s</Text>
-                </Pressable>
-                <Pressable style={styles.restButton} onPress={() => setPhase("set")}>
-                  <Text style={styles.restButtonLabel}>Skip rest</Text>
-                </Pressable>
-              </View>
-            </View>
-            <Card style={styles.upNext}>
-              <Text style={styles.upNextLabel}>UP NEXT</Text>
-              <Text style={styles.upNextName}>{exercise.name}</Text>
-              <Text style={styles.upNextSub}>
-                Set {slot.set + 1} of {exercise.sets} - {weight} - Target {target(exercise)}
-              </Text>
-            </Card>
-          </>
+          <Button label="Skip rest" onPress={() => setPhase("set")} />
         ) : (
-          <>
-            <View style={styles.setHead}>
-              <Text style={styles.setTitle} accessibilityRole="header">
-                {exercise.name}
-              </Text>
-              <Text style={styles.setSub}>
-                Set {slot.set + 1} of {exercise.sets} - {weight}
-              </Text>
-              <Pressable
-                hitSlop={10}
-                onPress={() => router.push(`/exercise-guide?name=${exercise.key}`)}
-              >
-                <Text style={styles.link}>How to do it ›</Text>
-              </Pressable>
-            </View>
-
-            {catalog && catalog.equipment !== "bodyweight" ? (
-              <Card style={styles.repCard}>
-                <View style={styles.stepper}>
-                  <Pressable
-                    style={styles.stepButton}
-                    accessibilityLabel="Decrease weight"
-                    onPress={() =>
-                      setWeights((values) =>
-                        values.map((value, index) =>
-                          index === slot.index ? Math.max(0, value - loadStep(catalog)) : value,
-                        ),
-                      )
-                    }
-                  >
-                    <Text style={styles.stepLabel}>−</Text>
-                  </Pressable>
-                  <Text style={styles.stepUnit}>{weight}</Text>
-                  <Pressable
-                    style={styles.stepButton}
-                    accessibilityLabel="Increase weight"
-                    onPress={() =>
-                      setWeights((values) =>
-                        values.map((value, index) =>
-                          index === slot.index ? Math.min(1000, value + loadStep(catalog)) : value,
-                        ),
-                      )
-                    }
-                  >
-                    <Text style={styles.stepLabel}>+</Text>
-                  </Pressable>
-                </View>
-              </Card>
-            ) : null}
-
-            <Card style={styles.repCard}>
-              <View style={styles.stepper}>
-                <Pressable
-                  style={styles.stepButton}
-                  accessibilityLabel={exercise.unit === "seconds" ? "Fewer seconds" : "Fewer reps"}
-                  onPress={() =>
-                    setDraft((value) => Math.max(0, value - (exercise.unit === "seconds" ? 5 : 1)))
-                  }
-                >
-                  <Text style={styles.stepLabel}>−</Text>
-                </Pressable>
-                <View style={styles.stepValue}>
-                  <Text style={styles.stepNumber} accessibilityLabel={unitLabel(exercise, draft)}>
-                    {draft}
-                  </Text>
-                  <Text style={styles.stepUnit}>
-                    {exercise.unit === "seconds" ? "seconds" : "reps"}
-                  </Text>
-                </View>
-                <Pressable
-                  style={styles.stepButton}
-                  accessibilityLabel={exercise.unit === "seconds" ? "More seconds" : "More reps"}
-                  onPress={() =>
-                    setDraft((value) =>
-                      Math.min(999, value + (exercise.unit === "seconds" ? 5 : 1)),
-                    )
-                  }
-                >
-                  <Text style={styles.stepLabel}>+</Text>
-                </Pressable>
-              </View>
-              <Text style={styles.targetText}>Target {target(exercise)}</Text>
-            </Card>
-
-            <Button label="Done set" onPress={doneSet} />
-            <Pressable style={styles.skip} onPress={skipExercise}>
-              <Text style={styles.skipLabel}>Skip exercise</Text>
-            </Pressable>
-          </>
+          <Button
+            label="Done set"
+            icon={<SymbolView name={glyphs.check} size={18} tintColor={C.onAccent} />}
+            onPress={doneSet}
+          />
         )}
-      </Screen>
+      </Footer>
       {exitDialog}
     </View>
   )
 }
 
+/** Shape rule: icon buttons and chips are round, text buttons 16, cards 20. */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -901,135 +1139,222 @@ const styles = StyleSheet.create({
   content: {
     gap: 14,
   },
-  progressHead: {
+  topBar: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingBottom: 8,
   },
-  progressLabel: {
+  topCenter: {
+    flex: 1,
+    alignItems: "center",
+  },
+  topTitle: {
     fontSize: 12,
+    fontWeight: "500",
     color: C.textMuted,
   },
-  progressTrack: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: C.card,
-    overflow: "hidden",
+  topClock: {
+    fontSize: 17,
+    fontWeight: "600",
+    fontVariant: ["tabular-nums"],
+    color: C.text,
   },
-  progressFill: {
-    height: "100%",
-    backgroundColor: C.accent,
+  finish: {
+    minWidth: 0,
+    minHeight: 36,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    alignItems: "center",
+    backgroundColor: C.accentTint,
   },
-  setHead: {
-    gap: 4,
-    paddingTop: 8,
+  finishLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: C.accent,
   },
-  setTitle: {
-    fontSize: 28,
+  progressArea: {
+    paddingHorizontal: 24,
+    paddingBottom: 4,
+  },
+  scrollArea: {
+    flex: 1,
+  },
+  scroll: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 24,
+    gap: 16,
+  },
+  exerciseHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  exerciseCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  eyebrow: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: C.textMuted,
+  },
+  exerciseName: {
+    fontSize: 24,
     fontWeight: "600",
     color: C.text,
   },
-  setSub: {
+  setLine: {
     fontSize: 14,
-    color: C.textMuted,
+    fontWeight: "600",
+    fontVariant: ["tabular-nums"],
+    color: C.accent,
   },
-  link: {
+  countCard: {
+    padding: 16,
+    gap: 12,
+  },
+  cardHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    minHeight: 28,
+  },
+  cardLabel: {
     fontSize: 13,
     fontWeight: "600",
-    color: C.accent,
-    paddingTop: 4,
+    color: C.text,
   },
-  repCard: {
-    padding: 14,
-    gap: 10,
-  },
-  stepper: {
+  countRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  stepButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    backgroundColor: C.previewTint,
+  countNumber: {
+    fontSize: 56,
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
+    color: C.text,
+    lineHeight: 64,
+  },
+  countOf: {
+    fontSize: 13,
+    fontVariant: ["tabular-nums"],
+    color: C.textMuted,
+  },
+  captionRow: {
+    minHeight: 20,
     alignItems: "center",
     justifyContent: "center",
   },
-  stepLabel: {
-    fontSize: 28,
-    color: C.text,
-  },
-  stepValue: {
-    alignItems: "center",
-  },
-  stepNumber: {
-    fontSize: 44,
-    fontWeight: "600",
-    color: C.text,
-  },
-  stepUnit: {
-    fontSize: 12,
-    color: C.textMuted,
-  },
-  targetText: {
-    fontSize: 12,
+  countCaption: {
+    fontSize: 13,
+    lineHeight: 20,
     color: C.textMuted,
     textAlign: "center",
+  },
+  useWatch: {
+    minWidth: 0,
+    minHeight: 20,
+    paddingHorizontal: 8,
+  },
+  useWatchLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    fontVariant: ["tabular-nums"],
+    color: C.accent,
+  },
+  loadCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  loadCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  loadHint: {
+    fontSize: 12,
+    color: C.textMuted,
+  },
+  loadValue: {
+    minWidth: 72,
+    fontSize: 22,
+    fontWeight: "600",
+    fontVariant: ["tabular-nums"],
+    color: C.text,
+    textAlign: "center",
+  },
+  loadUnit: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: C.textMuted,
   },
   skip: {
     alignSelf: "center",
     minHeight: 44,
-    justifyContent: "center",
     paddingHorizontal: 12,
   },
   skipLabel: {
     fontSize: 13,
+    fontWeight: "500",
     color: C.textMuted,
   },
-  restBlock: {
+  restHero: {
     alignItems: "center",
-    gap: 6,
-    paddingVertical: 24,
+    gap: 20,
+    paddingTop: 12,
   },
   restLabel: {
     fontSize: 13,
+    fontWeight: "600",
     letterSpacing: 0.8,
     color: C.textMuted,
     textTransform: "uppercase",
   },
   restClock: {
-    fontSize: 64,
+    fontSize: 60,
     fontWeight: "300",
-    color: C.text,
     fontVariant: ["tabular-nums"],
+    color: C.text,
   },
-  restActions: {
+  restLogged: {
+    fontSize: 13,
+    fontVariant: ["tabular-nums"],
+    color: C.textMuted,
+  },
+  restAdjust: {
     flexDirection: "row",
-    gap: 10,
-    paddingTop: 8,
+    gap: 12,
   },
   restButton: {
-    minWidth: 110,
-    minHeight: 48,
-    borderRadius: 14,
-    backgroundColor: C.surface,
+    minWidth: 96,
+    minHeight: 44,
+    borderRadius: 22,
+    backgroundColor: C.card,
     alignItems: "center",
-    justifyContent: "center",
     paddingHorizontal: 16,
   },
   restButtonLabel: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
+    fontVariant: ["tabular-nums"],
     color: C.text,
   },
   upNext: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
     padding: 14,
-    gap: 3,
   },
-  upNextLabel: {
-    fontSize: 10,
-    letterSpacing: 0.6,
-    color: C.textMuted,
+  upNextCopy: {
+    flex: 1,
+    gap: 2,
   },
   upNextName: {
     fontSize: 16,
@@ -1037,16 +1362,29 @@ const styles = StyleSheet.create({
     color: C.text,
   },
   upNextSub: {
-    fontSize: 12,
+    fontSize: 13,
+    fontVariant: ["tabular-nums"],
     color: C.textMuted,
+  },
+  footer: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: C.border,
+    backgroundColor: C.background,
   },
   celebrate: {
     alignItems: "center",
     gap: 6,
-    paddingTop: 32,
   },
-  celebrateEmoji: {
-    fontSize: 44,
+  doneBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    marginBottom: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: C.accent,
   },
   celebrateTitle: {
     fontSize: 28,
@@ -1056,22 +1394,29 @@ const styles = StyleSheet.create({
   celebrateSub: {
     fontSize: 14,
     color: C.textMuted,
+    textAlign: "center",
   },
   stats: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   stat: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: "40%",
     backgroundColor: C.surface,
-    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 20,
+    borderCurve: "continuous",
     paddingVertical: 14,
-    alignItems: "center",
+    paddingHorizontal: 16,
     gap: 2,
   },
   statValue: {
     fontSize: 26,
     fontWeight: "600",
+    fontVariant: ["tabular-nums"],
     color: C.text,
   },
   statLabel: {
@@ -1084,29 +1429,50 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   summaryList: {
-    padding: 14,
-    gap: 10,
+    backgroundColor: C.surface,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 20,
+    borderCurve: "continuous",
+    paddingHorizontal: 14,
   },
   summaryRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: "center",
     gap: 12,
+    paddingVertical: 12,
+  },
+  divider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: C.border,
+  },
+  summaryCopy: {
+    flex: 1,
+    gap: 2,
   },
   summaryName: {
-    flex: 1,
-    fontSize: 13,
+    fontSize: 14,
+    fontWeight: "600",
     color: C.text,
   },
   summaryValue: {
     fontSize: 13,
+    fontVariant: ["tabular-nums"],
     color: C.textMuted,
+  },
+  record: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: C.accent,
+    textAlign: "center",
   },
   keep: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
     backgroundColor: C.accentTint,
-    borderRadius: 16,
+    borderRadius: 20,
+    borderCurve: "continuous",
     padding: 14,
   },
   keepCopy: {
@@ -1121,5 +1487,10 @@ const styles = StyleSheet.create({
   keepSub: {
     fontSize: 12,
     color: C.textMuted,
+  },
+  error: {
+    fontSize: 13,
+    color: C.accent,
+    textAlign: "center",
   },
 })

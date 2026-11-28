@@ -76,7 +76,7 @@ export class WatchLink {
     this.unsubscribe?.()
     this.unsubscribe = null
     void this.client.disconnect()
-    useWatchStore.setState({ status: "off", error: null })
+    useWatchStore.setState({ status: "off", error: null, live: null })
   }
 
   setForeground(foreground: boolean) {
@@ -127,8 +127,11 @@ export class WatchLink {
       this.hello = setInterval(() => this.greet(), HELLO_MS)
       return
     }
+    // A count from a watch that is gone would go stale on screen.
     useWatchStore.setState(
-      status === "connecting" ? { status: "connecting", error: null } : { status: "searching" },
+      status === "connecting"
+        ? { status: "connecting", error: null, live: null }
+        : { status: "searching", live: null },
     )
     if (status === "disconnected") {
       this.clearTimers()
@@ -174,6 +177,8 @@ export class WatchLink {
       return
     } else if (message.t === "session") {
       useWatchStore.getState().receive(message.session)
+    } else if (message.t === "reps") {
+      useWatchStore.setState({ live: message.live })
     } else if (message.t === "food") {
       this.saveFood(message.logs)
     }

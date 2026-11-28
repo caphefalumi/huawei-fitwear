@@ -49,6 +49,21 @@ export type SharedSession = {
   skip: number[]
 }
 
+/**
+ * The set on the watch's screen while it is counted, sent on every change.
+ * Watch to phone only, and never merged into the session: it is gone once the set is done.
+ */
+export type LiveReps = {
+  /** The session the set belongs to. */
+  id: string
+  /** The set's position in the set-by-set order. */
+  pos: number
+  /** Reps so far, or seconds for timed holds. */
+  reps: number
+  /** Counted from the wrist, not with the watch's buttons. */
+  auto: boolean
+}
+
 export type WireMacros = { protein: number; carbs: number; fat: number }
 
 /** A recent meal the watch can log again. `ref` is that meal's ID. */
@@ -79,6 +94,8 @@ export type SyncMessage =
   | { t: "welcome"; v: number; ok: boolean }
   | { t: "plan"; plan: WirePlan }
   | { t: "session"; session: SharedSession }
+  /** Older watch apps never send it; older phone apps ignore it. */
+  | { t: "reps"; live: LiveReps }
   | { t: "day"; day: WireDay }
   | { t: "food"; logs: WireFoodLog[] }
 
@@ -161,6 +178,14 @@ function isSession(session: SharedSession | undefined) {
   )
 }
 
+const isLive = (live: LiveReps | undefined) =>
+  !!live &&
+  isText(live.id, 64) &&
+  live.id !== "" &&
+  isCount(live.pos, MAX_EXERCISES * MAX_SETS) &&
+  isCount(live.reps, 10000) &&
+  typeof live.auto === "boolean"
+
 const isFoodLog = (log: WireFoodLog | undefined) =>
   !!log &&
   isText(log.id, 64) &&
@@ -181,6 +206,7 @@ export function parseMessage(json: string): SyncMessage | undefined {
   }
   if (message?.t === "welcome") return typeof message.ok === "boolean" ? message : undefined
   if (message?.t === "session") return isSession(message.session) ? message : undefined
+  if (message?.t === "reps") return isLive(message.live) ? message : undefined
   if (message?.t === "food") {
     return Array.isArray(message.logs) &&
       message.logs.length <= MAX_FOOD_LOGS &&

@@ -7,6 +7,7 @@ import {
   encodeFrames,
   FoodLog,
   FrameAssembler,
+  LiveReps,
   PROTOCOL_VERSION,
   SharedSession,
   SyncMessage,
@@ -101,6 +102,12 @@ export class PhoneLink {
   sendSession(session: SharedSession): void {
     if (this.state === LinkState.CONNECTED) {
       this.send({ t: 'session', session: session });
+    }
+  }
+
+  sendReps(live: LiveReps): void {
+    if (this.state === LinkState.CONNECTED) {
+      this.send({ t: 'reps', live: live });
     }
   }
 
