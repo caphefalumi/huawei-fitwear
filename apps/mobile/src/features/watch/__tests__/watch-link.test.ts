@@ -12,6 +12,7 @@ import {
   type SharedSession,
   type SyncMessage,
   type WireDay,
+  type WireFormat,
 } from "../protocol"
 import { resetWatchSession, toWirePlan, useWatchStore } from "../store"
 import { reportSync } from "../telemetry"
@@ -303,8 +304,8 @@ async function connected(welcome: { v: number }, nutrition?: WatchNutrition) {
   return link
 }
 
-function fromWatch(message: SyncMessage, id: number) {
-  for (const frame of encodeFrames(message, 180, id)) {
+function fromWatch(message: SyncMessage, id: number, format?: WireFormat) {
+  for (const frame of encodeFrames(message, 180, id, format)) {
     mockClient.listener.onMessage("watch-to-phone", frame, frame.length)
   }
 }
@@ -397,5 +398,20 @@ test("writes rows to a watch that reads them, and keeps the hello named", async 
   const frames = mockClient.sendFrame.mock.calls.map(([frame]) => frame)
   expect(frames[0]).toContain('~{"t":"hello"')
   expect(frames.some((frame) => /~\["s","s1",/.test(frame))).toBe(true)
+  link.destroy()
+})
+
+test("writes protobuf to a watch that reads it, and reads what it sends back", async () => {
+  const link = await connected({ v: 5 })
+  useWatchStore.setState({ session, outbox: useWatchStore.getState().outbox + 1 })
+  await jest.advanceTimersByTimeAsync(0)
+
+  const frames = mockClient.sendFrame.mock.calls.map(([frame]) => frame)
+  expect(frames[0]).toContain('~{"t":"hello"')
+  expect(frames.some((frame) => frame.startsWith("#") && frame.includes("s1"))).toBe(true)
+  expect(frames.filter((frame) => frame.startsWith("~"))).toHaveLength(1)
+
+  fromWatch({ t: "session", session: { ...session, rev: session.rev + 1, pos: 1 } }, 2, "protobuf")
+  expect(useWatchStore.getState().session?.pos).toBe(1)
   link.destroy()
 })

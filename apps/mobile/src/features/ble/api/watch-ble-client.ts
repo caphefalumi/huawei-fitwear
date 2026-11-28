@@ -20,7 +20,13 @@ import {
   FITWEAR_CHAR_MESSAGE_UUID,
   FITWEAR_SERVICE_UUID,
 } from "../constants"
-import { base64ToBytes, bytesToBase64, decodeUtf8Bytes, encodeUtf8Bytes } from "../utils/codec"
+import {
+  base64ToBytes,
+  binaryToBytes,
+  bytesToBase64,
+  bytesToBinary,
+  encodeUtf8Bytes,
+} from "../utils/codec"
 
 export type BleDirection = "phone-to-watch" | "watch-to-phone"
 export type WatchBleStatus = "disconnected" | "scanning" | "connecting" | "connected"
@@ -393,13 +399,13 @@ export class WatchBleClient {
   }
 
   /**
-   * Writes one protocol frame exactly as given. An unanswered write does not wait for the watch,
+   * Writes one protocol frame exactly as given, one byte per character. An unanswered write does not wait for the watch,
    * so several can share one connection event, but a rejection of it goes unseen.
    */
   async sendFrame(frame: string, answered: boolean): Promise<boolean> {
     const device = this.connectedDevice
     if (!device || this.status !== "connected") return false
-    const value = bytesToBase64(encodeUtf8Bytes(frame))
+    const value = bytesToBase64(binaryToBytes(frame))
     try {
       if (answered) {
         await device.writeCharacteristicWithResponseForService(
@@ -440,7 +446,7 @@ export class WatchBleClient {
   }
 
   private emitBytes(direction: BleDirection, bytes: Uint8Array): void {
-    this.listener.onMessage(direction, decodeUtf8Bytes(bytes), bytes.byteLength)
+    this.listener.onMessage(direction, bytesToBinary(bytes), bytes.byteLength)
   }
 
   private bindBluetoothState(manager: BleManager): void {

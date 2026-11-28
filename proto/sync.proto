@@ -1,0 +1,107 @@
+// Phone <-> watch sync messages from version 5; see docs/watch/phone-sync.md.
+// Run `bun run proto:sync` after a change: it writes the code both apps use.
+// Field numbers follow the positions in the version 4 rows. Never reuse or renumber one.
+syntax = "proto3";
+
+message Envelope {
+  oneof body {
+    Plan plan = 1;
+    Session session = 2;
+    Reps reps = 3;
+    Day day = 4;
+    Food food = 5;
+    Ack ack = 6;
+  }
+}
+
+message Exercise {
+  string key = 1;
+  string name = 2;
+  uint32 sets = 3;
+  uint32 reps = 4;
+  bool seconds = 5;
+  uint32 rest = 6;
+  string superset = 7;
+}
+
+message Plan {
+  string key = 1;
+  string name = 2;
+  uint32 minutes = 3;
+  repeated Exercise exercises = 4;
+}
+
+message Session {
+  string id = 1;
+  uint32 rev = 2;
+  string plan = 3;
+  Status status = 4;
+  uint64 at = 5;
+  uint64 end = 6;
+  uint32 pos = 7;
+  uint32 rest = 8;
+  // Flat [exercise, set, reps, ...].
+  repeated uint32 log = 9;
+  repeated uint32 skip = 10;
+}
+
+message Reps {
+  string id = 1;
+  uint32 pos = 2;
+  uint32 reps = 3;
+  bool auto = 4;
+}
+
+message Macros {
+  uint32 protein = 1;
+  uint32 carbs = 2;
+  uint32 fat = 3;
+}
+
+message Favorite {
+  string ref = 1;
+  string name = 2;
+  uint32 kcal = 3;
+  uint32 protein = 4;
+  uint32 carbs = 5;
+  uint32 fat = 6;
+}
+
+// A message of its own so that "no favorites" and "favorites unchanged" stay different.
+message Favorites {
+  repeated Favorite items = 1;
+}
+
+message Day {
+  string date = 1;
+  string owner = 2;
+  uint32 kcal_target = 3;
+  Macros target = 4;
+  uint32 kcal_eaten = 5;
+  Macros eaten = 6;
+  repeated string applied = 7;
+  // Left out while unchanged.
+  Favorites favorites = 8;
+}
+
+message FoodLog {
+  string id = 1;
+  string ref = 2;
+  string owner = 3;
+  uint64 at = 4;
+}
+
+message Food {
+  repeated FoodLog logs = 1;
+}
+
+message Ack {
+  uint32 id = 1;
+}
+
+// Last in the file: pbts leaves out the interfaces of messages declared after an enum.
+enum Status {
+  ACTIVE = 0;
+  DONE = 1;
+  CLOSED = 2;
+}

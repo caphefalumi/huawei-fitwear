@@ -3,7 +3,6 @@ import { common } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
-import { util } from '@kit.ArkTS';
 
 const DOMAIN: number = 0x0000;
 const TAG: string = 'FitwearBleWatch';
@@ -12,11 +11,11 @@ const READY_MESSAGE: string = 'VoocHealth Watch Ready';
 
 /** Private Fitwear GATT service UUID (not a Bluetooth SIG assigned number). */
 export const SERVICE_UUID: string = 'F17E0001-6B2A-4C8E-9D15-3A7F2E8C4B01';
-/** UTF-8 message characteristic: read / write / notify. */
+/** Message characteristic, carrying protocol frames: read / write / notify. */
 export const CHAR_MESSAGE_UUID: string = 'F17E0002-6B2A-4C8E-9D15-3A7F2E8C4B02';
 
 /**
- * Max UTF-8 payload bytes per write/notify.
+ * Max payload bytes per write/notify.
  * Matches mobile BLE_MAX_MESSAGE_BYTES under a 185-byte MTU.
  */
 export const MAX_MESSAGE_BYTES: number = 180;
@@ -49,18 +48,25 @@ export interface BleGattServerListener {
   onReceived: (text: string) => void;
 }
 
-const textEncoder: util.TextEncoder = new util.TextEncoder();
-const textDecoder: util.TextDecoder = util.TextDecoder.create('utf-8');
-
-function encodeUtf8(text: string): ArrayBuffer {
-  const bytes = textEncoder.encodeInto(text);
-  const copy = new ArrayBuffer(bytes.byteLength);
-  new Uint8Array(copy).set(bytes);
-  return copy;
+/**
+ * Frames are bytes held one per character, so protobuf passes through unchanged. JSON frames are
+ * ASCII, so phone apps from before protobuf read and write them alike.
+ */
+function frameBytes(frame: string): ArrayBuffer {
+  const bytes = new Uint8Array(frame.length);
+  for (let index = 0; index < frame.length; index++) {
+    bytes[index] = frame.charCodeAt(index);
+  }
+  return bytes.buffer;
 }
 
-function decodeUtf8(buffer: ArrayBuffer): string {
-  return textDecoder.decodeToString(new Uint8Array(buffer));
+function frameText(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let text = '';
+  for (let index = 0; index < bytes.length; index++) {
+    text += String.fromCharCode(bytes[index]);
+  }
+  return text;
 }
 
 /**
@@ -79,7 +85,7 @@ export class BleGattServerService {
   private serverRunning: boolean = false;
   private connectedDeviceId: string = '';
   /** Outbound watch-to-phone data (notified to phone, read by phone). */
-  private outboundBuffer: ArrayBuffer = encodeUtf8(READY_MESSAGE);
+  private outboundBuffer: ArrayBuffer = frameBytes(READY_MESSAGE);
   /** Inbound phone-to-watch data (written by phone). */
   private inboundBuffer: ArrayBuffer = new ArrayBuffer(0);
   /** Client Characteristic Configuration Descriptor: [0, 0] = disabled, [1, 0] = notify. */
@@ -148,7 +154,7 @@ export class BleGattServerService {
    */
   sendFrame(frame: string): Promise<boolean> {
     const server = this.gattServer;
-    const encoded = encodeUtf8(frame);
+    const encoded = frameBytes(frame);
     if (
       !server ||
       this.connectedDeviceId.length === 0 ||
@@ -353,7 +359,7 @@ export class BleGattServerService {
     const cccView = new Uint8Array(this.cccBuffer);
     cccView[0] = 0;
     cccView[1] = 0;
-    this.outboundBuffer = encodeUtf8(READY_MESSAGE);
+    this.outboundBuffer = frameBytes(READY_MESSAGE);
     this.inboundBuffer = new ArrayBuffer(0);
   }
 
@@ -439,7 +445,7 @@ export class BleGattServerService {
     }
     // Store phone write in inboundBuffer so outboundBuffer is not clobbered
     this.inboundBuffer = req.value;
-    const incoming = decodeUtf8(req.value);
+    const incoming = frameText(req.value);
     if (incoming.length > 0) {
       this.listener.onReceived(incoming);
     }

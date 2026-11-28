@@ -2,6 +2,19 @@
  * Phone ↔ watch workout sync, protocol v1.
  * Mirrors apps/mobile/src/features/watch/protocol.ts — change both together.
  */
+import {
+  Envelope,
+  IAck,
+  IEnvelope,
+  IExercise,
+  IFavorite,
+  IFood,
+  IFoodLog,
+  IMacros,
+  IReps,
+  ISession,
+  Status,
+} from './SyncProto';
 
 /** Carried by hello. Every watch app has required exactly 1, so it stays 1. */
 export const PROTOCOL_VERSION: number = 1;
@@ -10,12 +23,15 @@ export const PROTOCOL_VERSION: number = 1;
  * 2: compact plans, and welcome names the plan held.
  * 3: acks plan, session and day messages, and keeps its favorites when a day leaves them out.
  * 4: reads every message but the handshake as a row; see toRow.
+ * 5: reads every message but the handshake as protobuf; see proto/sync.proto.
  */
-export const WATCH_VERSION: number = 4;
+export const WATCH_VERSION: number = 5;
 /** The `app` in a hello from which the phone acks session and food messages too. */
 export const ACK_VERSION: number = 3;
 /** The `app` in a hello from which the phone reads rows. */
 export const ROW_VERSION: number = 4;
+/** The `app` in a hello from which the phone reads protobuf. */
+export const PROTOBUF_VERSION: number = 5;
 const MAX_MESSAGE_CHARS: number = 16000;
 const MAX_EXERCISES: number = 30;
 const MAX_SETS: number = 20;
@@ -203,7 +219,6 @@ export function sessionSlots(exercises: PlanExercise[]): Slot[] {
   return slots;
 }
 
-/** Splits a message into ASCII frames of at most maxBytes. */
 const STATUSES: string[] = ['active', 'done', 'closed'];
 
 /**
@@ -352,23 +367,225 @@ function fromRow(row: Object[]): SyncMessage | undefined {
   return undefined;
 }
 
-/** Splits a message into ASCII frames of at most maxBytes, as a row when `rows` is set. */
+/** Zeros and empty values are left out of protobuf, as proto3 does; protobuf.js writes any set. */
+function count(value: number): number | undefined {
+  return value !== 0 ? value : undefined;
+}
+
+function text(value: string): string | undefined {
+  return value !== '' ? value : undefined;
+}
+
+/** The message in the shape of proto/sync.proto; undefined for messages that stay JSON. */
+function toEnvelope(message: SyncMessage): IEnvelope | undefined {
+  if (message.t === 'session') {
+    const session = message.session as SharedSession;
+    const log: number[] = [];
+    session.log.forEach((entry: number[]) => {
+      log.push(entry[0], entry[1], entry[2]);
+    });
+    const status = STATUSES.indexOf(session.status);
+    const out: ISession = {
+      id: text(session.id),
+      rev: count(session.rev),
+      plan: text(session.plan),
+      status: status === 1 ? Status.DONE : status === 2 ? Status.CLOSED : undefined,
+      at: count(session.at),
+      end: count(session.end),
+      pos: count(session.pos),
+      rest: count(session.rest),
+      log: log,
+      skip: session.skip,
+    };
+    const envelope: IEnvelope = { session: out };
+    return envelope;
+  }
+  if (message.t === 'reps') {
+    const live = message.live as LiveReps;
+    const reps: IReps = {
+      id: text(live.id),
+      pos: count(live.pos),
+      reps: count(live.reps),
+      auto: live.auto ? true : undefined,
+    };
+    const envelope: IEnvelope = { reps: reps };
+    return envelope;
+  }
+  if (message.t === 'food') {
+    const logs = (message.logs as FoodLog[]).map((log: FoodLog): IFoodLog => {
+      const item: IFoodLog = {
+        id: text(log.id),
+        ref: text(log.ref),
+        owner: text(log.owner),
+        at: count(log.at),
+      };
+      return item;
+    });
+    const food: IFood = { logs: logs };
+    const envelope: IEnvelope = { food: food };
+    return envelope;
+  }
+  if (message.t === 'ack') {
+    const ack: IAck = { id: count(message.id as number) };
+    const envelope: IEnvelope = { ack: ack };
+    return envelope;
+  }
+  return undefined;
+}
+
+/** Protobuf bytes, one per character like the frames that carry them. */
+function toProto(envelope: IEnvelope): string {
+  const bytes: Uint8Array = Envelope.encode(envelope).finish();
+  let out = '';
+  for (let index = 0; index < bytes.length; index++) {
+    out += String.fromCharCode(bytes[index]);
+  }
+  return out;
+}
+
+function macrosOf(macros: IMacros | null | undefined): Macros {
+  const read: Macros = {
+    protein: macros?.protein ?? 0,
+    carbs: macros?.carbs ?? 0,
+    fat: macros?.fat ?? 0,
+  };
+  return read;
+}
+
+function statusOf(status: Status | null | undefined): string {
+  if (status === undefined || status === null || status === Status.ACTIVE) {
+    return 'active';
+  }
+  if (status === Status.DONE) {
+    return 'done';
+  }
+  return status === Status.CLOSED ? 'closed' : '';
+}
+
+/**
+ * The named message in protobuf bytes, before the usual checks; throws if they are broken.
+ * 64-bit fields may decode as BigInt on this runtime, hence Number().
+ */
+function fromProto(bytes: string): SyncMessage | undefined {
+  const buffer = new Uint8Array(bytes.length);
+  for (let index = 0; index < bytes.length; index++) {
+    buffer[index] = bytes.charCodeAt(index);
+  }
+  const envelope = Envelope.decode(buffer);
+  // The watch only ever receives these. Decoded fields left out read as zero or empty.
+  const plan = envelope.plan;
+  if (plan) {
+    const exercises = (plan.exercises ?? []).map((item: IExercise): PlanExercise => {
+      const exercise: PlanExercise = {
+        key: item.key ?? '',
+        name: item.name ?? '',
+        sets: item.sets ?? 0,
+        reps: item.reps ?? 0,
+        unit: item.seconds ? 'seconds' : 'reps',
+        rest: item.rest ?? 0,
+        superset: item.superset ?? '',
+      };
+      return exercise;
+    });
+    const read: WorkoutPlan = {
+      name: plan.name ?? '',
+      minutes: plan.minutes ?? 0,
+      exercises: exercises,
+    };
+    const message: SyncMessage = { t: 'plan', plan: read, key: plan.key ?? '' };
+    return message;
+  }
+  const session = envelope.session;
+  if (session) {
+    const flat = session.log ?? [];
+    if (flat.length % 3 !== 0) {
+      return undefined;
+    }
+    const log: number[][] = [];
+    for (let index = 0; index < flat.length; index += 3) {
+      log.push(flat.slice(index, index + 3));
+    }
+    const read: SharedSession = {
+      id: session.id ?? '',
+      rev: session.rev ?? 0,
+      plan: session.plan ?? '',
+      status: statusOf(session.status),
+      at: Number(session.at ?? 0),
+      end: Number(session.end ?? 0),
+      pos: session.pos ?? 0,
+      rest: session.rest ?? 0,
+      log: log,
+      skip: (session.skip ?? []).slice(),
+    };
+    const message: SyncMessage = { t: 'session', session: read };
+    return message;
+  }
+  const day = envelope.day;
+  if (day) {
+    const read: DayInfo = {
+      date: day.date ?? '',
+      owner: day.owner ?? '',
+      kcalTarget: day.kcalTarget ?? 0,
+      target: macrosOf(day.target),
+      kcalEaten: day.kcalEaten ?? 0,
+      eaten: macrosOf(day.eaten),
+      applied: (day.applied ?? []).slice(),
+    };
+    // Left out while unchanged.
+    const favorites = day.favorites;
+    if (favorites) {
+      read.favorites = (favorites.items ?? []).map((food: IFavorite): FavoriteMeal => {
+        const meal: FavoriteMeal = {
+          ref: food.ref ?? '',
+          name: food.name ?? '',
+          kcal: food.kcal ?? 0,
+          protein: food.protein ?? 0,
+          carbs: food.carbs ?? 0,
+          fat: food.fat ?? 0,
+        };
+        return meal;
+      });
+    }
+    const message: SyncMessage = { t: 'day', day: read };
+    return message;
+  }
+  const ack = envelope.ack;
+  if (ack) {
+    const message: SyncMessage = { t: 'ack', id: ack.id ?? 0 };
+    return message;
+  }
+  return undefined;
+}
+
+/**
+ * Splits a message into frames of at most maxBytes, one character per byte. `format` is 'named',
+ * 'rows' (version 4) or 'protobuf' (version 5), whose frame headers are marked '#' instead of
+ * '~'. Hello and welcome always go as named JSON.
+ */
 export function encodeFrames(
   message: SyncMessage,
   maxBytes: number,
   id: number,
-  rows: boolean = false,
+  format: string = 'named',
 ): string[] {
-  const row = rows ? toRow(message) : undefined;
-  const text = row !== undefined ? JSON.stringify(row) : JSON.stringify(message);
-  const json = text.replace(/[\u0080-\uffff]/g, (char: string) => {
-    return '\\u' + ('000' + char.charCodeAt(0).toString(16)).slice(-4);
-  });
+  const envelope = format === 'protobuf' ? toEnvelope(message) : undefined;
+  const row = format === 'rows' ? toRow(message) : undefined;
+  const mark = envelope !== undefined ? '#' : '~';
+  let body = '';
+  if (envelope !== undefined) {
+    body = toProto(envelope);
+  } else {
+    const json = row !== undefined ? JSON.stringify(row) : JSON.stringify(message);
+    body = json.replace(/[\u0080-\uffff]/g, (char: string) => {
+      return '\\u' + ('000' + char.charCodeAt(0).toString(16)).slice(-4);
+    });
+  }
   const size = Math.max(1, maxBytes - HEADER_CHARS);
-  const total = Math.ceil(json.length / size);
+  const total = Math.ceil(body.length / size);
   const frames: string[] = [];
   for (let index = 0; index < total; index++) {
-    frames.push(`~${id % 1000}.${index}.${total}~${json.slice(index * size, (index + 1) * size)}`);
+    const part = body.slice(index * size, (index + 1) * size);
+    frames.push(`${mark}${id % 1000}.${index}.${total}${mark}${part}`);
   }
   return frames;
 }
@@ -380,11 +597,14 @@ export class FrameAssembler {
   private id: number = -1;
   private next: number = 0;
   private text: string = '';
+  /** The message being put together is protobuf. */
+  private binary: boolean = false;
 
   /** Returns the whole message once its last frame arrives. Anything else is dropped. */
   push(frame: string): SyncMessage | undefined {
-    const headerEnd = frame.indexOf('~', 1);
-    if (!frame.startsWith('~') || headerEnd < 0) {
+    const mark = frame.charAt(0);
+    const headerEnd = frame.indexOf(mark, 1);
+    if ((mark !== '~' && mark !== '#') || headerEnd < 0) {
       return undefined;
     }
     const header = frame.slice(1, headerEnd).split('.');
@@ -395,8 +615,9 @@ export class FrameAssembler {
       this.id = id;
       this.next = 0;
       this.text = '';
+      this.binary = mark === '#';
     }
-    if (id !== this.id || index !== this.next) {
+    if (id !== this.id || index !== this.next || (mark === '#') !== this.binary) {
       this.id = -1;
       return undefined;
     }
@@ -411,7 +632,7 @@ export class FrameAssembler {
     }
     this.lastId = this.id;
     this.id = -1;
-    return parseMessage(this.text);
+    return this.binary ? parseProto(this.text) : parseMessage(this.text);
   }
 }
 
@@ -546,41 +767,52 @@ export function parseMessage(json: string): SyncMessage | undefined {
   try {
     const parsed = JSON.parse(json) as Object;
     const read = Array.isArray(parsed) ? fromRow(parsed as Object[]) : (parsed as SyncMessage);
-    if (read === undefined) {
-      return undefined;
-    }
-    const message: SyncMessage = read;
-    if (message.t === 'hello') {
-      return message.v === PROTOCOL_VERSION &&
-        isText(message.phone as string, 64) &&
-        message.phone !== ''
-        ? message
-        : undefined;
-    }
-    if (message.t === 'welcome') {
-      return typeof message.ok === 'boolean' ? message : undefined;
-    }
-    if (message.t === 'plan') {
-      const plan = readPlan(message.plan as WorkoutPlan | CompactPlan);
-      if (plan === undefined || !(message.key === undefined || isText(message.key, 16))) {
-        return undefined;
-      }
-      const read: SyncMessage = { t: 'plan', plan: plan, key: message.key };
-      return read;
-    }
-    if (message.t === 'session') {
-      return isSession(message.session as SharedSession) ? message : undefined;
-    }
-    if (message.t === 'day') {
-      return isDay(message.day as DayInfo) ? message : undefined;
-    }
-    if (message.t === 'ack') {
-      return isCount(message.id as number, 999) ? message : undefined;
-    }
-    return undefined;
+    return read === undefined ? undefined : checkMessage(read);
   } catch (err) {
     return undefined;
   }
+}
+
+/** Reads protobuf bytes, which phone apps from PROTOBUF_VERSION on send. */
+function parseProto(bytes: string): SyncMessage | undefined {
+  try {
+    const read = fromProto(bytes);
+    return read === undefined ? undefined : checkMessage(read);
+  } catch (err) {
+    return undefined;
+  }
+}
+
+/** The message if it is valid. May throw on a malformed one, so call it inside a try. */
+function checkMessage(message: SyncMessage): SyncMessage | undefined {
+  if (message.t === 'hello') {
+    return message.v === PROTOCOL_VERSION &&
+      isText(message.phone as string, 64) &&
+      message.phone !== ''
+      ? message
+      : undefined;
+  }
+  if (message.t === 'welcome') {
+    return typeof message.ok === 'boolean' ? message : undefined;
+  }
+  if (message.t === 'plan') {
+    const plan = readPlan(message.plan as WorkoutPlan | CompactPlan);
+    if (plan === undefined || !(message.key === undefined || isText(message.key, 16))) {
+      return undefined;
+    }
+    const read: SyncMessage = { t: 'plan', plan: plan, key: message.key };
+    return read;
+  }
+  if (message.t === 'session') {
+    return isSession(message.session as SharedSession) ? message : undefined;
+  }
+  if (message.t === 'day') {
+    return isDay(message.day as DayInfo) ? message : undefined;
+  }
+  if (message.t === 'ack') {
+    return isCount(message.id as number, 999) ? message : undefined;
+  }
+  return undefined;
 }
 
 function sameContent(a: SharedSession, b: SharedSession): boolean {

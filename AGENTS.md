@@ -84,7 +84,7 @@ bun lint                     # Lint mobile and backend workspaces
 - Hub / entry pages reside in `apps/watch/entry/src/main/ets/pages/` and are registered in `main_pages.json`.
 - Application lifecycle handlers reside in `apps/watch/entry/src/main/ets/entryability/`.
 - Follow strict ArkTS typing conventions defined in `apps/watch/code-linter.json5`.
-- Do not add web or node libraries to `apps/watch`.
+- Do not add web or node libraries to `apps/watch`. Use ohpm packages made for HarmonyOS, such as `@ohos/protobufjs` for the sync.
 - **`@Builder` arguments do not refresh**: ArkUI reads plain values passed to a `@Builder` once, so UI that shows changing state must read `this.*` inside the builder or be a `@ComponentV2` with `@Param` fields. A `ForEach` that renders a builder needs a key that includes the values shown.
 
 ### Phone ↔ Watch Sync Rules
@@ -92,8 +92,9 @@ bun lint                     # Lint mobile and backend workspaces
 Read `docs/watch/phone-sync.md` before changing the Bluetooth sync.
 
 - **One protocol, two files**: `apps/mobile/src/features/watch/protocol.ts` and `apps/watch/entry/src/main/ets/features/link/SyncProtocol.ets` mirror each other. Change both in the same commit, along with the shared fixture frames in `watch-sync.test.ts` and `WorkoutSession.test.ets`.
+- **Protobuf comes from `proto/sync.proto`**: after changing it, run `bun run proto:sync` and commit the generated `sync-proto.js` / `.d.ts` (phone) and `SyncProto.js` / `.d.ets` (watch). Never edit them by hand, and never renumber or reuse a field.
 - **Never break an older build**: `hello.v` stays 1 and `hello` / `welcome` stay named JSON. Put a new wire format behind a new version, announced by the watch in `welcome.v` and by the phone in `hello.app`. Send it only to a peer that announces it, and keep reading the older formats.
-- **Rows on the wire, named in code**: from version 4, every other message is a JSON row (`toRow` / `fromRow`). A new message needs a row layout on both sides. Validation runs on the named form.
+- **Protobuf on the wire, named in code**: from version 5, every other message is protobuf; version 4 apps get JSON rows (`toRow` / `fromRow`). A new message needs a protobuf message and a row layout on both sides. Validation runs on the named form.
 - **Radio input is untrusted**: validate every message read, and ignore malformed ones rather than throwing.
 - **Verify both apps**: run the mobile tests and typecheck, then build the watch and run its unit tests. Tests are not evidence that the radio link works; ask for the device tests in `docs/watch/phone-sync.md` when behavior on the link changes.
 

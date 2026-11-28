@@ -3,6 +3,8 @@
  * Mirrors apps/watch/entry/src/main/ets/features/link/SyncProtocol.ets — change both together.
  */
 
+import { Envelope, type Food, type IEnvelope, type Reps, type Session } from "./sync-proto"
+
 /** Carried by hello. Every watch app has required exactly 1, so it stays 1. */
 export const PROTOCOL_VERSION = 1
 /** The welcome version from which the watch reads compact plans and names the plan it holds. */
@@ -15,8 +17,10 @@ export const COMPACT_PLAN_VERSION = 2
 export const ACK_VERSION = 3
 /** The version from which an app reads every message but the handshake as a row; see `toRow`. */
 export const ROW_VERSION = 4
+/** The version from which an app reads every message but the handshake as protobuf. */
+export const PROTOBUF_VERSION = 5
 /** What this phone app does, sent as `app` in the hello. */
-export const PHONE_VERSION = 4
+export const PHONE_VERSION = 5
 const MAX_MESSAGE_CHARS = 16000
 const MAX_EXERCISES = 30
 const MAX_SETS = 20
@@ -157,7 +161,6 @@ export function planKey(plan: WirePlan): string {
   return `${(hash >>> 0).toString(16).padStart(8, "0")}${json.length.toString(36)}`
 }
 
-/** Splits a message into ASCII frames of at most `maxBytes`. */
 const STATUSES = ["active", "done", "closed"] as const
 
 const macroRow = (macros: WireMacros) => [macros.protein, macros.carbs, macros.fat]
@@ -272,22 +275,116 @@ function fromRow(row: unknown[]): unknown {
   }
 }
 
-/** Splits a message into ASCII frames of at most `maxBytes`, as a row when `rows` is set. */
+/** proto3 leaves out zeros and empty values, but protobuf.js writes every field that is set. */
+function lean<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(lean) as T
+  if (typeof value !== "object" || value === null) return value
+  const kept = Object.entries(value).filter(
+    ([, item]) =>
+      item !== 0 && item !== "" && item !== false && !(Array.isArray(item) && item.length === 0),
+  )
+  return Object.fromEntries(kept.map(([key, item]) => [key, lean(item)])) as T
+}
+
+/** The message in the shape of proto/sync.proto; null for hello and welcome, which stay JSON. */
+function toEnvelope(message: SyncMessage): IEnvelope | null {
+  switch (message.t) {
+    case "plan": {
+      const plan = "x" in message.plan ? message.plan : compactPlan(message.plan)
+      const exercises = plan.x.map(([key, name, sets, reps, unit, rest, superset]) => ({
+        key,
+        name,
+        sets,
+        reps,
+        seconds: unit === 1,
+        rest,
+        superset,
+      }))
+      return {
+        plan: { key: message.key ?? "", name: plan.name, minutes: plan.minutes, exercises },
+      }
+    }
+    case "session": {
+      const { status, log, ...session } = message.session
+      return { session: { ...session, status: STATUSES.indexOf(status), log: log.flat() } }
+    }
+    case "reps":
+      return { reps: message.live }
+    case "day": {
+      const day = message.day
+      if (!("favorites" in day)) return { day }
+      // A message of its own, so that no favorites differs from favorites left out.
+      const { favorites, ...totals } = day
+      return { day: { ...totals, favorites: { items: favorites } } }
+    }
+    case "food":
+      return { food: { logs: message.logs } }
+    case "ack":
+      return { ack: { id: message.id } }
+    default:
+      return null
+  }
+}
+
+/** Protobuf bytes, one per character like the frames that carry them. */
+function toProto(envelope: IEnvelope) {
+  let bytes = ""
+  for (const byte of Envelope.encode(lean(envelope)).finish()) bytes += String.fromCharCode(byte)
+  return bytes
+}
+
+/** The named message in protobuf bytes, before the usual checks. Throws if they are broken. */
+function fromProto(bytes: string): unknown {
+  const envelope = Envelope.decode(Uint8Array.from(bytes, (char) => char.charCodeAt(0)))
+  // The phone only ever receives these. Decoded fields left out read as zero or empty.
+  const session = envelope.session as Session | null
+  if (session) {
+    const { id, rev, plan, at, end, pos, rest, skip } = session
+    const status = STATUSES[session.status]
+    const named = { id, rev, plan, status, at, end, pos, rest, log: triples(session.log) }
+    return { t: "session", session: { ...named, skip: [...skip] } }
+  }
+  const reps = envelope.reps as Reps | null
+  if (reps)
+    return { t: "reps", live: { id: reps.id, pos: reps.pos, reps: reps.reps, auto: reps.auto } }
+  const food = envelope.food as Food | null
+  if (food) {
+    return { t: "food", logs: food.logs.map(({ id, ref, owner, at }) => ({ id, ref, owner, at })) }
+  }
+  return envelope.ack ? { t: "ack", id: envelope.ack.id ?? 0 } : undefined
+}
+
+/** How a message is written: named JSON, a JSON row (version 4) or protobuf (version 5). */
+export type WireFormat = "named" | "rows" | "protobuf"
+
+/** JSON in ASCII, so that every character is one byte. */
+const asciiJson = (value: unknown) =>
+  JSON.stringify(value).replace(
+    /[\u0080-￿]/g,
+    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  )
+
+/**
+ * Splits a message into frames of at most `maxBytes`, one character per byte. A frame header is
+ * marked "#" when it carries protobuf and "~" when it carries JSON. Hello and welcome are always
+ * named JSON.
+ */
 export function encodeFrames(
   message: SyncMessage,
   maxBytes: number,
   id: number,
-  rows = false,
+  format: WireFormat = "named",
 ): string[] {
-  const json = JSON.stringify((rows && toRow(message)) || message).replace(
-    /[\u0080-￿]/g,
-    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
-  )
+  const envelope = format === "protobuf" ? toEnvelope(message) : null
+  const row = format === "rows" ? toRow(message) : null
+  const body = envelope ? toProto(envelope) : asciiJson(row ?? message)
+  const mark = envelope ? "#" : "~"
   const size = Math.max(1, maxBytes - HEADER_CHARS)
-  const total = Math.ceil(json.length / size)
+  const total = Math.ceil(body.length / size)
   return Array.from(
     { length: total },
-    (_, index) => `~${id % 1000}.${index}.${total}~${json.slice(index * size, (index + 1) * size)}`,
+    (_, index) =>
+      `${mark}${id % 1000}.${index}.${total}${mark}${body.slice(index * size, (index + 1) * size)}`,
   )
 }
 
@@ -298,18 +395,22 @@ export class FrameAssembler {
   private id = -1
   private next = 0
   private text = ""
+  /** The message being put together is protobuf. */
+  private binary = false
 
   /** Returns the whole message once its last frame arrives. Anything else is dropped. */
   push(frame: string): SyncMessage | undefined {
-    const match = /^~(\d+)\.(\d+)\.(\d+)~/.exec(frame)
+    const match = /^([~#])(\d+)\.(\d+)\.(\d+)\1/.exec(frame)
     if (!match) return undefined
-    const [header, id, index, total] = [match[0], Number(match[1]), Number(match[2]), match[3]]
+    const [header, mark, total] = [match[0], match[1], match[4]]
+    const [id, index] = [Number(match[2]), Number(match[3])]
     if (index === 0) {
       this.id = id
       this.next = 0
       this.text = ""
+      this.binary = mark === "#"
     }
-    if (id !== this.id || index !== this.next) {
+    if (id !== this.id || index !== this.next || (mark === "#") !== this.binary) {
       this.id = -1
       return undefined
     }
@@ -322,7 +423,7 @@ export class FrameAssembler {
     if (this.next < Number(total)) return undefined
     this.lastId = this.id
     this.id = -1
-    return parseMessage(this.text)
+    return this.binary ? parseProto(this.text) : parseMessage(this.text)
   }
 }
 
@@ -379,9 +480,16 @@ const isFoodLog = (log: WireFoodLog | undefined) =>
 
 /** Input from the radio is untrusted: anything malformed is ignored. */
 export function parseMessage(json: string): SyncMessage | undefined {
+  return readMessage(() => JSON.parse(json) as unknown)
+}
+
+const parseProto = (bytes: string) => readMessage(() => fromProto(bytes))
+
+/** Checks what `decode` reads: a named message or a row. Bytes are read as named messages. */
+function readMessage(decode: () => unknown): SyncMessage | undefined {
   let message: SyncMessage
   try {
-    const parsed: unknown = JSON.parse(json)
+    const parsed = decode()
     message = (Array.isArray(parsed) ? fromRow(parsed) : parsed) as SyncMessage
   } catch {
     return undefined

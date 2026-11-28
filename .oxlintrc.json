@@ -39,5 +39,6 @@
         "no-restricted-imports": "off"
       }
     }
-  ]
+  ],
+  "ignorePatterns": ["apps/mobile/src/features/watch/sync-proto.*"]
 }

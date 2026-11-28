@@ -34,6 +34,12 @@ export function decodeUtf8Bytes(bytes: Uint8Array): string {
   return out
 }
 
+/** Protocol frames are bytes held one per character. JSON frames are ASCII, so they match. */
+export const binaryToBytes = (binary: string) =>
+  Uint8Array.from(binary, (char) => char.charCodeAt(0))
+export const bytesToBinary = (bytes: Uint8Array) =>
+  Array.from(bytes, (byte) => String.fromCharCode(byte)).join("")
+
 export function bytesToBase64(bytes: Uint8Array): string {
   let out = ""
   for (let i = 0; i < bytes.length; i += 3) {

@@ -51,6 +51,31 @@ const ROW_DAY_FRAME: string =
 const ROW_FOOD_FRAME: string = '~11.0.1~["f",[["log-1","m1","u1",1000]]]';
 const ROW_REPS_FRAME: string = '~12.0.1~["r","one",1,4,1]';
 const ROW_ACK_FRAME: string = '~13.0.1~["a",42]';
+/**
+ * Protobuf written and read the same way by apps/mobile's protocol test: the bytes after each
+ * frame header, in hex. AT needs more than 32 bits.
+ */
+const AT: number = 1764320000000;
+const PROTO_PLAN_HEX: string =
+  '0a2e0a026b31120450757368180a22200a0b62656e63682d7072657373120b42656e636820707265737318022008303c';
+const PROTO_SESSION_HEX: string = '121b0a036f6e6510021a04507573682880f0aacdac3338014a03000008';
+const PROTO_DAY_HEX: string =
+  '22400a0a323032362d30332d30321202753118d00f2207086410c801183c286432060801100218033a0161' +
+  '42150a130a026d3112045269636518f403200a28143005';
+const PROTO_TOTALS_HEX: string =
+  '22290a0a323032362d30332d30321202753118d00f2207086410c801183c286432060801100218033a0161';
+const PROTO_FOOD_HEX: string = '2a180a160a056c6f672d3112026d311a0275312080f0aacdac33';
+const PROTO_REPS_HEX: string = '1a0b0a036f6e65100118042001';
+const PROTO_ACK_HEX: string = '3202082a';
+
+/** A frame as sent: the header, then one character per byte. */
+function binary(header: string, hex: string): string {
+  let frame = header;
+  for (let index = 0; index < hex.length; index += 2) {
+    frame += String.fromCharCode(parseInt(hex.slice(index, index + 2), 16));
+  }
+  return frame;
+}
 /** Written by apps/mobile's protocol test from its "Push" routine. */
 const COMPACT_PLAN_FRAME: string =
   '~8.0.1~{"t":"plan","plan":{"name":"Push","minutes":10,"x":[["bench-press","Bench press",2,8,0,60,""]]},"key":"k1"}';
@@ -192,14 +217,16 @@ export default function workoutSessionTest() {
       };
       const log: FoodLog = { id: 'log-1', ref: 'm1', owner: 'u1', at: 1000 };
       const live: LiveReps = { id: 'one', pos: 1, reps: 4, auto: true };
-      const session9 = encodeFrames({ t: 'session', session: session }, 180, 9, true);
+      const session9 = encodeFrames({ t: 'session', session: session }, 180, 9, 'rows');
       expect(session9[0]).assertEqual(ROW_SESSION_FRAME);
-      const food = encodeFrames({ t: 'food', logs: [log] }, 180, 11, true);
+      const food = encodeFrames({ t: 'food', logs: [log] }, 180, 11, 'rows');
       expect(food[0]).assertEqual(ROW_FOOD_FRAME);
-      expect(encodeFrames({ t: 'reps', live: live }, 180, 12, true)[0]).assertEqual(ROW_REPS_FRAME);
-      expect(encodeFrames({ t: 'ack', id: 42 }, 180, 13, true)[0]).assertEqual(ROW_ACK_FRAME);
+      expect(encodeFrames({ t: 'reps', live: live }, 180, 12, 'rows')[0]).assertEqual(
+        ROW_REPS_FRAME,
+      );
+      expect(encodeFrames({ t: 'ack', id: 42 }, 180, 13, 'rows')[0]).assertEqual(ROW_ACK_FRAME);
       // The handshake stays named, so every phone app reads it.
-      const welcome = encodeFrames({ t: 'welcome', v: 1, ok: true }, 180, 7, true);
+      const welcome = encodeFrames({ t: 'welcome', v: 1, ok: true }, 180, 7, 'rows');
       expect(welcome[0]).assertEqual(FIXTURE_FRAME);
     });
 
@@ -225,6 +252,85 @@ export default function workoutSessionTest() {
       broken.forEach((frame: string) => {
         expect(new FrameAssembler().push(frame)).assertUndefined();
       });
+    });
+
+    it('writes protobuf exactly as the phone test reads it', 0, () => {
+      const session: SharedSession = {
+        id: 'one',
+        rev: 2,
+        plan: 'Push',
+        status: 'active',
+        at: AT,
+        end: 0,
+        pos: 1,
+        rest: 0,
+        log: [[0, 0, 8]],
+        skip: [],
+      };
+      const log: FoodLog = { id: 'log-1', ref: 'm1', owner: 'u1', at: AT };
+      const live: LiveReps = { id: 'one', pos: 1, reps: 4, auto: true };
+      const proto = (message: SyncMessage, id: number): string =>
+        encodeFrames(message, 180, id, 'protobuf')[0];
+      expect(proto({ t: 'session', session: session }, 9)).assertEqual(
+        binary('#9.0.1#', PROTO_SESSION_HEX),
+      );
+      expect(proto({ t: 'food', logs: [log] }, 11)).assertEqual(binary('#11.0.1#', PROTO_FOOD_HEX));
+      expect(proto({ t: 'reps', live: live }, 12)).assertEqual(binary('#12.0.1#', PROTO_REPS_HEX));
+      expect(proto({ t: 'ack', id: 42 }, 13)).assertEqual(binary('#13.0.1#', PROTO_ACK_HEX));
+      // The handshake stays named JSON, so every phone app reads it.
+      expect(proto({ t: 'welcome', v: 1, ok: true }, 7)).assertEqual(FIXTURE_FRAME);
+    });
+
+    it('reads the protobuf the phone writes, and rejects broken bytes', 0, () => {
+      const plan = new FrameAssembler().push(binary('#8.0.1#', PROTO_PLAN_HEX));
+      expect((plan?.plan as WorkoutPlan).exercises[0].name).assertEqual('Bench press');
+      expect((plan?.plan as WorkoutPlan).exercises[0].rest).assertEqual(60);
+      expect(plan?.key).assertEqual('k1');
+      const frame = binary('#9.0.1#', PROTO_SESSION_HEX);
+      const session = new FrameAssembler().push(frame)?.session as SharedSession;
+      expect(session.at).assertEqual(AT);
+      expect(typeof session.at).assertEqual('number');
+      expect(session.status).assertEqual('active');
+      expect(JSON.stringify(session.log)).assertEqual('[[0,0,8]]');
+      const day = new FrameAssembler().push(binary('#10.0.1#', PROTO_DAY_HEX))?.day as DayInfo;
+      expect(day.eaten.fat).assertEqual(3);
+      expect((day.favorites as FavoriteMeal[])[0].kcal).assertEqual(500);
+      const totals = new FrameAssembler().push(binary('#10.0.1#', PROTO_TOTALS_HEX));
+      expect(totals?.day?.favorites).assertUndefined();
+      expect(new FrameAssembler().push(binary('#13.0.1#', PROTO_ACK_HEX))?.id).assertEqual(42);
+      // Cut short, not protobuf, no message at all.
+      expect(new FrameAssembler().push(frame.slice(0, frame.length - 1))).assertUndefined();
+      expect(new FrameAssembler().push(binary('#1.0.1#', 'ffffff'))).assertUndefined();
+      expect(new FrameAssembler().push('#1.0.1#')).assertUndefined();
+    });
+
+    it('splits protobuf into frames and puts it back together', 0, () => {
+      const log: number[][] = [];
+      for (let index = 0; index < 60; index++) {
+        log.push([index % 30, index % 3, 10]);
+      }
+      const session: SharedSession = {
+        id: 'one',
+        rev: 2,
+        plan: 'Push',
+        status: 'done',
+        at: AT,
+        end: AT + 1,
+        pos: 59,
+        rest: 0,
+        log: log,
+        skip: [2],
+      };
+      const frames = encodeFrames({ t: 'session', session: session }, 40, 5, 'protobuf');
+      expect(frames.length > 3).assertTrue();
+      // The watch reads sessions from the phone, so read it back through the phone format.
+      const assembler = new FrameAssembler();
+      let read: SyncMessage | undefined = undefined;
+      frames.forEach((part: string) => {
+        read = assembler.push(part);
+      });
+      const back = (read as SyncMessage | undefined)?.session as SharedSession;
+      expect(JSON.stringify(back)).assertEqual(JSON.stringify(session));
     });
 
     it('reads an ack and remembers which message to ack', 0, () => {

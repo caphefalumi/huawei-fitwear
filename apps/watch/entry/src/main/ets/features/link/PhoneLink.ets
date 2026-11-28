@@ -12,6 +12,7 @@ import {
   SharedSession,
   SyncMessage,
   ACK_VERSION,
+  PROTOBUF_VERSION,
   ROW_VERSION,
   WATCH_VERSION,
   WorkoutPlan,
@@ -68,8 +69,8 @@ export class PhoneLink {
   private sending: Promise<void> = Promise.resolve();
   /** The phone said in its hello that it acks. */
   private phoneAcks: boolean = false;
-  /** The phone said in its hello that it reads rows. */
-  private phoneRows: boolean = false;
+  /** What the phone said in its hello it reads: 'named', 'rows' or 'protobuf'. */
+  private phoneFormat: string = 'named';
   /** The latest session and food message the phone has not acked yet. */
   private awaiting: Map<string, Awaiting> = new Map<string, Awaiting>();
   /** Tries so far for a kind being sent again, so the wait keeps doubling. */
@@ -170,6 +171,13 @@ export class PhoneLink {
   }
 
   private onFrame(text: string): void {
+    // Bytes are decoded only from an allowed phone that said it writes protobuf.
+    if (
+      text.startsWith('#') &&
+      (this.state !== LinkState.CONNECTED || this.phoneFormat !== 'protobuf')
+    ) {
+      return;
+    }
     const message = this.assembler.push(text);
     if (!message || !this.handlers) {
       return;
@@ -178,8 +186,10 @@ export class PhoneLink {
     hilog.info(0x0000, TAG, 'got %{public}s', message.t);
     if (message.t === 'hello') {
       const phone = message.phone as string;
-      this.phoneAcks = typeof message.app === 'number' && message.app >= ACK_VERSION;
-      this.phoneRows = typeof message.app === 'number' && message.app >= ROW_VERSION;
+      const app = typeof message.app === 'number' ? message.app : 0;
+      this.phoneAcks = app >= ACK_VERSION;
+      this.phoneFormat =
+        app >= PROTOBUF_VERSION ? 'protobuf' : app >= ROW_VERSION ? 'rows' : 'named';
       this.phoneName = typeof message.name === 'string' ? message.name.slice(0, 40) : '';
       if (phone === this.handlers.allowedPhone()) {
         this.accept();
@@ -276,7 +286,7 @@ export class PhoneLink {
     this.awaiting.clear();
     this.retryTries.clear();
     this.phoneAcks = false;
-    this.phoneRows = false;
+    this.phoneFormat = 'named';
   }
 
   private send(message: SyncMessage): Promise<boolean> {
@@ -286,7 +296,7 @@ export class PhoneLink {
     }
     this.messageId++;
     const id = this.messageId;
-    const frames = encodeFrames(message, service.getEffectiveMaxPayload(), id, this.phoneRows);
+    const frames = encodeFrames(message, service.getEffectiveMaxPayload(), id, this.phoneFormat);
     const sent = this.sending.then(async (): Promise<boolean> => {
       for (const frame of frames) {
         if (!(await service.sendFrame(frame))) {
