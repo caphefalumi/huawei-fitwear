@@ -1,0 +1,30 @@
+{
+  "matcha": {
+    "folder": "matcha",
+    "name": "matcha_latte",
+    "unit": "ml",
+    "queries": [
+      "matcha latte in a transparent glass",
+      "iced matcha latte clear glass",
+      "layered iced matcha latte glass cafe",
+      "matcha latte glass cup with ice milk"
+    ],
+    "include_regex": "matcha|latte",
+    "exclude_regex": "powder|bowl|whisk|ceremony|boba|cake|cookie|benefit|plastic cup|takeaway"
+  },
+  "bun_cha": {
+    "folder": "bun_cha",
+    "name": "bun_cha",
+    "unit": "g",
+    "queries": [
+      "bún chả hà nội",
+      "bún chả",
+      "bún chả nem cua bể",
+      "bun cha vietnamese grilled pork noodles",
+      "bún chả que tre",
+      "bún chả hương liên"
+    ],
+    "include_regex": "b[úu]n ch[ảa]|bun cha",
+    "exclude_regex": "bún chả cá|bún cá|chả cá|cách làm nước|công thức"
+  }
+}
