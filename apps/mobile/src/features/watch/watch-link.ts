@@ -11,6 +11,7 @@ import {
   PHONE_VERSION,
   planKey,
   PROTOCOL_VERSION,
+  PROTOBUF_VERSION,
   ROW_VERSION,
   type SyncMessage,
   type WireDay,
@@ -432,8 +433,13 @@ export class WatchLink {
   /** Writes one message as frames; false if even small frames fail. */
   private async write(message: SyncMessage, id: number): Promise<boolean> {
     const payload = Math.min(BLE_MAX_MESSAGE_BYTES, this.client.maxPayload())
-    const rows = this.watchVersion >= ROW_VERSION
-    const frames = encodeFrames(message, payload, id, rows)
+    const format =
+      this.watchVersion >= PROTOBUF_VERSION
+        ? "protobuf"
+        : this.watchVersion >= ROW_VERSION
+          ? "rows"
+          : "named"
+    const frames = encodeFrames(message, payload, id, format)
     for (const [index, frame] of frames.entries()) {
       // Only the first frame, always the full size, waits for an answer: it shows the watch takes
       // frames this big. The rest share connection events; a link that drops meanwhile sends
@@ -442,7 +448,7 @@ export class WatchLink {
       // A watch that missed the larger MTU rejects the first frame; retry the message in small
       // frames, each answered.
       this.stats?.fellBackToSmallFrames()
-      for (const small of encodeFrames(message, MIN_PAYLOAD, id, rows)) {
+      for (const small of encodeFrames(message, MIN_PAYLOAD, id, format)) {
         if (!(await this.client.sendFrame(small, true))) return false
       }
       return true
