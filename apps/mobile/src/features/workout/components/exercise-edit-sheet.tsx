@@ -3,13 +3,14 @@ import { StyleSheet, Text, View } from "react-native"
 import { Button } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
 import { Sheet } from "@/components/ui/sheet"
-import { Toggle } from "@/components/ui/toggle"
 import { Palette as C } from "@/theme"
 
+import { loadStep, loadUnit, useLoads } from "../store/training-weights.store"
 import { findExercise } from "../utils/catalog"
 import { EQUIPMENT_LABELS } from "../utils/muscle-groups"
 import { LIMITS, REST_PRESETS, restLabel } from "../utils/routine-edit"
 import type { RoutineExercise } from "../utils/routines"
+import { MAX_WARM_UP_SETS, warmUpCount, warmUpPreview } from "../utils/warm-up"
 
 function Stepper({
   label,
@@ -67,13 +68,12 @@ function Stepper({
   )
 }
 
-/** Sets, reps, rest, warm-up and position for one exercise in the routine being edited. */
+/** Sets, reps, rest, warm-up sets and position for one exercise in the routine being edited. */
 export function ExerciseEditSheet({
   exercise,
   canMoveUp,
   canMoveDown,
   onChange,
-  onWarmUp,
   onMove,
   onRemove,
   onClose,
@@ -81,14 +81,18 @@ export function ExerciseEditSheet({
   exercise: RoutineExercise | null
   canMoveUp: boolean
   canMoveDown: boolean
-  onChange: (patch: Partial<Pick<RoutineExercise, "sets" | "reps" | "rest">>) => void
-  onWarmUp: (warmUp: boolean) => void
+  onChange: (patch: Partial<Pick<RoutineExercise, "sets" | "reps" | "rest" | "warmUpSets">>) => void
   onMove: (direction: -1 | 1) => void
   onRemove: () => void
   onClose: () => void
 }) {
   const catalog = exercise ? findExercise(exercise.key) : undefined
   const seconds = exercise?.unit === "seconds"
+  const { loadFor } = useLoads()
+  // Warm-up sets ramp toward a working weight, so only loaded, rep-counted exercises get them.
+  const warmable = catalog !== undefined && catalog.equipment !== "bodyweight" && !seconds
+  const warm = exercise ? warmUpCount(exercise) : 0
+  const working = catalog ? (loadFor(catalog)?.kg ?? 0) : 0
   return (
     <Sheet visible={exercise !== null} title={exercise?.name ?? ""} onClose={onClose}>
       {exercise ? (
@@ -140,17 +144,42 @@ export function ExerciseEditSheet({
             })}
           </View>
 
-          <View style={styles.row}>
-            <View style={styles.rowCopy}>
-              <Text style={styles.label}>Warm-up exercise</Text>
-              <Text style={styles.hint}>Done first. Not counted in volume or progress.</Text>
+          {warmable ? (
+            <View style={styles.warm}>
+              <View style={styles.rowCopy}>
+                <Text style={styles.label}>Warm-up sets</Text>
+                <Text style={styles.hint}>
+                  Lighter sets before your first working set, to warm up the joints. Not counted in
+                  volume or progress.
+                </Text>
+              </View>
+              <View style={styles.presets}>
+                {Array.from({ length: MAX_WARM_UP_SETS + 1 }, (_, count) => {
+                  const active = warm === count
+                  return (
+                    <Pressable
+                      key={count}
+                      style={[styles.preset, active && styles.presetActive]}
+                      accessibilityLabel={count ? `${count} warm-up sets` : "No warm-up sets"}
+                      accessibilityState={{ selected: active }}
+                      onPress={() => onChange({ warmUpSets: count })}
+                    >
+                      <Text style={[styles.presetLabel, active && styles.presetLabelActive]}>
+                        {count ? String(count) : "None"}
+                      </Text>
+                    </Pressable>
+                  )
+                })}
+              </View>
+              {warm && catalog ? (
+                <Text style={styles.hint}>
+                  {working > 0
+                    ? `Suggested: ${warmUpPreview(warm, working, loadStep(catalog), loadUnit(catalog))}, based on ${working} ${loadUnit(catalog)}.`
+                    : "Loads ramp to 40 to 80% of your working weight."}
+                </Text>
+              ) : null}
             </View>
-            <Toggle
-              accessibilityLabel="Warm-up exercise"
-              value={Boolean(exercise.warmUp)}
-              onValueChange={onWarmUp}
-            />
-          </View>
+          ) : null}
 
           <View style={styles.moves}>
             <Pressable
@@ -231,6 +260,7 @@ const styles = StyleSheet.create({
   presetActive: { backgroundColor: C.accent, borderColor: C.accent },
   presetLabel: { fontSize: 13, color: C.text },
   presetLabelActive: { color: C.onAccent, fontWeight: "600" },
+  warm: { gap: 8, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border },
   moves: {
     flexDirection: "row",
     gap: 10,

@@ -21,7 +21,6 @@ import {
   exerciseLine,
   moveExercise,
   restoreExercise,
-  setWarmUp,
   updateExercise,
 } from "../utils/routine-edit"
 import { fromDateKey, routineMinutes, routineOn, type RoutineExercise } from "../utils/routines"
@@ -29,7 +28,12 @@ import { fromDateKey, routineMinutes, routineOn, type RoutineExercise } from "..
 /** Copies the routine for editing, dropping fields the editor no longer supports. */
 const editable = (items: RoutineExercise[]) =>
   items.map((item) => {
-    const { superset: _legacy, ...rest } = item as RoutineExercise & { superset?: string }
+    // Supersets and whole warm-up exercises were earlier ideas; a saved routine may still have them.
+    const {
+      superset: _superset,
+      warmUp: _warmUp,
+      ...rest
+    } = item as RoutineExercise & { superset?: string; warmUp?: boolean }
     return { ...rest }
   })
 
@@ -74,7 +78,7 @@ export function RoutineEditScreen() {
   const [saved] = useState(() => editable(routine.exercises))
   const [draft, setDraft] = useState(saved)
   const [open, setOpen] = useState<string | null>(null)
-  const [picker, setPicker] = useState<"warmUp" | "workout" | null>(null)
+  const [picking, setPicking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [leave, setLeave] = useState<(() => void) | null>(null)
   const [confirmRestore, setConfirmRestore] = useState(false)
@@ -82,14 +86,12 @@ export function RoutineEditScreen() {
   const dirty = changed(saved, draft)
   const disableGuard = usePreventRemove(dirty, ({ repeat }) => setLeave(() => repeat))
 
-  const warmUps = draft.filter((item) => item.warmUp)
-  const workout = draft.filter((item) => !item.warmUp)
   const totalSets = draft.reduce((sum, item) => sum + item.sets, 0)
   const editing = draft.find((item) => item.key === open) ?? null
 
   const save = () => {
     if (!user) return
-    if (!workout.length) return setError("Add at least one exercise to the workout before saving.")
+    if (!draft.length) return setError("Add at least one exercise before saving.")
     try {
       saveRoutine(user.id, {
         ...routine,
@@ -114,27 +116,6 @@ export function RoutineEditScreen() {
       onAction: () => setDraft((items) => restoreExercise(items, item, index)),
     })
   }
-
-  const section = (title: string, caption: string | null, items: RoutineExercise[]) => (
-    <View style={styles.section}>
-      <Text accessibilityRole="header" style={styles.sectionTitle}>
-        {title}
-      </Text>
-      {caption ? <Text style={styles.caption}>{caption}</Text> : null}
-      {items.length ? (
-        <View style={styles.list}>
-          {items.map((item, index) => (
-            <ExerciseRow
-              key={item.key}
-              item={item}
-              first={index === 0}
-              onPress={() => setOpen(item.key)}
-            />
-          ))}
-        </View>
-      ) : null}
-    </View>
-  )
 
   return (
     <View style={styles.container}>
@@ -166,15 +147,22 @@ export function RoutineEditScreen() {
         </Text>
         <Text style={styles.scope}>{`Changes apply to every ${routine.name} day.`}</Text>
 
-        {section("Warm-up", "Done first. Not counted in volume or progress.", warmUps)}
-        <Pressable style={styles.addLine} onPress={() => setPicker("warmUp")}>
-          <Text style={styles.addLineLabel}>
-            {warmUps.length ? "+ Add warm-up exercise" : "Add a warm-up exercise"}
-          </Text>
-        </Pressable>
-
-        {section("Workout", null, workout)}
-        <Pressable style={styles.add} onPress={() => setPicker("workout")}>
+        {draft.length ? (
+          <View style={styles.list}>
+            {draft.map((item, index) => (
+              <ExerciseRow
+                key={item.key}
+                item={item}
+                first={index === 0}
+                onPress={() => setOpen(item.key)}
+              />
+            ))}
+          </View>
+        ) : null}
+        <Text style={styles.caption}>
+          Tap an exercise to change its sets, rest or warm-up sets.
+        </Text>
+        <Pressable style={styles.add} onPress={() => setPicking(true)}>
           <Text style={styles.addLabel}>+ Add exercises</Text>
         </Pressable>
 
@@ -198,7 +186,6 @@ export function RoutineEditScreen() {
         onChange={(patch) =>
           editing && setDraft((items) => updateExercise(items, editing.key, patch))
         }
-        onWarmUp={(on) => editing && setDraft((items) => setWarmUp(items, editing.key, on))}
         onMove={(direction) =>
           editing && setDraft((items) => moveExercise(items, editing.key, direction))
         }
@@ -207,15 +194,14 @@ export function RoutineEditScreen() {
       />
 
       <ExercisePickerSheet
-        visible={picker !== null}
-        warmUp={picker === "warmUp"}
+        visible={picking}
         inRoutine={draft.map((item) => item.key)}
         onAdd={(picked) => {
-          setDraft((items) => addExercises(items, picked, picker === "warmUp", input.goal))
+          setDraft((items) => addExercises(items, picked, input.goal))
           setError(null)
-          setPicker(null)
+          setPicking(false)
         }}
-        onClose={() => setPicker(null)}
+        onClose={() => setPicking(false)}
       />
 
       <ConfirmDialog
@@ -292,9 +278,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  section: { gap: 6, marginTop: 6 },
-  sectionTitle: { fontSize: 17, fontWeight: "600", color: C.text },
-  caption: { fontSize: 12, color: C.textMuted },
+  caption: { fontSize: 12, color: C.textMuted, textAlign: "center" },
   list: {
     backgroundColor: C.surface,
     borderWidth: 1,
@@ -315,8 +299,6 @@ const styles = StyleSheet.create({
   rowTitle: { fontSize: 15, fontWeight: "600", color: C.text },
   rowSub: { fontSize: 13, color: C.textMuted, fontVariant: ["tabular-nums"] },
   chevron: { fontSize: 20, color: C.track },
-  addLine: { alignSelf: "flex-start" },
-  addLineLabel: { fontSize: 14, fontWeight: "600", color: C.accent },
   add: {
     borderWidth: 1,
     borderStyle: "dashed",

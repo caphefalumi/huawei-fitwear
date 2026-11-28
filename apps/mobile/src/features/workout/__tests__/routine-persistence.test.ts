@@ -46,7 +46,6 @@ const routine: Routine = {
       unit: "seconds",
       rest: 30,
       prescription: "2x30s",
-      warmUp: true,
     },
   ],
 }

@@ -82,20 +82,20 @@ test("follows the Full Body A template with compounds first and 8–12 reps", ()
   expect(routine.exercises[0].prescription).toBe("3x8–12")
   expect(routine.exercises[5].prescription).toBe("3x30–45s")
 })
-test("uses edited warm-ups on matching training days without bypassing injuries", () => {
+test("uses edited sets and warm-up sets on matching training days without bypassing injuries", () => {
   const original = routineOn(day(fullBodyA), base)
   const custom = {
     ...original,
     exercises: original.exercises.slice(0, 3).map((exercise, index) => ({
       ...exercise,
       sets: 4,
-      warmUp: index === 0,
+      ...(index === 0 ? { warmUpSets: 2 } : {}),
     })),
   }
   const input = { ...base, customRoutines: { [original.name]: custom } }
   const edited = routineOn(day(fullBodyA), input)
   expect(edited.exercises.map((exercise) => exercise.sets)).toEqual([4, 4, 4])
-  expect(edited.exercises[0].warmUp).toBe(true)
+  expect(edited.exercises[0].warmUpSets).toBe(2)
   expect(routineOn(day(1), input)).toBe(REST_DAY)
   const adjusted = routineOn(day(fullBodyA), { ...input, injuries: [injury(excluded)] })
   expect(adjusted.exercises.some((exercise) => find(exercise.key).joints.includes("knee"))).toBe(

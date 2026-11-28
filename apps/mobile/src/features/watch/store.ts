@@ -136,7 +136,9 @@ export function toWirePlan(routine: Routine): WirePlan {
     exercises: routine.exercises.map((item) => ({
       key: item.key,
       name: item.name.slice(0, 60),
-      sets: item.sets,
+      // Warm-up sets come first in the phone's set order, so the watch counts them as sets too.
+      // Same rule as allSets() in workout/utils/warm-up.ts; importing it would make a cycle.
+      sets: item.sets + (item.unit === "reps" ? Math.min(3, Math.max(0, item.warmUpSets ?? 0)) : 0),
       reps: item.reps,
       unit: item.unit,
       rest: Math.round(item.rest),

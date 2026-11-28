@@ -16,6 +16,7 @@ import { formatLoad, loadUnit, useLoads } from "../store/training-weights.store"
 import { backToBackFullBody, useWorkoutLog } from "../store/workout-log.store"
 import { findExercise } from "../utils/catalog"
 import { fromDateKey, routineOn, type RoutineExercise } from "../utils/routines"
+import { warmUpCount } from "../utils/warm-up"
 
 export const formatRest = (seconds: number) =>
   seconds % 60
@@ -49,7 +50,11 @@ function ExerciseRow({ exercise, index }: { exercise: RoutineExercise; index: nu
         <Text style={styles.rowSub}>
           {weight} - Rest {formatRest(exercise.rest)}
         </Text>
-        {exercise.warmUp ? <Text style={styles.rowSub}>Warm-up exercise</Text> : null}
+        {warmUpCount(exercise) ? (
+          <Text style={styles.rowSub}>
+            {`${warmUpCount(exercise)} warm-up ${warmUpCount(exercise) === 1 ? "set" : "sets"} first`}
+          </Text>
+        ) : null}
       </View>
       <Text style={styles.chevron}>›</Text>
     </Pressable>

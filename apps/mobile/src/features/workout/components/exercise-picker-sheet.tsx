@@ -15,14 +15,11 @@ const fold = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toL
 /** Search and pick several exercises at once; ones already in the routine are shown but locked. */
 export function ExercisePickerSheet({
   visible,
-  warmUp,
   inRoutine,
   onAdd,
   onClose,
 }: {
   visible: boolean
-  /** Picked exercises join the warm-up. */
-  warmUp: boolean
   inRoutine: string[]
   onAdd: (picked: CatalogExercise[]) => void
   onClose: () => void
@@ -50,11 +47,7 @@ export function ExercisePickerSheet({
   const count = picked.length
 
   return (
-    <Sheet
-      visible={visible}
-      title={warmUp ? "Add warm-up exercises" : "Add exercises"}
-      onClose={onClose}
-    >
+    <Sheet visible={visible} title="Add exercises" onClose={onClose}>
       <View style={styles.body}>
         <TextInput
           accessibilityLabel="Search exercises"

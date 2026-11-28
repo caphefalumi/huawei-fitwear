@@ -60,6 +60,17 @@ import {
   type PlanInput,
   type RoutineExercise,
 } from "../utils/routines"
+import {
+  allSets,
+  sessionSlots,
+  slotLabel,
+  slotRest,
+  slotTarget,
+  warmUpCount,
+  warmUpLoad,
+  warmUpStep,
+  type Slot,
+} from "../utils/warm-up"
 
 const REST_EXTRA_SECONDS = 15
 const TICK_MS = 250
@@ -76,12 +87,6 @@ const unitLabel = (exercise: RoutineExercise, value: number) =>
   exercise.unit === "seconds" ? `${value}s` : `${value} reps`
 const average = (values: number[]) =>
   Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
-
-/** Flatten exercises into set-by-set order: every set of one exercise, then the next. */
-const sessionSlots = (exercises: RoutineExercise[]) =>
-  exercises.flatMap((exercise, index) =>
-    Array.from({ length: exercise.sets }, (_, set) => ({ index, set })),
-  )
 
 type Phase = "set" | "rest" | "summary"
 
@@ -245,7 +250,7 @@ function ActiveSession({
       return catalog ? (loadFor(catalog)?.kg ?? 0) : 0
     })
   const emptySets = (exercises: RoutineExercise[]): (LoggedSet | undefined)[][] =>
-    exercises.map((item) => Array.from({ length: item.sets }, () => undefined))
+    exercises.map((item) => Array.from({ length: allSets(item) }, () => undefined))
   const ownDraft = adopted && initialDraft?.saveId === adopted.session.id ? initialDraft : null
   const [weights, setWeights] = useState(() =>
     ownDraft?.weights.length === routine.exercises.length
@@ -265,8 +270,11 @@ function ActiveSession({
         return { reps: entry[2], weightKg: value?.weightKg ?? loads[index] ?? 0 }
       }),
     )
-  const repsAt = (exercises: RoutineExercise[], at: number) =>
-    exercises[sessionSlots(exercises)[at]?.index ?? 0]?.reps ?? 0
+  const repsAt = (exercises: RoutineExercise[], at: number) => {
+    const target = sessionSlots(exercises)[at]
+    const item = exercises[target?.index ?? 0]
+    return item && target ? slotTarget(item, target) : (item?.reps ?? 0)
+  }
   const [logged, setLogged] = useState(() =>
     mergeLog(
       emptySets(routine.exercises).map((sets, index) =>
@@ -346,10 +354,10 @@ function ActiveSession({
     )
     setLogged(
       exercises.map((item, index) =>
-        Array.from({ length: item.sets }, (_, set) => saved.logged[index]?.[set]),
+        Array.from({ length: allSets(item) }, (_, set) => saved.logged[index]?.[set]),
       ),
     )
-    setDraft(saved.reps ?? exercises[restoredSlots[restoredPosition]?.index ?? 0]?.reps ?? 0)
+    setDraft(saved.reps ?? repsAt(exercises, restoredPosition))
     setSkipped(saved.skipped ?? [])
     setStartedAt(saved.startedAt)
     setSessionDate(saved.date)
@@ -455,7 +463,7 @@ function ActiveSession({
       setSkipped([])
       setLogged(emptySets(routine.exercises))
       setWeights(initialWeights(routine.exercises))
-      setDraft(routine.exercises[0]?.reps ?? 0)
+      setDraft(repsAt(routine.exercises, 0))
       setRestEndsAt(0)
       setFinishedAt(null)
       setPhase("set")
@@ -472,7 +480,7 @@ function ActiveSession({
       routine.exercises.map((item, index) => {
         const history = records.find((entry) => entry.exerciseId === item.key)
         const exercise = findExercise(item.key)
-        return history && exercise && !item.warmUp && exercise.equipment !== "bodyweight"
+        return history && exercise && exercise.equipment !== "bodyweight"
           ? nextLoad(history, item.sets, loadStep(exercise))
           : (current[index] ?? 0)
       }),
@@ -495,7 +503,20 @@ function ActiveSession({
   const slot = slots[Math.min(position, slots.length - 1)]
   const exercise = routine.exercises[slot?.index ?? 0]
   const catalog = findExercise(exercise?.key)
-  const weightKg = weights[slot?.index ?? 0] ?? 0
+  /** Warm-up loads ramp toward the working weight unless changed for that set. */
+  const [warmLoads, setWarmLoads] = useState<Record<string, number>>({})
+  const step = catalog ? loadStep(catalog) : 2.5
+  const loadAt = (target: Slot | undefined) => {
+    if (!target) return 0
+    const working = weights[target.index] ?? 0
+    if (!target.warmUp) return working
+    return (
+      warmLoads[`${target.index}:${target.set}`] ??
+      warmUpLoad(working, warmUpStep(target.of, target.n).share, step)
+    )
+  }
+  const weightKg = loadAt(slot)
+  const target = exercise && slot ? slotTarget(exercise, slot) : 0
   const weight =
     catalog && catalog.equipment !== "bodyweight"
       ? `${formatLoad(weightKg)} ${loadUnit(catalog)}`
@@ -536,7 +557,7 @@ function ActiveSession({
   const watchCount = liveHere && countedSet === setKey ? liveHere : null
   const followingWatch = watchCount !== null && editedSet !== setKey
 
-  const step = exercise?.unit === "seconds" ? 5 : 1
+  const countStep = exercise?.unit === "seconds" ? 5 : 1
   const changeDraft = (delta: number) => {
     setEditedSet(setKey)
     setDraft((value) => Math.min(999, Math.max(0, value + delta)))
@@ -544,6 +565,12 @@ function ActiveSession({
   }
   const changeWeight = (delta: number) => {
     if (!slot) return
+    if (slot.warmUp) {
+      const key = `${slot.index}:${slot.set}`
+      setWarmLoads((loads) => ({ ...loads, [key]: Math.min(1000, Math.max(0, weightKg + delta)) }))
+      void Haptics.selectionAsync().catch(() => {})
+      return
+    }
     setWeights((values) =>
       values.map((value, index) =>
         index === slot.index ? Math.min(1000, Math.max(0, value + delta)) : value,
@@ -554,7 +581,7 @@ function ActiveSession({
 
   // The rep ring fills toward the target; a ring past the target stays full.
   const repProgress = useSharedValue(0)
-  const repFill = exercise && exercise.reps > 0 ? draft / exercise.reps : 0
+  const repFill = target > 0 ? draft / target : 0
   useEffect(() => {
     repProgress.set(withTiming(repFill, { duration: 240, easing: EASE_OUT }))
   }, [repFill, repProgress])
@@ -564,7 +591,9 @@ function ActiveSession({
     .slice(0, position)
     .reverse()
     .find(({ index, set }) => logged[index]?.[set])
-  const restBase = routine.exercises[lastDone?.index ?? slot?.index ?? 0]?.rest ?? 0
+  const restSlot = lastDone ?? slot
+  const restItem = routine.exercises[restSlot?.index ?? 0]
+  const restBase = restItem && restSlot ? slotRest(restItem, restSlot) : 0
   const restProgress = useSharedValue(1)
   useEffect(() => {
     if (phase !== "rest") return
@@ -605,8 +634,9 @@ function ActiveSession({
     const following = slots[next]
     if (!following) return finish()
     setPosition(next)
-    if (following.index !== slot.index) setDraft(routine.exercises[following.index]!.reps)
-    setRestEndsAt(Date.now() + exercise.rest * 1000)
+    if (following.index !== slot.index || following.warmUp !== slot.warmUp)
+      setDraft(slotTarget(routine.exercises[following.index]!, following))
+    setRestEndsAt(Date.now() + slotRest(exercise, slot) * 1000)
     setNow(Date.now())
     setPhase("rest")
   }
@@ -620,7 +650,7 @@ function ActiveSession({
     )
     if (following < 0) return finish()
     setPosition(following)
-    setDraft(routine.exercises[slots[following]!.index]!.reps)
+    setDraft(slotTarget(routine.exercises[slots[following]!.index]!, slots[following]!))
     setPhase("set")
   }
 
@@ -628,11 +658,16 @@ function ActiveSession({
   const done = routine.exercises
     .map((item, index) => ({
       item,
-      sets: logged[index]!.filter((value): value is LoggedSet => value !== undefined),
+      // Warm-up sets are left out of the summary, records and rep targets.
+      sets: logged[index]!.slice(warmUpCount(item)).filter(
+        (value): value is LoggedSet => value !== undefined,
+      ),
     }))
     .filter(({ sets }) => sets.length)
   const totalSets = done.reduce((sum, { sets }) => sum + sets.length, 0)
-  const disableExitGuard = usePreventRemove(!exitApproved && totalSets > 0, ({ repeat }) => {
+  /** Every finished set, warm-ups included: anything worth saving or guarding. */
+  const loggedCount = logged.reduce((sum, sets) => sum + sets.filter(Boolean).length, 0)
+  const disableExitGuard = usePreventRemove(!exitApproved && loggedCount > 0, ({ repeat }) => {
     if (!saving) setRepeatExit(() => repeat)
   })
   const sum = (unit: RoutineExercise["unit"]) =>
@@ -646,7 +681,7 @@ function ActiveSession({
 
   const close = async () => {
     if (saving) return
-    if (totalSets) {
+    if (loggedCount) {
       if (!user?.id) {
         setSaveError("Sign in to save your workout.")
         return
@@ -663,7 +698,7 @@ function ActiveSession({
                   {
                     exerciseId: item.key,
                     weightKg: entry.weightKg,
-                    isWarmup: Boolean(item.warmUp),
+                    isWarmup: set < warmUpCount(item),
                     targetReps: item.reps,
                     userConfirmedReps: entry.reps,
                     restDurationSeconds: item.rest,
@@ -714,7 +749,7 @@ function ActiveSession({
     useWatchStore.getState().close(saveId)
     setExitApproved(true)
     disableExitGuard()
-    if (!totalSets && user?.id) await clearSessionDraft(user.id)
+    if (!loggedCount && user?.id) await clearSessionDraft(user.id)
     router.dismissTo("/workout")
   }
 
@@ -827,7 +862,7 @@ function ActiveSession({
                       {item.name}
                     </Text>
                     <Text style={styles.summaryValue}>
-                      {sets.map((set) => set.reps).join(" · ")}
+                      {sets.map((set) => set.reps).join(", ")}
                       {item.unit === "seconds" ? " s" : " reps"}
                     </Text>
                   </View>
@@ -846,7 +881,7 @@ function ActiveSession({
                 )
                 return previous && best > previous.maxWeightKg ? (
                   <Text key={item.key} style={styles.record}>
-                    New weight record: {item.name} · {formatLoad(best)} kg
+                    New weight record: {item.name} - {formatLoad(best)} kg
                   </Text>
                 ) : null
               })
@@ -877,7 +912,7 @@ function ActiveSession({
         </ScrollView>
         <Footer>
           <Button
-            label={totalSets ? "Save workout" : "Done"}
+            label={loggedCount ? "Save workout" : "Done"}
             onPress={() => void close()}
             busy={saving}
           />
@@ -893,7 +928,7 @@ function ActiveSession({
   const fills = routine.exercises.map((item, index) =>
     skipped.includes(index)
       ? null
-      : (logged[index]?.filter(Boolean).length ?? 0) / Math.max(1, item.sets),
+      : (logged[index]?.filter(Boolean).length ?? 0) / Math.max(1, allSets(item)),
   )
   const takeWatchCount = () => {
     if (!watchCount) return
@@ -916,17 +951,20 @@ function ActiveSession({
             {exercise.name}
           </Text>
           <Text style={styles.setLine}>
-            Set {slot.set + 1} of {exercise.sets}
-            {loadable ? "" : " · Body weight"}
+            {slotLabel(slot)}
+            {loadable ? "" : " - Body weight"}
           </Text>
         </View>
       </View>
+      {/* Warm-up and working sets each get their own strip, so the pills match the label. */}
       <SetStrip
-        sets={(logged[slot.index] ?? []).map((value) => ({
-          done: value?.reps,
-          target: exercise.reps,
-        }))}
-        current={slot.set}
+        sets={(logged[slot.index] ?? [])
+          .slice(slot.set - slot.n, slot.set - slot.n + slot.of)
+          .map((value, n) => ({
+            done: value?.reps,
+            target: slot.warmUp ? warmUpStep(slot.of, n).reps : exercise.reps,
+          }))}
+        current={slot.n}
         seconds={seconds}
       />
 
@@ -944,7 +982,7 @@ function ActiveSession({
           <RoundButton
             glyph={glyphs.minus}
             label={seconds ? "Fewer seconds" : "Fewer reps"}
-            onPress={() => changeDraft(-step)}
+            onPress={() => changeDraft(-countStep)}
           />
           <ProgressRing size={ringSize} stroke={8} progress={repProgress}>
             <Animated.Text
@@ -955,14 +993,14 @@ function ActiveSession({
               {draft}
             </Animated.Text>
             <Text style={styles.countOf}>
-              of {exercise.reps}
+              of {target}
               {seconds ? " s" : " reps"}
             </Text>
           </ProgressRing>
           <RoundButton
             glyph={glyphs.plus}
             label={seconds ? "More seconds" : "More reps"}
-            onPress={() => changeDraft(step)}
+            onPress={() => changeDraft(countStep)}
           />
         </View>
         {/* Held open while the watch is connected, so the cards below stay put when counting starts. */}
@@ -983,7 +1021,7 @@ function ActiveSession({
                 accessibilityLabel={`Use the watch's count, ${unitLabel(exercise, watchCount.reps)}`}
                 onPress={takeWatchCount}
               >
-                <Text style={styles.useWatchLabel}>Use watch count · {watchCount.reps}</Text>
+                <Text style={styles.useWatchLabel}>Use watch count - {watchCount.reps}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -1065,7 +1103,7 @@ function ActiveSession({
             {exercise.name}
           </Text>
           <Text style={styles.upNextSub}>
-            Set {slot.set + 1} of {exercise.sets} · {weight} · {unitLabel(exercise, exercise.reps)}
+            {`${slotLabel(slot)} - ${weight} - ${unitLabel(exercise, target)}`}
           </Text>
         </View>
       </Card>
@@ -1084,7 +1122,7 @@ function ActiveSession({
         accessible
         accessibilityRole="progressbar"
         accessibilityLabel={`Exercise ${slot.index + 1} of ${routine.exercises.length}`}
-        accessibilityValue={{ min: 0, max: slots.length, now: totalSets }}
+        accessibilityValue={{ min: 0, max: slots.length, now: loggedCount }}
       >
         <ExerciseProgress fills={fills} current={slot.index} />
       </View>
