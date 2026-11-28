@@ -606,6 +606,18 @@ Legend: **Purpose · Structure · Actions · States · Copy**
 - **Structure:** same as chest plan, parameterised by group; body diagram icon; exercise list; start CTA.
 - **States:** unknown group (fallback/empty), recovery-adjusted.
 
+### 11.15a Edit routine (`/routine-edit?date=`)
+
+- **Purpose:** change the exercises of one routine; every day that routine is scheduled uses the saved version.
+- **Structure:** fixed header with `Cancel` (left), `Edit Upper A` (centre) and a `Save` pill (right, muted until something changed); a summary line `6 exercises - 18 sets - about 52 min` that updates live (warm-up sets included in the time); a scope note `Changes apply to every Upper A day.`; one list of exercises; a caption `Tap an exercise to change its sets, rest or warm-up sets.`; a dashed `+ Add exercises` button; `Restore generated routine` at the end when the routine was edited.
+- **Rows:** one line per exercise: name and `3 × 10 - 90s rest`, or `2 warm-up + 3 × 8 - 2 min rest`; tapping opens the exercise sheet.
+- **Exercise sheet:** steppers for `Sets` (1 to 20), `Reps` or `Seconds`, and `Rest` (15 s steps) with quick picks `45s`, `90s`, `2 min`, `3 min`; `Warm-up sets` with `None`, `1`, `2`, `3` (loaded, rep-counted exercises only) and a preview `Suggested: 30 kg × 8, then 45 kg × 5, based on 60 kg.`; `Move up` / `Move down`; `Done`; `Remove from routine`, followed by a toast `Removed Cable curl` + `Undo`.
+- **Warm-up sets:** lighter sets before the first working set of the same exercise, to warm up the joints. Loads ramp to 60% (1 set), 50% and 75% (2), or 40%, 60% and 80% (3) of the working weight, rounded down to the equipment step, with 8, 5 and 3 reps and 45 s rest. In the session they show as `Warm-up 1 of 2` with their own set strip, the weight can be changed per warm-up set, and they are saved as warm-ups: not counted in volume, records, rep targets or load progression.
+- **Add exercises sheet:** search, muscle-group chips, several picks at once with checkboxes, exercises already in the routine shown as `In routine` and locked, `Add 2 exercises`. New exercises get 3 sets and the plan's rest for the goal.
+- **Leaving:** with unsaved changes, `Discard changes?` (`Keep editing` / `Discard`). Restoring the generated routine asks first.
+- **States:** no exercise (Save shows `Add at least one exercise before saving.`), save error. Editing is unavailable while recovery adjustments are active (Routine screen).
+- **Removed:** supersets, and whole warm-up exercises. A saved routine that still has either is treated as plain exercises.
+
 ### 11.16 Exercise guide (`/exercise-guide`)
 
 - **Purpose:** technique reference before or during a session.

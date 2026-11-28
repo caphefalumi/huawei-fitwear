@@ -11,6 +11,7 @@ import {
 } from "@/features/recovery"
 
 import { CATALOG, findExercise, type CatalogExercise, type MuscleGroup } from "./catalog"
+import { WARM_UP_REST, warmUpCount } from "./warm-up"
 
 export type Emphasis = "Balanced" | "Lower body"
 export type Experience = "Beginner" | "Regular"
@@ -26,10 +27,11 @@ export type RoutineExercise = {
   /** Rest after each set, in seconds. */
   rest: number
   liked?: boolean
-  /** Warm-ups are performed before working sets. */
-  warmUp?: boolean
-  /** Adjacent exercises with the same value are performed as a superset. */
-  superset?: string
+  /**
+   * Lighter sets before the first working set, ramping toward the working weight to warm up the
+   * joints. Saved as warm-ups, so they never count toward volume or progression.
+   */
+  warmUpSets?: number
 }
 export type Routine = {
   name: string
@@ -210,6 +212,21 @@ const COMPOUND_EXTRA_REST = 30
 const SET_SECONDS = 40
 const WARM_UP_MINUTES = 5
 const SETUP_MINUTES = 1
+
+/** Minutes for a routine the user arranged: each set, its rest and a minute of setup per exercise. */
+export const routineMinutes = (
+  exercises: Pick<RoutineExercise, "sets" | "rest" | "unit" | "warmUpSets">[],
+) =>
+  Math.round(
+    exercises.reduce(
+      (sum, item) =>
+        sum +
+        (item.sets * (SET_SECONDS + item.rest) + warmUpCount(item) * (SET_SECONDS + WARM_UP_REST)) /
+          60 +
+        SETUP_MINUTES,
+      0,
+    ),
+  )
 const MAX_EXERCISES = 6
 const MAX_SESSIONS = 6
 const BEGINNER_MAX_COMPOUNDS = 3
@@ -434,12 +451,7 @@ export function routineOn(date: Date, input: PlanInput): Routine {
     ...custom,
     exercises,
     sets: exercises.reduce((sum, item) => sum + item.sets, 0),
-    minutes: Math.round(
-      exercises.reduce(
-        (sum, item) => sum + (item.sets * (SET_SECONDS + item.rest)) / 60 + SETUP_MINUTES,
-        0,
-      ),
-    ),
+    minutes: routineMinutes(exercises),
   }
 }
 
