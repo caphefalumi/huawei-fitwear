@@ -618,5 +618,4 @@ export class BleGattServerService {
       hilog.error(DOMAIN, TAG, 'pauseAdvertising err: %{public}d %{public}s', e.code, e.message);
     }
   }
-
 }
