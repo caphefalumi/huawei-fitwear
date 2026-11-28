@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { Animated, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native"
-import Svg, { Circle, Polyline } from "react-native-svg"
+import Svg, { Circle, Line, Polyline, Text as SvgText } from "react-native-svg"
 
 import { Palette as C } from "@/theme"
 
@@ -11,9 +11,20 @@ const CHART_HEIGHT = 124
 const GRID_INSET = 12
 const PLOT_HEIGHT = CHART_HEIGHT - GRID_INSET * 2
 const X_PADDING = 8
+/** A goal this close to the logged weights is drawn on the chart; a farther one is pinned to the edge. */
+const GOAL_REACH_KG = 5
 
-/** Weight line over three gridlines; the y-axis rounds to whole kilograms around the data. */
-export function WeightChart({ weights }: { weights: number[] }) {
+/**
+ * Weight line over three gridlines; the y-axis rounds to whole kilograms around the data, and
+ * stretches to include the goal when it is near enough.
+ */
+export function WeightChart({
+  weights,
+  goalKg = null,
+}: {
+  weights: number[]
+  goalKg?: number | null
+}) {
   const [width, setWidth] = useState(0)
   const draw = useRef(new Animated.Value(0)).current
   const pulse = useRef(new Animated.Value(0)).current
@@ -46,8 +57,13 @@ export function WeightChart({ weights }: { weights: number[] }) {
   const pulseR = pulse.interpolate({ inputRange: [0, 1], outputRange: [5, 12] })
   const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0] })
 
-  const top = Math.ceil(Math.max(...weights))
-  const bottom = Math.min(Math.floor(Math.min(...weights)), top - 1)
+  const high = Math.max(...weights)
+  const low = Math.min(...weights)
+  const goalInside =
+    goalKg !== null && goalKg <= high + GOAL_REACH_KG && goalKg >= low - GOAL_REACH_KG
+  const top = Math.ceil(goalInside ? Math.max(high, goalKg) : high)
+  const bottom = Math.min(Math.floor(goalInside ? Math.min(low, goalKg) : low), top - 1)
+  const goalY = goalInside ? GRID_INSET + ((top - goalKg) / (top - bottom)) * PLOT_HEIGHT : null
   const axis = [top, (top + bottom) / 2, bottom]
 
   const points = weights.map((weight, index) => ({
@@ -69,6 +85,29 @@ export function WeightChart({ weights }: { weights: number[] }) {
         </View>
         {width > 0 ? (
           <Svg width={width} height={CHART_HEIGHT} style={StyleSheet.absoluteFill}>
+            {goalY !== null ? (
+              <>
+                <Line
+                  x1={0}
+                  x2={width}
+                  y1={goalY}
+                  y2={goalY}
+                  stroke={C.accent}
+                  strokeWidth={1.5}
+                  strokeDasharray="5 4"
+                />
+                <SvgText
+                  x={width - 2}
+                  y={goalY < GRID_INSET + 14 ? goalY + 13 : goalY - 5}
+                  textAnchor="end"
+                  fontSize={10}
+                  fontWeight="600"
+                  fill={C.accent}
+                >
+                  {`Goal ${goalKg!.toFixed(1)}`}
+                </SvgText>
+              </>
+            ) : null}
             <APolyline
               points={points.map((point) => `${point.x},${point.y}`).join(" ")}
               fill="none"
@@ -99,6 +138,11 @@ export function WeightChart({ weights }: { weights: number[] }) {
             />
           </Svg>
         ) : null}
+        {goalKg !== null && !goalInside ? (
+          <Text style={[styles.goalPinned, goalKg > high ? styles.goalTop : styles.goalBottom]}>
+            {`Goal ${goalKg.toFixed(1)} ${goalKg > high ? "↑" : "↓"}`}
+          </Text>
+        ) : null}
       </View>
 
       <View style={styles.axis}>
@@ -128,6 +172,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  goalPinned: {
+    position: "absolute",
+    right: 2,
+    fontSize: 10,
+    fontWeight: "600",
+    color: C.accent,
+  },
+  goalTop: { top: 0 },
+  goalBottom: { bottom: 0 },
   emptyLabel: {
     fontSize: 11,
     color: C.textMuted,
