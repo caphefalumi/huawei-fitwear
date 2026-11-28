@@ -145,6 +145,43 @@ test("reports today's totals with the logs they already include", async () => {
   })
 })
 
+test("lists only the newest saved logs, which cover every one the watch can still hold", async () => {
+  stored = JSON.stringify(Array.from({ length: 40 }, (_, index) => `log-${index}`))
+  jest.mocked(fetchMealSummary).mockResolvedValueOnce({
+    targetDate: "2026-03-02",
+    targets: null,
+    consumed: { caloriesKcal: 0, proteinG: 0, carbsG: 0, fatG: 0 },
+  } as never)
+
+  const day = await nutrition().day()
+  expect(day?.applied).toEqual(Array.from({ length: 20 }, (_, index) => `log-${index + 20}`))
+})
+
+test("reads the totals through the shared query when one is given", async () => {
+  const summary = jest.fn(async () => ({
+    targetDate: "2026-03-02",
+    targets: null,
+    consumed: { caloriesKcal: 10, proteinG: 0, carbsG: 0, fatG: 0 },
+  }))
+  const sync = createWatchNutrition({
+    owner: "user-1",
+    history: () => [],
+    onSaved: jest.fn(),
+    summary: summary as never,
+  })
+
+  await expect(sync.day()).resolves.toMatchObject({ kcalEaten: 10 })
+  expect(summary).toHaveBeenCalledTimes(1)
+  expect(fetchMealSummary).not.toHaveBeenCalled()
+})
+
+test("refetches the totals before a saved log is listed, so they always include it", async () => {
+  const storedWhenSaved: (string | null)[] = []
+  await nutrition(jest.fn(() => storedWhenSaved.push(stored))).save([log])
+  expect(storedWhenSaved).toEqual([null])
+  expect(stored).toBe('["log-1"]')
+})
+
 test("picks the meal type from the time of day", () => {
   const at = (hour: number) => mealTypeAt(new Date(2026, 2, 2, hour))
   expect([at(8), at(12), at(19), at(23), at(16)]).toEqual([

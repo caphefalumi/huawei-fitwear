@@ -1,11 +1,11 @@
-import { useQueryClient } from "@tanstack/react-query"
+import { isCancelledError, useQueryClient } from "@tanstack/react-query"
 import * as Device from "expo-device"
 import { router } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { AppState, Platform } from "react-native"
 
 import { useAuth } from "@/features/auth"
-import { mealsQueryKeys, useMeals } from "@/features/meals"
+import { fetchMealSummary, mealsQueryKeys, useMeals } from "@/features/meals"
 import { useRoutines } from "@/features/workout"
 import { captureException } from "@/lib/analytics/posthog"
 
@@ -14,6 +14,9 @@ import { createWatchNutrition } from "./nutrition"
 import { phoneId, usePairing } from "./pairing.store"
 import { resetWatchSession, useWatchStore } from "./store"
 import { WatchLink } from "./watch-link"
+
+/** How long today's totals from the shared query count as current for the watch. */
+const SUMMARY_FRESH_MS = 30_000
 
 // iOS only tells apps "iPhone" for the user's device name, so the model says more there.
 const phoneName = () =>
@@ -61,6 +64,23 @@ export function WatchBridge() {
             ? createWatchNutrition({
                 owner,
                 history: () => meals.current,
+                summary: async (date) => {
+                  const query = {
+                    queryKey: mealsQueryKeys.summary(owner, date),
+                    queryFn: ({ signal }: { signal: AbortSignal }) =>
+                      fetchMealSummary(date, signal),
+                    // Fresh enough for a reconnect; a meal change invalidates it at once.
+                    staleTime: SUMMARY_FRESH_MS,
+                  }
+                  // Joins the refetch a meal change started rather than fetching a second time.
+                  try {
+                    return await queryClient.fetchQuery(query)
+                  } catch (error) {
+                    // A newer refetch replaced the one this joined.
+                    if (isCancelledError(error)) return queryClient.fetchQuery(query)
+                    throw error
+                  }
+                },
                 onSaved: () =>
                   void queryClient.invalidateQueries({ queryKey: mealsQueryKeys.all(owner) }),
               })
@@ -82,9 +102,11 @@ export function WatchBridge() {
     else link.current?.stop()
   }, [enabled, foreground, inBackground, ready])
 
+  // A workout keeps the fast link: the phone is usually in a pocket while every set syncs.
+  const training = useWatchStore((state) => state.session?.status === "active")
   useEffect(() => {
-    link.current?.setForeground(foreground)
-  }, [foreground, ready])
+    link.current?.setForeground(foreground || training)
+  }, [foreground, training, ready])
 
   // The watch gets new totals and favorites whenever the meals here change.
   useEffect(() => {

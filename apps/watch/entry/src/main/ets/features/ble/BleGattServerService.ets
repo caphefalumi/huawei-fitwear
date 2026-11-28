@@ -30,8 +30,14 @@ const ATT_ERR_INVALID_ATTR_VALUE_LEN: number = 0x0d;
  */
 const ADV_INTERVAL_SLOTS: number = 32;
 
-/** Max duration (ms) to advertise without a client before turning off radio to save battery. */
+/** How long fast advertising runs without a client before it slows down to save battery. */
 const ADV_TIMEOUT_MS: number = 120_000;
+
+/**
+ * After that, about once a second (1022.5 ms, also from the Apple guidelines) instead of not at
+ * all, so a phone that comes back into reach later still finds the watch.
+ */
+const SLOW_ADV_INTERVAL_SLOTS: number = 1636;
 
 /** Max duration (ms) to allow a connected client to subscribe/handshake before disconnecting errant devices. */
 const HANDSHAKE_TIMEOUT_MS: number = 10_000;
@@ -68,6 +74,8 @@ export class BleGattServerService {
   private gattServer: ble.GattServer | undefined = undefined;
   private advHandle: number = 0xff;
   private advActive: boolean = false;
+  /** Raised for every advertising start, so a late answer to an older one is stopped. */
+  private advRequest: number = 0;
   private serverRunning: boolean = false;
   private connectedDeviceId: string = '';
   /** Outbound watch-to-phone data (notified to phone, read by phone). */
@@ -212,35 +220,51 @@ export class BleGattServerService {
       this.gattServer.on('descriptorWrite', this.onDescriptorWrite);
       this.gattServer.on('BLEMtuChange', this.onMtuChange);
 
-      const setting: ble.AdvertiseSetting = {
-        interval: ADV_INTERVAL_SLOTS,
-        txPower: 0,
-        connectable: true,
-      };
-      // Primary advertisement: 128-bit UUID only. Device name in scan response (31-byte limit protection)
-      const advData: ble.AdvertiseData = {
-        serviceUuids: [SERVICE_UUID],
-        manufactureData: [],
-        serviceData: [],
-        includeDeviceName: false,
-      };
-      const scanResponse: ble.AdvertiseData = {
-        serviceUuids: [],
-        manufactureData: [],
-        serviceData: [],
-        includeDeviceName: true,
-      };
-      const advParams: ble.AdvertisingParams = {
-        advertisingSettings: setting,
-        advertisingData: advData,
-        advertisingResponse: scanResponse,
-        duration: 0,
-      };
-
       this.listener.onStatus('Starting...');
       this.setKeepScreen(true);
+      this.advertise(ADV_INTERVAL_SLOTS);
+    } catch (err) {
+      const e = err as BusinessError;
+      hilog.error(DOMAIN, TAG, 'start err: %{public}d %{public}s', e.code, e.message);
+      this.releaseResources();
+      this.listener.onStatus(`BLE Err: ${e.code}`);
+    }
+  }
+
+  /**
+   * Advertises at `interval` slots in place of any advertising already set up. Fast advertising
+   * slows down after ADV_TIMEOUT_MS without a phone.
+   */
+  private advertise(interval: number): void {
+    this.stopAdvertisingSet();
+    const request = ++this.advRequest;
+    const setting: ble.AdvertiseSetting = {
+      interval: interval,
+      txPower: 0,
+      connectable: true,
+    };
+    // Primary advertisement: 128-bit UUID only. Device name in scan response (31-byte limit).
+    const advData: ble.AdvertiseData = {
+      serviceUuids: [SERVICE_UUID],
+      manufactureData: [],
+      serviceData: [],
+      includeDeviceName: false,
+    };
+    const scanResponse: ble.AdvertiseData = {
+      serviceUuids: [],
+      manufactureData: [],
+      serviceData: [],
+      includeDeviceName: true,
+    };
+    const advParams: ble.AdvertisingParams = {
+      advertisingSettings: setting,
+      advertisingData: advData,
+      advertisingResponse: scanResponse,
+      duration: 0,
+    };
+    try {
       ble.startAdvertising(advParams, (err: BusinessError, outAdvHandle: number) => {
-        if (!this.serverRunning) {
+        if (!this.serverRunning || request !== this.advRequest) {
           if (!err) {
             try {
               ble.stopAdvertising(outAdvHandle);
@@ -265,15 +289,36 @@ export class BleGattServerService {
         }
         this.advHandle = outAdvHandle;
         this.advActive = true;
+        // A phone connected while this was starting.
+        if (this.connectedDeviceId.length > 0) {
+          this.pauseAdvertising();
+          return;
+        }
         this.listener.onStatus('Advertising...');
-        // Start 120s timeout to save battery if no device connects
-        this.startAdvTimeout();
+        if (interval === ADV_INTERVAL_SLOTS) {
+          this.startAdvTimeout();
+        }
       });
     } catch (err) {
       const e = err as BusinessError;
-      hilog.error(DOMAIN, TAG, 'start err: %{public}d %{public}s', e.code, e.message);
+      hilog.error(DOMAIN, TAG, 'advertise err: %{public}d %{public}s', e.code, e.message);
       this.releaseResources();
-      this.listener.onStatus(`BLE Err: ${e.code}`);
+      this.listener.onStatus(`Adv Err: ${e.code}`);
+    }
+  }
+
+  private stopAdvertisingSet(): void {
+    if (this.advHandle === 0xff) {
+      return;
+    }
+    const handle = this.advHandle;
+    this.advHandle = 0xff;
+    this.advActive = false;
+    try {
+      ble.stopAdvertising(handle);
+    } catch (err) {
+      const e = err as BusinessError;
+      hilog.error(DOMAIN, TAG, 'stopAdvertising err: %{public}d %{public}s', e.code, e.message);
     }
   }
 
@@ -332,9 +377,8 @@ export class BleGattServerService {
       cccView[0] = 0;
       cccView[1] = 0;
       if (this.serverRunning) {
-        this.listener.onStatus('Advertising...');
-        this.resumeAdvertising();
-        this.startAdvTimeout();
+        // A phone that just dropped is usually close by, so look fast for it again.
+        this.advertise(ADV_INTERVAL_SLOTS);
       } else {
         this.listener.onStatus('BLE Idle');
       }
@@ -466,10 +510,9 @@ export class BleGattServerService {
     this.clearAdvTimeout();
     this.advTimeoutTimer = setTimeout(() => {
       if (this.serverRunning && this.connectedDeviceId.length === 0) {
-        hilog.info(DOMAIN, TAG, 'Adv timed out after 120s without connection');
-        this.pauseAdvertising();
+        hilog.info(DOMAIN, TAG, 'No phone for 120 s; advertising slowly');
         this.setKeepScreen(false);
-        this.listener.onStatus('Adv Timed Out');
+        this.advertise(SLOW_ADV_INTERVAL_SLOTS);
       }
     }, ADV_TIMEOUT_MS);
   }
@@ -576,29 +619,4 @@ export class BleGattServerService {
     }
   }
 
-  private resumeAdvertising(): void {
-    if (this.advHandle === 0xff || this.advActive) {
-      return;
-    }
-    this.advActive = true;
-    const params: ble.AdvertisingEnableParams = { advertisingId: this.advHandle };
-    try {
-      ble.enableAdvertising(params, (err: BusinessError) => {
-        if (err) {
-          this.advActive = false;
-          hilog.error(
-            DOMAIN,
-            TAG,
-            'enableAdvertising err: %{public}d %{public}s',
-            err.code,
-            err.message,
-          );
-        }
-      });
-    } catch (err) {
-      this.advActive = false;
-      const e = err as BusinessError;
-      hilog.error(DOMAIN, TAG, 'resumeAdvertising err: %{public}d %{public}s', e.code, e.message);
-    }
-  }
 }

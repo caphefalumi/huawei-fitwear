@@ -392,15 +392,28 @@ export class WatchBleClient {
     return Math.max(20, (this.connectedDevice?.mtu ?? 23) - 3)
   }
 
-  /** Writes one protocol frame exactly as given. */
-  async sendFrame(frame: string): Promise<boolean> {
-    if (!this.connectedDevice || this.status !== "connected") return false
+  /**
+   * Writes one protocol frame exactly as given. An unanswered write does not wait for the watch,
+   * so several can share one connection event, but a rejection of it goes unseen.
+   */
+  async sendFrame(frame: string, answered: boolean): Promise<boolean> {
+    const device = this.connectedDevice
+    if (!device || this.status !== "connected") return false
+    const value = bytesToBase64(encodeUtf8Bytes(frame))
     try {
-      await this.connectedDevice.writeCharacteristicWithResponseForService(
-        FITWEAR_SERVICE_UUID,
-        FITWEAR_CHAR_MESSAGE_UUID,
-        bytesToBase64(encodeUtf8Bytes(frame)),
-      )
+      if (answered) {
+        await device.writeCharacteristicWithResponseForService(
+          FITWEAR_SERVICE_UUID,
+          FITWEAR_CHAR_MESSAGE_UUID,
+          value,
+        )
+      } else {
+        await device.writeCharacteristicWithoutResponseForService(
+          FITWEAR_SERVICE_UUID,
+          FITWEAR_CHAR_MESSAGE_UUID,
+          value,
+        )
+      }
       return true
     } catch {
       // The caller retries; a dropped link is reported by onDisconnected.

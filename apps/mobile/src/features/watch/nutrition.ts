@@ -14,7 +14,7 @@ import {
 } from "@/features/meals"
 import { captureException } from "@/lib/analytics/posthog"
 
-import { MAX_FAVORITES, type WireDay, type WireFoodLog } from "./protocol"
+import { MAX_FAVORITES, MAX_FOOD_LOGS, type WireDay, type WireFoodLog } from "./protocol"
 import type { WatchNutrition } from "./watch-link"
 
 const SAVED_KEY = "watch.saved-logs"
@@ -117,26 +117,34 @@ const isPermanent = (error: unknown) => {
 export function createWatchNutrition(options: {
   owner: string
   history: () => MealLog[]
-  /** Called after meals were added, so that the app's screens refetch. */
+  /**
+   * Today's totals from a read that starts after `onSaved` was last called: the app's shared
+   * query, which joins a refetch already running. Fetched afresh when not given.
+   */
+  summary?: (date: string) => Promise<NutritionSummary>
+  /** Called once a meal is added and before its log counts as saved, so totals refetch. */
   onSaved: () => void
 }): WatchNutrition {
   const owner = options.owner.slice(0, 64)
   return {
     day: async () => {
-      // Read before the totals, so every ID listed is certainly counted in them.
-      const applied = await savedIds()
-      const summary = await fetchMealSummary(localDate())
+      // Read before the totals, so every ID listed is certainly counted in them. The watch holds
+      // at most MAX_FOOD_LOGS unsaved logs and drops one once it is listed, so any it still
+      // holds is among the newest MAX_FOOD_LOGS saved; older IDs would only lengthen the message.
+      const applied = (await savedIds()).slice(-MAX_FOOD_LOGS)
+      const date = localDate()
+      const summary = await (options.summary ?? fetchMealSummary)(date)
       return toWireDay(summary, options.history(), owner, applied)
     },
     save: async (logs: WireFoodLog[]) => {
       const done = await savedIds()
-      let added = false
       for (const log of logs) {
         if (done.includes(log.id) || log.owner !== owner) continue
         try {
           const source = await fetchMeal(log.ref)
           await writeMeal({ path: "/meals", method: "POST", body: copyMeal(source, log.at) })
-          added = true
+          // Before the ID is stored: any totals read once it is listed then include this meal.
+          options.onSaved()
         } catch (error) {
           if (!isPermanent(error)) continue
           captureException(error)
@@ -144,7 +152,6 @@ export function createWatchNutrition(options: {
         done.push(log.id)
         await SecureStore.setItemAsync(SAVED_KEY, JSON.stringify(done.slice(-SAVED_LIMIT)))
       }
-      if (added) options.onSaved()
     },
   }
 }

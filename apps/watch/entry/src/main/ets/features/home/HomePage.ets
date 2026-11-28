@@ -67,6 +67,8 @@ struct HomePage {
   private readonly autoReps: AutoReps = new AutoReps();
   /** The phone's latest plan, held while a different workout is still on screen. */
   private phonePlan: WorkoutPlan | undefined = undefined;
+  /** The phone's ID for phonePlan, named in the welcome so the phone need not send it again. */
+  private phonePlanKey: string = '';
   /** Session id and revision the phone already has. */
   private sentKey: string = '';
   /** The set and count the phone was last shown. */
@@ -232,17 +234,27 @@ struct HomePage {
         this.sentReps = '';
         this.sentFood = '';
       },
-      onPlan: (plan: WorkoutPlan) => this.receivePlan(plan),
+      planKey: () => this.phonePlanKey,
+      onPlan: (plan: WorkoutPlan, key: string) => this.receivePlan(plan, key),
       onSession: (session: SharedSession) => this.receiveSession(session),
       onDay: (info: DayInfo) => {
         this.day.apply(info);
         this.save();
       },
+      // Cleared, so the next tick sends the current state again.
+      onUnconfirmed: (kind: string) => {
+        if (kind === 'session') {
+          this.sentKey = '';
+        } else if (kind === 'food') {
+          this.sentFood = '';
+        }
+      },
     };
   }
 
-  private receivePlan(plan: WorkoutPlan): void {
+  private receivePlan(plan: WorkoutPlan, key: string): void {
     this.phonePlan = plan;
+    this.phonePlanKey = key;
     const same = JSON.stringify(plan) === JSON.stringify(this.session.plan);
     const finished =
       this.session.status === WorkoutStatus.IDLE ||
@@ -303,7 +315,12 @@ struct HomePage {
     const key = `${shared.id}:${shared.rev}`;
     if (key !== this.sentKey) {
       this.sentKey = key;
-      this.link.sendSession(shared);
+      // One that does not go out is sent again on the next tick.
+      this.link.sendSession(shared).then((sent: boolean) => {
+        if (!sent && this.sentKey === key) {
+          this.sentKey = '';
+        }
+      });
     }
   }
 
@@ -327,7 +344,11 @@ struct HomePage {
     const key = `${live.id}:${live.pos}:${live.reps}:${live.auto}`;
     if (key !== this.sentReps) {
       this.sentReps = key;
-      this.link.sendReps(live);
+      this.link.sendReps(live).then((sent: boolean) => {
+        if (!sent && this.sentReps === key) {
+          this.sentReps = '';
+        }
+      });
     }
   }
 
@@ -369,6 +390,7 @@ struct HomePage {
     this.link.stop();
     this.store.clear();
     this.phonePlan = undefined;
+    this.phonePlanKey = '';
     this.session = new WorkoutSession(initialPlan());
     this.day = new FoodDay();
     this.useSampleDay();
@@ -466,7 +488,7 @@ struct HomePage {
     this.summaryDismissed = true;
     this.homePage = CLOCK_PAGE;
     if (this.phonePlan) {
-      this.receivePlan(this.phonePlan);
+      this.receivePlan(this.phonePlan, this.phonePlanKey);
     }
   }
 
