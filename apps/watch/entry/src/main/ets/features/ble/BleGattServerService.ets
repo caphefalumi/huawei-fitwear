@@ -374,14 +374,24 @@ export class BleGattServerService {
     this.clearHandshakeWatchdog();
     this.listener.onConnection(req.deviceId);
 
-    const maxAllowed = this.getEffectiveMaxPayload();
-    if (req.value.byteLength > maxAllowed) {
-      this.listener.onStatus(`Write rejected (${req.value.byteLength}B)`);
+    const size = req.value.byteLength;
+    if (size > MAX_MESSAGE_BYTES) {
+      this.listener.onStatus(`Write rejected (${size}B)`);
       if (req.needRsp) {
         // Return ATT error 0x0D (Invalid Attribute Value Length)
         this.sendWriteStatus(req, ATT_ERR_INVALID_ATTR_VALUE_LEN);
       }
       return;
+    }
+    // The stack only delivers a plain write that fits the MTU, so a write proves the MTU even if
+    // BLEMtuChange never came. Rejecting it made the phone resend everything in 20-byte frames.
+    if (!req.isPrepared && size + 3 > this.negotiatedMtu) {
+      this.negotiatedMtu = size + 3;
+      hilog.info(DOMAIN, TAG, 'MTU raised by a write: %{public}d', this.negotiatedMtu);
+    }
+    // Answer before handling the frame: the phone sends its next frame only after the answer.
+    if (req.needRsp) {
+      this.sendWriteStatus(req, 0);
     }
     // Store phone write in inboundBuffer so outboundBuffer is not clobbered
     this.inboundBuffer = req.value;
@@ -389,10 +399,6 @@ export class BleGattServerService {
     if (incoming.length > 0) {
       this.listener.onReceived(incoming);
     }
-    if (!req.needRsp) {
-      return;
-    }
-    this.sendWriteStatus(req, 0);
   };
 
   private sendWriteStatus(req: ble.CharacteristicWriteRequest, status: number): void {
