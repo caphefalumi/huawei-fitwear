@@ -39,7 +39,20 @@ export class FoodDay {
 
   /** Takes the phone's figures, dropping quick logs that they now include. */
   apply(info: DayInfo): void {
-    this.info = info;
+    // Left out means unchanged, but never carried over to another account.
+    const kept: FavoriteMeal[] =
+      this.info !== undefined && this.info.owner === info.owner ? (this.info.favorites ?? []) : [];
+    const next: DayInfo = {
+      date: info.date,
+      owner: info.owner,
+      kcalTarget: info.kcalTarget,
+      target: info.target,
+      kcalEaten: info.kcalEaten,
+      eaten: info.eaten,
+      favorites: info.favorites ?? kept,
+      applied: info.applied,
+    };
+    this.info = next;
     this.pending = this.pending.filter(
       (log: PendingLog) => info.applied.indexOf(log.id) < 0 && log.owner === info.owner,
     );

@@ -3,7 +3,18 @@
  * Mirrors apps/watch/entry/src/main/ets/features/link/SyncProtocol.ets — change both together.
  */
 
+/** Carried by hello. Every watch app has required exactly 1, so it stays 1. */
 export const PROTOCOL_VERSION = 1
+/** The welcome version from which the watch reads compact plans and names the plan it holds. */
+export const COMPACT_PLAN_VERSION = 2
+/**
+ * The version from which an app acks every plan, session, day and food message, and the watch
+ * keeps its favorites when a day leaves them out. Both apps announce theirs: the watch in its
+ * welcome, the phone as `app` in its hello.
+ */
+export const ACK_VERSION = 3
+/** What this phone app does, sent as `app` in the hello. */
+export const PHONE_VERSION = 3
 const MAX_MESSAGE_CHARS = 16000
 const MAX_EXERCISES = 30
 const MAX_SETS = 20
@@ -26,6 +37,20 @@ export type PlanExercise = {
 }
 
 export type WirePlan = { name: string; minutes: number; exercises: PlanExercise[] }
+
+/** One exercise as a row instead of named fields; `unit` is 1 for seconds, 0 for reps. */
+export type CompactExercise = [
+  key: string,
+  name: string,
+  sets: number,
+  reps: number,
+  unit: 0 | 1,
+  rest: number,
+  superset: string,
+]
+
+/** A plan about half the size of a WirePlan, for watches from COMPACT_PLAN_VERSION on. */
+export type CompactPlan = { name: string; minutes: number; x: CompactExercise[] }
 
 export type SharedSession = {
   id: string
@@ -90,14 +115,45 @@ export type WireFoodLog = { id: string; ref: string; owner: string; at: number }
 
 export type SyncMessage =
   /** `name` is what the watch calls this phone; older apps leave it out. */
-  | { t: "hello"; v: number; phone: string; name?: string }
-  | { t: "welcome"; v: number; ok: boolean }
-  | { t: "plan"; plan: WirePlan }
+  | { t: "hello"; v: number; phone: string; name?: string; app?: number }
+  /** `v` says what the watch reads. `key` names the plan it holds; older watch apps leave it out. */
+  | { t: "welcome"; v: number; ok: boolean; key?: string }
+  /** `key` is the plan's ID from `planKey`, which the watch names in its next welcome. */
+  | { t: "plan"; plan: WirePlan | CompactPlan; key?: string }
   | { t: "session"; session: SharedSession }
   /** Older watch apps never send it; older phone apps ignore it. */
   | { t: "reps"; live: LiveReps }
-  | { t: "day"; day: WireDay }
+  /** From ACK_VERSION on, favorites are left out while they are unchanged. */
+  | { t: "day"; day: WireDay | Omit<WireDay, "favorites"> }
   | { t: "food"; logs: WireFoodLog[] }
+  /** The message with this frame ID arrived and was valid. Only between apps from ACK_VERSION. */
+  | { t: "ack"; id: number }
+
+export function compactPlan(plan: WirePlan): CompactPlan {
+  return {
+    name: plan.name,
+    minutes: plan.minutes,
+    x: plan.exercises.map((item) => [
+      item.key,
+      item.name,
+      item.sets,
+      item.reps,
+      item.unit === "seconds" ? 1 : 0,
+      item.rest,
+      item.superset,
+    ]),
+  }
+}
+
+/** A short ID for a plan's content: an FNV-1a hash and the length of its JSON. */
+export function planKey(plan: WirePlan): string {
+  const json = JSON.stringify(plan)
+  let hash = 0x811c9dc5
+  for (let index = 0; index < json.length; index++) {
+    hash = Math.imul(hash ^ json.charCodeAt(index), 0x01000193)
+  }
+  return `${(hash >>> 0).toString(16).padStart(8, "0")}${json.length.toString(36)}`
+}
 
 /** Splits a message into ASCII frames of at most `maxBytes`. */
 export function encodeFrames(message: SyncMessage, maxBytes: number, id: number): string[] {
@@ -115,6 +171,8 @@ export function encodeFrames(message: SyncMessage, maxBytes: number, id: number)
 
 /** Rebuilds messages from frames that arrive in order, as GATT delivers them. */
 export class FrameAssembler {
+  /** Frame ID of the last message completed, so it can be acked. */
+  lastId = -1
   private id = -1
   private next = 0
   private text = ""
@@ -140,6 +198,7 @@ export class FrameAssembler {
       return undefined
     }
     if (this.next < Number(total)) return undefined
+    this.lastId = this.id
     this.id = -1
     return parseMessage(this.text)
   }
@@ -204,9 +263,19 @@ export function parseMessage(json: string): SyncMessage | undefined {
   } catch {
     return undefined
   }
-  if (message?.t === "welcome") return typeof message.ok === "boolean" ? message : undefined
+  if (message?.t === "welcome") {
+    if (typeof message.ok !== "boolean") return undefined
+    // A watch app from before versions in the welcome counts as 1, and an odd key as none.
+    return {
+      t: "welcome",
+      v: isCount(message.v, 1000) && message.v > 0 ? message.v : 1,
+      ok: message.ok,
+      ...(isText(message.key, 16) && message.key ? { key: message.key } : {}),
+    }
+  }
   if (message?.t === "session") return isSession(message.session) ? message : undefined
   if (message?.t === "reps") return isLive(message.live) ? message : undefined
+  if (message?.t === "ack") return isCount(message.id, 999) ? message : undefined
   if (message?.t === "food") {
     return Array.isArray(message.logs) &&
       message.logs.length <= MAX_FOOD_LOGS &&

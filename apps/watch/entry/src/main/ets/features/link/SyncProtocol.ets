@@ -3,7 +3,16 @@
  * Mirrors apps/mobile/src/features/watch/protocol.ts — change both together.
  */
 
+/** Carried by hello. Every watch app has required exactly 1, so it stays 1. */
 export const PROTOCOL_VERSION: number = 1;
+/**
+ * Carried by welcome, so the phone knows what this watch reads.
+ * 2: compact plans, and welcome names the plan held.
+ * 3: acks plan, session and day messages, and keeps its favorites when a day leaves them out.
+ */
+export const WATCH_VERSION: number = 3;
+/** The `app` in a hello from which the phone acks session and food messages too. */
+export const ACK_VERSION: number = 3;
 const MAX_MESSAGE_CHARS: number = 16000;
 const MAX_EXERCISES: number = 30;
 const MAX_SETS: number = 20;
@@ -31,6 +40,16 @@ export interface WorkoutPlan {
   name: string;
   minutes: number;
   exercises: PlanExercise[];
+}
+
+/** One exercise as [key, name, sets, reps, unit (1 = seconds, 0 = reps), rest, superset]. */
+export type CompactExercise = (string | number)[];
+
+/** A plan with each exercise as a row, about half the size. Phone apps send it to version 2. */
+export interface CompactPlan {
+  name: string;
+  minutes: number;
+  x: CompactExercise[];
 }
 
 export interface SharedSession {
@@ -97,7 +116,8 @@ export interface DayInfo {
   target: Macros;
   kcalEaten: number;
   eaten: Macros;
-  favorites: FavoriteMeal[];
+  /** Phones from ACK_VERSION on leave it out while unchanged; FoodDay then keeps its own. */
+  favorites?: FavoriteMeal[];
   /** IDs of watch quick logs that these totals already include, or that were dropped. */
   applied: string[];
 }
@@ -117,8 +137,18 @@ export interface SyncMessage {
   phone?: string;
   /** With 'hello': what to call the phone. Older phone apps leave it out. */
   name?: string;
+  /** With 'hello': what the phone app does; ACK_VERSION and up acks. Older ones leave it out. */
+  app?: number;
+  /** With 'ack': the frame ID of the message that arrived. */
+  id?: number;
   ok?: boolean;
-  plan?: WorkoutPlan;
+  /** Compact as it arrives; parseMessage turns it into a WorkoutPlan. */
+  plan?: WorkoutPlan | CompactPlan;
+  /**
+   * A plan's ID, made by the phone. With 'plan': that plan's. With 'welcome': the plan the watch
+   * holds, so the phone need not send it again; empty when it holds none from this phone.
+   */
+  key?: string;
   session?: SharedSession;
   /** With 'reps'. Older phone apps ignore the message. */
   live?: LiveReps;
@@ -186,6 +216,8 @@ export function encodeFrames(message: SyncMessage, maxBytes: number, id: number)
 
 /** Rebuilds messages from frames that arrive in order, as GATT delivers them. */
 export class FrameAssembler {
+  /** Frame ID of the last message completed, so it can be acked. */
+  lastId: number = -1;
   private id: number = -1;
   private next: number = 0;
   private text: string = '';
@@ -218,6 +250,7 @@ export class FrameAssembler {
     if (this.next < total) {
       return undefined;
     }
+    this.lastId = this.id;
     this.id = -1;
     return parseMessage(this.text);
   }
@@ -249,6 +282,37 @@ export function isPlan(plan: WorkoutPlan): boolean {
         (item.unit === 'reps' || item.unit === 'seconds'),
     )
   );
+}
+
+/** Reads either format: rows from phone apps that know version 2, named fields from older ones. */
+function readPlan(raw: WorkoutPlan | CompactPlan): WorkoutPlan | undefined {
+  const compact = raw as CompactPlan;
+  if (!Array.isArray(compact.x)) {
+    return isPlan(raw as WorkoutPlan) ? (raw as WorkoutPlan) : undefined;
+  }
+  if (
+    compact.x.length > MAX_EXERCISES ||
+    !compact.x.every((row: CompactExercise) => Array.isArray(row) && row.length === 7)
+  ) {
+    return undefined;
+  }
+  const plan: WorkoutPlan = {
+    name: compact.name,
+    minutes: compact.minutes,
+    exercises: compact.x.map((row: CompactExercise): PlanExercise => {
+      const item: PlanExercise = {
+        key: row[0] as string,
+        name: row[1] as string,
+        sets: row[2] as number,
+        reps: row[3] as number,
+        unit: row[4] === 1 ? 'seconds' : row[4] === 0 ? 'reps' : '',
+        rest: row[5] as number,
+        superset: row[6] as string,
+      };
+      return item;
+    }),
+  };
+  return isPlan(plan) ? plan : undefined;
 }
 
 function isSession(session: SharedSession): boolean {
@@ -294,9 +358,18 @@ export function isDay(day: DayInfo): boolean {
     isCount(day.kcalEaten, MAX_NUTRIENT) &&
     isMacros(day.target) &&
     isMacros(day.eaten) &&
-    Array.isArray(day.favorites) &&
-    day.favorites.length <= MAX_FAVORITES &&
-    day.favorites.every(
+    (day.favorites === undefined || isFavorites(day.favorites)) &&
+    Array.isArray(day.applied) &&
+    day.applied.length <= MAX_APPLIED &&
+    day.applied.every((id: string) => isText(id, 64))
+  );
+}
+
+function isFavorites(favorites: FavoriteMeal[]): boolean {
+  return (
+    Array.isArray(favorites) &&
+    favorites.length <= MAX_FAVORITES &&
+    favorites.every(
       (food: FavoriteMeal) =>
         isText(food.ref, 64) &&
         food.ref !== '' &&
@@ -305,10 +378,7 @@ export function isDay(day: DayInfo): boolean {
         isCount(food.protein, MAX_NUTRIENT) &&
         isCount(food.carbs, MAX_NUTRIENT) &&
         isCount(food.fat, MAX_NUTRIENT),
-    ) &&
-    Array.isArray(day.applied) &&
-    day.applied.length <= MAX_APPLIED &&
-    day.applied.every((id: string) => isText(id, 64))
+    )
   );
 }
 
@@ -327,13 +397,21 @@ export function parseMessage(json: string): SyncMessage | undefined {
       return typeof message.ok === 'boolean' ? message : undefined;
     }
     if (message.t === 'plan') {
-      return isPlan(message.plan as WorkoutPlan) ? message : undefined;
+      const plan = readPlan(message.plan as WorkoutPlan | CompactPlan);
+      if (plan === undefined || !(message.key === undefined || isText(message.key, 16))) {
+        return undefined;
+      }
+      const read: SyncMessage = { t: 'plan', plan: plan, key: message.key };
+      return read;
     }
     if (message.t === 'session') {
       return isSession(message.session as SharedSession) ? message : undefined;
     }
     if (message.t === 'day') {
       return isDay(message.day as DayInfo) ? message : undefined;
+    }
+    if (message.t === 'ack') {
+      return isCount(message.id as number, 999) ? message : undefined;
     }
     return undefined;
   } catch (err) {

@@ -40,6 +40,9 @@ const SUPERSET: WorkoutPlan = {
 
 /** The same frame is asserted by apps/mobile's protocol test. */
 const FIXTURE_FRAME: string = '~7.0.1~{"t":"welcome","v":1,"ok":true}';
+/** Written by apps/mobile's protocol test from its "Push" routine. */
+const COMPACT_PLAN_FRAME: string =
+  '~8.0.1~{"t":"plan","plan":{"name":"Push","minutes":10,"x":[["bench-press","Bench press",2,8,0,60,""]]},"key":"k1"}';
 
 const RICE: FavoriteMeal = {
   ref: 'm1',
@@ -161,6 +164,44 @@ export default function workoutSessionTest() {
       expect(new FrameAssembler().push('~1.0.1~{"t":"session"}')).assertUndefined();
       expect(new FrameAssembler().push('VoocHealth Watch Ready')).assertUndefined();
       expect(new FrameAssembler().push('~1.1.2~tail')).assertUndefined();
+    });
+
+    it('reads an ack and remembers which message to ack', 0, () => {
+      const assembler = new FrameAssembler();
+      expect(assembler.push('~12.0.1~{"t":"ack","id":42}')?.id).assertEqual(42);
+      expect(assembler.lastId).assertEqual(12);
+      expect(assembler.push('~13.0.1~{"t":"ack","id":1000}')).assertUndefined();
+    });
+
+    it('reads the compact plan the phone writes, and rejects bad rows', 0, () => {
+      const message = new FrameAssembler().push(COMPACT_PLAN_FRAME);
+      const expected: WorkoutPlan = {
+        name: 'Push',
+        minutes: 10,
+        exercises: [
+          {
+            key: 'bench-press',
+            name: 'Bench press',
+            sets: 2,
+            reps: 8,
+            unit: 'reps',
+            rest: 60,
+            superset: '',
+          },
+        ],
+      };
+      expect(JSON.stringify(message?.plan)).assertEqual(JSON.stringify(expected));
+      expect(message?.key).assertEqual('k1');
+      const bad: string[] = [
+        // No sets, an unknown unit, a short row.
+        '[["a","A",0,8,0,60,""]]',
+        '[["a","A",2,8,2,60,""]]',
+        '[["a","A",2,8]]',
+      ];
+      bad.forEach((rows: string) => {
+        const frame = `~1.0.1~{"t":"plan","plan":{"name":"P","minutes":1,"x":${rows}}}`;
+        expect(new FrameAssembler().push(frame)).assertUndefined();
+      });
     });
 
     it('splits a long message into small frames and rebuilds it', 0, () => {
@@ -286,6 +327,20 @@ export default function workoutSessionTest() {
       day.today = isoDay(noon + 24 * 60 * 60 * 1000);
       expect(day.kcalEaten).assertEqual(0);
       expect(day.kcalTarget).assertEqual(2000);
+    });
+
+    it('keeps its favorites when a day leaves them out, but not for another account', 0, () => {
+      const day = loadedDay(noon);
+      const totals = info(isoDay(noon));
+      totals.favorites = undefined;
+      totals.kcalEaten = 900;
+      day.apply(totals);
+      expect(day.kcalEaten).assertEqual(900);
+      expect(day.favorites.length).assertEqual(1);
+      const other = info(isoDay(noon), [], 'u2');
+      other.favorites = undefined;
+      day.apply(other);
+      expect(day.favorites.length).assertEqual(0);
     });
   });
 

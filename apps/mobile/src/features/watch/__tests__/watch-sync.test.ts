@@ -1,10 +1,21 @@
 import type { Routine } from "@/features/workout"
 
-import { encodeFrames, FrameAssembler, mergeSessions, type SharedSession } from "../protocol"
+import {
+  compactPlan,
+  encodeFrames,
+  FrameAssembler,
+  mergeSessions,
+  parseMessage,
+  planKey,
+  type SharedSession,
+} from "../protocol"
 import { resetWatchSession, toWirePlan, useWatchStore } from "../store"
 
 /** The same frame is asserted by the watch's protocol test. */
 const FIXTURE_FRAME = '~7.0.1~{"t":"welcome","v":1,"ok":true}'
+/** The watch's protocol test reads this frame back into the named plan. */
+const COMPACT_PLAN_FRAME =
+  '~8.0.1~{"t":"plan","plan":{"name":"Push","minutes":10,"x":[["bench-press","Bench press",2,8,0,60,""]]},"key":"k1"}'
 
 const session: SharedSession = {
   id: "one",
@@ -46,6 +57,39 @@ test("reads the shared fixture and ignores junk", () => {
   expect(new FrameAssembler().push('~1.0.1~{"t":"session"}')).toBeUndefined()
   expect(new FrameAssembler().push("VoocHealth Watch Ready")).toBeUndefined()
   expect(new FrameAssembler().push("~1.1.2~tail")).toBeUndefined()
+})
+
+test("writes a compact plan exactly as the watch's test reads it", () => {
+  const plan = compactPlan(toWirePlan(routine))
+  expect(encodeFrames({ t: "plan", plan, key: "k1" }, 180, 8)).toEqual([COMPACT_PLAN_FRAME])
+})
+
+test("reads what the watch reads and which plan it holds from its welcome", () => {
+  expect(parseMessage('{"t":"welcome","v":2,"ok":true,"key":"abc"}')).toEqual({
+    t: "welcome",
+    v: 2,
+    ok: true,
+    key: "abc",
+  })
+  // Older watch apps send no key; a malformed one counts as no plan held.
+  expect(parseMessage('{"t":"welcome","ok":true,"key":7}')).toEqual({
+    t: "welcome",
+    v: 1,
+    ok: true,
+  })
+  expect(parseMessage('{"t":"welcome","v":2,"ok":true,"key":""}')).toEqual({
+    t: "welcome",
+    v: 2,
+    ok: true,
+  })
+})
+
+test("gives a plan a short key that changes with its content", () => {
+  const plan = toWirePlan(routine)
+  const key = planKey(plan)
+  expect(key.length).toBeLessThanOrEqual(16)
+  expect(planKey(toWirePlan(routine))).toBe(key)
+  expect(planKey({ ...plan, exercises: [{ ...plan.exercises[0]!, reps: 9 }] })).not.toBe(key)
 })
 
 test("splits a long message into small ASCII frames and rebuilds it", () => {
