@@ -4,7 +4,6 @@ import { StyleSheet, Text, View } from "react-native"
 
 import { BackHeader, Button, Card, PageHeading, Screen } from "@/components/ui"
 import { Pressable } from "@/components/ui/pressable"
-import { useAuth } from "@/features/auth"
 import { dateKey, useHealth } from "@/features/health"
 import {
   usePlanInput,
@@ -17,7 +16,6 @@ import { Palette as C } from "@/theme"
 
 import { TrainingActivityCard } from "../components/training-activity-card"
 import { WeightChart } from "../components/weight-chart"
-import { approx, bodyComposition } from "../utils/body-composition"
 import { progressData, RANGE_PERIODS, RANGES, type Range } from "../utils/progress-data"
 import { trainingActivity } from "../utils/training-activity"
 import { towardGoal, weightGoal } from "../utils/weight-goal"
@@ -31,12 +29,11 @@ const shortDate = (value: string | Date) =>
   })
 
 export function ProgressScreen() {
-  const { weightKg, weights, plan, heightCm, sex, loading: weightsLoading } = useHealth()
+  const { weightKg, weights, plan, loading: weightsLoading } = useHealth()
   const { sessions, historyMessage, error: historyError, refresh } = useWorkouts()
   const stats = useWorkoutProgress()
   const input = usePlanInput()
   const { today } = useRoutines()
-  const { user } = useAuth()
   const [range, setRange] = useState<Range>("Month")
 
   const data = progressData(range, weights)
@@ -48,10 +45,6 @@ export function ProgressScreen() {
     minutes: input.minutes,
   })
   const recent = sessions.slice(0, RECENT_COUNT)
-
-  const composition = bodyComposition({ weightKg, heightCm, sex, birthDate: user?.birthDate })
-  const latestLog = weights.at(-1)?.loggedDate
-  const measuredOn = latestLog ? shortDate(latestLog) : null
 
   return (
     <Screen>
@@ -89,15 +82,7 @@ export function ProgressScreen() {
           {weightKg !== null ? `${weightKg.toFixed(1)} kg` : weightsLoading ? "Loading…" : "—"}
         </Text>
 
-        <WeightChart key={range} weights={data.weights} goalKg={plan.targetWeightKg} />
-
-        <View style={styles.dates}>
-          {data.dates.map((date) => (
-            <Text key={date} style={styles.dateLabel}>
-              {shortDate(date)}
-            </Text>
-          ))}
-        </View>
+        <WeightChart key={range} logs={data.logs} goalKg={plan.targetWeightKg} />
 
         {goal?.status === "reached" ? (
           <Text style={styles.goalReached}>
@@ -188,49 +173,6 @@ export function ProgressScreen() {
       </Card>
 
       <Card>
-        <View style={styles.weightHeader}>
-          <Text style={styles.cardTitle}>Body composition</Text>
-          {composition.status === "ready" && measuredOn ? (
-            <Text style={styles.cardNote}>{measuredOn}</Text>
-          ) : null}
-        </View>
-
-        {composition.status === "ready" ? (
-          <View style={styles.compositionRow}>
-            <View
-              style={styles.compositionItem}
-              accessible
-              accessibilityLabel={`Body fat, about ${approx(composition.bodyFat, " percent").slice(1)}`}
-            >
-              <Text style={styles.compositionValue}>{approx(composition.bodyFat, "%")}</Text>
-              <Text style={styles.compositionLabel}>Body fat</Text>
-            </View>
-            <View
-              style={styles.compositionItem}
-              accessible
-              accessibilityLabel={`Lean mass, about ${approx(composition.leanKg, " kilograms").slice(1)}`}
-            >
-              <Text style={styles.compositionValue}>{approx(composition.leanKg, " kg")}</Text>
-              <Text style={styles.compositionLabel}>Lean mass</Text>
-            </View>
-          </View>
-        ) : composition.status === "incomplete" ? (
-          <>
-            <Text style={styles.cardNote}>
-              {`Add your ${composition.missing.join(", ")} in Profile to see an estimate.`}
-            </Text>
-            <Pressable onPress={() => router.push("/profile")} hitSlop={8}>
-              <Text style={styles.link}>Complete profile</Text>
-            </Pressable>
-          </>
-        ) : (
-          <Text style={styles.cardNote}>{composition.reason}</Text>
-        )}
-
-        <Text style={styles.cardNote}>Personal-scale estimates, not a diagnosis</Text>
-      </Card>
-
-      <Card>
         <Text style={styles.cardTitle}>Accuracy &amp; personalization</Text>
         <Text style={styles.cardNote}>
           Basic body info gives you a starting nutrition estimate. Adding daily activity and goals
@@ -308,38 +250,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: C.text,
   },
-  dates: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  dateLabel: {
-    fontSize: 10,
-    color: C.textMuted,
-  },
   cardNote: {
     fontSize: 11,
     color: C.textMuted,
     flexShrink: 1,
-  },
-  compositionRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  compositionItem: {
-    flex: 1,
-    backgroundColor: C.previewTint,
-    borderRadius: 16,
-    padding: 12,
-    gap: 3,
-  },
-  compositionValue: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: C.text,
-  },
-  compositionLabel: {
-    fontSize: 11,
-    color: C.textMuted,
   },
   link: {
     fontSize: 12,

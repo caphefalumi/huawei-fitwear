@@ -4,6 +4,8 @@ import Svg, { Circle, Line, Polyline, Text as SvgText } from "react-native-svg"
 
 import { Palette as C } from "@/theme"
 
+import { weightTimeline } from "../utils/weight-timeline"
+
 const APolyline = Animated.createAnimatedComponent(Polyline)
 const ACircle = Animated.createAnimatedComponent(Circle)
 
@@ -15,14 +17,16 @@ const X_PADDING = 8
 const GOAL_REACH_KG = 5
 
 /**
- * Weight line over three gridlines; the y-axis rounds to whole kilograms around the data, and
- * stretches to include the goal when it is near enough.
+ * Weight line over three gridlines with a time axis below. Points sit at the date they were
+ * logged, so a gap between logs shows as distance. The y-axis rounds to whole kilograms around
+ * the data, and stretches to include the goal when it is near enough.
  */
 export function WeightChart({
-  weights,
+  logs,
   goalKg = null,
 }: {
-  weights: number[]
+  /** Oldest first. */
+  logs: { loggedDate: string; weightKg: number }[]
   goalKg?: number | null
 }) {
   const [width, setWidth] = useState(0)
@@ -45,7 +49,7 @@ export function WeightChart({
     }
   }, [draw, pulse])
 
-  if (weights.length === 0) {
+  if (logs.length === 0) {
     return (
       <View style={styles.empty}>
         <Text style={styles.emptyLabel}>No weight logs yet</Text>
@@ -57,6 +61,8 @@ export function WeightChart({
   const pulseR = pulse.interpolate({ inputRange: [0, 1], outputRange: [5, 12] })
   const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0] })
 
+  const weights = logs.map((log) => log.weightKg)
+  const timeline = weightTimeline(logs.map((log) => log.loggedDate))
   const high = Math.max(...weights)
   const low = Math.min(...weights)
   const goalInside =
@@ -67,81 +73,90 @@ export function WeightChart({
   const axis = [top, (top + bottom) / 2, bottom]
 
   const points = weights.map((weight, index) => ({
-    x: X_PADDING + (index * (width - X_PADDING * 2)) / Math.max(1, weights.length - 1),
+    x: X_PADDING + timeline.positions[index]! * (width - X_PADDING * 2),
     y: GRID_INSET + ((top - weight) / (top - bottom)) * PLOT_HEIGHT,
   }))
   const last = points[points.length - 1]
 
   return (
     <View style={styles.row}>
-      <View
-        style={styles.chart}
-        onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)}
-      >
-        <View style={styles.grid}>
-          {axis.map((value) => (
-            <View key={value} style={styles.gridLine} />
-          ))}
-        </View>
-        {width > 0 ? (
-          <Svg width={width} height={CHART_HEIGHT} style={StyleSheet.absoluteFill}>
-            {goalY !== null ? (
-              <>
-                <Line
-                  x1={0}
-                  x2={width}
-                  y1={goalY}
-                  y2={goalY}
-                  stroke={C.accent}
-                  strokeWidth={1.5}
-                  strokeDasharray="5 4"
-                />
-                <SvgText
-                  x={width - 2}
-                  y={goalY < GRID_INSET + 14 ? goalY + 13 : goalY - 5}
-                  textAnchor="end"
-                  fontSize={10}
-                  fontWeight="600"
-                  fill={C.accent}
-                >
-                  {`Goal ${goalKg!.toFixed(1)}`}
-                </SvgText>
-              </>
-            ) : null}
-            <APolyline
-              points={points.map((point) => `${point.x},${point.y}`).join(" ")}
-              fill="none"
-              stroke={C.accent}
-              strokeWidth={2}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              strokeDasharray="800"
-              strokeDashoffset={dashOffset}
-            />
-            {points.slice(0, -1).map((point) => (
-              <Circle key={`${point.x}`} cx={point.x} cy={point.y} r={3} fill={C.accentBorder} />
+      <View style={styles.plot}>
+        <View
+          style={styles.chart}
+          onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)}
+        >
+          <View style={styles.grid}>
+            {axis.map((value) => (
+              <View key={value} style={styles.gridLine} />
             ))}
-            <ACircle
-              cx={last.x}
-              cy={last.y}
-              r={pulseR}
-              fill={C.accentBorder}
-              opacity={pulseOpacity}
-            />
-            <Circle
-              cx={last.x}
-              cy={last.y}
-              r={5}
-              fill={C.accentBorder}
-              stroke={C.surface}
-              strokeWidth={2}
-            />
-          </Svg>
-        ) : null}
-        {goalKg !== null && !goalInside ? (
-          <Text style={[styles.goalPinned, goalKg > high ? styles.goalTop : styles.goalBottom]}>
-            {`Goal ${goalKg.toFixed(1)} ${goalKg > high ? "↑" : "↓"}`}
-          </Text>
+          </View>
+          {width > 0 ? (
+            <Svg width={width} height={CHART_HEIGHT} style={StyleSheet.absoluteFill}>
+              {goalY !== null ? (
+                <>
+                  <Line
+                    x1={0}
+                    x2={width}
+                    y1={goalY}
+                    y2={goalY}
+                    stroke={C.accent}
+                    strokeWidth={1.5}
+                    strokeDasharray="5 4"
+                  />
+                  <SvgText
+                    x={width - 2}
+                    y={goalY < GRID_INSET + 14 ? goalY + 13 : goalY - 5}
+                    textAnchor="end"
+                    fontSize={10}
+                    fontWeight="600"
+                    fill={C.accent}
+                  >
+                    {`Goal ${goalKg!.toFixed(1)}`}
+                  </SvgText>
+                </>
+              ) : null}
+              <APolyline
+                points={points.map((point) => `${point.x},${point.y}`).join(" ")}
+                fill="none"
+                stroke={C.accent}
+                strokeWidth={2}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                strokeDasharray="800"
+                strokeDashoffset={dashOffset}
+              />
+              {points.slice(0, -1).map((point, index) => (
+                <Circle key={index} cx={point.x} cy={point.y} r={3} fill={C.accentBorder} />
+              ))}
+              <ACircle
+                cx={last.x}
+                cy={last.y}
+                r={pulseR}
+                fill={C.accentBorder}
+                opacity={pulseOpacity}
+              />
+              <Circle
+                cx={last.x}
+                cy={last.y}
+                r={5}
+                fill={C.accentBorder}
+                stroke={C.surface}
+                strokeWidth={2}
+              />
+            </Svg>
+          ) : null}
+          {goalKg !== null && !goalInside ? (
+            <Text style={[styles.goalPinned, goalKg > high ? styles.goalTop : styles.goalBottom]}>
+              {`Goal ${goalKg.toFixed(1)} ${goalKg > high ? "↑" : "↓"}`}
+            </Text>
+          ) : null}
+        </View>
+        {timeline.axis ? (
+          <View style={styles.dates}>
+            <Text style={styles.dateLabel}>{timeline.axis.first}</Text>
+            <Text style={[styles.dateLabel, styles.dateMiddle]}>{timeline.axis.middle ?? ""}</Text>
+            <Text style={[styles.dateLabel, styles.dateLast]}>{timeline.axis.last ?? ""}</Text>
+          </View>
         ) : null}
       </View>
 
@@ -162,10 +177,14 @@ const styles = StyleSheet.create({
     alignItems: "stretch",
     gap: 6,
   },
+  plot: { flex: 1, gap: 4 },
   chart: {
-    flex: 1,
     height: CHART_HEIGHT,
   },
+  dates: { flexDirection: "row" },
+  dateLabel: { flex: 1, fontSize: 10, color: C.textMuted },
+  dateMiddle: { textAlign: "center" },
+  dateLast: { textAlign: "right" },
   empty: {
     flex: 1,
     height: CHART_HEIGHT,

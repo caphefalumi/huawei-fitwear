@@ -4,8 +4,8 @@ export type RangeData = {
   /** Change from the first to the last log in the range, or null with fewer than two logs. */
   changeKg: number | null
   delta: string
-  weights: number[]
-  dates: string[]
+  /** Logs in the range, oldest first. */
+  logs: { loggedDate: string; weightKg: number }[]
 }
 export const RANGE_DAYS: Record<Range, number> = { Week: 7, Month: 30, "3 mo": 90, Year: 365 }
 
@@ -39,12 +39,6 @@ export function progressData(
   return {
     changeKg: change,
     delta: change === null ? "Not enough logs" : `${change > 0 ? "+" : ""}${change.toFixed(1)} kg`,
-    weights: selected.map((log) => log.weightKg),
-    dates: selected.length
-      ? [
-          selected[0].loggedDate,
-          ...(selected.length > 1 ? [selected[selected.length - 1].loggedDate] : []),
-        ]
-      : [],
+    logs: selected,
   }
 }

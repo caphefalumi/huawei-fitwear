@@ -196,9 +196,7 @@ export function HomeScreen() {
                 </Text>
               )}
             </View>
-            {weights.length > 1 ? (
-              <WeightChart weights={weights.slice(-7).map(({ weightKg }) => weightKg)} />
-            ) : null}
+            {weights.length > 1 ? <WeightChart logs={weights.slice(-7)} /> : null}
           </Card>
         </Pressable>
       </Animated.View>

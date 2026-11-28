@@ -1,6 +1,7 @@
 import { progressBounds, progressData } from "@/features/home"
 import { formatTraining, trainingActivity } from "@/features/home/utils/training-activity"
 import { towardGoal, weightGoal } from "@/features/home/utils/weight-goal"
+import { weightTimeline } from "@/features/home/utils/weight-timeline"
 
 // Saturday, Jan 3 2026.
 const now = new Date(2026, 0, 3, 9)
@@ -18,8 +19,10 @@ test("filters and sorts persisted weights without inventing intermediate measure
     { loggedDate: "2026-01-04", weightKg: 70 },
   ]
   const result = progressData("Week", logs, now)
-  expect(result.weights).toEqual([72.5, 71])
-  expect(result.dates).toEqual(["2025-12-28", "2026-01-03"])
+  expect(result.logs).toEqual([
+    { loggedDate: "2025-12-28", weightKg: 72.5 },
+    { loggedDate: "2026-01-03", weightKg: 71 },
+  ])
   expect(result.delta).toBe("-1.5 kg")
   expect(result.changeKg).toBe(-1.5)
   expect(logs[0].loggedDate).toBe("2026-01-03")
@@ -29,7 +32,7 @@ test("does not turn a single weight into fake progress", () => {
   const result = progressData("Week", [{ loggedDate: "2026-01-03", weightKg: 71 }], now)
   expect(result.delta).toBe("Not enough logs")
   expect(result.changeKg).toBeNull()
-  expect(progressData("Week", [], now).weights).toEqual([])
+  expect(progressData("Week", [], now).logs).toEqual([])
 })
 
 test("formats training time for bars and totals", () => {
@@ -156,5 +159,26 @@ describe("weight goal", () => {
     expect(towardGoal(-1, 72, 70)).toBe(true)
     expect(towardGoal(1, 72, 70)).toBe(false)
     expect(towardGoal(1, 72, null)).toBeNull()
+  })
+})
+
+describe("weight chart timeline", () => {
+  test("places logs by date, so a long gap shows as distance", () => {
+    const { positions, axis } = weightTimeline(["2025-11-01", "2025-11-02", "2025-11-11"])
+    expect(positions).toEqual([0, 0.1, 1])
+    expect(axis).toEqual({ first: "Nov 1", middle: "Nov 6", last: "Nov 11" })
+  })
+
+  test("leaves out the middle date when logs are a day apart, and centres a single log", () => {
+    expect(weightTimeline(["2025-11-01", "2025-11-02"]).axis).toEqual({
+      first: "Nov 1",
+      middle: null,
+      last: "Nov 2",
+    })
+    expect(weightTimeline(["2025-11-01"])).toEqual({
+      positions: [0.5],
+      axis: { first: "Nov 1", middle: null, last: null },
+    })
+    expect(weightTimeline([]).axis).toBeNull()
   })
 })
