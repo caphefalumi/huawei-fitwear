@@ -5,6 +5,9 @@
   "main": "",
   "author": "",
   "license": "",
-  "dependencies": {}
+  "dependencies": {
+    "@ohos/protobufjs": "3.0.2"
+  },
+  "devDependencies": {},
+  "dynamicDependencies": {}
 }
-
