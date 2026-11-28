@@ -13,8 +13,10 @@ export const COMPACT_PLAN_VERSION = 2
  * welcome, the phone as `app` in its hello.
  */
 export const ACK_VERSION = 3
+/** The version from which an app reads every message but the handshake as a row; see `toRow`. */
+export const ROW_VERSION = 4
 /** What this phone app does, sent as `app` in the hello. */
-export const PHONE_VERSION = 3
+export const PHONE_VERSION = 4
 const MAX_MESSAGE_CHARS = 16000
 const MAX_EXERCISES = 30
 const MAX_SETS = 20
@@ -156,8 +158,128 @@ export function planKey(plan: WirePlan): string {
 }
 
 /** Splits a message into ASCII frames of at most `maxBytes`. */
-export function encodeFrames(message: SyncMessage, maxBytes: number, id: number): string[] {
-  const json = JSON.stringify(message).replace(
+const STATUSES = ["active", "done", "closed"] as const
+
+const macroRow = (macros: WireMacros) => [macros.protein, macros.carbs, macros.fat]
+
+/**
+ * The message as a JSON array whose first element names it, about half the size of named
+ * fields. Null for hello and welcome, which stay named because every app version reads them.
+ *
+ * - plan: ["p", key, name, minutes, exercises as in CompactPlan.x]
+ * - session: ["s", id, rev, plan, status (0 active, 1 done, 2 closed), at, end, pos, rest,
+ *   log as flat [exercise, set, reps, ...], skip]
+ * - reps: ["r", id, pos, reps, auto (1 or 0)]
+ * - day: ["d", date, owner, kcalTarget, [protein, carbs, fat], kcalEaten, [protein, carbs, fat],
+ *   applied, favorites as [ref, name, kcal, protein, carbs, fat] rows, left out when unchanged]
+ * - food: ["f", logs as [id, ref, owner, at] rows]
+ * - ack: ["a", id]
+ */
+export function toRow(message: SyncMessage): unknown[] | null {
+  switch (message.t) {
+    case "plan": {
+      const plan = "x" in message.plan ? message.plan : compactPlan(message.plan)
+      return ["p", message.key ?? "", plan.name, plan.minutes, plan.x]
+    }
+    case "session": {
+      const session = message.session
+      return [
+        "s",
+        session.id,
+        session.rev,
+        session.plan,
+        STATUSES.indexOf(session.status),
+        session.at,
+        session.end,
+        session.pos,
+        session.rest,
+        session.log.flat(),
+        session.skip,
+      ]
+    }
+    case "reps": {
+      const live = message.live
+      return ["r", live.id, live.pos, live.reps, live.auto ? 1 : 0]
+    }
+    case "day": {
+      const day = message.day
+      const row = [
+        "d",
+        day.date,
+        day.owner,
+        day.kcalTarget,
+        macroRow(day.target),
+        day.kcalEaten,
+        macroRow(day.eaten),
+        day.applied,
+      ]
+      if (!("favorites" in day)) return row
+      const favorites = day.favorites.map((food) => [
+        food.ref,
+        food.name,
+        food.kcal,
+        food.protein,
+        food.carbs,
+        food.fat,
+      ])
+      return [...row, favorites]
+    }
+    case "food":
+      return ["f", message.logs.map((log) => [log.id, log.ref, log.owner, log.at])]
+    case "ack":
+      return ["a", message.id]
+    default:
+      return null
+  }
+}
+
+/** Every 3 entries of a flat log as one [exercise, set, reps]; null if it does not split. */
+function triples(flat: unknown) {
+  if (!Array.isArray(flat) || flat.length % 3 !== 0) return null
+  return Array.from({ length: flat.length / 3 }, (_, index) => flat.slice(index * 3, index * 3 + 3))
+}
+
+/** The named message for a row the phone receives; the usual checks then apply to it. */
+function fromRow(row: unknown[]): unknown {
+  switch (row[0]) {
+    case "s": {
+      const [, id, rev, plan, status, at, end, pos, rest, log, skip] = row
+      const session = { id, rev, plan, at, end, pos, rest, log: triples(log), skip }
+      return { t: "session", session: { ...session, status: STATUSES[status as 0 | 1 | 2] } }
+    }
+    case "r": {
+      const [, id, pos, reps, auto] = row
+      return {
+        t: "reps",
+        live: { id, pos, reps, auto: auto === 1 ? true : auto === 0 ? false : auto },
+      }
+    }
+    case "f": {
+      const logs = row[1]
+      return {
+        t: "food",
+        logs: Array.isArray(logs)
+          ? logs.map((log) =>
+              Array.isArray(log) ? { id: log[0], ref: log[1], owner: log[2], at: log[3] } : log,
+            )
+          : logs,
+      }
+    }
+    case "a":
+      return { t: "ack", id: row[1] }
+    default:
+      return undefined
+  }
+}
+
+/** Splits a message into ASCII frames of at most `maxBytes`, as a row when `rows` is set. */
+export function encodeFrames(
+  message: SyncMessage,
+  maxBytes: number,
+  id: number,
+  rows = false,
+): string[] {
+  const json = JSON.stringify((rows && toRow(message)) || message).replace(
     /[\u0080-￿]/g,
     (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
   )
@@ -259,7 +381,8 @@ const isFoodLog = (log: WireFoodLog | undefined) =>
 export function parseMessage(json: string): SyncMessage | undefined {
   let message: SyncMessage
   try {
-    message = JSON.parse(json) as SyncMessage
+    const parsed: unknown = JSON.parse(json)
+    message = (Array.isArray(parsed) ? fromRow(parsed) : parsed) as SyncMessage
   } catch {
     return undefined
   }

@@ -12,6 +12,7 @@ import {
   SharedSession,
   SyncMessage,
   ACK_VERSION,
+  ROW_VERSION,
   WATCH_VERSION,
   WorkoutPlan,
 } from './SyncProtocol';
@@ -67,6 +68,8 @@ export class PhoneLink {
   private sending: Promise<void> = Promise.resolve();
   /** The phone said in its hello that it acks. */
   private phoneAcks: boolean = false;
+  /** The phone said in its hello that it reads rows. */
+  private phoneRows: boolean = false;
   /** The latest session and food message the phone has not acked yet. */
   private awaiting: Map<string, Awaiting> = new Map<string, Awaiting>();
   /** Tries so far for a kind being sent again, so the wait keeps doubling. */
@@ -176,6 +179,7 @@ export class PhoneLink {
     if (message.t === 'hello') {
       const phone = message.phone as string;
       this.phoneAcks = typeof message.app === 'number' && message.app >= ACK_VERSION;
+      this.phoneRows = typeof message.app === 'number' && message.app >= ROW_VERSION;
       this.phoneName = typeof message.name === 'string' ? message.name.slice(0, 40) : '';
       if (phone === this.handlers.allowedPhone()) {
         this.accept();
@@ -272,6 +276,7 @@ export class PhoneLink {
     this.awaiting.clear();
     this.retryTries.clear();
     this.phoneAcks = false;
+    this.phoneRows = false;
   }
 
   private send(message: SyncMessage): Promise<boolean> {
@@ -281,7 +286,7 @@ export class PhoneLink {
     }
     this.messageId++;
     const id = this.messageId;
-    const frames = encodeFrames(message, service.getEffectiveMaxPayload(), id);
+    const frames = encodeFrames(message, service.getEffectiveMaxPayload(), id, this.phoneRows);
     const sent = this.sending.then(async (): Promise<boolean> => {
       for (const frame of frames) {
         if (!(await service.sendFrame(frame))) {

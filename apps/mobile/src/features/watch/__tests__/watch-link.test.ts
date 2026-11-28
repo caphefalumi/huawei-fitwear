@@ -7,6 +7,7 @@ import { usePairing } from "../pairing.store"
 import {
   compactPlan,
   encodeFrames,
+  PHONE_VERSION,
   planKey,
   type SharedSession,
   type SyncMessage,
@@ -337,7 +338,7 @@ test("sends the current session again until a watch that acks confirms it", asyn
 
 test("acks what a watch that acks sends, and says it acks in its hello", async () => {
   let link = await connected({ v: 3 })
-  expect(sentMessages()[0]).toMatchObject({ t: "hello", v: 1, app: 3 })
+  expect(sentMessages()[0]).toMatchObject({ t: "hello", v: 1, app: PHONE_VERSION })
   fromWatch({ t: "session", session }, 42)
   await jest.advanceTimersByTimeAsync(0)
   expect(sentMessages()).toContainEqual({ t: "ack", id: 42 })
@@ -385,5 +386,16 @@ test("reports how a welcomed link went once it ends", async () => {
     "watch_sync_link_ended",
     expect.objectContaining({ reason: "dropped", acked: 1, resent: 0, failed: 0 }),
   )
+  link.destroy()
+})
+
+test("writes rows to a watch that reads them, and keeps the hello named", async () => {
+  const link = await connected({ v: 4 })
+  useWatchStore.setState({ session, outbox: useWatchStore.getState().outbox + 1 })
+  await jest.advanceTimersByTimeAsync(0)
+
+  const frames = mockClient.sendFrame.mock.calls.map(([frame]) => frame)
+  expect(frames[0]).toContain('~{"t":"hello"')
+  expect(frames.some((frame) => /~\["s","s1",/.test(frame))).toBe(true)
   link.destroy()
 })

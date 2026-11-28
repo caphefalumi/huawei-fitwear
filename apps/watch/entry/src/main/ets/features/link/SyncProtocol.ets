@@ -9,10 +9,13 @@ export const PROTOCOL_VERSION: number = 1;
  * Carried by welcome, so the phone knows what this watch reads.
  * 2: compact plans, and welcome names the plan held.
  * 3: acks plan, session and day messages, and keeps its favorites when a day leaves them out.
+ * 4: reads every message but the handshake as a row; see toRow.
  */
-export const WATCH_VERSION: number = 3;
+export const WATCH_VERSION: number = 4;
 /** The `app` in a hello from which the phone acks session and food messages too. */
 export const ACK_VERSION: number = 3;
+/** The `app` in a hello from which the phone reads rows. */
+export const ROW_VERSION: number = 4;
 const MAX_MESSAGE_CHARS: number = 16000;
 const MAX_EXERCISES: number = 30;
 const MAX_SETS: number = 20;
@@ -201,8 +204,164 @@ export function sessionSlots(exercises: PlanExercise[]): Slot[] {
 }
 
 /** Splits a message into ASCII frames of at most maxBytes. */
-export function encodeFrames(message: SyncMessage, maxBytes: number, id: number): string[] {
-  const json = JSON.stringify(message).replace(/[\u0080-\uffff]/g, (char: string) => {
+const STATUSES: string[] = ['active', 'done', 'closed'];
+
+/**
+ * The message as a JSON array whose first element names it, about half the size of named
+ * fields; undefined for messages that stay named. Rows as in apps/mobile's protocol.ts `toRow`:
+ *
+ * - session: ['s', id, rev, plan, status (0 active, 1 done, 2 closed), at, end, pos, rest,
+ *   log as flat [exercise, set, reps, ...], skip]
+ * - reps: ['r', id, pos, reps, auto (1 or 0)]
+ * - food: ['f', logs as [id, ref, owner, at] rows]
+ * - ack: ['a', id]
+ */
+export function toRow(message: SyncMessage): Object[] | undefined {
+  if (message.t === 'session') {
+    const session = message.session as SharedSession;
+    const log: number[] = [];
+    session.log.forEach((entry: number[]) => {
+      log.push(entry[0], entry[1], entry[2]);
+    });
+    const row: Object[] = [
+      's',
+      session.id,
+      session.rev,
+      session.plan,
+      STATUSES.indexOf(session.status),
+      session.at,
+      session.end,
+      session.pos,
+      session.rest,
+      log,
+      session.skip,
+    ];
+    return row;
+  }
+  if (message.t === 'reps') {
+    const live = message.live as LiveReps;
+    const row: Object[] = ['r', live.id, live.pos, live.reps, live.auto ? 1 : 0];
+    return row;
+  }
+  if (message.t === 'food') {
+    const logs: Object[] = (message.logs as FoodLog[]).map((log: FoodLog): Object => {
+      const entry: Object[] = [log.id, log.ref, log.owner, log.at];
+      return entry;
+    });
+    const row: Object[] = ['f', logs];
+    return row;
+  }
+  if (message.t === 'ack') {
+    const row: Object[] = ['a', message.id as number];
+    return row;
+  }
+  return undefined;
+}
+
+function macrosFrom(value: Object): Macros | undefined {
+  if (!Array.isArray(value) || (value as Object[]).length !== 3) {
+    return undefined;
+  }
+  const row = value as number[];
+  const macros: Macros = { protein: row[0], carbs: row[1], fat: row[2] };
+  return macros;
+}
+
+/** The named message for a row the watch receives; the usual checks then apply to it. */
+function fromRow(row: Object[]): SyncMessage | undefined {
+  const t = row[0] as string;
+  if (t === 'p') {
+    const plan: CompactPlan = {
+      name: row[2] as string,
+      minutes: row[3] as number,
+      x: row[4] as CompactExercise[],
+    };
+    const message: SyncMessage = { t: 'plan', plan: plan, key: row[1] as string };
+    return message;
+  }
+  if (t === 's') {
+    const flat = row[9];
+    if (!Array.isArray(flat) || (flat as number[]).length % 3 !== 0) {
+      return undefined;
+    }
+    const entries = flat as number[];
+    const log: number[][] = [];
+    for (let index = 0; index < entries.length; index += 3) {
+      log.push(entries.slice(index, index + 3));
+    }
+    const session: SharedSession = {
+      id: row[1] as string,
+      rev: row[2] as number,
+      plan: row[3] as string,
+      status: STATUSES[row[4] as number] ?? '',
+      at: row[5] as number,
+      end: row[6] as number,
+      pos: row[7] as number,
+      rest: row[8] as number,
+      log: log,
+      skip: row[10] as number[],
+    };
+    const message: SyncMessage = { t: 'session', session: session };
+    return message;
+  }
+  if (t === 'd') {
+    const target = macrosFrom(row[4]);
+    const eaten = macrosFrom(row[6]);
+    if (target === undefined || eaten === undefined) {
+      return undefined;
+    }
+    const day: DayInfo = {
+      date: row[1] as string,
+      owner: row[2] as string,
+      kcalTarget: row[3] as number,
+      target: target,
+      kcalEaten: row[5] as number,
+      eaten: eaten,
+      applied: row[7] as string[],
+    };
+    // Left out while unchanged.
+    if (row.length > 8) {
+      if (!Array.isArray(row[8])) {
+        return undefined;
+      }
+      const favorites: FavoriteMeal[] = [];
+      for (const value of row[8] as Object[]) {
+        if (!Array.isArray(value) || (value as Object[]).length !== 6) {
+          return undefined;
+        }
+        const food = value as Object[];
+        const meal: FavoriteMeal = {
+          ref: food[0] as string,
+          name: food[1] as string,
+          kcal: food[2] as number,
+          protein: food[3] as number,
+          carbs: food[4] as number,
+          fat: food[5] as number,
+        };
+        favorites.push(meal);
+      }
+      day.favorites = favorites;
+    }
+    const message: SyncMessage = { t: 'day', day: day };
+    return message;
+  }
+  if (t === 'a') {
+    const message: SyncMessage = { t: 'ack', id: row[1] as number };
+    return message;
+  }
+  return undefined;
+}
+
+/** Splits a message into ASCII frames of at most maxBytes, as a row when `rows` is set. */
+export function encodeFrames(
+  message: SyncMessage,
+  maxBytes: number,
+  id: number,
+  rows: boolean = false,
+): string[] {
+  const row = rows ? toRow(message) : undefined;
+  const text = row !== undefined ? JSON.stringify(row) : JSON.stringify(message);
+  const json = text.replace(/[\u0080-\uffff]/g, (char: string) => {
     return '\\u' + ('000' + char.charCodeAt(0).toString(16)).slice(-4);
   });
   const size = Math.max(1, maxBytes - HEADER_CHARS);
@@ -385,7 +544,12 @@ function isFavorites(favorites: FavoriteMeal[]): boolean {
 /** Input from the radio is untrusted: anything malformed is ignored. */
 export function parseMessage(json: string): SyncMessage | undefined {
   try {
-    const message = JSON.parse(json) as SyncMessage;
+    const parsed = JSON.parse(json) as Object;
+    const read = Array.isArray(parsed) ? fromRow(parsed as Object[]) : (parsed as SyncMessage);
+    if (read === undefined) {
+      return undefined;
+    }
+    const message: SyncMessage = read;
     if (message.t === 'hello') {
       return message.v === PROTOCOL_VERSION &&
         isText(message.phone as string, 64) &&

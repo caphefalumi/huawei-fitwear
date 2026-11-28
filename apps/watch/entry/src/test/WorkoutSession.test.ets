@@ -3,7 +3,9 @@ import {
   DayInfo,
   encodeFrames,
   FavoriteMeal,
+  FoodLog,
   FrameAssembler,
+  LiveReps,
   mergeSessions,
   SharedSession,
   SyncMessage,
@@ -40,6 +42,15 @@ const SUPERSET: WorkoutPlan = {
 
 /** The same frame is asserted by apps/mobile's protocol test. */
 const FIXTURE_FRAME: string = '~7.0.1~{"t":"welcome","v":1,"ok":true}';
+/** Rows written and read the same way by apps/mobile's protocol test. */
+const ROW_PLAN_FRAME: string =
+  '~8.0.1~["p","k1","Push",10,[["bench-press","Bench press",2,8,0,60,""]]]';
+const ROW_SESSION_FRAME: string = '~9.0.1~["s","one",2,"Push",0,1000,0,1,0,[0,0,8],[]]';
+const ROW_DAY_FRAME: string =
+  '~10.0.1~["d","2026-03-02","u1",2000,[100,200,60],100,[1,2,3],["a"],[["m1","Rice",500,10,20,5]]]';
+const ROW_FOOD_FRAME: string = '~11.0.1~["f",[["log-1","m1","u1",1000]]]';
+const ROW_REPS_FRAME: string = '~12.0.1~["r","one",1,4,1]';
+const ROW_ACK_FRAME: string = '~13.0.1~["a",42]';
 /** Written by apps/mobile's protocol test from its "Push" routine. */
 const COMPACT_PLAN_FRAME: string =
   '~8.0.1~{"t":"plan","plan":{"name":"Push","minutes":10,"x":[["bench-press","Bench press",2,8,0,60,""]]},"key":"k1"}';
@@ -164,6 +175,56 @@ export default function workoutSessionTest() {
       expect(new FrameAssembler().push('~1.0.1~{"t":"session"}')).assertUndefined();
       expect(new FrameAssembler().push('VoocHealth Watch Ready')).assertUndefined();
       expect(new FrameAssembler().push('~1.1.2~tail')).assertUndefined();
+    });
+
+    it('writes rows exactly as the phone test reads them', 0, () => {
+      const session: SharedSession = {
+        id: 'one',
+        rev: 2,
+        plan: 'Push',
+        status: 'active',
+        at: 1000,
+        end: 0,
+        pos: 1,
+        rest: 0,
+        log: [[0, 0, 8]],
+        skip: [],
+      };
+      const log: FoodLog = { id: 'log-1', ref: 'm1', owner: 'u1', at: 1000 };
+      const live: LiveReps = { id: 'one', pos: 1, reps: 4, auto: true };
+      const session9 = encodeFrames({ t: 'session', session: session }, 180, 9, true);
+      expect(session9[0]).assertEqual(ROW_SESSION_FRAME);
+      const food = encodeFrames({ t: 'food', logs: [log] }, 180, 11, true);
+      expect(food[0]).assertEqual(ROW_FOOD_FRAME);
+      expect(encodeFrames({ t: 'reps', live: live }, 180, 12, true)[0]).assertEqual(ROW_REPS_FRAME);
+      expect(encodeFrames({ t: 'ack', id: 42 }, 180, 13, true)[0]).assertEqual(ROW_ACK_FRAME);
+      // The handshake stays named, so every phone app reads it.
+      const welcome = encodeFrames({ t: 'welcome', v: 1, ok: true }, 180, 7, true);
+      expect(welcome[0]).assertEqual(FIXTURE_FRAME);
+    });
+
+    it('reads the rows the phone writes, and rejects broken ones', 0, () => {
+      const plan = new FrameAssembler().push(ROW_PLAN_FRAME);
+      expect((plan?.plan as WorkoutPlan).exercises[0].name).assertEqual('Bench press');
+      expect(plan?.key).assertEqual('k1');
+      const session = new FrameAssembler().push(ROW_SESSION_FRAME)?.session as SharedSession;
+      expect(session.status).assertEqual('active');
+      expect(JSON.stringify(session.log)).assertEqual('[[0,0,8]]');
+      const day = new FrameAssembler().push(ROW_DAY_FRAME)?.day as DayInfo;
+      expect(day.eaten.fat).assertEqual(3);
+      expect((day.favorites as FavoriteMeal[])[0].kcal).assertEqual(500);
+      expect(new FrameAssembler().push(ROW_ACK_FRAME)?.id).assertEqual(42);
+      const totals = '~1.0.1~["d","2026-03-02","u1",2000,[100,200,60],100,[1,2,3],[]]';
+      expect(new FrameAssembler().push(totals)?.day?.favorites).assertUndefined();
+      // A log that does not split into sets, an unknown status, a short macro row.
+      const broken: string[] = [
+        '~1.0.1~["s","one",2,"Push",0,1000,0,1,0,[0,0],[]]',
+        '~1.0.1~["s","one",2,"Push",3,1000,0,1,0,[],[]]',
+        '~1.0.1~["d","2026-03-02","u1",2000,[100,200],100,[1,2,3],[]]',
+      ];
+      broken.forEach((frame: string) => {
+        expect(new FrameAssembler().push(frame)).assertUndefined();
+      });
     });
 
     it('reads an ack and remembers which message to ack', 0, () => {
