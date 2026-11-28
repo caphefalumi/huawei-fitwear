@@ -71,12 +71,31 @@ bun lint                     # Lint mobile and backend workspaces
 
 ### Watch Development Rules (`apps/watch`)
 
-- Open exclusively in **DevEco Studio**.
+- Open in **DevEco Studio**, or use its bundled Hvigor from the command line (PowerShell, in `apps/watch`):
+  ```powershell
+  $env:DEVECO_SDK_HOME = "C:\Program Files\Huawei\DevEco Studio\sdk"
+  $env:PATH = "C:\Program Files\Huawei\DevEco Studio\tools\node;$env:PATH"
+  $hv = "C:\Program Files\Huawei\DevEco Studio\tools\hvigor\bin\hvigorw.bat"
+  & $hv --mode module -p module=entry@default -p product=default assembleHap --no-daemon  # Build
+  & $hv --mode module -p module=entry@default -p product=default test --no-daemon         # Unit tests (src/test)
+  ```
+  Test results land in `entry/.test/default/intermediates/test/coverage_data/test_result.txt`.
 - Feature UI + domain code live together in `apps/watch/entry/src/main/ets/features/<feature>/`.
 - Hub / entry pages reside in `apps/watch/entry/src/main/ets/pages/` and are registered in `main_pages.json`.
 - Application lifecycle handlers reside in `apps/watch/entry/src/main/ets/entryability/`.
 - Follow strict ArkTS typing conventions defined in `apps/watch/code-linter.json5`.
 - Do not add web or node libraries to `apps/watch`.
+- **`@Builder` arguments do not refresh**: ArkUI reads plain values passed to a `@Builder` once, so UI that shows changing state must read `this.*` inside the builder or be a `@ComponentV2` with `@Param` fields. A `ForEach` that renders a builder needs a key that includes the values shown.
+
+### Phone ↔ Watch Sync Rules
+
+Read `docs/watch/phone-sync.md` before changing the Bluetooth sync.
+
+- **One protocol, two files**: `apps/mobile/src/features/watch/protocol.ts` and `apps/watch/entry/src/main/ets/features/link/SyncProtocol.ets` mirror each other. Change both in the same commit, along with the shared fixture frames in `watch-sync.test.ts` and `WorkoutSession.test.ets`.
+- **Never break an older build**: `hello.v` stays 1 and `hello` / `welcome` stay named JSON. Put a new wire format behind a new version, announced by the watch in `welcome.v` and by the phone in `hello.app`. Send it only to a peer that announces it, and keep reading the older formats.
+- **Rows on the wire, named in code**: from version 4, every other message is a JSON row (`toRow` / `fromRow`). A new message needs a row layout on both sides. Validation runs on the named form.
+- **Radio input is untrusted**: validate every message read, and ignore malformed ones rather than throwing.
+- **Verify both apps**: run the mobile tests and typecheck, then build the watch and run its unit tests. Tests are not evidence that the radio link works; ask for the device tests in `docs/watch/phone-sync.md` when behavior on the link changes.
 
 ---
 
