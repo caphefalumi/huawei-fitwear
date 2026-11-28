@@ -28,6 +28,9 @@ export const ACTIVITIES = {
   extra_active: "Athlete (2x per day)",
 } as const
 
+/** The level alone (`Light`), for rows too narrow for the example in parentheses. */
+export const activityName = (activity: string) => activity.replace(/\s*\(.*\)\s*$/, "")
+
 export function dateKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
 }

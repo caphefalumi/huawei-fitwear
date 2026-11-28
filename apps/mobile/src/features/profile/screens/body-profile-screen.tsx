@@ -4,7 +4,7 @@ import { StyleSheet, Text } from "react-native"
 import { FetchErrorState } from "@/components/feedback/fetch-states"
 import { BackHeader, PageHeading, Screen } from "@/components/ui"
 import { useAuth } from "@/features/auth"
-import { useHealth } from "@/features/health"
+import { activityName, useHealth } from "@/features/health"
 import { Palette as C } from "@/theme"
 
 import { MenuGroup, MenuRow } from "../components/menu"
@@ -68,7 +68,7 @@ export function BodyProfileScreen() {
         />
         <MenuRow
           label="Daily activity"
-          value={plan.activity || "Not set"}
+          value={plan.activity ? activityName(plan.activity) : "Not set"}
           onPress={() => setOpenSheet("activity")}
         />
         <MenuRow label="Goal" value={plan.goal || "Not set"} onPress={() => setOpenSheet("goal")} />

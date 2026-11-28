@@ -1,6 +1,7 @@
 /** Public API. Screens are composed by route files directly. */
 export {
   ACTIVITIES,
+  activityName,
   GOALS,
   dateKey,
   dateLabel,
