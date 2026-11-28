@@ -28,6 +28,52 @@ function formatDate(now: number): string {
   return `${WEEKDAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}`;
 }
 
+/**
+ * One macro's progress. A component rather than a @Builder: plain values passed to a builder are
+ * read once, so the bar stayed at the first figures it was drawn with.
+ */
+@ComponentV2
+struct MacroBar {
+  @Require @Param label: string;
+  @Require @Param eaten: number;
+  @Require @Param target: number;
+
+  build() {
+    Row({ space: 6 }) {
+      Text(this.label)
+        .width(30)
+        .fontSize(Type.CAPTION)
+        .fontColor(Palette.MUTED)
+      Progress({
+        value: Math.min(this.eaten, this.target),
+        total: Math.max(this.target, 1),
+        type: ProgressType.Linear,
+      })
+        .width(54)
+        .color(Palette.ACCENT)
+        .backgroundColor(Palette.TRACK)
+        .style({ strokeWidth: 5, strokeRadius: 3 })
+    }
+    .accessibilityGroup(true)
+    .accessibilityText(`${this.label} ${this.eaten} of ${this.target} grams`);
+  }
+}
+
+/** A line of muted text. A component for the same reason as MacroBar: its text changes. */
+@ComponentV2
+struct Note {
+  @Require @Param message: string;
+
+  build() {
+    Text(this.message)
+      .width('70%')
+      .margin({ top: 4 })
+      .fontSize(Type.CAPTION)
+      .fontColor(Palette.MUTED)
+      .textAlign(TextAlign.Center);
+  }
+}
+
 /** W1a: time first, then the phone link, kcal left and macro bars. */
 @ComponentV2
 export struct ClockView {
@@ -39,27 +85,6 @@ export struct ClockView {
   @Param searching: boolean = false;
   @Event onConnect: () => void = () => {};
   @Event onOpenDemos: () => void = () => {};
-
-  @Builder
-  macroBar(label: string, eaten: number, target: number) {
-    Row({ space: 6 }) {
-      Text(label)
-        .width(30)
-        .fontSize(Type.CAPTION)
-        .fontColor(Palette.MUTED)
-      Progress({
-        value: Math.min(eaten, target),
-        total: Math.max(target, 1),
-        type: ProgressType.Linear,
-      })
-        .width(54)
-        .color(Palette.ACCENT)
-        .backgroundColor(Palette.TRACK)
-        .style({ strokeWidth: 5, strokeRadius: 3 })
-    }
-    .accessibilityGroup(true)
-    .accessibilityText(`${label} ${eaten} of ${target} grams`);
-  }
 
   /** Phone link as a small capsule; tapping it looks for the phone again. */
   @Builder
@@ -110,9 +135,9 @@ export struct ClockView {
       .gesture(LongPressGesture({ duration: 800 }).onAction(() => this.onOpenDemos()))
       this.phoneChip()
       if (!this.day.hasData) {
-        this.note("Open the phone app to see today's food");
+        Note({ message: "Open the phone app to see today's food" });
       } else if (this.day.kcalTarget === 0) {
-        this.note(`${this.day.kcalEaten} kcal eaten\nSet your goals on the phone`);
+        Note({ message: `${this.day.kcalEaten} kcal eaten\nSet your goals on the phone` });
       } else {
         this.targets();
       }
@@ -120,16 +145,6 @@ export struct ClockView {
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center);
-  }
-
-  @Builder
-  note(message: string) {
-    Text(message)
-      .width('70%')
-      .margin({ top: 4 })
-      .fontSize(Type.CAPTION)
-      .fontColor(Palette.MUTED)
-      .textAlign(TextAlign.Center);
   }
 
   /** Calories left, macro progress and the protein still to eat. */
@@ -160,9 +175,9 @@ export struct ClockView {
           }
         }.accessibilityGroup(true)
         Column({ space: 7 }) {
-          this.macroBar('Pro', this.day.eaten.protein, this.day.target.protein)
-          this.macroBar('Carb', this.day.eaten.carbs, this.day.target.carbs)
-          this.macroBar('Fat', this.day.eaten.fat, this.day.target.fat)
+          MacroBar({ label: 'Pro', eaten: this.day.eaten.protein, target: this.day.target.protein })
+          MacroBar({ label: 'Carb', eaten: this.day.eaten.carbs, target: this.day.target.carbs })
+          MacroBar({ label: 'Fat', eaten: this.day.eaten.fat, target: this.day.target.fat })
         }
       }
       Text(`${Math.max(0, this.day.target.protein - this.day.eaten.protein)} g protein left`)

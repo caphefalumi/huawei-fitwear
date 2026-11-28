@@ -159,7 +159,10 @@ export struct QuickLogView {
               (food: FavoriteMeal) => {
                 this.foodCard(food);
               },
-              (food: FavoriteMeal) => food.ref,
+              // The card is a builder and keeps the figures it was drawn with, so an edited meal
+              // needs a new key to be drawn again.
+              (food: FavoriteMeal) =>
+                `${food.ref}:${food.name}:${food.kcal}:${food.protein}:${food.carbs}:${food.fat}`,
             )
           }
           .index(this.favoriteIndex)
