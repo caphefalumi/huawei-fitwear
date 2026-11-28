@@ -77,25 +77,11 @@ const unitLabel = (exercise: RoutineExercise, value: number) =>
 const average = (values: number[]) =>
   Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
 
-/** Flatten exercises into set-by-set order, alternating superset members within a round. */
-function sessionSlots(exercises: RoutineExercise[]) {
-  const slots: { index: number; set: number }[] = []
-  for (let index = 0; index < exercises.length;) {
-    const first = exercises[index]!
-    let end = index + 1
-    if (first.superset) {
-      while (end < exercises.length && exercises[end]!.superset === first.superset) end++
-    }
-    const rounds = Math.max(...exercises.slice(index, end).map((entry) => entry.sets))
-    for (let set = 0; set < rounds; set++) {
-      for (let member = index; member < end; member++) {
-        if (set < exercises[member]!.sets) slots.push({ index: member, set })
-      }
-    }
-    index = end
-  }
-  return slots
-}
+/** Flatten exercises into set-by-set order: every set of one exercise, then the next. */
+const sessionSlots = (exercises: RoutineExercise[]) =>
+  exercises.flatMap((exercise, index) =>
+    Array.from({ length: exercise.sets }, (_, set) => ({ index, set })),
+  )
 
 type Phase = "set" | "rest" | "summary"
 
@@ -620,14 +606,6 @@ function ActiveSession({
     if (!following) return finish()
     setPosition(next)
     if (following.index !== slot.index) setDraft(routine.exercises[following.index]!.reps)
-    if (
-      exercise.superset &&
-      exercise.superset === routine.exercises[following.index]?.superset &&
-      following.set === slot.set
-    ) {
-      setPhase("set")
-      return
-    }
     setRestEndsAt(Date.now() + exercise.rest * 1000)
     setNow(Date.now())
     setPhase("rest")
@@ -933,7 +911,6 @@ function ActiveSession({
         <View style={styles.exerciseCopy}>
           <Text style={styles.eyebrow}>
             Exercise {slot.index + 1} of {routine.exercises.length}
-            {exercise.superset ? " · Superset" : ""}
           </Text>
           <Text style={styles.exerciseName} accessibilityRole="header" numberOfLines={2}>
             {exercise.name}

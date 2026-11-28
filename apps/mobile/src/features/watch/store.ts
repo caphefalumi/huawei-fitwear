@@ -140,7 +140,8 @@ export function toWirePlan(routine: Routine): WirePlan {
       reps: item.reps,
       unit: item.unit,
       rest: Math.round(item.rest),
-      superset: item.superset ?? "",
+      // Supersets were removed from the app; the watch protocol still carries the field.
+      superset: "",
     })),
   }
 }

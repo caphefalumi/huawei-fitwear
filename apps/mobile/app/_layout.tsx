@@ -89,6 +89,7 @@ function RootNavigator() {
           <Stack.Screen name="(workout)/training-weights" />
           <Stack.Screen name="(workout)/plan" />
           <Stack.Screen name="(workout)/routine" />
+          <Stack.Screen name="(workout)/routine-edit" />
           <Stack.Screen name="(workout)/session" options={{ gestureEnabled: false }} />
           <Stack.Screen name="(workout)/workout-history/index" />
           <Stack.Screen name="(workout)/workout-history/[id]" />

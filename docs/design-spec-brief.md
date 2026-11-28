@@ -606,6 +606,17 @@ Legend: **Purpose · Structure · Actions · States · Copy**
 - **Structure:** same as chest plan, parameterised by group; body diagram icon; exercise list; start CTA.
 - **States:** unknown group (fallback/empty), recovery-adjusted.
 
+### 11.15a Edit routine (`/routine-edit?date=`)
+
+- **Purpose:** change the exercises of one routine; every day that routine is scheduled uses the saved version.
+- **Structure:** fixed header with `Cancel` (left), `Edit Upper A` (centre) and a `Save` pill (right, muted until something changed); a summary line `6 exercises - 18 sets - about 52 min` that updates live; a scope note `Changes apply to every Upper A day.`; a `Warm-up` section (caption `Done first. Not counted in volume or progress.`) with an `Add a warm-up exercise` link; a `Workout` section; a dashed `+ Add exercises` button; `Restore generated routine` at the end when the routine was edited.
+- **Rows:** one line per exercise: name and `3 × 10 - 90s rest`; tapping opens the exercise sheet.
+- **Exercise sheet:** steppers for `Sets` (1 to 20), `Reps` or `Seconds`, and `Rest` (15 s steps) with quick picks `45s`, `90s`, `2 min`, `3 min`; a `Warm-up exercise` toggle (moves it between the sections); `Move up` / `Move down` within its section; `Done`; `Remove from routine`, followed by a toast `Removed Cable curl` + `Undo`.
+- **Add exercises sheet:** search, muscle-group chips, several picks at once with checkboxes, exercises already in the routine shown as `In routine` and locked, `Add 2 exercises`. Warm-ups default to 2 sets and 30 s rest; workout exercises to 3 sets and the plan's rest for the goal.
+- **Leaving:** with unsaved changes, `Discard changes?` (`Keep editing` / `Discard`). Restoring the generated routine asks first.
+- **States:** no workout exercise (Save shows `Add at least one exercise to the workout before saving.`), save error. Editing is unavailable while recovery adjustments are active (Routine screen).
+- **Supersets** were removed: sessions run every set of one exercise before the next.
+
 ### 11.16 Exercise guide (`/exercise-guide`)
 
 - **Purpose:** technique reference before or during a session.
