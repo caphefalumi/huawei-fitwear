@@ -25,6 +25,7 @@ export const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1)
 
 export const glyphs = {
   back: { ios: "chevron.left", android: "chevron_left", web: "chevron_left" },
+  forward: { ios: "chevron.right", android: "chevron_right", web: "chevron_right" },
   minus: { ios: "minus", android: "remove", web: "remove" },
   plus: { ios: "plus", android: "add", web: "add" },
   check: { ios: "checkmark", android: "check", web: "check" },
@@ -154,16 +155,21 @@ export function WatchChip({ live, label }: { live: boolean; label: string }) {
   )
 }
 
-/** Exercise poster that opens the technique guide, as on the routine screens. */
+/**
+ * Exercise poster that opens the technique guide, as on the routine screens. Inside a larger
+ * button, leave out `onPress` and set `playBadge` so it still looks playable.
+ */
 export function ExerciseThumb({
   exerciseKey,
   name,
   onPress,
+  playBadge = Boolean(onPress),
   size = 64,
 }: {
   exerciseKey: string
   name: string
   onPress?: () => void
+  playBadge?: boolean
   size?: number
 }) {
   const poster = exerciseLoops[exerciseKey]?.[1]
@@ -179,7 +185,7 @@ export function ExerciseThumb({
       ) : (
         <SymbolView name={glyphs.exercise} size={Math.round(size * 0.4)} tintColor={C.onAccent} />
       )}
-      {onPress && poster ? (
+      {playBadge && poster ? (
         <View style={styles.playBadge}>
           <SymbolView name={glyphs.play} size={9} tintColor={C.text} />
         </View>

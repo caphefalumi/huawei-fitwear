@@ -1075,23 +1075,26 @@ function ActiveSession({
           </Pressable>
         </View>
       </View>
-      <Card style={styles.upNext}>
-        <ExerciseThumb
-          exerciseKey={exercise.key}
-          name={exercise.name}
-          size={56}
-          onPress={openGuide}
-        />
-        <View style={styles.upNextCopy}>
-          <Text style={styles.eyebrow}>Up next</Text>
-          <Text style={styles.upNextName} numberOfLines={2}>
-            {exercise.name}
-          </Text>
-          <Text style={styles.upNextSub}>
-            Set {slot.set + 1} of {exercise.sets} · {weight} · {unitLabel(exercise, exercise.reps)}
-          </Text>
-        </View>
-      </Card>
+      {/* The whole card opens the guide, not just the poster. */}
+      <Pressable
+        accessibilityLabel={`Up next: ${exercise.name}, set ${slot.set + 1} of ${exercise.sets}, ${weight}, ${unitLabel(exercise, exercise.reps)}`}
+        accessibilityHint="Opens the technique guide"
+        onPress={openGuide}
+      >
+        <Card style={styles.upNext}>
+          <ExerciseThumb exerciseKey={exercise.key} name={exercise.name} size={56} playBadge />
+          <View style={styles.upNextCopy}>
+            <Text style={styles.eyebrow}>Up next</Text>
+            <Text style={styles.upNextName} numberOfLines={2}>
+              {exercise.name}
+            </Text>
+            <Text style={styles.upNextSub}>
+              {`Set ${slot.set + 1} of ${exercise.sets} - ${weight} - ${unitLabel(exercise, exercise.reps)}`}
+            </Text>
+          </View>
+          <SymbolView name={glyphs.forward} size={16} tintColor={C.textMuted} />
+        </Card>
+      </Pressable>
     </>
   )
 
